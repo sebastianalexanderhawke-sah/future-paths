@@ -3,8 +3,11 @@ import { notFound } from "next/navigation";
 
 import { generatePathsAction } from "@/actions/paths";
 import { archiveMomentAction } from "@/actions/moments";
+import { CheckInCard } from "@/components/check-ins/check-in-card";
+import { CheckInForm } from "@/components/check-ins/check-in-form";
 import { MomentForm } from "@/components/moments/moment-form";
 import { PathCard } from "@/components/paths/path-card";
+import { listCheckInsForMoment } from "@/lib/check-ins";
 import { getMoment } from "@/lib/moments";
 import { listPathsForMoment } from "@/lib/paths";
 
@@ -27,8 +30,14 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
     notFound();
   }
 
+  const checkInsResult = await listCheckInsForMoment(id);
+  if ("error" in checkInsResult) {
+    notFound();
+  }
+
   const { moment } = momentResult;
   const { paths } = pathsResult;
+  const { checkIns } = checkInsResult;
   const chosenPath = paths.find((path) => path.is_chosen);
   const canChoose = paths.length > 0 && !chosenPath;
 
@@ -81,17 +90,46 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                 </div>
               ) : null}
 
+              {chosenPath?.is_locked ? (
+                <p className="text-sm text-zinc-500">
+                  Your chosen path is locked after your first check-in.
+                </p>
+              ) : null}
+
               {paths.map((path) => (
                 <PathCard
                   key={path.id}
                   path={path}
                   momentId={moment.id}
-                  canChoose={canChoose}
+                  canChoose={canChoose && !path.is_locked}
                 />
               ))}
             </div>
           )}
         </section>
+
+        {chosenPath ? (
+          <section className="rounded-lg border border-zinc-200 bg-white p-6">
+            <h2 className="text-sm font-medium text-zinc-900">Check-ins</h2>
+            <p className="mt-2 text-sm text-zinc-600">
+              Record what actually happened. Reality carries more weight than
+              prediction.
+            </p>
+
+            <div className="mt-6">
+              <CheckInForm momentId={moment.id} />
+            </div>
+
+            {checkIns.length > 0 ? (
+              <div className="mt-8 flex flex-col gap-4">
+                <h3 className="text-sm font-medium text-zinc-900">History</h3>
+                {checkIns.map((checkIn) => (
+                  <CheckInCard key={checkIn.id} checkIn={checkIn} />
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         <section className="rounded-lg border border-zinc-200 bg-white p-6">
           <h2 className="text-sm font-medium text-zinc-900">Edit moment</h2>

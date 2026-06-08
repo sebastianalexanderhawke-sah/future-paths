@@ -2,9 +2,9 @@
 
 ## Current Status
 
-Phase: Phase 1 — Foundation
+Phase: Phase 2 — Check-In Engine
 
-Step: Step 5 — Path Generation
+Step: Step 1 — Check-Ins
 
 Status: Complete
 
@@ -12,37 +12,24 @@ Status: Complete
 
 ## Completed
 
-* Created Next.js project
-* Installed dependencies
-* Configured TypeScript
-* Configured Tailwind
-* Configured App Router
-* Opened project in Cursor
-* Created documentation structure
-* Installed Supabase packages (`@supabase/supabase-js`, `@supabase/ssr`)
-* Created Supabase project configuration (`supabase/config.toml`)
-* Created database migrations (profiles, moments, paths, timeline_events, RLS)
-* Created TypeScript database types and enums
-* Created Supabase client utilities (browser, server, middleware)
-* Created environment template (`.env.example`)
-* Implemented authentication (Server Actions, login/signup, protected overview)
-* Added auth callback route and middleware route protection
-* Implemented moments (create, list, view, edit, archive)
-* Timeline events written on moment creation
-* Implemented mock path generation and path selection
-* Timeline events written on paths_generated and path_chosen
+* Phase 1 Foundation (auth, moments, paths, timeline events)
+* Check-ins table and RLS migrations
+* Extended timeline_events for check_in_recorded
+* Mock Check-In Generator
+* Check-in creation with path locking on first check-in
+* Check-in form and history on moment detail page
 
 ---
 
 ## Current Objective
 
-Phase 1 Foundation is complete. Begin Phase 2 — Check-In Engine.
+Build identity updates and homepage (Phase 2 Steps 2–3).
 
 ---
 
 ## Next Tasks
 
-1. Begin Phase 2 Step 1 — Check-Ins
+1. Begin Phase 2 Step 2 — Identity Updates
 
 ---
 
@@ -50,12 +37,10 @@ Phase 1 Foundation is complete. Begin Phase 2 — Check-In Engine.
 
 Future Paths is an identity exploration platform.
 
-Core Questions:
+Check-in reflections are append-only and preserved permanently in `check_ins.reflection`.
 
-1. Who am I becoming?
-2. Who am I today?
-3. Who could I have become?
+The chosen path locks after the first check-in. Additional check-ins remain allowed.
 
-Phase 1 database tables: `profiles`, `moments`, `paths`, `timeline_events`.
+Mock Check-In Generator lives in `src/lib/mock-checkin-generator.ts` for future Claude replacement.
 
-Mock Crossroad Generator lives in `src/lib/mock-crossroad-generator.ts` and will be replaced with Claude in a future step.
+Apply migrations `00006` through `00008` to your Supabase project if not already applied.

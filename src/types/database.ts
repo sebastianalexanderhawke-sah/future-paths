@@ -40,14 +40,40 @@ export type Path = {
   created_at: string;
 };
 
+export type ThemeChange = {
+  theme: ThemeName;
+  direction: "strengthened" | "weakened" | "emerging";
+};
+
+export type CheckIn = {
+  id: string;
+  user_id: string;
+  moment_id: string;
+  path_id: string;
+  reflection: string;
+  reality_summary: string;
+  theme_changes: ThemeChange[];
+  identity_impact: string;
+  created_at: string;
+};
+
 export type TimelineEventMetadata = {
   moment_id?: string;
   moment_title?: string;
   path_id?: string;
   path_description?: string;
   path_count?: number;
+  check_in_id?: string;
   themes?: ThemeName[];
-  [key: string]: string | number | boolean | ThemeName[] | undefined;
+  theme_changes?: ThemeChange[];
+  identity_impact?: string;
+  [key: string]:
+    | string
+    | number
+    | boolean
+    | ThemeName[]
+    | ThemeChange[]
+    | undefined;
 };
 
 export type TimelineEvent = {
@@ -98,6 +124,18 @@ export type PathInsert = Pick<
 export type PathUpdate = Partial<
   Pick<Path, "is_chosen" | "is_locked" | "chosen_at">
 >;
+
+export type CheckInInsert = Pick<
+  CheckIn,
+  | "user_id"
+  | "moment_id"
+  | "path_id"
+  | "reflection"
+  | "reality_summary"
+  | "identity_impact"
+> & {
+  theme_changes?: ThemeChange[];
+};
 
 export type TimelineEventInsert = Pick<
   TimelineEvent,
@@ -162,6 +200,31 @@ export type Database = {
             foreignKeyName: "timeline_events_user_id_fkey";
             columns: ["user_id"];
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      check_ins: {
+        Row: CheckIn;
+        Insert: CheckInInsert;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "check_ins_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "check_ins_moment_id_fkey";
+            columns: ["moment_id"];
+            referencedRelation: "moments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "check_ins_path_id_fkey";
+            columns: ["path_id"];
+            referencedRelation: "paths";
             referencedColumns: ["id"];
           },
         ];
