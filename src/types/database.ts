@@ -3,6 +3,7 @@ import type {
   FutureSelfStage,
   FutureSelfStatus,
   AlternateSelfStatus,
+  PastCrossroadStatus,
   ContradictionEventType,
   ContradictionStatus,
   ContradictionType,
@@ -167,12 +168,35 @@ export type ContradictionEvent = {
   created_at: string;
 };
 
+export type PastCrossroad = {
+  id: string;
+  user_id: string;
+  what_happened: string;
+  why_chosen: string | null;
+  life_stage: string | null;
+  status: PastCrossroadStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PastAlternativePath = {
+  id: string;
+  past_crossroad_id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  themes: ThemeName[];
+  possible_future_shift: string;
+  sort_order: number;
+  is_selected: boolean;
+  created_at: string;
+};
+
 export type AlternateSelf = {
   id: string;
   user_id: string;
-  decision_title: string;
-  chosen_path: string;
-  unchosen_path: string;
+  past_crossroad_id: string;
+  selected_alternative_path_id: string;
   name: string;
   road_not_taken: string;
   alternate_self: string;
@@ -371,12 +395,41 @@ export type ContradictionEventInsert = Pick<
   summary?: string | null;
 };
 
+export type PastCrossroadInsert = Pick<
+  PastCrossroad,
+  "user_id" | "what_happened"
+> & {
+  why_chosen?: string | null;
+  life_stage?: string | null;
+  status?: PastCrossroadStatus;
+};
+
+export type PastCrossroadUpdate = Partial<
+  Pick<PastCrossroad, "status" | "updated_at">
+>;
+
+export type PastAlternativePathInsert = Pick<
+  PastAlternativePath,
+  | "past_crossroad_id"
+  | "user_id"
+  | "title"
+  | "description"
+  | "possible_future_shift"
+  | "sort_order"
+> & {
+  themes?: ThemeName[];
+  is_selected?: boolean;
+};
+
+export type PastAlternativePathUpdate = Partial<
+  Pick<PastAlternativePath, "is_selected">
+>;
+
 export type AlternateSelfInsert = Pick<
   AlternateSelf,
   | "user_id"
-  | "decision_title"
-  | "chosen_path"
-  | "unchosen_path"
+  | "past_crossroad_id"
+  | "selected_alternative_path_id"
   | "name"
   | "road_not_taken"
   | "alternate_self"
@@ -389,6 +442,7 @@ export type AlternateSelfInsert = Pick<
 export type AlternateSelfUpdate = Partial<
   Pick<
     AlternateSelf,
+    | "selected_alternative_path_id"
     | "name"
     | "road_not_taken"
     | "alternate_self"
@@ -625,6 +679,38 @@ export type Database = {
           },
         ];
       };
+      past_crossroads: {
+        Row: PastCrossroad;
+        Insert: PastCrossroadInsert;
+        Update: PastCrossroadUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "past_crossroads_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      past_alternative_paths: {
+        Row: PastAlternativePath;
+        Insert: PastAlternativePathInsert;
+        Update: PastAlternativePathUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "past_alternative_paths_past_crossroad_id_fkey";
+            columns: ["past_crossroad_id"];
+            referencedRelation: "past_crossroads";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "past_alternative_paths_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       alternate_selves: {
         Row: AlternateSelf;
         Insert: AlternateSelfInsert;
@@ -634,6 +720,18 @@ export type Database = {
             foreignKeyName: "alternate_selves_user_id_fkey";
             columns: ["user_id"];
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "alternate_selves_past_crossroad_id_fkey";
+            columns: ["past_crossroad_id"];
+            referencedRelation: "past_crossroads";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "alternate_selves_selected_alternative_path_id_fkey";
+            columns: ["selected_alternative_path_id"];
+            referencedRelation: "past_alternative_paths";
             referencedColumns: ["id"];
           },
         ];

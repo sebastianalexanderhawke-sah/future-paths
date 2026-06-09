@@ -93,3 +93,6 @@ export type ContradictionEventType = (typeof CONTRADICTION_EVENT_TYPES)[number];
 
 export const ALTERNATE_SELF_STATUSES = ["active", "archived"] as const;
 export type AlternateSelfStatus = (typeof ALTERNATE_SELF_STATUSES)[number];
+
+export const PAST_CROSSROAD_STATUSES = ["active", "archived"] as const;
+export type PastCrossroadStatus = (typeof PAST_CROSSROAD_STATUSES)[number];

@@ -2,10 +2,10 @@ import Link from "next/link";
 
 import { signOut } from "@/actions/auth";
 import { AlternateSelfCard } from "@/components/alternate-selves/alternate-self-card";
-import { listAlternateSelves } from "@/lib/alternate-selves";
+import { listPastCrossroads } from "@/lib/past-crossroads";
 
 export default async function AlternateSelvesPage() {
-  const result = await listAlternateSelves();
+  const result = await listPastCrossroads();
 
   if ("error" in result) {
     return (
@@ -15,7 +15,7 @@ export default async function AlternateSelvesPage() {
     );
   }
 
-  const { alternateSelves } = result;
+  const { crossroads } = result;
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -31,7 +31,7 @@ export default async function AlternateSelvesPage() {
             href="/alternate-selves/new"
             className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
           >
-            Explore past decision
+            New past crossroad
           </Link>
           <form action={signOut}>
             <button
@@ -51,20 +51,20 @@ export default async function AlternateSelvesPage() {
               Who could you have become?
             </h2>
             <p className="mt-1 text-sm text-zinc-500">
-              Past-oriented perspectives on roads not taken — never regret, never
-              advice.
+              Past crossroads, alternative paths, and alternate selves — perspective,
+              not regret.
             </p>
           </div>
 
-          {alternateSelves.length === 0 ? (
+          {crossroads.length === 0 ? (
             <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-8 text-center text-sm text-zinc-600">
-              No alternate selves yet. Enter a significant past decision to explore
-              who you might have become along another path.
+              No past crossroads yet. Describe a significant decision from your past
+              to explore plausible roads not taken.
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {alternateSelves.map((alternateSelf) => (
-                <AlternateSelfCard key={alternateSelf.id} alternateSelf={alternateSelf} />
+              {crossroads.map((item) => (
+                <AlternateSelfCard key={item.crossroad.id} item={item} />
               ))}
             </div>
           )}

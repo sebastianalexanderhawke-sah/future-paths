@@ -3,64 +3,62 @@
 import { useActionState } from "react";
 
 import {
-  createAlternateSelfAction,
-  type AlternateSelfFormState,
+  createPastCrossroadAction,
+  type PastCrossroadFormState,
 } from "@/actions/alternate-selves";
 
-const initialState: AlternateSelfFormState = { error: null };
+const initialState: PastCrossroadFormState = { error: null };
 
-export function AlternateSelfForm() {
+export function PastCrossroadForm() {
   const [state, formAction, pending] = useActionState(
-    createAlternateSelfAction,
+    createPastCrossroadAction,
     initialState,
   );
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <label htmlFor="decisionTitle" className="text-sm text-zinc-600">
-          Significant past decision
+        <label htmlFor="whatHappened" className="text-sm text-zinc-600">
+          What happened?
         </label>
-        <input
-          id="decisionTitle"
-          name="decisionTitle"
-          type="text"
+        <textarea
+          id="whatHappened"
+          name="whatHappened"
+          rows={4}
           required
-          maxLength={200}
-          placeholder="Should I have moved to another city?"
+          maxLength={5000}
+          placeholder="I attended a local university close to home."
           className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none focus:border-zinc-400"
         />
         <p className="text-xs text-zinc-400">
-          A crossroad from your past — not a moment you are actively living now.
+          Describe the path you actually took — the decision that already happened.
         </p>
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="chosenPath" className="text-sm text-zinc-600">
-          Chosen path — what happened
+        <label htmlFor="whyChosen" className="text-sm text-zinc-600">
+          Why did you choose it? (optional)
         </label>
         <textarea
-          id="chosenPath"
-          name="chosenPath"
-          rows={4}
-          required
-          maxLength={5000}
-          placeholder="I stayed where I was, built stability, and invested in the life I already had..."
+          id="whyChosen"
+          name="whyChosen"
+          rows={3}
+          maxLength={1000}
+          placeholder="Staying near family felt safer at the time."
           className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none focus:border-zinc-400"
         />
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="unchosenPath" className="text-sm text-zinc-600">
-          Unchosen path — what almost happened
+        <label htmlFor="lifeStage" className="text-sm text-zinc-600">
+          Approximate age / life stage (optional)
         </label>
-        <textarea
-          id="unchosenPath"
-          name="unchosenPath"
-          rows={4}
-          required
-          maxLength={5000}
-          placeholder="I might have moved, explored a new city, and leaned into independence..."
+        <input
+          id="lifeStage"
+          name="lifeStage"
+          type="text"
+          maxLength={1000}
+          placeholder="19, or early twenties"
           className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none focus:border-zinc-400"
         />
       </div>
@@ -76,7 +74,7 @@ export function AlternateSelfForm() {
         disabled={pending}
         className="self-start rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
       >
-        {pending ? "Exploring…" : "Explore alternate self"}
+        {pending ? "Saving…" : "Create past crossroad"}
       </button>
     </form>
   );

@@ -11,7 +11,7 @@ import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentCard } from "@/components/moments/moment-card";
 import { TimelineEventCard } from "@/components/timeline/timeline-event-card";
 import { getCurrentSelf } from "@/lib/current-self";
-import { listAlternateSelves } from "@/lib/alternate-selves";
+import { listPastCrossroads } from "@/lib/past-crossroads";
 import { listActiveContradictions } from "@/lib/contradictions";
 import { listActiveFutureSelves } from "@/lib/future-selves";
 import { listMomentsNeedingCheckIn } from "@/lib/homepage";
@@ -39,7 +39,7 @@ export default async function OverviewPage() {
       getCurrentSelf(),
       listPendingIdentityPrompts(3),
       listActiveContradictions(3),
-      listAlternateSelves(3),
+      listPastCrossroads(3),
     ]);
 
   const activeMoments =
@@ -59,7 +59,7 @@ export default async function OverviewPage() {
   const activeContradictions =
     "contradictions" in contradictionsResult ? contradictionsResult.contradictions : [];
   const alternateSelves =
-    "alternateSelves" in alternateSelvesResult ? alternateSelvesResult.alternateSelves : [];
+    "crossroads" in alternateSelvesResult ? alternateSelvesResult.crossroads : [];
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -149,13 +149,13 @@ export default async function OverviewPage() {
                 href="/alternate-selves/new"
                 className="mt-4 inline-block text-zinc-900 underline-offset-4 hover:underline"
               >
-                Explore past decision
+                New past crossroad
               </Link>
             </EmptyState>
           ) : (
             <div className="flex flex-col gap-3">
-              {alternateSelves.map((alternateSelf) => (
-                <AlternateSelfCard key={alternateSelf.id} alternateSelf={alternateSelf} />
+              {alternateSelves.map((item) => (
+                <AlternateSelfCard key={item.crossroad.id} item={item} />
               ))}
             </div>
           )}

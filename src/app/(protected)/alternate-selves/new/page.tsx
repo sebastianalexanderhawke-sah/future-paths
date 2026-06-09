@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { AlternateSelfForm } from "@/components/alternate-selves/alternate-self-form";
+import { PastCrossroadForm } from "@/components/alternate-selves/past-crossroad-form";
 
 export default function NewAlternateSelfPage() {
   return (
@@ -12,18 +12,16 @@ export default function NewAlternateSelfPage() {
         >
           ← Back to alternate selves
         </Link>
-        <h1 className="mt-1 text-lg font-semibold text-zinc-900">
-          Explore a past decision
-        </h1>
+        <h1 className="mt-1 text-lg font-semibold text-zinc-900">New past crossroad</h1>
       </header>
 
       <main className="mx-auto w-full max-w-2xl px-6 py-12">
         <p className="mb-8 text-sm text-zinc-500">
-          Describe a significant decision from your past. The platform will explore
-          the road not taken as perspective — not as something you should have done
-          differently.
+          Describe a significant decision that already happened. You will generate
+          plausible alternative paths next, then explore an alternate self — never as
+          regret, never as advice.
         </p>
-        <AlternateSelfForm />
+        <PastCrossroadForm />
       </main>
     </div>
   );
