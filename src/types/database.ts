@@ -2,6 +2,7 @@ import type {
   FutureSelfEventType,
   FutureSelfStage,
   FutureSelfStatus,
+  AlternateSelfStatus,
   ContradictionEventType,
   ContradictionStatus,
   ContradictionType,
@@ -164,6 +165,22 @@ export type ContradictionEvent = {
   intensity_after: number | null;
   summary: string | null;
   created_at: string;
+};
+
+export type AlternateSelf = {
+  id: string;
+  user_id: string;
+  decision_title: string;
+  chosen_path: string;
+  unchosen_path: string;
+  name: string;
+  road_not_taken: string;
+  alternate_self: string;
+  what_remains_available: string;
+  themes: ThemeName[];
+  status: AlternateSelfStatus;
+  created_at: string;
+  updated_at: string;
 };
 
 export type TimelineEventMetadata = {
@@ -353,6 +370,34 @@ export type ContradictionEventInsert = Pick<
   intensity_after?: number | null;
   summary?: string | null;
 };
+
+export type AlternateSelfInsert = Pick<
+  AlternateSelf,
+  | "user_id"
+  | "decision_title"
+  | "chosen_path"
+  | "unchosen_path"
+  | "name"
+  | "road_not_taken"
+  | "alternate_self"
+  | "what_remains_available"
+> & {
+  themes?: ThemeName[];
+  status?: AlternateSelfStatus;
+};
+
+export type AlternateSelfUpdate = Partial<
+  Pick<
+    AlternateSelf,
+    | "name"
+    | "road_not_taken"
+    | "alternate_self"
+    | "what_remains_available"
+    | "themes"
+    | "status"
+    | "updated_at"
+  >
+>;
 
 export type TimelineEventInsert = Pick<
   TimelineEvent,
@@ -576,6 +621,19 @@ export type Database = {
             foreignKeyName: "contradiction_events_contradiction_id_fkey";
             columns: ["contradiction_id"];
             referencedRelation: "contradictions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      alternate_selves: {
+        Row: AlternateSelf;
+        Insert: AlternateSelfInsert;
+        Update: AlternateSelfUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "alternate_selves_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { signOut } from "@/actions/auth";
+import { AlternateSelfCard } from "@/components/alternate-selves/alternate-self-card";
 import { CheckInPromptCard } from "@/components/homepage/check-in-prompt-card";
 import { ContradictionCard } from "@/components/contradictions/contradiction-card";
 import { CurrentSelfCard } from "@/components/current-self/current-self-card";
@@ -10,6 +11,7 @@ import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentCard } from "@/components/moments/moment-card";
 import { TimelineEventCard } from "@/components/timeline/timeline-event-card";
 import { getCurrentSelf } from "@/lib/current-self";
+import { listAlternateSelves } from "@/lib/alternate-selves";
 import { listActiveContradictions } from "@/lib/contradictions";
 import { listActiveFutureSelves } from "@/lib/future-selves";
 import { listMomentsNeedingCheckIn } from "@/lib/homepage";
@@ -27,7 +29,7 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 export default async function OverviewPage() {
-  const [momentsResult, updatesResult, timelineResult, checkInResult, futuresResult, currentSelfResult, promptsResult, contradictionsResult] =
+  const [momentsResult, updatesResult, timelineResult, checkInResult, futuresResult, currentSelfResult, promptsResult, contradictionsResult, alternateSelvesResult] =
     await Promise.all([
       listMoments(),
       listIdentityUpdates(5),
@@ -37,6 +39,7 @@ export default async function OverviewPage() {
       getCurrentSelf(),
       listPendingIdentityPrompts(3),
       listActiveContradictions(3),
+      listAlternateSelves(3),
     ]);
 
   const activeMoments =
@@ -55,6 +58,8 @@ export default async function OverviewPage() {
     "prompts" in promptsResult ? promptsResult.prompts : [];
   const activeContradictions =
     "contradictions" in contradictionsResult ? contradictionsResult.contradictions : [];
+  const alternateSelves =
+    "alternateSelves" in alternateSelvesResult ? alternateSelvesResult.alternateSelves : [];
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -115,6 +120,42 @@ export default async function OverviewPage() {
             <div className="flex flex-col gap-3">
               {futureSelves.map((futureSelf) => (
                 <FutureCard key={futureSelf.id} futureSelf={futureSelf} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-medium text-zinc-900">
+                Who could I have become?
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">Alternate selves</p>
+            </div>
+            <Link
+              href="/alternate-selves"
+              className="text-sm text-zinc-600 underline-offset-4 hover:underline"
+            >
+              View all
+            </Link>
+          </div>
+
+          {alternateSelves.length === 0 ? (
+            <EmptyState>
+              Explore a significant past decision to see who you might have become
+              along another path.{" "}
+              <Link
+                href="/alternate-selves/new"
+                className="mt-4 inline-block text-zinc-900 underline-offset-4 hover:underline"
+              >
+                Explore past decision
+              </Link>
+            </EmptyState>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {alternateSelves.map((alternateSelf) => (
+                <AlternateSelfCard key={alternateSelf.id} alternateSelf={alternateSelf} />
               ))}
             </div>
           )}
