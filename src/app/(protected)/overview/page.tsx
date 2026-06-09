@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { signOut } from "@/actions/auth";
 import { CheckInPromptCard } from "@/components/homepage/check-in-prompt-card";
+import { ContradictionCard } from "@/components/contradictions/contradiction-card";
 import { CurrentSelfCard } from "@/components/current-self/current-self-card";
 import { FutureCard } from "@/components/futures/future-card";
 import { IdentityPromptCard } from "@/components/identity-prompts/identity-prompt-card";
@@ -9,6 +10,7 @@ import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentCard } from "@/components/moments/moment-card";
 import { TimelineEventCard } from "@/components/timeline/timeline-event-card";
 import { getCurrentSelf } from "@/lib/current-self";
+import { listActiveContradictions } from "@/lib/contradictions";
 import { listActiveFutureSelves } from "@/lib/future-selves";
 import { listMomentsNeedingCheckIn } from "@/lib/homepage";
 import { listPendingIdentityPrompts } from "@/lib/identity-prompts";
@@ -25,7 +27,7 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 export default async function OverviewPage() {
-  const [momentsResult, updatesResult, timelineResult, checkInResult, futuresResult, currentSelfResult, promptsResult] =
+  const [momentsResult, updatesResult, timelineResult, checkInResult, futuresResult, currentSelfResult, promptsResult, contradictionsResult] =
     await Promise.all([
       listMoments(),
       listIdentityUpdates(5),
@@ -34,6 +36,7 @@ export default async function OverviewPage() {
       listActiveFutureSelves(3),
       getCurrentSelf(),
       listPendingIdentityPrompts(3),
+      listActiveContradictions(3),
     ]);
 
   const activeMoments =
@@ -50,6 +53,8 @@ export default async function OverviewPage() {
     "currentSelf" in currentSelfResult ? currentSelfResult.currentSelf : null;
   const pendingPrompts =
     "prompts" in promptsResult ? promptsResult.prompts : [];
+  const activeContradictions =
+    "contradictions" in contradictionsResult ? contradictionsResult.contradictions : [];
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -119,7 +124,7 @@ export default async function OverviewPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-medium text-zinc-900">Who am I today?</h2>
-              <p className="mt-1 text-sm text-zinc-500">Current Self</p>
+              <p className="mt-1 text-sm text-zinc-500">Current Self and contradictions</p>
             </div>
             {currentSelf ? (
               <Link
@@ -144,6 +149,29 @@ export default async function OverviewPage() {
                 Generate current self
               </Link>
             </EmptyState>
+          )}
+
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-sm text-zinc-500">Contradictions</p>
+            <Link
+              href="/contradictions"
+              className="text-sm text-zinc-600 hover:text-zinc-900"
+            >
+              View all
+            </Link>
+          </div>
+
+          {activeContradictions.length === 0 ? (
+            <EmptyState>
+              Identity tensions will appear here after you detect contradictions from
+              your current self, futures, and reflections.
+            </EmptyState>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {activeContradictions.map((contradiction) => (
+                <ContradictionCard key={contradiction.id} contradiction={contradiction} />
+              ))}
+            </div>
           )}
         </section>
 

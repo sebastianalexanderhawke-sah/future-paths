@@ -2,6 +2,9 @@ import type {
   FutureSelfEventType,
   FutureSelfStage,
   FutureSelfStatus,
+  ContradictionEventType,
+  ContradictionStatus,
+  ContradictionType,
   IdentityPromptStatus,
   IdentityPromptType,
   IdentityUpdateType,
@@ -126,6 +129,40 @@ export type IdentityPromptResponse = {
   prompt_id: string;
   response: string;
   themes: ThemeName[];
+  created_at: string;
+};
+
+export type ContradictionSourceRefs = {
+  current_self_id?: string;
+  future_self_ids?: string[];
+  prompt_response_ids?: string[];
+};
+
+export type Contradiction = {
+  id: string;
+  user_id: string;
+  contradiction_type: ContradictionType;
+  title: string;
+  summary: string;
+  pole_a: string;
+  pole_b: string;
+  themes: ThemeName[];
+  intensity: number;
+  status: ContradictionStatus;
+  source_refs: ContradictionSourceRefs;
+  signature: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ContradictionEvent = {
+  id: string;
+  user_id: string;
+  contradiction_id: string;
+  event_type: ContradictionEventType;
+  intensity_before: number | null;
+  intensity_after: number | null;
+  summary: string | null;
   created_at: string;
 };
 
@@ -275,6 +312,46 @@ export type IdentityPromptResponseInsert = Pick<
   "user_id" | "prompt_id" | "response"
 > & {
   themes?: ThemeName[];
+};
+
+export type ContradictionInsert = Pick<
+  Contradiction,
+  | "user_id"
+  | "contradiction_type"
+  | "title"
+  | "summary"
+  | "pole_a"
+  | "pole_b"
+  | "signature"
+> & {
+  themes?: ThemeName[];
+  intensity?: number;
+  status?: ContradictionStatus;
+  source_refs?: ContradictionSourceRefs;
+};
+
+export type ContradictionUpdate = Partial<
+  Pick<
+    Contradiction,
+    | "title"
+    | "summary"
+    | "pole_a"
+    | "pole_b"
+    | "themes"
+    | "intensity"
+    | "status"
+    | "source_refs"
+    | "updated_at"
+  >
+>;
+
+export type ContradictionEventInsert = Pick<
+  ContradictionEvent,
+  "user_id" | "contradiction_id" | "event_type"
+> & {
+  intensity_before?: number | null;
+  intensity_after?: number | null;
+  summary?: string | null;
 };
 
 export type TimelineEventInsert = Pick<
@@ -467,6 +544,38 @@ export type Database = {
             foreignKeyName: "identity_prompt_responses_prompt_id_fkey";
             columns: ["prompt_id"];
             referencedRelation: "identity_prompts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      contradictions: {
+        Row: Contradiction;
+        Insert: ContradictionInsert;
+        Update: ContradictionUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "contradictions_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      contradiction_events: {
+        Row: ContradictionEvent;
+        Insert: ContradictionEventInsert;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "contradiction_events_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "contradiction_events_contradiction_id_fkey";
+            columns: ["contradiction_id"];
+            referencedRelation: "contradictions";
             referencedColumns: ["id"];
           },
         ];

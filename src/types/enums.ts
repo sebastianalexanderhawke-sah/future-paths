@@ -66,3 +66,27 @@ export const IDENTITY_PROMPT_STATUSES = [
   "dismissed",
 ] as const;
 export type IdentityPromptStatus = (typeof IDENTITY_PROMPT_STATUSES)[number];
+
+export const CONTRADICTION_TYPES = [
+  "current_vs_future",
+  "dual_future",
+  "stated_vs_lived",
+] as const;
+export type ContradictionType = (typeof CONTRADICTION_TYPES)[number];
+
+export const CONTRADICTION_STATUSES = [
+  "active",
+  "softened",
+  "resolved",
+  "faded",
+] as const;
+export type ContradictionStatus = (typeof CONTRADICTION_STATUSES)[number];
+
+export const CONTRADICTION_EVENT_TYPES = [
+  "detected",
+  "intensified",
+  "softened",
+  "resolved",
+  "faded",
+] as const;
+export type ContradictionEventType = (typeof CONTRADICTION_EVENT_TYPES)[number];
