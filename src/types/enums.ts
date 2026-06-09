@@ -96,3 +96,17 @@ export type AlternateSelfStatus = (typeof ALTERNATE_SELF_STATUSES)[number];
 
 export const PAST_CROSSROAD_STATUSES = ["active", "archived"] as const;
 export type PastCrossroadStatus = (typeof PAST_CROSSROAD_STATUSES)[number];
+
+export const LIFE_CHAPTER_STATUSES = ["active", "archived"] as const;
+export type LifeChapterStatus = (typeof LIFE_CHAPTER_STATUSES)[number];
+
+export const LIFE_CHAPTER_EVIDENCE_TYPES = [
+  "moment",
+  "path",
+  "check_in",
+  "identity_update",
+  "future_self",
+  "contradiction",
+  "alternate_self",
+] as const;
+export type LifeChapterEvidenceType = (typeof LIFE_CHAPTER_EVIDENCE_TYPES)[number];

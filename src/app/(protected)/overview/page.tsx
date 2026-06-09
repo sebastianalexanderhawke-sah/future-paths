@@ -9,16 +9,16 @@ import { FutureCard } from "@/components/futures/future-card";
 import { IdentityPromptCard } from "@/components/identity-prompts/identity-prompt-card";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentCard } from "@/components/moments/moment-card";
-import { TimelineEventCard } from "@/components/timeline/timeline-event-card";
+import { LifeChapterCard } from "@/components/timeline/life-chapter-card";
 import { getCurrentSelf } from "@/lib/current-self";
 import { listPastCrossroads } from "@/lib/past-crossroads";
 import { listActiveContradictions } from "@/lib/contradictions";
 import { listActiveFutureSelves } from "@/lib/future-selves";
+import { listLifeChapters } from "@/lib/life-chapters";
 import { listMomentsNeedingCheckIn } from "@/lib/homepage";
 import { listPendingIdentityPrompts } from "@/lib/identity-prompts";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
-import { listRecentTimelineEvents } from "@/lib/timeline";
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
@@ -29,11 +29,11 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 export default async function OverviewPage() {
-  const [momentsResult, updatesResult, timelineResult, checkInResult, futuresResult, currentSelfResult, promptsResult, contradictionsResult, alternateSelvesResult] =
+  const [momentsResult, updatesResult, chaptersResult, checkInResult, futuresResult, currentSelfResult, promptsResult, contradictionsResult, alternateSelvesResult] =
     await Promise.all([
       listMoments(),
       listIdentityUpdates(5),
-      listRecentTimelineEvents(8),
+      listLifeChapters(3),
       listMomentsNeedingCheckIn(),
       listActiveFutureSelves(3),
       getCurrentSelf(),
@@ -46,8 +46,8 @@ export default async function OverviewPage() {
     "moments" in momentsResult ? momentsResult.moments.slice(0, 5) : [];
   const identityUpdates =
     "identityUpdates" in updatesResult ? updatesResult.identityUpdates : [];
-  const timelineEvents =
-    "events" in timelineResult ? timelineResult.events : [];
+  const lifeChapters =
+    "chapters" in chaptersResult ? chaptersResult.chapters : [];
   const momentsNeedingCheckIn =
     "moments" in checkInResult ? checkInResult.moments : [];
   const futureSelves =
@@ -272,20 +272,34 @@ export default async function OverviewPage() {
         </section>
 
         <section className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-sm font-medium text-zinc-900">Recent history</h2>
-            <p className="mt-1 text-sm text-zinc-500">Timeline events</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-medium text-zinc-900">Your story so far</h2>
+              <p className="mt-1 text-sm text-zinc-500">Timeline</p>
+            </div>
+            <Link
+              href="/timeline"
+              className="text-sm text-zinc-600 underline-offset-4 hover:underline"
+            >
+              View all
+            </Link>
           </div>
 
-          {timelineEvents.length === 0 ? (
+          {lifeChapters.length === 0 ? (
             <EmptyState>
-              Your identity history will build as you capture moments, explore
-              paths, and check in.
+              Life chapters will appear here once you generate your timeline from
+              moments, check-ins, and reflections.{" "}
+              <Link
+                href="/timeline"
+                className="mt-4 inline-block text-zinc-900 underline-offset-4 hover:underline"
+              >
+                Generate timeline
+              </Link>
             </EmptyState>
           ) : (
             <div className="flex flex-col gap-3">
-              {timelineEvents.map((event) => (
-                <TimelineEventCard key={event.id} event={event} />
+              {lifeChapters.map((chapter) => (
+                <LifeChapterCard key={chapter.id} chapter={chapter} />
               ))}
             </div>
           )}

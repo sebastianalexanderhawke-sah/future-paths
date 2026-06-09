@@ -2,9 +2,9 @@
 
 ## Current Status
 
-Phase: Phase 5 — Reflection Engine
+Phase: Phase 7 — AI Identity Engine
 
-Step: Step 1 — Past Crossroads / Alternate Selves
+Step: Step 0 — Foundation
 
 Status: Complete
 
@@ -19,18 +19,21 @@ Status: Complete
 * Phase 4 Step 1 — Identity Prompts (mock generator, `/identity-prompts`, homepage section)
 * Phase 4 Step 2 — Contradictions (mock generator, `/contradictions`, homepage section)
 * Phase 5 Step 1 — Past Crossroads (three-layer model, `/alternate-selves`, homepage section)
+* Phase 6 Step 1 — Timeline (mock generator, `/timeline`, life chapters on overview)
+* Phase 7 Step 0 — AI Identity Engine Foundation (provider abstraction, context builder, prompt registry, schemas, usage hooks)
 
 ---
 
 ## Current Objective
 
-Phase 5 Step 1 is complete. Next: Phase 3 Step 3 — Identity Engine or Phase 5 Step 2.
+Phase 7 Step 0 is complete. Next: Phase 7 Step 1 — migrate first generator (crossroad) behind the orchestrator.
 
 ---
 
 ## Next Tasks
 
-1. Decide next step: Identity Engine integration or additional reflection features
+1. Wire `paths.ts` to `runStructuredGeneration` for crossroad generation
+2. Keep mock as default via `IDENTITY_ENGINE_MODE=mock`
 
 ---
 
@@ -40,12 +43,18 @@ Future Paths is an identity exploration platform.
 
 Homepage route: `/overview` (protected, server-rendered).
 
-**Important:** Migrations `00024`–`00027` replaced the flat alternate selves prototype. Run `supabase db reset` locally if you previously applied the old flat `00024`/`00025`.
+**Identity Engine modes:** `mock` (default), `claude`, `auto` (Claude with mock fallback).
 
-Canonical model:
+**AI migration order:** crossroad → check-in → identity update → future self → current self → identity prompt → contradiction → past path → alternate self → **timeline last**.
+
+Existing `Mock*Draft` types remain canonical output contracts. Domain libs still call mock generators directly until per-generator migration steps.
+
+`timeline_events` remains a separate immutable audit layer.
+
+Apply migrations `00028`–`00030` locally if Timeline tables are not yet applied.
+
+Canonical past model:
 
 Past Crossroad → Alternative Paths → Alternate Self
 
 User-facing label remains **Alternate Selves** at `/alternate-selves`.
-
-No Claude API, timeline events, or automatic identity updates in this step.

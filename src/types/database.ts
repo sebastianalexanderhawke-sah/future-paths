@@ -3,6 +3,8 @@ import type {
   FutureSelfStage,
   FutureSelfStatus,
   AlternateSelfStatus,
+  LifeChapterEvidenceType,
+  LifeChapterStatus,
   PastCrossroadStatus,
   ContradictionEventType,
   ContradictionStatus,
@@ -205,6 +207,34 @@ export type AlternateSelf = {
   status: AlternateSelfStatus;
   created_at: string;
   updated_at: string;
+};
+
+export type LifeChapter = {
+  id: string;
+  user_id: string;
+  title: string;
+  period_label: string;
+  starts_at: string;
+  ends_at: string;
+  summary: string;
+  themes: ThemeName[];
+  includes_current_self: boolean;
+  status: LifeChapterStatus;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LifeChapterEvidence = {
+  id: string;
+  life_chapter_id: string;
+  user_id: string;
+  evidence_type: LifeChapterEvidenceType;
+  evidence_id: string;
+  label: string;
+  occurred_at: string;
+  sort_order: number;
+  created_at: string;
 };
 
 export type TimelineEventMetadata = {
@@ -452,6 +482,46 @@ export type AlternateSelfUpdate = Partial<
     | "updated_at"
   >
 >;
+
+export type LifeChapterInsert = Pick<
+  LifeChapter,
+  | "user_id"
+  | "title"
+  | "period_label"
+  | "starts_at"
+  | "ends_at"
+  | "summary"
+  | "sort_order"
+> & {
+  themes?: ThemeName[];
+  includes_current_self?: boolean;
+  status?: LifeChapterStatus;
+};
+
+export type LifeChapterUpdate = Partial<
+  Pick<
+    LifeChapter,
+    | "title"
+    | "summary"
+    | "themes"
+    | "includes_current_self"
+    | "status"
+    | "sort_order"
+    | "updated_at"
+  >
+>;
+
+export type LifeChapterEvidenceInsert = Pick<
+  LifeChapterEvidence,
+  | "life_chapter_id"
+  | "user_id"
+  | "evidence_type"
+  | "evidence_id"
+  | "label"
+  | "occurred_at"
+> & {
+  sort_order?: number;
+};
 
 export type TimelineEventInsert = Pick<
   TimelineEvent,
@@ -732,6 +802,38 @@ export type Database = {
             foreignKeyName: "alternate_selves_selected_alternative_path_id_fkey";
             columns: ["selected_alternative_path_id"];
             referencedRelation: "past_alternative_paths";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      life_chapters: {
+        Row: LifeChapter;
+        Insert: LifeChapterInsert;
+        Update: LifeChapterUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "life_chapters_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      life_chapter_evidence: {
+        Row: LifeChapterEvidence;
+        Insert: LifeChapterEvidenceInsert;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "life_chapter_evidence_life_chapter_id_fkey";
+            columns: ["life_chapter_id"];
+            referencedRelation: "life_chapters";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "life_chapter_evidence_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
