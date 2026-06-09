@@ -97,6 +97,16 @@ export type FutureSelfEvent = {
   created_at: string;
 };
 
+export type CurrentSelf = {
+  id: string;
+  user_id: string;
+  headline: string;
+  summary: string;
+  themes: ThemeName[];
+  created_at: string;
+  updated_at: string;
+};
+
 export type TimelineEventMetadata = {
   moment_id?: string;
   moment_title?: string;
@@ -213,6 +223,17 @@ export type FutureSelfEventInsert = Pick<
   momentum_before?: number | null;
   summary?: string | null;
 };
+
+export type CurrentSelfInsert = Pick<
+  CurrentSelf,
+  "user_id" | "headline" | "summary"
+> & {
+  themes?: ThemeName[];
+};
+
+export type CurrentSelfUpdate = Partial<
+  Pick<CurrentSelf, "headline" | "summary" | "themes" | "updated_at">
+>;
 
 export type TimelineEventInsert = Pick<
   TimelineEvent,
@@ -359,6 +380,19 @@ export type Database = {
             foreignKeyName: "future_self_events_future_self_id_fkey";
             columns: ["future_self_id"];
             referencedRelation: "future_selves";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      current_self: {
+        Row: CurrentSelf;
+        Insert: CurrentSelfInsert;
+        Update: CurrentSelfUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "current_self_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];

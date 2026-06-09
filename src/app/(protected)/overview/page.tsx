@@ -2,10 +2,12 @@ import Link from "next/link";
 
 import { signOut } from "@/actions/auth";
 import { CheckInPromptCard } from "@/components/homepage/check-in-prompt-card";
+import { CurrentSelfCard } from "@/components/current-self/current-self-card";
 import { FutureCard } from "@/components/futures/future-card";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentCard } from "@/components/moments/moment-card";
 import { TimelineEventCard } from "@/components/timeline/timeline-event-card";
+import { getCurrentSelf } from "@/lib/current-self";
 import { listActiveFutureSelves } from "@/lib/future-selves";
 import { listMomentsNeedingCheckIn } from "@/lib/homepage";
 import { listIdentityUpdates } from "@/lib/identity-updates";
@@ -21,13 +23,14 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 export default async function OverviewPage() {
-  const [momentsResult, updatesResult, timelineResult, checkInResult, futuresResult] =
+  const [momentsResult, updatesResult, timelineResult, checkInResult, futuresResult, currentSelfResult] =
     await Promise.all([
       listMoments(),
       listIdentityUpdates(5),
       listRecentTimelineEvents(8),
       listMomentsNeedingCheckIn(),
       listActiveFutureSelves(3),
+      getCurrentSelf(),
     ]);
 
   const activeMoments =
@@ -40,6 +43,8 @@ export default async function OverviewPage() {
     "moments" in checkInResult ? checkInResult.moments : [];
   const futureSelves =
     "futureSelves" in futuresResult ? futuresResult.futureSelves : [];
+  const currentSelf =
+    "currentSelf" in currentSelfResult ? currentSelfResult.currentSelf : null;
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -102,6 +107,38 @@ export default async function OverviewPage() {
                 <FutureCard key={futureSelf.id} futureSelf={futureSelf} />
               ))}
             </div>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-medium text-zinc-900">Who am I today?</h2>
+              <p className="mt-1 text-sm text-zinc-500">Current Self</p>
+            </div>
+            {currentSelf ? (
+              <Link
+                href="/current-self"
+                className="text-sm text-zinc-600 underline-offset-4 hover:underline"
+              >
+                View all
+              </Link>
+            ) : null}
+          </div>
+
+          {currentSelf ? (
+            <CurrentSelfCard currentSelf={currentSelf} />
+          ) : (
+            <EmptyState>
+              Your current identity summary will appear here once you have moments,
+              check-ins, and active Future Selves.{" "}
+              <Link
+                href="/current-self"
+                className="mt-4 inline-block text-zinc-900 underline-offset-4 hover:underline"
+              >
+                Generate current self
+              </Link>
+            </EmptyState>
           )}
         </section>
 
