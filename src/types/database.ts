@@ -2,6 +2,8 @@ import type {
   FutureSelfEventType,
   FutureSelfStage,
   FutureSelfStatus,
+  IdentityPromptStatus,
+  IdentityPromptType,
   IdentityUpdateType,
   MomentStatus,
   ThemeName,
@@ -105,6 +107,26 @@ export type CurrentSelf = {
   themes: ThemeName[];
   created_at: string;
   updated_at: string;
+};
+
+export type IdentityPrompt = {
+  id: string;
+  user_id: string;
+  prompt_type: IdentityPromptType;
+  question: string;
+  context: string | null;
+  themes: ThemeName[];
+  status: IdentityPromptStatus;
+  created_at: string;
+};
+
+export type IdentityPromptResponse = {
+  id: string;
+  user_id: string;
+  prompt_id: string;
+  response: string;
+  themes: ThemeName[];
+  created_at: string;
 };
 
 export type TimelineEventMetadata = {
@@ -234,6 +256,26 @@ export type CurrentSelfInsert = Pick<
 export type CurrentSelfUpdate = Partial<
   Pick<CurrentSelf, "headline" | "summary" | "themes" | "updated_at">
 >;
+
+export type IdentityPromptInsert = Pick<
+  IdentityPrompt,
+  "user_id" | "prompt_type" | "question"
+> & {
+  context?: string | null;
+  themes?: ThemeName[];
+  status?: IdentityPromptStatus;
+};
+
+export type IdentityPromptUpdate = Partial<
+  Pick<IdentityPrompt, "status">
+>;
+
+export type IdentityPromptResponseInsert = Pick<
+  IdentityPromptResponse,
+  "user_id" | "prompt_id" | "response"
+> & {
+  themes?: ThemeName[];
+};
 
 export type TimelineEventInsert = Pick<
   TimelineEvent,
@@ -393,6 +435,38 @@ export type Database = {
             foreignKeyName: "current_self_user_id_fkey";
             columns: ["user_id"];
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      identity_prompts: {
+        Row: IdentityPrompt;
+        Insert: IdentityPromptInsert;
+        Update: IdentityPromptUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "identity_prompts_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      identity_prompt_responses: {
+        Row: IdentityPromptResponse;
+        Insert: IdentityPromptResponseInsert;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "identity_prompt_responses_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "identity_prompt_responses_prompt_id_fkey";
+            columns: ["prompt_id"];
+            referencedRelation: "identity_prompts";
             referencedColumns: ["id"];
           },
         ];

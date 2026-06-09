@@ -4,12 +4,14 @@ import { signOut } from "@/actions/auth";
 import { CheckInPromptCard } from "@/components/homepage/check-in-prompt-card";
 import { CurrentSelfCard } from "@/components/current-self/current-self-card";
 import { FutureCard } from "@/components/futures/future-card";
+import { IdentityPromptCard } from "@/components/identity-prompts/identity-prompt-card";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentCard } from "@/components/moments/moment-card";
 import { TimelineEventCard } from "@/components/timeline/timeline-event-card";
 import { getCurrentSelf } from "@/lib/current-self";
 import { listActiveFutureSelves } from "@/lib/future-selves";
 import { listMomentsNeedingCheckIn } from "@/lib/homepage";
+import { listPendingIdentityPrompts } from "@/lib/identity-prompts";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
 import { listRecentTimelineEvents } from "@/lib/timeline";
@@ -23,7 +25,7 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 export default async function OverviewPage() {
-  const [momentsResult, updatesResult, timelineResult, checkInResult, futuresResult, currentSelfResult] =
+  const [momentsResult, updatesResult, timelineResult, checkInResult, futuresResult, currentSelfResult, promptsResult] =
     await Promise.all([
       listMoments(),
       listIdentityUpdates(5),
@@ -31,6 +33,7 @@ export default async function OverviewPage() {
       listMomentsNeedingCheckIn(),
       listActiveFutureSelves(3),
       getCurrentSelf(),
+      listPendingIdentityPrompts(3),
     ]);
 
   const activeMoments =
@@ -45,6 +48,8 @@ export default async function OverviewPage() {
     "futureSelves" in futuresResult ? futuresResult.futureSelves : [];
   const currentSelf =
     "currentSelf" in currentSelfResult ? currentSelfResult.currentSelf : null;
+  const pendingPrompts =
+    "prompts" in promptsResult ? promptsResult.prompts : [];
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -222,7 +227,7 @@ export default async function OverviewPage() {
             <h2 className="text-sm font-medium text-zinc-900">
               What should I do next?
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">Check-ins</p>
+            <p className="mt-1 text-sm text-zinc-500">Check-ins and identity prompts</p>
           </div>
 
           {momentsNeedingCheckIn.length === 0 ? (
@@ -238,6 +243,29 @@ export default async function OverviewPage() {
                   moment={moment}
                   hasCheckIns={hasCheckIns}
                 />
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-sm text-zinc-500">Identity prompts</p>
+            <Link
+              href="/identity-prompts"
+              className="text-sm text-zinc-600 hover:text-zinc-900"
+            >
+              View all
+            </Link>
+          </div>
+
+          {pendingPrompts.length === 0 ? (
+            <EmptyState>
+              Generate reflection questions from your current self, active futures,
+              and recent shifts on the Identity Prompts page.
+            </EmptyState>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {pendingPrompts.map((prompt) => (
+                <IdentityPromptCard key={prompt.id} prompt={prompt} />
               ))}
             </div>
           )}

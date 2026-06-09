@@ -52,3 +52,17 @@ export const FUTURE_SELF_EVENT_TYPES = [
   "returned",
 ] as const;
 export type FutureSelfEventType = (typeof FUTURE_SELF_EVENT_TYPES)[number];
+
+export const IDENTITY_PROMPT_TYPES = [
+  "theme_reflection",
+  "future_alignment",
+  "pattern_probe",
+] as const;
+export type IdentityPromptType = (typeof IDENTITY_PROMPT_TYPES)[number];
+
+export const IDENTITY_PROMPT_STATUSES = [
+  "pending",
+  "answered",
+  "dismissed",
+] as const;
+export type IdentityPromptStatus = (typeof IDENTITY_PROMPT_STATUSES)[number];
