@@ -4,7 +4,7 @@
 
 Phase: Phase 2 — Check-In Engine
 
-Step: Step 1 — Check-Ins
+Step: Step 2 — Identity Updates
 
 Status: Complete
 
@@ -13,34 +13,33 @@ Status: Complete
 ## Completed
 
 * Phase 1 Foundation (auth, moments, paths, timeline events)
-* Check-ins table and RLS migrations
-* Extended timeline_events for check_in_recorded
-* Mock Check-In Generator
-* Check-in creation with path locking on first check-in
-* Check-in form and history on moment detail page
+* Check-ins with path locking and timeline events
+* Identity updates table and RLS migrations
+* Extended timeline_events for identity_update
+* Mock Identity Update Generator (optional updates on meaningful shifts)
+* Identity updates created after check-ins when warranted
+* Minimal Overview "What changed" section
 
 ---
 
 ## Current Objective
 
-Build identity updates and homepage (Phase 2 Steps 2–3).
+Build the homepage (Phase 2 Step 3).
 
 ---
 
 ## Next Tasks
 
-1. Begin Phase 2 Step 2 — Identity Updates
+1. Begin Phase 2 Step 3 — Homepage
 
 ---
 
 ## Notes
 
-Future Paths is an identity exploration platform.
+Identity updates are optional. The mock generator may return null when no meaningful shift is detected.
 
-Check-in reflections are append-only and preserved permanently in `check_ins.reflection`.
+Update types: `reality_shift`, `theme_emerging`, `pattern_strengthened`.
 
-The chosen path locks after the first check-in. Additional check-ins remain allowed.
+Apply migrations `00010` through `00012` (and `00009` for paths RLS if not already applied).
 
-Mock Check-In Generator lives in `src/lib/mock-checkin-generator.ts` for future Claude replacement.
-
-Apply migrations `00006` through `00008` to your Supabase project if not already applied.
+Mock Identity Update Generator: `src/lib/mock-identity-update-generator.ts`

@@ -1,4 +1,5 @@
 import { generateMockCheckIn } from "@/lib/mock-checkin-generator";
+import { createIdentityUpdateIfMeaningful } from "@/lib/identity-updates";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn } from "@/types/database";
 
@@ -175,6 +176,12 @@ export async function createCheckIn(
       return { error: lockError.message };
     }
   }
+
+  await createIdentityUpdateIfMeaningful({
+    userId: auth.userId,
+    moment: { id: moment.id, title: moment.title },
+    checkIn,
+  });
 
   return { checkIn };
 }

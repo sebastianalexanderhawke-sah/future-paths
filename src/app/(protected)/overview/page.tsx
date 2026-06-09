@@ -1,7 +1,9 @@
 import Link from "next/link";
 
 import { signOut } from "@/actions/auth";
+import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentCard } from "@/components/moments/moment-card";
+import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
 import { createClient } from "@/lib/supabase/server";
 
@@ -13,6 +15,10 @@ export default async function OverviewPage() {
 
   const momentsResult = await listMoments();
   const moments = "moments" in momentsResult ? momentsResult.moments.slice(0, 3) : [];
+
+  const updatesResult = await listIdentityUpdates(3);
+  const identityUpdates =
+    "identityUpdates" in updatesResult ? updatesResult.identityUpdates : [];
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -72,6 +78,15 @@ export default async function OverviewPage() {
             </div>
           )}
         </section>
+
+        {identityUpdates.length > 0 ? (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-sm font-medium text-zinc-900">What changed</h2>
+            {identityUpdates.map((update) => (
+              <IdentityUpdateCard key={update.id} update={update} />
+            ))}
+          </section>
+        ) : null}
       </main>
     </div>
   );

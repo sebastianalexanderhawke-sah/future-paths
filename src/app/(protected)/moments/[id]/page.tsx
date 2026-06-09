@@ -5,9 +5,11 @@ import { generatePathsAction } from "@/actions/paths";
 import { archiveMomentAction } from "@/actions/moments";
 import { CheckInCard } from "@/components/check-ins/check-in-card";
 import { CheckInForm } from "@/components/check-ins/check-in-form";
+import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentForm } from "@/components/moments/moment-form";
 import { PathCard } from "@/components/paths/path-card";
 import { listCheckInsForMoment } from "@/lib/check-ins";
+import { listIdentityUpdatesForMoment } from "@/lib/identity-updates";
 import { getMoment } from "@/lib/moments";
 import { listPathsForMoment } from "@/lib/paths";
 
@@ -34,6 +36,12 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
   if ("error" in checkInsResult) {
     notFound();
   }
+
+  const identityUpdatesResult = await listIdentityUpdatesForMoment(id);
+  const identityUpdates =
+    "identityUpdates" in identityUpdatesResult
+      ? identityUpdatesResult.identityUpdates
+      : [];
 
   const { moment } = momentResult;
   const { paths } = pathsResult;
@@ -128,6 +136,17 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                 ))}
               </div>
             ) : null}
+          </section>
+        ) : null}
+
+        {identityUpdates.length > 0 ? (
+          <section className="rounded-lg border border-zinc-200 bg-white p-6">
+            <h2 className="text-sm font-medium text-zinc-900">Identity updates</h2>
+            <div className="mt-4 flex flex-col gap-3">
+              {identityUpdates.map((update) => (
+                <IdentityUpdateCard key={update.id} update={update} />
+              ))}
+            </div>
           </section>
         ) : null}
 

@@ -1,4 +1,5 @@
 import type {
+  IdentityUpdateType,
   MomentStatus,
   ThemeName,
   TimelineEventType,
@@ -57,6 +58,18 @@ export type CheckIn = {
   created_at: string;
 };
 
+export type IdentityUpdate = {
+  id: string;
+  user_id: string;
+  moment_id: string;
+  check_in_id: string;
+  update_type: IdentityUpdateType;
+  title: string;
+  summary: string;
+  themes: ThemeName[];
+  created_at: string;
+};
+
 export type TimelineEventMetadata = {
   moment_id?: string;
   moment_title?: string;
@@ -64,6 +77,8 @@ export type TimelineEventMetadata = {
   path_description?: string;
   path_count?: number;
   check_in_id?: string;
+  identity_update_id?: string;
+  update_type?: IdentityUpdateType;
   themes?: ThemeName[];
   theme_changes?: ThemeChange[];
   identity_impact?: string;
@@ -135,6 +150,18 @@ export type CheckInInsert = Pick<
   | "identity_impact"
 > & {
   theme_changes?: ThemeChange[];
+};
+
+export type IdentityUpdateInsert = Pick<
+  IdentityUpdate,
+  | "user_id"
+  | "moment_id"
+  | "check_in_id"
+  | "update_type"
+  | "title"
+  | "summary"
+> & {
+  themes?: ThemeName[];
 };
 
 export type TimelineEventInsert = Pick<
@@ -225,6 +252,31 @@ export type Database = {
             foreignKeyName: "check_ins_path_id_fkey";
             columns: ["path_id"];
             referencedRelation: "paths";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      identity_updates: {
+        Row: IdentityUpdate;
+        Insert: IdentityUpdateInsert;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "identity_updates_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "identity_updates_moment_id_fkey";
+            columns: ["moment_id"];
+            referencedRelation: "moments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "identity_updates_check_in_id_fkey";
+            columns: ["check_in_id"];
+            referencedRelation: "check_ins";
             referencedColumns: ["id"];
           },
         ];
