@@ -52,7 +52,7 @@ export async function updateSession(request: NextRequest) {
     return redirectWithCookies(new URL("/overview", request.url), supabaseResponse);
   }
 
-  if (!user && (pathname.startsWith("/overview") || pathname.startsWith("/moments"))) {
+  if (!user && (pathname.startsWith("/overview") || pathname.startsWith("/moments") || pathname.startsWith("/future-selves"))) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirectTo", pathname);
     return redirectWithCookies(loginUrl, supabaseResponse);

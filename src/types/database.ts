@@ -1,4 +1,7 @@
 import type {
+  FutureSelfEventType,
+  FutureSelfStage,
+  FutureSelfStatus,
   IdentityUpdateType,
   MomentStatus,
   ThemeName,
@@ -67,6 +70,30 @@ export type IdentityUpdate = {
   title: string;
   summary: string;
   themes: ThemeName[];
+  created_at: string;
+};
+
+export type FutureSelf = {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string;
+  stage: FutureSelfStage;
+  momentum: number;
+  themes: ThemeName[];
+  status: FutureSelfStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FutureSelfEvent = {
+  id: string;
+  user_id: string;
+  future_self_id: string;
+  event_type: FutureSelfEventType;
+  momentum_before: number | null;
+  momentum_after: number;
+  summary: string | null;
   created_at: string;
 };
 
@@ -162,6 +189,29 @@ export type IdentityUpdateInsert = Pick<
   | "summary"
 > & {
   themes?: ThemeName[];
+};
+
+export type FutureSelfInsert = Pick<
+  FutureSelf,
+  "user_id" | "name" | "description" | "stage" | "momentum"
+> & {
+  themes?: ThemeName[];
+  status?: FutureSelfStatus;
+};
+
+export type FutureSelfUpdate = Partial<
+  Pick<
+    FutureSelf,
+    "description" | "stage" | "momentum" | "themes" | "status" | "updated_at"
+  >
+>;
+
+export type FutureSelfEventInsert = Pick<
+  FutureSelfEvent,
+  "user_id" | "future_self_id" | "event_type" | "momentum_after"
+> & {
+  momentum_before?: number | null;
+  summary?: string | null;
 };
 
 export type TimelineEventInsert = Pick<
@@ -277,6 +327,38 @@ export type Database = {
             foreignKeyName: "identity_updates_check_in_id_fkey";
             columns: ["check_in_id"];
             referencedRelation: "check_ins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      future_selves: {
+        Row: FutureSelf;
+        Insert: FutureSelfInsert;
+        Update: FutureSelfUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "future_selves_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      future_self_events: {
+        Row: FutureSelfEvent;
+        Insert: FutureSelfEventInsert;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "future_self_events_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "future_self_events_future_self_id_fkey";
+            columns: ["future_self_id"];
+            referencedRelation: "future_selves";
             referencedColumns: ["id"];
           },
         ];

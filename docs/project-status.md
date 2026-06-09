@@ -2,9 +2,9 @@
 
 ## Current Status
 
-Phase: Phase 2 — Check-In Engine
+Phase: Phase 3 — Identity Engine
 
-Step: Step 3 — Homepage
+Step: Step 1 — Future Selves
 
 Status: Complete
 
@@ -13,22 +13,21 @@ Status: Complete
 ## Completed
 
 * Phase 1 Foundation (auth, moments, paths, timeline events)
-* Check-ins with path locking and timeline events
-* Identity updates (mock generator, optional on meaningful shifts)
-* Homepage at `/overview` with all Build Spec sections
-* Server-rendered dashboard: Future Selves placeholder, active moments, identity updates, recent timeline, check-in prompts
+* Phase 2 Check-In Engine (check-ins, identity updates, homepage)
+* Future Selves with mock generator, momentum, emerge/fade/return events
+* `/future-selves` page and homepage Future Selves section
 
 ---
 
 ## Current Objective
 
-Phase 2 is complete. Begin Phase 3 — Identity Engine.
+Phase 3 Step 1 is complete. Next: Phase 3 Step 2 — Current Self.
 
 ---
 
 ## Next Tasks
 
-1. Begin Phase 3 — Future Selves
+1. Begin Phase 3 Step 2 — Current Self
 
 ---
 
@@ -38,4 +37,6 @@ Future Paths is an identity exploration platform.
 
 Homepage route: `/overview` (protected, server-rendered).
 
-Apply migrations `00009` through `00012` if not already applied on your Supabase project.
+Apply migrations `00013` through `00015` if not already applied on your Supabase project.
+
+Future Selves are generated manually via "Refresh futures" on `/future-selves`.

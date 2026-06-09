@@ -38,3 +38,17 @@ export const THEME_NAMES = [
   "Courage",
 ] as const;
 export type ThemeName = (typeof THEME_NAMES)[number];
+
+export const FUTURE_SELF_STAGES = ["possible", "emerging", "future_self"] as const;
+export type FutureSelfStage = (typeof FUTURE_SELF_STAGES)[number];
+
+export const FUTURE_SELF_STATUSES = ["active", "faded"] as const;
+export type FutureSelfStatus = (typeof FUTURE_SELF_STATUSES)[number];
+
+export const FUTURE_SELF_EVENT_TYPES = [
+  "emerged",
+  "grew",
+  "faded",
+  "returned",
+] as const;
+export type FutureSelfEventType = (typeof FUTURE_SELF_EVENT_TYPES)[number];

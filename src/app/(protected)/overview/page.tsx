@@ -2,9 +2,11 @@ import Link from "next/link";
 
 import { signOut } from "@/actions/auth";
 import { CheckInPromptCard } from "@/components/homepage/check-in-prompt-card";
+import { FutureCard } from "@/components/futures/future-card";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentCard } from "@/components/moments/moment-card";
 import { TimelineEventCard } from "@/components/timeline/timeline-event-card";
+import { listActiveFutureSelves } from "@/lib/future-selves";
 import { listMomentsNeedingCheckIn } from "@/lib/homepage";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
@@ -19,12 +21,13 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 export default async function OverviewPage() {
-  const [momentsResult, updatesResult, timelineResult, checkInResult] =
+  const [momentsResult, updatesResult, timelineResult, checkInResult, futuresResult] =
     await Promise.all([
       listMoments(),
       listIdentityUpdates(5),
       listRecentTimelineEvents(8),
       listMomentsNeedingCheckIn(),
+      listActiveFutureSelves(3),
     ]);
 
   const activeMoments =
@@ -35,6 +38,8 @@ export default async function OverviewPage() {
     "events" in timelineResult ? timelineResult.events : [];
   const momentsNeedingCheckIn =
     "moments" in checkInResult ? checkInResult.moments : [];
+  const futureSelves =
+    "futureSelves" in futuresResult ? futuresResult.futureSelves : [];
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -63,16 +68,41 @@ export default async function OverviewPage() {
 
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-6 py-12">
         <section className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-sm font-medium text-zinc-900">
-              Who am I becoming?
-            </h2>
-            <p className="mt-1 text-sm text-zinc-500">Future Selves</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-medium text-zinc-900">
+                Who am I becoming?
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">Future Selves</p>
+            </div>
+            {futureSelves.length > 0 ? (
+              <Link
+                href="/future-selves"
+                className="text-sm text-zinc-600 underline-offset-4 hover:underline"
+              >
+                View all
+              </Link>
+            ) : null}
           </div>
-          <EmptyState>
-            Future Selves will appear here as patterns emerge across your
-            moments and check-ins.
-          </EmptyState>
+
+          {futureSelves.length === 0 ? (
+            <EmptyState>
+              Future Selves will appear here as patterns emerge across your
+              moments and check-ins.{" "}
+              <Link
+                href="/future-selves"
+                className="mt-4 inline-block text-zinc-900 underline-offset-4 hover:underline"
+              >
+                Discover futures
+              </Link>
+            </EmptyState>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {futureSelves.map((futureSelf) => (
+                <FutureCard key={futureSelf.id} futureSelf={futureSelf} />
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="flex flex-col gap-4">
