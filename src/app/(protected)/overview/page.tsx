@@ -1,24 +1,40 @@
 import Link from "next/link";
 
 import { signOut } from "@/actions/auth";
+import { CheckInPromptCard } from "@/components/homepage/check-in-prompt-card";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentCard } from "@/components/moments/moment-card";
+import { TimelineEventCard } from "@/components/timeline/timeline-event-card";
+import { listMomentsNeedingCheckIn } from "@/lib/homepage";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
-import { createClient } from "@/lib/supabase/server";
+import { listRecentTimelineEvents } from "@/lib/timeline";
+
+function EmptyState({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-8 text-center text-sm text-zinc-600">
+      {children}
+    </div>
+  );
+}
 
 export default async function OverviewPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [momentsResult, updatesResult, timelineResult, checkInResult] =
+    await Promise.all([
+      listMoments(),
+      listIdentityUpdates(5),
+      listRecentTimelineEvents(8),
+      listMomentsNeedingCheckIn(),
+    ]);
 
-  const momentsResult = await listMoments();
-  const moments = "moments" in momentsResult ? momentsResult.moments.slice(0, 3) : [];
-
-  const updatesResult = await listIdentityUpdates(3);
+  const activeMoments =
+    "moments" in momentsResult ? momentsResult.moments.slice(0, 5) : [];
   const identityUpdates =
     "identityUpdates" in updatesResult ? updatesResult.identityUpdates : [];
+  const timelineEvents =
+    "events" in timelineResult ? timelineResult.events : [];
+  const momentsNeedingCheckIn =
+    "moments" in checkInResult ? checkInResult.moments : [];
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -27,66 +43,138 @@ export default async function OverviewPage() {
           <p className="text-sm text-zinc-500">Future Paths</p>
           <h1 className="text-lg font-semibold text-zinc-900">Overview</h1>
         </div>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+        <div className="flex items-center gap-3">
+          <Link
+            href="/moments/new"
+            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
           >
-            Sign out
-          </button>
-        </form>
+            New moment
+          </Link>
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
-        <p className="text-zinc-600">
-          Signed in as{" "}
-          <span className="font-medium text-zinc-900">{user?.email}</span>
-        </p>
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-10 px-6 py-12">
+        <section className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-sm font-medium text-zinc-900">
+              Who am I becoming?
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">Future Selves</p>
+          </div>
+          <EmptyState>
+            Future Selves will appear here as patterns emerge across your
+            moments and check-ins.
+          </EmptyState>
+        </section>
 
         <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-zinc-900">Active moments</h2>
+            <div>
+              <h2 className="text-sm font-medium text-zinc-900">
+                What is shaping me?
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">Active moments</p>
+            </div>
             <Link
-              href="/moments/new"
+              href="/moments"
               className="text-sm text-zinc-600 underline-offset-4 hover:underline"
             >
-              New moment
+              View all
             </Link>
           </div>
 
-          {moments.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-8 text-center">
-              <p className="text-sm text-zinc-600">No active moments yet.</p>
+          {activeMoments.length === 0 ? (
+            <EmptyState>
+              No active moments yet.{" "}
               <Link
                 href="/moments/new"
-                className="mt-4 inline-block text-sm text-zinc-900 underline-offset-4 hover:underline"
+                className="mt-4 inline-block text-zinc-900 underline-offset-4 hover:underline"
               >
                 Capture your first moment
               </Link>
-            </div>
+            </EmptyState>
           ) : (
             <div className="flex flex-col gap-3">
-              {moments.map((moment) => (
+              {activeMoments.map((moment) => (
                 <MomentCard key={moment.id} moment={moment} />
               ))}
-              <Link
-                href="/moments"
-                className="text-sm text-zinc-600 underline-offset-4 hover:underline"
-              >
-                View all moments
-              </Link>
             </div>
           )}
         </section>
 
-        {identityUpdates.length > 0 ? (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-medium text-zinc-900">What changed</h2>
-            {identityUpdates.map((update) => (
-              <IdentityUpdateCard key={update.id} update={update} />
-            ))}
-          </section>
-        ) : null}
+        <section className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-sm font-medium text-zinc-900">What changed?</h2>
+            <p className="mt-1 text-sm text-zinc-500">Identity updates</p>
+          </div>
+
+          {identityUpdates.length === 0 ? (
+            <EmptyState>
+              Meaningful shifts will appear here after check-ins reveal new
+              patterns.
+            </EmptyState>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {identityUpdates.map((update) => (
+                <IdentityUpdateCard key={update.id} update={update} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-sm font-medium text-zinc-900">Recent history</h2>
+            <p className="mt-1 text-sm text-zinc-500">Timeline events</p>
+          </div>
+
+          {timelineEvents.length === 0 ? (
+            <EmptyState>
+              Your identity history will build as you capture moments, explore
+              paths, and check in.
+            </EmptyState>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {timelineEvents.map((event) => (
+                <TimelineEventCard key={event.id} event={event} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-sm font-medium text-zinc-900">
+              What should I do next?
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">Check-ins</p>
+          </div>
+
+          {momentsNeedingCheckIn.length === 0 ? (
+            <EmptyState>
+              Choose a path on an active moment to unlock check-ins, or capture
+              a new moment to begin.
+            </EmptyState>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {momentsNeedingCheckIn.map(({ moment, hasCheckIns }) => (
+                <CheckInPromptCard
+                  key={moment.id}
+                  moment={moment}
+                  hasCheckIns={hasCheckIns}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );
