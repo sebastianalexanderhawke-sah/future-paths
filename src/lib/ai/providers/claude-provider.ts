@@ -60,6 +60,8 @@ export const claudeProvider: IdentityAIProvider = {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), getGenerationTimeoutMs());
 
+      console.log("MODEL USED:", getClaudeModel());
+      
       const response = await client.messages.create(
         {
           model: getClaudeModel(),
@@ -99,6 +101,7 @@ export const claudeProvider: IdentityAIProvider = {
         data,
       });
     } catch (error) {
+      console.error("CLAUDE ERROR:", error);
       const message =
         error instanceof Error ? error.message : "Claude generation failed.";
       return toGenerationFailure(message, true);

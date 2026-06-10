@@ -1,4 +1,5 @@
-import { generateMockCrossroads } from "@/lib/mock-crossroad-generator";
+import { runStructuredGeneration } from "@/lib/ai/orchestrator";
+import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
 import { createClient } from "@/lib/supabase/server";
 import type { Path } from "@/types/database";
 import type { ThemeName } from "@/types/enums";
@@ -94,7 +95,21 @@ export async function generatePaths(
     return { error: "Paths have already been generated for this moment." };
   }
 
-  const generated = generateMockCrossroads(moment);
+  const generationResult = await runStructuredGeneration({
+    userId: auth.userId,
+    profile: "crossroad",
+    promptId: "crossroad.generate",
+    schema: crossroadOutputSchema,
+    overrides: {
+      momentId,
+    },
+  });
+
+  if (!generationResult.ok) {
+    return { error: generationResult.error };
+  }
+
+  const generated = generationResult.data;
 
   const { error: updateError } = await supabase
     .from("moments")

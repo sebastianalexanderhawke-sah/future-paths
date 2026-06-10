@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { MockCrossroadResult, MockPathDraft } from "@/lib/mock-crossroad-generator";
+import { normalizeCrossroadThemesInOutput } from "@/lib/ai/schemas/theme-normalization";
 import { tentativeTextSchema, themeNameSchema, themesSchema } from "@/lib/ai/schemas/shared";
 
 export const pathDraftSchema = z.object({
@@ -17,5 +18,5 @@ export const crossroadOutputSchema = z.object({
 }) satisfies z.ZodType<MockCrossroadResult>;
 
 export function parseCrossroadOutput(data: unknown): MockCrossroadResult {
-  return crossroadOutputSchema.parse(data);
+  return crossroadOutputSchema.parse(normalizeCrossroadThemesInOutput(data));
 }

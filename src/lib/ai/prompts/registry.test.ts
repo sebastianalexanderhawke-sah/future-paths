@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CONTEXT_LIMITS } from "@/lib/ai/context/limits";
 import { enforceContextLimits } from "@/lib/ai/context/truncate";
+import { APPROVED_THEME_NAMES } from "@/lib/ai/prompts/shared/theme-instructions";
 import {
   FINAL_AI_MIGRATION_PROMPT_ID,
   PROMPT_MIGRATION_ORDER,
@@ -44,6 +45,23 @@ describe("prompt registry", () => {
   it("validates registered prompt ids", () => {
     expect(isRegisteredPromptId("crossroad.generate")).toBe(true);
     expect(isRegisteredPromptId("unknown.prompt")).toBe(false);
+  });
+
+  it("requires crossroad.generate to enumerate approved themes", () => {
+    const definition = getPromptDefinition("crossroad.generate");
+    const systemPrompt = definition.buildSystemPrompt();
+    const userPrompt = definition.buildUserPrompt({
+      userId: "user-1",
+      profile: "crossroad",
+    });
+
+    for (const theme of APPROVED_THEME_NAMES) {
+      expect(systemPrompt).toContain(theme);
+      expect(userPrompt).toContain(theme);
+    }
+
+    expect(systemPrompt).toContain("Never invent themes");
+    expect(userPrompt).toContain("Never invent theme labels");
   });
 });
 
