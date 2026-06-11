@@ -17,6 +17,7 @@ export type BuildContextOverrides = {
   momentId?: string;
   pathId?: string;
   reflection?: string;
+  checkInId?: string;
   crossroadId?: string;
   selectedPathId?: string;
 };

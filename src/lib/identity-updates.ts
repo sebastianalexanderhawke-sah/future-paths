@@ -1,4 +1,5 @@
-import { generateMockIdentityUpdate } from "@/lib/mock-identity-update-generator";
+import { runStructuredGeneration } from "@/lib/ai/orchestrator";
+import { identityUpdateNullableOutputSchema } from "@/lib/ai/schemas/identity-update";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn, IdentityUpdate, Moment } from "@/types/database";
 
@@ -63,7 +64,7 @@ export async function createIdentityUpdateIfMeaningful(input: {
 }): Promise<void> {
   const supabase = await createClient();
 
-  const { data: priorCheckIns, error: priorError } = await supabase
+  const { error: priorError } = await supabase
     .from("check_ins")
     .select("theme_changes")
     .eq("moment_id", input.moment.id)
@@ -75,11 +76,24 @@ export async function createIdentityUpdateIfMeaningful(input: {
     return;
   }
 
-  const draft = generateMockIdentityUpdate({
-    moment: input.moment,
-    checkIn: input.checkIn,
-    priorCheckIns: priorCheckIns ?? [],
+  const generationResult = await runStructuredGeneration({
+    userId: input.userId,
+    profile: "identity_update",
+    promptId: "identity_update.generate",
+    schema: identityUpdateNullableOutputSchema,
+    overrides: {
+      momentId: input.moment.id,
+      pathId: input.checkIn.path_id,
+      reflection: input.checkIn.reflection,
+      checkInId: input.checkIn.id,
+    },
   });
+
+  if (!generationResult.ok) {
+    return;
+  }
+
+  const draft = generationResult.data;
 
   if (!draft) {
     return;

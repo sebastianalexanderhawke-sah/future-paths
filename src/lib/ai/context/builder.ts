@@ -118,21 +118,43 @@ async function loadIdentityUpdateContext(
 ): Promise<IdentityContextBundle> {
   const bundle = await loadCheckInContext(supabase, base, options);
   const momentId = options.overrides?.momentId;
+  const checkInId = options.overrides?.checkInId;
 
   if (!momentId) {
     return bundle;
   }
 
-  const { data: priorCheckIns } = await supabase
+  let nextBundle = bundle;
+
+  if (checkInId) {
+    const { data: checkIn } = await supabase
+      .from("check_ins")
+      .select("theme_changes, identity_impact, reflection")
+      .eq("id", checkInId)
+      .eq("user_id", options.userId)
+      .eq("moment_id", momentId)
+      .maybeSingle();
+
+    nextBundle = { ...nextBundle, checkIn: checkIn ?? undefined };
+  }
+
+  let priorQuery = supabase
     .from("check_ins")
     .select("theme_changes")
     .eq("user_id", options.userId)
     .eq("moment_id", momentId)
-    .order("created_at", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.checkIns);
+    .order("created_at", { ascending: true });
+
+  if (checkInId) {
+    priorQuery = priorQuery.neq("id", checkInId);
+  }
+
+  const { data: priorCheckIns } = await priorQuery.limit(
+    CONTEXT_LIMITS.COUNTS.checkIns,
+  );
 
   return {
-    ...bundle,
+    ...nextBundle,
     checkInHistory: priorCheckIns ?? [],
   };
 }

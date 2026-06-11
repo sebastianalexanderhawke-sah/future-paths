@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CONTEXT_LIMITS } from "@/lib/ai/context/limits";
 import { enforceContextLimits } from "@/lib/ai/context/truncate";
 import { APPROVED_THEME_NAMES } from "@/lib/ai/prompts/shared/theme-instructions";
+import { APPROVED_IDENTITY_UPDATE_TYPES } from "@/lib/ai/prompts/shared/identity-update-instructions";
 import {
   FINAL_AI_MIGRATION_PROMPT_ID,
   PROMPT_MIGRATION_ORDER,
@@ -78,6 +79,23 @@ describe("prompt registry", () => {
     expect(systemPrompt).toContain("Never omit direction");
     expect(userPrompt).toContain("Never omit direction");
     expect(userPrompt).toContain('"direction"');
+  });
+
+  it("requires identity_update.generate to use approved update_type values", () => {
+    const definition = getPromptDefinition("identity_update.generate");
+    const systemPrompt = definition.buildSystemPrompt();
+    const userPrompt = definition.buildUserPrompt({
+      userId: "user-1",
+      profile: "identity_update",
+    });
+
+    for (const updateType of APPROVED_IDENTITY_UPDATE_TYPES) {
+      expect(systemPrompt).toContain(updateType);
+      expect(userPrompt).toContain(updateType);
+    }
+
+    expect(systemPrompt).toContain("Never invent alternative labels");
+    expect(userPrompt).toContain("Never invent update_type labels");
   });
 });
 

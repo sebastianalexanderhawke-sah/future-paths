@@ -4,7 +4,7 @@
 
 Phase: Phase 7 — AI Identity Engine
 
-Step: Step 2 — AI Check-ins
+Step: Step 3 — AI Identity Updates
 
 Status: Complete
 
@@ -23,18 +23,19 @@ Status: Complete
 * Phase 7 Step 0 — AI Identity Engine Foundation (provider abstraction, context builder, prompt registry, schemas, usage hooks)
 * Phase 7 Step 1 — AI Paths (`paths.ts` uses `runStructuredGeneration` for crossroad generation)
 * Phase 7 Step 2 — AI Check-ins (`check-ins.ts` uses `runStructuredGeneration` for check-in generation)
+* Phase 7 Step 3 — AI Identity Updates (`identity-updates.ts` uses `runStructuredGeneration` for identity update generation)
 
 ---
 
 ## Current Objective
 
-Phase 7 Step 2 is complete. Next: Phase 7 Step 3 — migrate identity update generation.
+Phase 7 Step 3 is complete. Next: Phase 7 Step 4 — migrate future self discovery.
 
 ---
 
 ## Next Tasks
 
-1. Wire identity updates to `runStructuredGeneration` with `identity_update.generate`
+1. Wire future selves to `runStructuredGeneration` with `future_self.discover`
 2. Keep mock as default via `IDENTITY_ENGINE_MODE=mock`
 
 ---

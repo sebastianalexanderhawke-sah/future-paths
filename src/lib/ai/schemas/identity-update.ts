@@ -6,6 +6,7 @@ import {
   tentativeTextSchema,
   themesSchema,
 } from "@/lib/ai/schemas/shared";
+import { normalizeIdentityUpdateInOutput } from "@/lib/ai/schemas/theme-normalization";
 
 export const identityUpdateOutputSchema = z.object({
   update_type: identityUpdateTypeSchema,
@@ -14,6 +15,9 @@ export const identityUpdateOutputSchema = z.object({
   themes: themesSchema,
 }) satisfies z.ZodType<MockIdentityUpdateDraft>;
 
+export const identityUpdateNullableOutputSchema =
+  identityUpdateOutputSchema.nullable();
+
 export function parseIdentityUpdateOutput(
   data: unknown,
 ): MockIdentityUpdateDraft | null {
@@ -21,5 +25,5 @@ export function parseIdentityUpdateOutput(
     return null;
   }
 
-  return identityUpdateOutputSchema.parse(data);
+  return identityUpdateOutputSchema.parse(normalizeIdentityUpdateInOutput(data));
 }

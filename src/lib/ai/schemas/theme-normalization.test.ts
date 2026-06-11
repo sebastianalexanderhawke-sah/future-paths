@@ -2,14 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import { parseCheckInOutput } from "@/lib/ai/schemas/check-in";
 import { parseCrossroadOutput } from "@/lib/ai/schemas/crossroad";
+import { parseIdentityUpdateOutput } from "@/lib/ai/schemas/identity-update";
 import {
   normalizeCheckInThemesInOutput,
   normalizeCrossroadThemesInOutput,
+  normalizeIdentityUpdateInOutput,
+  normalizeIdentityUpdateType,
   normalizeThemeChangesArray,
   normalizeThemeName,
   normalizeThemesArray,
 } from "@/lib/ai/schemas/theme-normalization";
-import { THEME_NAMES } from "@/types/enums";
+import { IDENTITY_UPDATE_TYPES, THEME_NAMES } from "@/types/enums";
 
 describe("theme normalization", () => {
   it("passes through approved theme names unchanged", () => {
@@ -119,5 +122,35 @@ describe("theme normalization", () => {
       { theme: "Connection", direction: "strengthened" },
       { theme: "Growth", direction: "emerging" },
     ]);
+  });
+
+  it("passes through approved identity update types unchanged", () => {
+    for (const updateType of IDENTITY_UPDATE_TYPES) {
+      expect(normalizeIdentityUpdateType(updateType)).toBe(updateType);
+    }
+  });
+
+  it("maps common Claude identity update type inventions to approved values", () => {
+    expect(normalizeIdentityUpdateType("shift")).toBe("reality_shift");
+    expect(normalizeIdentityUpdateType("emerging_pattern")).toBe("theme_emerging");
+    expect(normalizeIdentityUpdateType("pattern")).toBe("pattern_strengthened");
+    expect(normalizeIdentityUpdateType("strengthened")).toBe("pattern_strengthened");
+  });
+
+  it("normalizes identity update output before schema validation", () => {
+    const normalized = normalizeIdentityUpdateInOutput({
+      update_type: "shift",
+      title: "Intention may meet reality",
+      summary: "This check-in may suggest prediction is meeting outcome.",
+      themes: ["communication", "Growth"],
+    });
+
+    expect(() => parseIdentityUpdateOutput(normalized)).not.toThrow();
+    expect(parseIdentityUpdateOutput(normalized)).toEqual({
+      update_type: "reality_shift",
+      title: "Intention may meet reality",
+      summary: "This check-in may suggest prediction is meeting outcome.",
+      themes: ["Connection", "Growth"],
+    });
   });
 });

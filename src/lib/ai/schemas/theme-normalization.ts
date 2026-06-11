@@ -1,5 +1,10 @@
 import type { ThemeChange } from "@/types/database";
-import { THEME_NAMES, type ThemeName } from "@/types/enums";
+import {
+  IDENTITY_UPDATE_TYPES,
+  THEME_NAMES,
+  type IdentityUpdateType,
+  type ThemeName,
+} from "@/types/enums";
 
 const THEME_NAME_SET = new Set<string>(THEME_NAMES);
 
@@ -192,5 +197,68 @@ export function normalizeCrossroadThemesInOutput(data: unknown): unknown {
         themes: normalizeThemesArray(pathRecord.themes),
       };
     }),
+  };
+}
+
+const UPDATE_TYPE_SET = new Set<string>(IDENTITY_UPDATE_TYPES);
+
+const UPDATE_TYPE_SYNONYMS: Record<string, IdentityUpdateType> = {
+  shift: "reality_shift",
+  "reality-shift": "reality_shift",
+  reality: "reality_shift",
+  emerging: "theme_emerging",
+  "theme-emerging": "theme_emerging",
+  "emerging-pattern": "theme_emerging",
+  emerging_pattern: "theme_emerging",
+  "theme-emergence": "theme_emerging",
+  pattern: "pattern_strengthened",
+  "pattern-strengthened": "pattern_strengthened",
+  strengthened: "pattern_strengthened",
+  "strengthened-pattern": "pattern_strengthened",
+  "pattern-strengthening": "pattern_strengthened",
+};
+
+function normalizeUpdateTypeKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+export function normalizeIdentityUpdateType(
+  value: unknown,
+): IdentityUpdateType | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (UPDATE_TYPE_SET.has(trimmed)) {
+    return trimmed as IdentityUpdateType;
+  }
+
+  const key = normalizeUpdateTypeKey(trimmed);
+
+  if (UPDATE_TYPE_SET.has(key)) {
+    return key as IdentityUpdateType;
+  }
+
+  return UPDATE_TYPE_SYNONYMS[key] ?? null;
+}
+
+export function normalizeIdentityUpdateInOutput(data: unknown): unknown {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return data;
+  }
+
+  const record = data as Record<string, unknown>;
+  const updateType = normalizeIdentityUpdateType(record.update_type);
+
+  return {
+    ...record,
+    ...(updateType ? { update_type: updateType } : {}),
+    themes: normalizeThemesArray(record.themes),
   };
 }
