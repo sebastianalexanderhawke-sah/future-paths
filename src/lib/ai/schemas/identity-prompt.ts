@@ -16,6 +16,14 @@ export const identityPromptDraftSchema = z.object({
 
 export const identityPromptOutputSchema = z.array(identityPromptDraftSchema).min(1).max(3);
 
+export const identityPromptDiscoverOutputSchema = z
+  .array(identityPromptDraftSchema)
+  .max(3) satisfies z.ZodType<MockIdentityPromptDraft[]>;
+
 export function parseIdentityPromptOutput(data: unknown): MockIdentityPromptDraft[] {
+  if (Array.isArray(data) && data.length === 0) {
+    return [];
+  }
+
   return identityPromptOutputSchema.parse(data);
 }

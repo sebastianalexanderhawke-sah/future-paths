@@ -1,17 +1,16 @@
-import { generateMockIdentityPrompts } from "@/lib/mock-identity-prompt-generator";
+import { runStructuredGeneration } from "@/lib/ai/orchestrator";
+import { identityPromptDiscoverOutputSchema } from "@/lib/ai/schemas/identity-prompt";
 import { createClient } from "@/lib/supabase/server";
 import type {
-  CheckIn,
-  CurrentSelf,
-  FutureSelf,
   IdentityPrompt,
   IdentityPromptResponse,
-  IdentityUpdate,
 } from "@/types/database";
-import type { ThemeName } from "@/types/enums";
 
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
+
+const IDENTITY_PROMPT_EMPTY_ERROR =
+  "Identity prompts need at least one moment and one check-in.";
 
 async function requireUser(): Promise<AuthSuccess | AuthFailure> {
   const supabase = await createClient();
@@ -27,19 +26,14 @@ async function requireUser(): Promise<AuthSuccess | AuthFailure> {
   return { userId: user.id };
 }
 
-type GenerationInput = {
-  momentCount: number;
-  checkInCount: number;
-  currentSelf: CurrentSelf | null;
-  activeFutureSelves: FutureSelf[];
-  identityUpdates: Pick<IdentityUpdate, "title" | "summary" | "themes">[];
-  pathThemes: ThemeName[];
-  checkIns: Pick<CheckIn, "theme_changes">[];
-};
+type GenerationInput =
+  | {
+      momentCount: number;
+      checkInCount: number;
+    }
+  | { error: string };
 
-async function loadGenerationInput(userId: string): Promise<
-  GenerationInput | { error: string }
-> {
+async function loadGenerationInput(userId: string): Promise<GenerationInput> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -50,84 +44,68 @@ async function loadGenerationInput(userId: string): Promise<
     return { error: "Not authenticated." };
   }
 
-  const { count: momentCount, error: momentError } = await supabase
-    .from("moments")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId);
+  const [
+    { count: momentCount, error: momentError },
+    { count: checkInCount, error: checkInCountError },
+    { error: currentSelfError },
+    { error: futuresError },
+    { error: updatesError },
+    { error: pathsError },
+    { error: checkInsError },
+  ] = await Promise.all([
+    supabase
+      .from("moments")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("check_ins")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase.from("current_self").select("id").eq("user_id", userId).maybeSingle(),
+    supabase
+      .from("future_selves")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "active"),
+    supabase
+      .from("identity_updates")
+      .select("themes")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("paths")
+      .select("themes")
+      .eq("user_id", userId)
+      .eq("is_chosen", true),
+    supabase.from("check_ins").select("theme_changes").eq("user_id", userId),
+  ]);
 
-  if (momentError) {
-    return { error: momentError.message };
-  }
-
-  const { count: checkInCount, error: checkInCountError } = await supabase
-    .from("check_ins")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  if (checkInCountError) {
-    return { error: checkInCountError.message };
-  }
-
-  const { data: currentSelf, error: currentSelfError } = await supabase
-    .from("current_self")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (currentSelfError) {
-    return { error: currentSelfError.message };
-  }
-
-  const { data: activeFutureSelves, error: futuresError } = await supabase
-    .from("future_selves")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .order("momentum", { ascending: false });
-
-  if (futuresError) {
-    return { error: futuresError.message };
-  }
-
-  const { data: identityUpdates, error: updatesError } = await supabase
-    .from("identity_updates")
-    .select("title, summary, themes")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  if (updatesError) {
-    return { error: updatesError.message };
-  }
-
-  const { data: chosenPaths, error: pathsError } = await supabase
-    .from("paths")
-    .select("themes")
-    .eq("user_id", userId)
-    .eq("is_chosen", true);
-
-  if (pathsError) {
-    return { error: pathsError.message };
-  }
-
-  const { data: checkIns, error: checkInsError } = await supabase
-    .from("check_ins")
-    .select("theme_changes")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (checkInsError) {
-    return { error: checkInsError.message };
+  if (
+    momentError ||
+    checkInCountError ||
+    currentSelfError ||
+    futuresError ||
+    updatesError ||
+    pathsError ||
+    checkInsError
+  ) {
+    return {
+      error:
+        momentError?.message ??
+        checkInCountError?.message ??
+        currentSelfError?.message ??
+        futuresError?.message ??
+        updatesError?.message ??
+        pathsError?.message ??
+        checkInsError?.message ??
+        "Failed to load history.",
+    };
   }
 
   return {
     momentCount: momentCount ?? 0,
     checkInCount: checkInCount ?? 0,
-    currentSelf: currentSelf ?? null,
-    activeFutureSelves: activeFutureSelves ?? [],
-    identityUpdates: identityUpdates ?? [],
-    pathThemes: (chosenPaths ?? []).flatMap((path) => path.themes),
-    checkIns: checkIns ?? [],
   };
 }
 
@@ -231,11 +209,24 @@ export async function generateIdentityPrompts(): Promise<
     return input;
   }
 
-  const drafts = generateMockIdentityPrompts(input);
+  if (input.momentCount < 1 || input.checkInCount < 1) {
+    return { error: IDENTITY_PROMPT_EMPTY_ERROR };
+  }
+
+  const generationResult = await runStructuredGeneration({
+    userId: auth.userId,
+    profile: "identity_prompt",
+    promptId: "identity_prompt.generate",
+    schema: identityPromptDiscoverOutputSchema,
+  });
+
+  if (!generationResult.ok) {
+    return { error: generationResult.error };
+  }
+
+  const drafts = generationResult.data;
   if (drafts.length === 0) {
-    return {
-      error: "Identity prompts need at least one moment and one check-in.",
-    };
+    return { error: IDENTITY_PROMPT_EMPTY_ERROR };
   }
 
   const supabase = await createClient();

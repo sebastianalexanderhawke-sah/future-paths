@@ -4,7 +4,7 @@
 
 Phase: Phase 7 — AI Identity Engine
 
-Step: Step 4 — AI Future Selves
+Step: Step 7 — AI Contradictions
 
 Status: Complete
 
@@ -25,18 +25,21 @@ Status: Complete
 * Phase 7 Step 2 — AI Check-ins (`check-ins.ts` uses `runStructuredGeneration` for check-in generation)
 * Phase 7 Step 3 — AI Identity Updates (`identity-updates.ts` uses `runStructuredGeneration` for identity update generation)
 * Phase 7 Step 4 — AI Future Selves (`future-selves.ts` uses `runStructuredGeneration` for future self discovery)
+* Phase 7 Step 5 — AI Current Self (`current-self.ts` uses `runStructuredGeneration` for current self generation)
+* Phase 7 Step 6 — AI Identity Prompts (`identity-prompts.ts` uses `runStructuredGeneration` for identity prompt generation)
+* Phase 7 Step 7 — AI Contradictions (`contradictions.ts` uses `runStructuredGeneration` for contradiction detection)
 
 ---
 
 ## Current Objective
 
-Phase 7 Step 4 is complete. Next: Phase 7 Step 5 — migrate current self generation.
+Phase 7 Step 7 is complete. Next: Phase 7 Step 8 — migrate past alternative path generation.
 
 ---
 
 ## Next Tasks
 
-1. Wire current self to `runStructuredGeneration` with `current_self.generate`
+1. Wire past paths to `runStructuredGeneration` with `past_path.generate`
 2. Keep mock as default via `IDENTITY_ENGINE_MODE=mock`
 
 ---

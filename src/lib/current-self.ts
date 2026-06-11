@@ -1,10 +1,13 @@
-import { generateMockCurrentSelf } from "@/lib/mock-current-self-generator";
+import { runStructuredGeneration } from "@/lib/ai/orchestrator";
+import { currentSelfNullableOutputSchema } from "@/lib/ai/schemas/current-self";
 import { createClient } from "@/lib/supabase/server";
-import type { CheckIn, CurrentSelf, FutureSelf, IdentityUpdate } from "@/types/database";
-import type { ThemeName } from "@/types/enums";
+import type { CurrentSelf } from "@/types/database";
 
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
+
+const CURRENT_SELF_PREREQUISITE_ERROR =
+  "Current Self needs at least one moment, one check-in, and one active Future Self.";
 
 async function requireUser(): Promise<AuthSuccess | AuthFailure> {
   const supabase = await createClient();
@@ -42,18 +45,15 @@ export async function getCurrentSelf(): Promise<
   return { currentSelf: data };
 }
 
-type GenerationInput = {
-  momentCount: number;
-  checkInCount: number;
-  activeFutureSelves: FutureSelf[];
-  pathThemes: ThemeName[];
-  checkIns: Pick<CheckIn, "theme_changes" | "identity_impact">[];
-  identityUpdates: Pick<IdentityUpdate, "title" | "summary" | "themes">[];
-};
+type GenerationInput =
+  | {
+      momentCount: number;
+      checkInCount: number;
+      activeFutureSelfCount: number;
+    }
+  | { error: string };
 
-async function loadGenerationInput(userId: string): Promise<
-  GenerationInput | { error: string }
-> {
+async function loadGenerationInput(userId: string): Promise<GenerationInput> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -64,72 +64,60 @@ async function loadGenerationInput(userId: string): Promise<
     return { error: "Not authenticated." };
   }
 
-  const { count: momentCount, error: momentError } = await supabase
-    .from("moments")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId);
+  const [
+    { count: momentCount, error: momentError },
+    { count: checkInCount, error: checkInCountError },
+    { data: activeFutureSelves, error: futuresError },
+    { error: pathsError },
+    { error: checkInsError },
+    { error: updatesError },
+  ] = await Promise.all([
+    supabase
+      .from("moments")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("check_ins")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("future_selves")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "active"),
+    supabase
+      .from("paths")
+      .select("themes")
+      .eq("user_id", userId)
+      .eq("is_chosen", true),
+    supabase.from("check_ins").select("theme_changes").eq("user_id", userId),
+    supabase.from("identity_updates").select("themes").eq("user_id", userId),
+  ]);
 
-  if (momentError) {
-    return { error: momentError.message };
-  }
-
-  const { count: checkInCount, error: checkInCountError } = await supabase
-    .from("check_ins")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  if (checkInCountError) {
-    return { error: checkInCountError.message };
-  }
-
-  const { data: activeFutureSelves, error: futuresError } = await supabase
-    .from("future_selves")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .order("momentum", { ascending: false });
-
-  if (futuresError) {
-    return { error: futuresError.message };
-  }
-
-  const { data: chosenPaths, error: pathsError } = await supabase
-    .from("paths")
-    .select("themes")
-    .eq("user_id", userId)
-    .eq("is_chosen", true);
-
-  if (pathsError) {
-    return { error: pathsError.message };
-  }
-
-  const { data: checkIns, error: checkInsError } = await supabase
-    .from("check_ins")
-    .select("theme_changes, identity_impact")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (checkInsError) {
-    return { error: checkInsError.message };
-  }
-
-  const { data: identityUpdates, error: updatesError } = await supabase
-    .from("identity_updates")
-    .select("title, summary, themes")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (updatesError) {
-    return { error: updatesError.message };
+  if (
+    momentError ||
+    checkInCountError ||
+    futuresError ||
+    pathsError ||
+    checkInsError ||
+    updatesError
+  ) {
+    return {
+      error:
+        momentError?.message ??
+        checkInCountError?.message ??
+        futuresError?.message ??
+        pathsError?.message ??
+        checkInsError?.message ??
+        updatesError?.message ??
+        "Failed to load history.",
+    };
   }
 
   return {
     momentCount: momentCount ?? 0,
     checkInCount: checkInCount ?? 0,
-    activeFutureSelves: activeFutureSelves ?? [],
-    pathThemes: (chosenPaths ?? []).flatMap((path) => path.themes),
-    checkIns: checkIns ?? [],
-    identityUpdates: identityUpdates ?? [],
+    activeFutureSelfCount: activeFutureSelves?.length ?? 0,
   };
 }
 
@@ -146,12 +134,28 @@ export async function generateCurrentSelf(): Promise<
     return input;
   }
 
-  const draft = generateMockCurrentSelf(input);
+  if (
+    input.momentCount < 1 ||
+    input.checkInCount < 1 ||
+    input.activeFutureSelfCount < 1
+  ) {
+    return { error: CURRENT_SELF_PREREQUISITE_ERROR };
+  }
+
+  const generationResult = await runStructuredGeneration({
+    userId: auth.userId,
+    profile: "current_self",
+    promptId: "current_self.generate",
+    schema: currentSelfNullableOutputSchema,
+  });
+
+  if (!generationResult.ok) {
+    return { error: generationResult.error };
+  }
+
+  const draft = generationResult.data;
   if (!draft) {
-    return {
-      error:
-        "Current Self needs at least one moment, one check-in, and one active Future Self.",
-    };
+    return { error: CURRENT_SELF_PREREQUISITE_ERROR };
   }
 
   const supabase = await createClient();

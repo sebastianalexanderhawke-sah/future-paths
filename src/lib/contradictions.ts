@@ -1,21 +1,18 @@
-import {
-  generateMockContradictions,
-  type AnsweredPromptResponse,
-} from "@/lib/mock-contradiction-generator";
+import { runStructuredGeneration } from "@/lib/ai/orchestrator";
+import { contradictionOutputSchema } from "@/lib/ai/schemas/contradiction";
 import { createClient } from "@/lib/supabase/server";
-import type {
-  Contradiction,
-  ContradictionEvent,
-  CurrentSelf,
-  FutureSelf,
-  IdentityPromptResponse,
-} from "@/types/database";
+import type { Contradiction, ContradictionEvent } from "@/types/database";
 import type { ContradictionEventType } from "@/types/enums";
 
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
 
 const MAX_ACTIVE_CONTRADICTIONS = 3;
+const CURRENT_SELF_REQUIRED_ERROR =
+  "Contradictions require a Current Self. Generate one first.";
+const DETECTION_PREREQUISITE_ERROR =
+  "Contradictions need at least one answered identity prompt or two check-ins.";
+const NO_TENSIONS_ERROR = "No identity tensions detected from your current signals.";
 
 async function requireUser(): Promise<AuthSuccess | AuthFailure> {
   const supabase = await createClient();
@@ -31,16 +28,15 @@ async function requireUser(): Promise<AuthSuccess | AuthFailure> {
   return { userId: user.id };
 }
 
-type DetectionInput = {
-  checkInCount: number;
-  currentSelf: CurrentSelf | null;
-  activeFutureSelves: FutureSelf[];
-  answeredResponses: AnsweredPromptResponse[];
-};
+type DetectionInput =
+  | {
+      checkInCount: number;
+      hasCurrentSelf: boolean;
+      answeredResponseCount: number;
+    }
+  | { error: string };
 
-async function loadDetectionInput(userId: string): Promise<
-  DetectionInput | { error: string }
-> {
+async function loadDetectionInput(userId: string): Promise<DetectionInput> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -51,58 +47,49 @@ async function loadDetectionInput(userId: string): Promise<
     return { error: "Not authenticated." };
   }
 
-  const { count: checkInCount, error: checkInCountError } = await supabase
-    .from("check_ins")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId);
+  const [
+    { count: checkInCount, error: checkInCountError },
+    { data: currentSelf, error: currentSelfError },
+    { error: futuresError },
+    { data: answeredPrompts, error: promptsError },
+  ] = await Promise.all([
+    supabase
+      .from("check_ins")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase.from("current_self").select("id").eq("user_id", userId).maybeSingle(),
+    supabase
+      .from("future_selves")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "active"),
+    supabase
+      .from("identity_prompts")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "answered")
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
 
-  if (checkInCountError) {
-    return { error: checkInCountError.message };
-  }
-
-  const { data: currentSelf, error: currentSelfError } = await supabase
-    .from("current_self")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (currentSelfError) {
-    return { error: currentSelfError.message };
-  }
-
-  const { data: activeFutureSelves, error: futuresError } = await supabase
-    .from("future_selves")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .order("momentum", { ascending: false });
-
-  if (futuresError) {
-    return { error: futuresError.message };
-  }
-
-  const { data: answeredPrompts, error: promptsError } = await supabase
-    .from("identity_prompts")
-    .select("id, prompt_type, question, themes")
-    .eq("user_id", userId)
-    .eq("status", "answered")
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  if (promptsError) {
-    return { error: promptsError.message };
+  if (checkInCountError || currentSelfError || futuresError || promptsError) {
+    return {
+      error:
+        checkInCountError?.message ??
+        currentSelfError?.message ??
+        futuresError?.message ??
+        promptsError?.message ??
+        "Failed to load history.",
+    };
   }
 
   const promptIds = (answeredPrompts ?? []).map((prompt) => prompt.id);
-  let responses: Pick<
-    IdentityPromptResponse,
-    "id" | "prompt_id" | "response" | "themes"
-  >[] = [];
+  let answeredResponseCount = 0;
 
   if (promptIds.length > 0) {
-    const { data: promptResponses, error: responsesError } = await supabase
+    const { data: responses, error: responsesError } = await supabase
       .from("identity_prompt_responses")
-      .select("id, prompt_id, response, themes")
+      .select("id, prompt_id")
       .eq("user_id", userId)
       .in("prompt_id", promptIds);
 
@@ -110,30 +97,13 @@ async function loadDetectionInput(userId: string): Promise<
       return { error: responsesError.message };
     }
 
-    responses = promptResponses ?? [];
+    answeredResponseCount = responses?.length ?? 0;
   }
-
-  const promptById = new Map(
-    (answeredPrompts ?? []).map((prompt) => [prompt.id, prompt]),
-  );
-
-  const answeredResponses: AnsweredPromptResponse[] = responses.flatMap(
-    (response) => {
-      const prompt = promptById.get(response.prompt_id);
-
-      if (!prompt) {
-        return [];
-      }
-
-      return [{ prompt, response }];
-    },
-  );
 
   return {
     checkInCount: checkInCount ?? 0,
-    currentSelf: currentSelf ?? null,
-    activeFutureSelves: activeFutureSelves ?? [],
-    answeredResponses,
+    hasCurrentSelf: Boolean(currentSelf),
+    answeredResponseCount,
   };
 }
 
@@ -257,23 +227,33 @@ export async function detectContradictions(): Promise<
     return input;
   }
 
-  if (!input.currentSelf) {
+  if (!input.hasCurrentSelf) {
     return {
-      error: "Contradictions require a Current Self. Generate one first.",
+      error: CURRENT_SELF_REQUIRED_ERROR,
     };
   }
 
-  if (input.answeredResponses.length < 1 && input.checkInCount < 2) {
+  if (input.answeredResponseCount < 1 && input.checkInCount < 2) {
     return {
-      error:
-        "Contradictions need at least one answered identity prompt or two check-ins.",
+      error: DETECTION_PREREQUISITE_ERROR,
     };
   }
 
-  const drafts = generateMockContradictions(input);
+  const generationResult = await runStructuredGeneration({
+    userId: auth.userId,
+    profile: "contradiction",
+    promptId: "contradiction.detect",
+    schema: contradictionOutputSchema,
+  });
+
+  if (!generationResult.ok) {
+    return { error: generationResult.error };
+  }
+
+  const drafts = generationResult.data;
   if (drafts.length === 0) {
     return {
-      error: "No identity tensions detected from your current signals.",
+      error: NO_TENSIONS_ERROR,
     };
   }
 

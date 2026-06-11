@@ -223,32 +223,28 @@ async function loadCurrentSelfContext(
 
   const { data: activeFutureSelves } = await supabase
     .from("future_selves")
-    .select("name, description, momentum, themes")
+    .select("*")
     .eq("user_id", base.userId)
     .eq("status", "active")
-    .order("momentum", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.futureSelves);
+    .order("momentum", { ascending: false });
 
   const { data: chosenPaths } = await supabase
     .from("paths")
     .select("themes")
     .eq("user_id", base.userId)
-    .eq("is_chosen", true)
-    .limit(CONTEXT_LIMITS.COUNTS.chosenPaths);
+    .eq("is_chosen", true);
 
   const { data: checkIns } = await supabase
     .from("check_ins")
     .select("theme_changes, identity_impact")
     .eq("user_id", base.userId)
-    .order("created_at", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.checkIns);
+    .order("created_at", { ascending: false });
 
   const { data: identityUpdates } = await supabase
     .from("identity_updates")
     .select("title, summary, themes")
     .eq("user_id", base.userId)
-    .order("created_at", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.identityUpdates);
+    .order("created_at", { ascending: false });
 
   return {
     ...base,
@@ -269,15 +265,24 @@ async function loadIdentityPromptContext(
 ): Promise<IdentityContextBundle> {
   const bundle = await loadCurrentSelfContext(supabase, base);
 
-  const { data: currentSelf } = await supabase
-    .from("current_self")
-    .select("headline, summary, themes")
-    .eq("user_id", base.userId)
-    .maybeSingle();
+  const [{ data: currentSelf }, { data: identityUpdates }] = await Promise.all([
+    supabase
+      .from("current_self")
+      .select("headline, summary, themes")
+      .eq("user_id", base.userId)
+      .maybeSingle(),
+    supabase
+      .from("identity_updates")
+      .select("title, summary, themes")
+      .eq("user_id", base.userId)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
 
   return {
     ...bundle,
     currentSelf: currentSelf ?? undefined,
+    identityUpdates: identityUpdates ?? [],
   };
 }
 
@@ -292,17 +297,16 @@ async function loadContradictionContext(
 
   const { data: currentSelf } = await supabase
     .from("current_self")
-    .select("headline, summary, themes")
+    .select("*")
     .eq("user_id", base.userId)
     .maybeSingle();
 
   const { data: activeFutureSelves } = await supabase
     .from("future_selves")
-    .select("name, description, momentum, themes")
+    .select("*")
     .eq("user_id", base.userId)
     .eq("status", "active")
-    .order("momentum", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.futureSelves);
+    .order("momentum", { ascending: false });
 
   const { data: answeredPrompts } = await supabase
     .from("identity_prompts")
@@ -310,7 +314,7 @@ async function loadContradictionContext(
     .eq("user_id", base.userId)
     .eq("status", "answered")
     .order("created_at", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.answeredPrompts);
+    .limit(5);
 
   const promptIds = (answeredPrompts ?? []).map((prompt) => prompt.id);
   let answeredResponses: AnsweredPromptResponse[] = [];

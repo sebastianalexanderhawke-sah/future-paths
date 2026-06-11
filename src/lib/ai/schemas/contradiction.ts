@@ -29,5 +29,9 @@ export const contradictionDraftSchema = z.object({
 export const contradictionOutputSchema = z.array(contradictionDraftSchema).max(3);
 
 export function parseContradictionOutput(data: unknown): MockContradictionDraft[] {
+  if (Array.isArray(data) && data.length === 0) {
+    return [];
+  }
+
   return contradictionOutputSchema.parse(data);
 }

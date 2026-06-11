@@ -9,6 +9,9 @@ export const currentSelfOutputSchema = z.object({
   themes: themesSchema,
 }) satisfies z.ZodType<MockCurrentSelfDraft>;
 
+export const currentSelfNullableOutputSchema =
+  currentSelfOutputSchema.nullable();
+
 export function parseCurrentSelfOutput(data: unknown): MockCurrentSelfDraft | null {
   if (data === null) {
     return null;
