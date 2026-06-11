@@ -1,5 +1,6 @@
-import { generateMockAlternateSelf } from "@/lib/mock-alternate-self-generator";
-import { generateMockPastAlternativePaths } from "@/lib/mock-past-alternative-path-generator";
+import { runStructuredGeneration } from "@/lib/ai/orchestrator";
+import { alternateSelfOutputSchema } from "@/lib/ai/schemas/alternate-self";
+import { pastAlternativePathOutputSchema } from "@/lib/ai/schemas/past-alternative-path";
 import { createClient } from "@/lib/supabase/server";
 import type {
   AlternateSelf,
@@ -255,7 +256,21 @@ export async function generateAlternativePaths(
   await supabase.from("alternate_selves").delete().eq("past_crossroad_id", crossroadId);
   await supabase.from("past_alternative_paths").delete().eq("past_crossroad_id", crossroadId);
 
-  const drafts = generateMockPastAlternativePaths(crossroad);
+  const generationResult = await runStructuredGeneration({
+    userId: auth.userId,
+    profile: "past_alternative_path",
+    promptId: "past_path.generate",
+    schema: pastAlternativePathOutputSchema,
+    overrides: {
+      crossroadId,
+    },
+  });
+
+  if (!generationResult.ok) {
+    return { error: generationResult.error };
+  }
+
+  const drafts = generationResult.data;
   const rows = drafts.map((draft, index) => ({
     past_crossroad_id: crossroadId,
     user_id: auth.userId,
@@ -353,10 +368,22 @@ export async function generateAlternateSelf(
     return { error: "Select an alternative path before generating your alternate self." };
   }
 
-  const draft = generateMockAlternateSelf({
-    crossroad: detail.crossroad,
-    selectedPath,
+  const generationResult = await runStructuredGeneration({
+    userId: auth.userId,
+    profile: "alternate_self",
+    promptId: "alternate_self.generate",
+    schema: alternateSelfOutputSchema,
+    overrides: {
+      crossroadId,
+      selectedPathId: selectedPath.id,
+    },
   });
+
+  if (!generationResult.ok) {
+    return { error: generationResult.error };
+  }
+
+  const draft = generationResult.data;
 
   const supabase = await createClient();
   const now = new Date().toISOString();

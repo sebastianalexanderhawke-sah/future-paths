@@ -4,7 +4,7 @@
 
 Phase: Phase 7 — AI Identity Engine
 
-Step: Step 7 — AI Contradictions
+Step: Step 8B — AI Alternate Self
 
 Status: Complete
 
@@ -28,18 +28,20 @@ Status: Complete
 * Phase 7 Step 5 — AI Current Self (`current-self.ts` uses `runStructuredGeneration` for current self generation)
 * Phase 7 Step 6 — AI Identity Prompts (`identity-prompts.ts` uses `runStructuredGeneration` for identity prompt generation)
 * Phase 7 Step 7 — AI Contradictions (`contradictions.ts` uses `runStructuredGeneration` for contradiction detection)
+* Phase 7 Step 8A — AI Past Alternative Paths (`past-crossroads.ts` `generateAlternativePaths()` uses `runStructuredGeneration`)
+* Phase 7 Step 8B — AI Alternate Self (`past-crossroads.ts` `generateAlternateSelf()` uses `runStructuredGeneration`)
 
 ---
 
 ## Current Objective
 
-Phase 7 Step 7 is complete. Next: Phase 7 Step 8 — migrate past alternative path generation.
+Phase 7 Step 8B is complete. Next: Phase 7 Step 9 — migrate timeline / life chapter generation.
 
 ---
 
 ## Next Tasks
 
-1. Wire past paths to `runStructuredGeneration` with `past_path.generate`
+1. Wire timeline to `runStructuredGeneration` with `timeline.generate`
 2. Keep mock as default via `IDENTITY_ENGINE_MODE=mock`
 
 ---
