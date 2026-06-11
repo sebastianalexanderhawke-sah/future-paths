@@ -17,6 +17,14 @@ export const futureSelfDraftSchema = z.object({
 
 export const futureSelfOutputSchema = z.array(futureSelfDraftSchema).min(1).max(3);
 
+export const futureSelfDiscoverOutputSchema = z
+  .array(futureSelfDraftSchema)
+  .max(3) satisfies z.ZodType<MockFutureSelfDraft[]>;
+
 export function parseFutureSelfOutput(data: unknown): MockFutureSelfDraft[] {
+  if (Array.isArray(data) && data.length === 0) {
+    return [];
+  }
+
   return futureSelfOutputSchema.parse(data);
 }

@@ -174,26 +174,21 @@ async function loadFutureSelfContext(
       .eq("user_id", base.userId),
   ]);
 
-  const { data: chosenPaths } = await supabase
-    .from("paths")
-    .select("themes")
-    .eq("user_id", base.userId)
-    .eq("is_chosen", true)
-    .limit(CONTEXT_LIMITS.COUNTS.chosenPaths);
-
   const { data: checkIns } = await supabase
     .from("check_ins")
     .select("theme_changes, identity_impact")
-    .eq("user_id", base.userId)
-    .order("created_at", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.checkIns);
+    .eq("user_id", base.userId);
 
   const { data: identityUpdates } = await supabase
     .from("identity_updates")
     .select("themes")
+    .eq("user_id", base.userId);
+
+  const { data: chosenPaths } = await supabase
+    .from("paths")
+    .select("themes")
     .eq("user_id", base.userId)
-    .order("created_at", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.identityUpdates);
+    .eq("is_chosen", true);
 
   return {
     ...base,

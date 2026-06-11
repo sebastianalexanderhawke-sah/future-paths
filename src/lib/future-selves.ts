@@ -1,7 +1,8 @@
-import { generateMockFutureSelves } from "@/lib/mock-future-self-generator";
+import { runStructuredGeneration } from "@/lib/ai/orchestrator";
+import { futureSelfDiscoverOutputSchema } from "@/lib/ai/schemas/future-self";
+import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
 import { createClient } from "@/lib/supabase/server";
-import type { FutureSelf, ThemeChange } from "@/types/database";
-import type { ThemeName } from "@/types/enums";
+import type { FutureSelf } from "@/types/database";
 
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
@@ -60,25 +61,17 @@ export async function listActiveFutureSelves(
   return listFutureSelves({ status: "active", limit });
 }
 
-type GenerationInput =
-  | {
-      momentCount: number;
-      checkInCount: number;
-      pathThemes: ThemeName[];
-      checkInThemeChanges: ThemeChange[];
-      identityUpdateThemes: ThemeName[];
-    }
-  | { error: string };
+type GenerationInput = { momentCount: number } | { error: string };
 
 async function loadGenerationInput(userId: string): Promise<GenerationInput> {
   const supabase = await createClient();
 
   const [
     { count: momentCount, error: momentError },
-    { count: checkInCount, error: checkInError },
-    { data: chosenPaths, error: pathsError },
-    { data: checkIns, error: checkInsError },
-    { data: identityUpdates, error: updatesError },
+    { error: checkInError },
+    { error: pathsError },
+    { error: checkInsError },
+    { error: updatesError },
   ] = await Promise.all([
     supabase
       .from("moments")
@@ -109,20 +102,8 @@ async function loadGenerationInput(userId: string): Promise<GenerationInput> {
     };
   }
 
-  const pathThemes = (chosenPaths ?? []).flatMap((path) => path.themes);
-  const checkInThemeChanges = (checkIns ?? []).flatMap(
-    (checkIn) => checkIn.theme_changes as ThemeChange[],
-  );
-  const identityUpdateThemes = (identityUpdates ?? []).flatMap(
-    (update) => update.themes as ThemeName[],
-  );
-
   return {
     momentCount: momentCount ?? 0,
-    checkInCount: checkInCount ?? 0,
-    pathThemes,
-    checkInThemeChanges,
-    identityUpdateThemes,
   };
 }
 
@@ -159,7 +140,25 @@ export async function generateFutureSelves(): Promise<
     return input;
   }
 
-  const drafts = generateMockFutureSelves(input);
+  let drafts: MockFutureSelfDraft[];
+
+  if (input.momentCount < 1) {
+    drafts = [];
+  } else {
+    const generationResult = await runStructuredGeneration({
+      userId: auth.userId,
+      profile: "future_self",
+      promptId: "future_self.discover",
+      schema: futureSelfDiscoverOutputSchema,
+    });
+
+    if (!generationResult.ok) {
+      return { error: generationResult.error };
+    }
+
+    drafts = generationResult.data;
+  }
+
   const supabase = await createClient();
   const now = new Date().toISOString();
 
