@@ -56,6 +56,23 @@ export const claudeProvider: IdentityAIProvider = {
 
     try {
       const prompt = getPromptDefinition(request.promptId as PromptId);
+
+      if (request.promptId === "timeline.generate") {
+        const candidates = request.context.chapterCandidates;
+
+        if (candidates !== undefined) {
+          const parsed = prompt.parseOutput(candidates);
+          const data = validateStructuredOutput(request.schema, parsed);
+
+          return toGenerationSuccess({
+            provider: "claude",
+            promptId: prompt.promptId,
+            promptVersion: prompt.promptVersion,
+            data,
+          });
+        }
+      }
+
       const client = new Anthropic({ apiKey });
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), getGenerationTimeoutMs());

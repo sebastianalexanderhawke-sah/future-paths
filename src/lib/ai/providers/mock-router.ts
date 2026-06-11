@@ -14,8 +14,11 @@ import { generateMockFutureSelves } from "@/lib/mock-future-self-generator";
 import { generateMockIdentityPrompts } from "@/lib/mock-identity-prompt-generator";
 import { generateMockIdentityUpdate } from "@/lib/mock-identity-update-generator";
 import { generateMockPastAlternativePaths } from "@/lib/mock-past-alternative-path-generator";
-import { generateMockLifeChapters } from "@/lib/mock-timeline-generator";
 import type { IdentityContextBundle } from "@/lib/ai/context/slices";
+import {
+  timelineContextToGenerationInput,
+} from "@/lib/timeline-chapter-candidates";
+import { generateMockLifeChapters } from "@/lib/mock-timeline-generator";
 import type { PromptId } from "@/lib/ai/prompts/ids";
 
 function asCurrentSelf(
@@ -133,19 +136,11 @@ export function runMockGenerator(
       });
 
     case "timeline.generate":
-      return generateMockLifeChapters({
-        moments: context.timelineMoments ?? [],
-        chosenPaths: context.timelineChosenPaths ?? [],
-        checkIns: context.timelineCheckIns ?? [],
-        identityUpdates: context.timelineIdentityUpdates ?? [],
-        futureSelves: context.timelineFutureSelves ?? [],
-        contradictions: (context.contradictions ?? []) as Parameters<
-          typeof generateMockLifeChapters
-        >[0]["contradictions"],
-        alternateSelves: context.alternateSelves ?? [],
-        crossroadSnippets: new Map(Object.entries(context.crossroadSnippets ?? {})),
-        currentSelf: context.currentSelf ?? null,
-      });
+      if (context.chapterCandidates) {
+        return context.chapterCandidates;
+      }
+
+      return generateMockLifeChapters(timelineContextToGenerationInput(context));
 
     default:
       throw new Error(`Unsupported prompt id: ${promptId satisfies never}`);

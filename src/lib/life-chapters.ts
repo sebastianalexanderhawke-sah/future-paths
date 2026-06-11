@@ -1,7 +1,5 @@
-import {
-  generateMockLifeChapters,
-  type TimelineGenerationInput,
-} from "@/lib/mock-timeline-generator";
+import { runStructuredGeneration } from "@/lib/ai/orchestrator";
+import { timelineDiscoverOutputSchema } from "@/lib/ai/schemas/timeline";
 import { createClient } from "@/lib/supabase/server";
 import type {
   LifeChapter,
@@ -10,6 +8,9 @@ import type {
 
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
+
+const INSUFFICIENT_SIGNAL_ERROR =
+  "Not enough meaningful identity signal to form life chapters yet. Capture moments, check in, and reflect first.";
 
 async function requireUser(): Promise<AuthSuccess | AuthFailure> {
   const supabase = await createClient();
@@ -23,133 +24,6 @@ async function requireUser(): Promise<AuthSuccess | AuthFailure> {
   }
 
   return { userId: user.id };
-}
-
-async function loadChapterInput(userId: string): Promise<
-  TimelineGenerationInput | { error: string }
-> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return { error: "Not authenticated." };
-  }
-
-  const { data: moments, error: momentsError } = await supabase
-    .from("moments")
-    .select("id, title, created_at, status")
-    .eq("user_id", userId)
-    .eq("status", "active");
-
-  if (momentsError) {
-    return { error: momentsError.message };
-  }
-
-  const { data: chosenPaths, error: pathsError } = await supabase
-    .from("paths")
-    .select("id, moment_id, description, themes, chosen_at, created_at")
-    .eq("user_id", userId)
-    .eq("is_chosen", true);
-
-  if (pathsError) {
-    return { error: pathsError.message };
-  }
-
-  const { data: checkIns, error: checkInsError } = await supabase
-    .from("check_ins")
-    .select("id, reflection, theme_changes, identity_impact, created_at")
-    .eq("user_id", userId);
-
-  if (checkInsError) {
-    return { error: checkInsError.message };
-  }
-
-  const { data: identityUpdates, error: updatesError } = await supabase
-    .from("identity_updates")
-    .select("id, title, summary, themes, created_at")
-    .eq("user_id", userId);
-
-  if (updatesError) {
-    return { error: updatesError.message };
-  }
-
-  const { data: futureSelves, error: futuresError } = await supabase
-    .from("future_selves")
-    .select("id, name, momentum, themes, status, updated_at")
-    .eq("user_id", userId)
-    .eq("status", "active");
-
-  if (futuresError) {
-    return { error: futuresError.message };
-  }
-
-  const { data: contradictions, error: contradictionsError } = await supabase
-    .from("contradictions")
-    .select("id, title, themes, intensity, status, updated_at")
-    .eq("user_id", userId)
-    .in("status", ["active", "softened"]);
-
-  if (contradictionsError) {
-    return { error: contradictionsError.message };
-  }
-
-  const { data: alternateSelves, error: alternateSelvesError } = await supabase
-    .from("alternate_selves")
-    .select("id, name, themes, status, updated_at, past_crossroad_id")
-    .eq("user_id", userId)
-    .eq("status", "active");
-
-  if (alternateSelvesError) {
-    return { error: alternateSelvesError.message };
-  }
-
-  const crossroadIds = [...new Set((alternateSelves ?? []).map((row) => row.past_crossroad_id))];
-  const crossroadSnippets = new Map<string, string>();
-
-  if (crossroadIds.length > 0) {
-    const { data: crossroads, error: crossroadsError } = await supabase
-      .from("past_crossroads")
-      .select("id, what_happened")
-      .eq("user_id", userId)
-      .in("id", crossroadIds);
-
-    if (crossroadsError) {
-      return { error: crossroadsError.message };
-    }
-
-    for (const crossroad of crossroads ?? []) {
-      const snippet = crossroad.what_happened.trim();
-      crossroadSnippets.set(
-        crossroad.id,
-        snippet.length > 80 ? `${snippet.slice(0, 79).trim()}…` : snippet,
-      );
-    }
-  }
-
-  const { data: currentSelf, error: currentSelfError } = await supabase
-    .from("current_self")
-    .select("headline, summary, themes")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (currentSelfError) {
-    return { error: currentSelfError.message };
-  }
-
-  return {
-    moments: moments ?? [],
-    chosenPaths: chosenPaths ?? [],
-    checkIns: checkIns ?? [],
-    identityUpdates: identityUpdates ?? [],
-    futureSelves: futureSelves ?? [],
-    contradictions: contradictions ?? [],
-    alternateSelves: alternateSelves ?? [],
-    crossroadSnippets,
-    currentSelf: currentSelf ?? null,
-  };
 }
 
 export async function listLifeChapters(
@@ -222,6 +96,35 @@ export async function getLifeChapter(
   return { chapter, evidence: evidence ?? [] };
 }
 
+export async function deleteUserTimeline(): Promise<{ ok: true } | { error: string }> {
+  const auth = await requireUser();
+  if ("error" in auth) {
+    return auth;
+  }
+
+  const supabase = await createClient();
+
+  const { error: deleteEvidenceError } = await supabase
+    .from("life_chapter_evidence")
+    .delete()
+    .eq("user_id", auth.userId);
+
+  if (deleteEvidenceError) {
+    return { error: deleteEvidenceError.message };
+  }
+
+  const { error: deleteChaptersError } = await supabase
+    .from("life_chapters")
+    .delete()
+    .eq("user_id", auth.userId);
+
+  if (deleteChaptersError) {
+    return { error: deleteChaptersError.message };
+  }
+
+  return { ok: true };
+}
+
 export async function generateTimeline(): Promise<
   { chapters: LifeChapter[] } | { error: string }
 > {
@@ -230,16 +133,21 @@ export async function generateTimeline(): Promise<
     return auth;
   }
 
-  const input = await loadChapterInput(auth.userId);
-  if ("error" in input) {
-    return input;
+  const generationResult = await runStructuredGeneration({
+    userId: auth.userId,
+    profile: "timeline",
+    promptId: "timeline.generate",
+    schema: timelineDiscoverOutputSchema,
+  });
+
+  if (!generationResult.ok) {
+    return { error: generationResult.error };
   }
 
-  const drafts = generateMockLifeChapters(input);
+  const drafts = generationResult.data;
   if (drafts.length === 0) {
     return {
-      error:
-        "Not enough meaningful identity signal to form life chapters yet. Capture moments, check in, and reflect first.",
+      error: INSUFFICIENT_SIGNAL_ERROR,
     };
   }
 

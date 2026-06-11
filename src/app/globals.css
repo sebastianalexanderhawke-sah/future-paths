@@ -1,26 +1,307 @@
 @import "tailwindcss";
 
+/* ── Light mode (warm linen canvas) ─────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  /* Canvas & surfaces */
+  --canvas: #f7f4ef;
+  --canvas-gradient-top: #fbf8f3;
+  --canvas-gradient-bottom: #f0ebe3;
+  --surface: #fffcf8;
+  --surface-muted: #f5f1ea;
+  --surface-raised: #fffcf8;
+
+  /* Ink */
+  --ink-primary: #1c1917;
+  --ink-secondary: #57534e;
+  --ink-tertiary: #a8a29e;
+
+  /* Actions */
+  --action-fill: #5c4d3c;
+  --action-fill-hover: #44382b;
+  --action-text: #fffcf8;
+  --action-soft-fill: #e8dfd4;
+  --action-soft-fill-hover: #ddd2c4;
+  --action-ring: rgb(92 77 60 / 0.35);
+
+  /* Legacy aliases (existing pages) */
+  --background: var(--canvas);
+  --foreground: var(--ink-primary);
+
+  /* Radius */
+  --radius-whisper: 0.5rem;
+  --radius-card: 1.25rem;
+  --radius-hero: 1.75rem;
+  --radius-full: 9999px;
+
+  /* Spacing */
+  --space-section: 4.5rem;
+  --space-zone: 2.5rem;
+  --space-card: 1.5rem;
+
+  /* Shadows */
+  --shadow-elevated: 0 4px 24px rgb(26 22 20 / 0.06), 0 1px 2px rgb(26 22 20 / 0.04);
+  --shadow-hero: 0 12px 40px rgb(26 22 20 / 0.1), 0 2px 8px rgb(26 22 20 / 0.06);
+
+  /* Typography scale */
+  --text-display-size: 2rem;
+  --text-display-leading: 1.2;
+  --text-display-tracking: -0.02em;
+  --text-h1-size: 1.5rem;
+  --text-h1-leading: 1.25;
+  --text-h1-tracking: -0.01em;
+  --text-h2-size: 0.9375rem;
+  --text-h2-leading: 1.35;
+  --text-body-size: 0.9375rem;
+  --text-body-leading: 1.55;
+  --text-body-small-size: 0.8125rem;
+  --text-body-small-leading: 1.45;
+  --text-body-small-tracking: 0.01em;
+  --text-label-size: 0.6875rem;
+  --text-label-leading: 1.3;
+  --text-label-tracking: 0.08em;
+  --text-quote-size: 1.0625rem;
+  --text-quote-leading: 1.5;
+
+  /* Theme colors — Connection */
+  --theme-connection-primary: #b85a4e;
+  --theme-connection-secondary: #e8a598;
+  --theme-connection-soft: #f9ebe8;
+  --theme-connection-soft-dark: rgb(42 30 28 / 0.8);
+  --theme-connection-glow: #b85a4e;
+
+  /* Theme colors — Independence */
+  --theme-independence-primary: #4a6b8a;
+  --theme-independence-secondary: #8bafc8;
+  --theme-independence-soft: #e8eef4;
+  --theme-independence-soft-dark: rgb(26 32 40 / 0.85);
+  --theme-independence-glow: #4a6b8a;
+
+  /* Theme colors — Curiosity */
+  --theme-curiosity-primary: #6e5494;
+  --theme-curiosity-secondary: #a88bd4;
+  --theme-curiosity-soft: #f0ebf7;
+  --theme-curiosity-soft-dark: rgb(34 28 42 / 0.85);
+  --theme-curiosity-glow: #6e5494;
+
+  /* Theme colors — Stability */
+  --theme-stability-primary: #4f7268;
+  --theme-stability-secondary: #8fb5a8;
+  --theme-stability-soft: #e8f0ed;
+  --theme-stability-soft-dark: rgb(26 34 31 / 0.85);
+  --theme-stability-glow: #4f7268;
+
+  /* Theme colors — Creativity */
+  --theme-creativity-primary: #a84e7a;
+  --theme-creativity-secondary: #d49ab8;
+  --theme-creativity-soft: #f9ebf2;
+  --theme-creativity-soft-dark: rgb(40 26 34 / 0.85);
+  --theme-creativity-glow: #a84e7a;
+
+  /* Theme colors — Growth */
+  --theme-growth-primary: #3d8260;
+  --theme-growth-secondary: #7ab89a;
+  --theme-growth-soft: #e8f4ed;
+  --theme-growth-soft-dark: rgb(26 34 28 / 0.85);
+  --theme-growth-glow: #3d8260;
+
+  /* Theme colors — Belonging */
+  --theme-belonging-primary: #9a7344;
+  --theme-belonging-secondary: #c4a078;
+  --theme-belonging-soft: #f5ede3;
+  --theme-belonging-soft-dark: rgb(36 30 24 / 0.85);
+  --theme-belonging-glow: #9a7344;
+
+  /* Theme colors — Leadership */
+  --theme-leadership-primary: #7a5c18;
+  --theme-leadership-secondary: #c4a050;
+  --theme-leadership-soft: #f5f0e3;
+  --theme-leadership-soft-dark: rgb(34 30 20 / 0.85);
+  --theme-leadership-glow: #7a5c18;
+
+  /* Theme colors — Reflection */
+  --theme-reflection-primary: #5c6370;
+  --theme-reflection-secondary: #8b929e;
+  --theme-reflection-soft: #eeeff2;
+  --theme-reflection-soft-dark: rgb(26 28 32 / 0.85);
+  --theme-reflection-glow: #5c6370;
+
+  /* Theme colors — Courage */
+  --theme-courage-primary: #b84e32;
+  --theme-courage-secondary: #d88468;
+  --theme-courage-soft: #f9ebe6;
+  --theme-courage-soft-dark: rgb(40 26 22 / 0.85);
+  --theme-courage-glow: #b84e32;
+
+  /* Identity state colors */
+  --state-strengthened: #4a8f6a;
+  --state-emerging: #7b5ea7;
+  --state-weakened: #a8a29e;
+  --state-contradiction-detected: #b45309;
+  --state-contradiction-resolved: #5a7a6e;
+  --state-momentum-increasing-start: #3d8260;
+  --state-momentum-increasing-end: #6e5494;
+  --state-momentum-decreasing-start: #a8a29e;
+  --state-momentum-decreasing-end: #78716c;
+}
+
+/* ── Dark mode (candlelit layers) ───────────────────────────────────────── */
+
+.dark {
+  color-scheme: dark;
+
+  --canvas: #12100e;
+  --canvas-gradient-top: #121110;
+  --canvas-gradient-bottom: #0a0908;
+  --surface: #1c1916;
+  --surface-muted: #252119;
+  --surface-raised: #252119;
+
+  --ink-primary: #fafaf9;
+  --ink-secondary: #a8a29e;
+  --ink-tertiary: #78716c;
+
+  --action-fill: #e7ddd0;
+  --action-fill-hover: #f5efe6;
+  --action-text: #1c1917;
+  --action-soft-fill: rgb(255 252 248 / 0.06);
+  --action-soft-fill-hover: rgb(255 252 248 / 0.1);
+  --action-ring: rgb(231 221 208 / 0.35);
+
+  --background: var(--canvas);
+  --foreground: var(--ink-primary);
+
+  --shadow-elevated: 0 12px 40px rgb(0 0 0 / 0.45);
+  --shadow-hero: 0 16px 48px rgb(0 0 0 / 0.55), 0 0 64px rgb(92 77 60 / 0.18);
+
+  --state-strengthened: #6bb892;
+  --state-emerging: #a88bd4;
+  --state-weakened: #78716c;
+  --state-contradiction-detected: #d97706;
+  --state-contradiction-resolved: #7a9e8e;
+  --state-momentum-increasing-start: #6bb892;
+  --state-momentum-increasing-end: #a88bd4;
+  --state-momentum-decreasing-start: #78716c;
+  --state-momentum-decreasing-end: #57534e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-raised: var(--surface-raised);
+  --color-ink-primary: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-tertiary: var(--ink-tertiary);
+  --font-sans: var(--font-ui);
+  --font-serif: var(--font-voice);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ── Base ───────────────────────────────────────────────────────────────── */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(
+    180deg,
+    var(--canvas-gradient-top) 0%,
+    var(--canvas) 40%,
+    var(--canvas-gradient-bottom) 100%
+  );
+  background-color: var(--canvas);
+  color: var(--ink-primary);
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-leading);
+}
+
+/* ── Typography utilities ─────────────────────────────────────────────────── */
+
+.font-voice {
+  font-family: var(--font-voice), Georgia, "Times New Roman", serif;
+}
+
+.font-ui {
+  font-family: var(--font-ui), system-ui, sans-serif;
+}
+
+.text-display {
+  font-family: var(--font-voice), Georgia, serif;
+  font-size: var(--text-display-size);
+  font-weight: 500;
+  letter-spacing: var(--text-display-tracking);
+  line-height: var(--text-display-leading);
+}
+
+.text-h1 {
+  font-family: var(--font-voice), Georgia, serif;
+  font-size: var(--text-h1-size);
+  font-weight: 500;
+  letter-spacing: var(--text-h1-tracking);
+  line-height: var(--text-h1-leading);
+}
+
+.text-h2 {
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: var(--text-h2-size);
+  font-weight: 600;
+  line-height: var(--text-h2-leading);
+}
+
+.text-body {
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-leading);
+}
+
+.text-body-small {
+  font-size: var(--text-body-small-size);
+  letter-spacing: var(--text-body-small-tracking);
+  line-height: var(--text-body-small-leading);
+}
+
+.text-label {
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: var(--text-label-size);
+  font-weight: 600;
+  letter-spacing: var(--text-label-tracking);
+  line-height: var(--text-label-leading);
+  text-transform: uppercase;
+}
+
+.text-quote {
+  font-family: var(--font-voice), Georgia, serif;
+  font-size: var(--text-quote-size);
+  font-style: italic;
+  line-height: var(--text-quote-leading);
+}
+
+.text-ink-primary {
+  color: var(--ink-primary);
+}
+
+.text-ink-secondary {
+  color: var(--ink-secondary);
+}
+
+.text-ink-tertiary {
+  color: var(--ink-tertiary);
+}
+
+.bg-canvas {
+  background-color: var(--canvas);
+}
+
+.bg-surface {
+  background-color: var(--surface);
+}
+
+.bg-surface-muted {
+  background-color: var(--surface-muted);
+}
+
+.bg-surface-raised {
+  background-color: var(--surface-raised);
 }

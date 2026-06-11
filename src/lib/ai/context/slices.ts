@@ -13,6 +13,7 @@ import type {
 import type { ThemeName } from "@/types/enums";
 
 import type { AnsweredPromptResponse } from "@/lib/mock-contradiction-generator";
+import type { MockLifeChapterDraft } from "@/lib/mock-timeline-generator";
 
 export type ContextCounts = {
   moments: number;
@@ -69,4 +70,5 @@ export type IdentityContextBundle = {
     FutureSelf,
     "id" | "name" | "momentum" | "themes" | "status" | "updated_at"
   >[];
+  chapterCandidates?: MockLifeChapterDraft[];
 };

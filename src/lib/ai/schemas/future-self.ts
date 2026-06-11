@@ -6,6 +6,7 @@ import {
   tentativeTextSchema,
   themesSchema,
 } from "@/lib/ai/schemas/shared";
+import { normalizeFutureSelfInOutput } from "@/lib/ai/schemas/theme-normalization";
 
 export const futureSelfDraftSchema = z.object({
   name: tentativeTextSchema,
@@ -26,5 +27,5 @@ export function parseFutureSelfOutput(data: unknown): MockFutureSelfDraft[] {
     return [];
   }
 
-  return futureSelfOutputSchema.parse(data);
+  return futureSelfOutputSchema.parse(normalizeFutureSelfInOutput(data));
 }

@@ -6,6 +6,7 @@ import {
   tentativeTextSchema,
   themesSchema,
 } from "@/lib/ai/schemas/shared";
+import { normalizeIdentityPromptInOutput } from "@/lib/ai/schemas/theme-normalization";
 
 export const identityPromptDraftSchema = z.object({
   prompt_type: identityPromptTypeSchema,
@@ -25,5 +26,5 @@ export function parseIdentityPromptOutput(data: unknown): MockIdentityPromptDraf
     return [];
   }
 
-  return identityPromptOutputSchema.parse(data);
+  return identityPromptOutputSchema.parse(normalizeIdentityPromptInOutput(data));
 }

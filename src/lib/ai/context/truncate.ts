@@ -41,6 +41,7 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
     pathThemes: bundle.pathThemes,
     checkInCount: bundle.checkInCount,
     crossroadSnippets: bundle.crossroadSnippets,
+    chapterCandidates: bundle.chapterCandidates,
   };
 
   if (bundle.moment) {
@@ -224,6 +225,7 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     currentSelf: bundle.currentSelf,
     pastCrossroad: bundle.pastCrossroad,
     selectedPastPath: bundle.selectedPastPath,
+    chapterCandidates: bundle.chapterCandidates,
   };
 
   serialized = JSON.stringify(reduced);

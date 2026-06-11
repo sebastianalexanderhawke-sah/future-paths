@@ -7,6 +7,7 @@ import {
   tentativeTextSchema,
   themesSchema,
 } from "@/lib/ai/schemas/shared";
+import { normalizeContradictionInOutput } from "@/lib/ai/schemas/theme-normalization";
 
 const contradictionSourceRefsSchema = z.object({
   current_self_id: z.string().uuid().optional(),
@@ -33,5 +34,5 @@ export function parseContradictionOutput(data: unknown): MockContradictionDraft[
     return [];
   }
 
-  return contradictionOutputSchema.parse(data);
+  return contradictionOutputSchema.parse(normalizeContradictionInOutput(data));
 }

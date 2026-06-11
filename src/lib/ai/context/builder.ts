@@ -5,6 +5,7 @@ import { CONTEXT_LIMITS } from "@/lib/ai/context/limits";
 import { createClient } from "@/lib/supabase/server";
 import type { ThemeName } from "@/types/enums";
 import type { AnsweredPromptResponse } from "@/lib/mock-contradiction-generator";
+import { buildTimelineChapterCandidates } from "@/lib/timeline-chapter-candidates";
 
 export type { BuildContextOptions, BuildContextOverrides, ContextProfile } from "@/lib/ai/context/profiles";
 export type { IdentityContextBundle } from "@/lib/ai/context/slices";
@@ -49,7 +50,7 @@ export async function buildIdentityContext(
     case "alternate_self":
       return enforceContextLimits(await loadAlternateSelfContext(supabase, base, options));
     case "timeline":
-      return enforceContextLimits(await loadTimelineContext(supabase, base));
+      return await loadTimelineContext(supabase, base);
     default:
       return { error: "Unknown context profile." };
   }
@@ -401,44 +402,35 @@ async function loadTimelineContext(
       .from("moments")
       .select("id, title, created_at, status")
       .eq("user_id", base.userId)
-      .eq("status", "active")
-      .limit(CONTEXT_LIMITS.COUNTS.moments),
+      .eq("status", "active"),
     supabase
       .from("paths")
       .select("id, moment_id, description, themes, chosen_at, created_at")
       .eq("user_id", base.userId)
-      .eq("is_chosen", true)
-      .limit(CONTEXT_LIMITS.COUNTS.chosenPaths),
+      .eq("is_chosen", true),
     supabase
       .from("check_ins")
       .select("id, reflection, theme_changes, identity_impact, created_at")
-      .eq("user_id", base.userId)
-      .order("created_at", { ascending: false })
-      .limit(CONTEXT_LIMITS.COUNTS.checkIns),
+      .eq("user_id", base.userId),
     supabase
       .from("identity_updates")
       .select("id, title, summary, themes, created_at")
-      .eq("user_id", base.userId)
-      .order("created_at", { ascending: false })
-      .limit(CONTEXT_LIMITS.COUNTS.identityUpdates),
+      .eq("user_id", base.userId),
     supabase
       .from("future_selves")
       .select("id, name, momentum, themes, status, updated_at")
       .eq("user_id", base.userId)
-      .eq("status", "active")
-      .limit(CONTEXT_LIMITS.COUNTS.futureSelves),
+      .eq("status", "active"),
     supabase
       .from("contradictions")
       .select("id, title, themes, intensity, status, updated_at")
       .eq("user_id", base.userId)
-      .in("status", ["active", "softened"])
-      .limit(CONTEXT_LIMITS.COUNTS.contradictions),
+      .in("status", ["active", "softened"]),
     supabase
       .from("alternate_selves")
       .select("id, name, themes, status, updated_at, past_crossroad_id")
       .eq("user_id", base.userId)
-      .eq("status", "active")
-      .limit(CONTEXT_LIMITS.COUNTS.alternateSelves),
+      .eq("status", "active"),
     supabase
       .from("current_self")
       .select("headline, summary, themes")
@@ -457,11 +449,13 @@ async function loadTimelineContext(
       .in("id", crossroadIds);
 
     for (const crossroad of crossroads ?? []) {
-      crossroadSnippets[crossroad.id] = crossroad.what_happened.trim();
+      const snippet = crossroad.what_happened.trim();
+      crossroadSnippets[crossroad.id] =
+        snippet.length > 80 ? `${snippet.slice(0, 79).trim()}…` : snippet;
     }
   }
 
-  return {
+  const bundle: IdentityContextBundle = {
     ...base,
     timelineMoments: moments ?? [],
     timelineChosenPaths: chosenPaths ?? [],
@@ -472,5 +466,10 @@ async function loadTimelineContext(
     alternateSelves: alternateSelves ?? [],
     crossroadSnippets,
     currentSelf: currentSelf ?? undefined,
+  };
+
+  return {
+    ...bundle,
+    chapterCandidates: buildTimelineChapterCandidates(bundle),
   };
 }

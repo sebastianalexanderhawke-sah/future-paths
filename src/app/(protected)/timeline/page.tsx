@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { generateTimelineAction } from "@/actions/timeline";
+import { deleteTimelineDevAction, generateTimelineAction } from "@/actions/timeline";
 import { signOut } from "@/actions/auth";
 import { LifeChapterCard } from "@/components/timeline/life-chapter-card";
 import { listLifeChapters } from "@/lib/life-chapters";
@@ -22,6 +22,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
   }
 
   const chapters = [...result.chapters].sort((a, b) => a.sort_order - b.sort_order);
+  const showDevReset = process.env.NODE_ENV !== "production";
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -41,6 +42,16 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
               Generate timeline
             </button>
           </form>
+          {showDevReset ? (
+            <form action={deleteTimelineDevAction}>
+              <button
+                type="submit"
+                className="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-700 transition-colors hover:bg-red-50"
+              >
+                Delete Timeline (Dev)
+              </button>
+            </form>
+          ) : null}
           <form action={signOut}>
             <button
               type="submit"

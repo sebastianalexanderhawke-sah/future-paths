@@ -4,7 +4,7 @@
 
 Phase: Phase 7 — AI Identity Engine
 
-Step: Step 8B — AI Alternate Self
+Step: Step 9 — AI Timeline
 
 Status: Complete
 
@@ -30,18 +30,19 @@ Status: Complete
 * Phase 7 Step 7 — AI Contradictions (`contradictions.ts` uses `runStructuredGeneration` for contradiction detection)
 * Phase 7 Step 8A — AI Past Alternative Paths (`past-crossroads.ts` `generateAlternativePaths()` uses `runStructuredGeneration`)
 * Phase 7 Step 8B — AI Alternate Self (`past-crossroads.ts` `generateAlternateSelf()` uses `runStructuredGeneration`)
+* Phase 7 Step 9 — AI Timeline (`life-chapters.ts` `generateTimeline()` uses `runStructuredGeneration`)
 
 ---
 
 ## Current Objective
 
-Phase 7 Step 8B is complete. Next: Phase 7 Step 9 — migrate timeline / life chapter generation.
+Phase 7 AI Identity Engine migration is complete. All domain generators now route through `runStructuredGeneration`.
 
 ---
 
 ## Next Tasks
 
-1. Wire timeline to `runStructuredGeneration` with `timeline.generate`
+1. Phase 8 planning (if applicable)
 2. Keep mock as default via `IDENTITY_ENGINE_MODE=mock`
 
 ---
@@ -56,7 +57,7 @@ Homepage route: `/overview` (protected, server-rendered).
 
 **AI migration order:** crossroad → check-in → identity update → future self → current self → identity prompt → contradiction → past path → alternate self → **timeline last**.
 
-Existing `Mock*Draft` types remain canonical output contracts. Path and check-in generation are migrated; other domain libs still call mock generators directly until per-generator migration steps.
+Existing `Mock*Draft` types remain canonical output contracts. All Phase 7 domain generators are migrated; mock mode still uses mock generators via `mock-router.ts`.
 
 `timeline_events` remains a separate immutable audit layer.
 
