@@ -1,3 +1,4 @@
+import type { ThemeChange } from "@/types/database";
 import { THEME_NAMES, type ThemeName } from "@/types/enums";
 
 const THEME_NAME_SET = new Set<string>(THEME_NAMES);
@@ -74,6 +75,96 @@ export function normalizeThemesArray(themes: unknown): ThemeName[] {
   ].slice(0, 3);
 
   return normalized.length > 0 ? normalized : ["Reflection"];
+}
+
+type ThemeChangeDirection = ThemeChange["direction"];
+
+const DIRECTION_VALUES = new Set<string>(["strengthened", "emerging", "weakened"]);
+
+const DIRECTION_SYNONYMS: Record<string, ThemeChangeDirection> = {
+  strengthened: "strengthened",
+  strengthening: "strengthened",
+  stronger: "strengthened",
+  increased: "strengthened",
+  growing: "strengthened",
+  emerging: "emerging",
+  emerge: "emerging",
+  new: "emerging",
+  appeared: "emerging",
+  weakened: "weakened",
+  weakening: "weakened",
+  weaker: "weakened",
+  decreased: "weakened",
+  fading: "weakened",
+};
+
+function normalizeThemeDirection(
+  value: unknown,
+  fallback: ThemeChangeDirection = "emerging",
+): ThemeChangeDirection {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const key = value.trim().toLowerCase();
+
+  if (DIRECTION_VALUES.has(key)) {
+    return key as ThemeChangeDirection;
+  }
+
+  return DIRECTION_SYNONYMS[key] ?? fallback;
+}
+
+export function normalizeThemeChangesArray(changes: unknown): ThemeChange[] {
+  if (!Array.isArray(changes)) {
+    return [{ theme: "Reflection", direction: "emerging" }];
+  }
+
+  const seen = new Set<ThemeName>();
+  const normalized: ThemeChange[] = [];
+
+  for (const [index, item] of changes.entries()) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      continue;
+    }
+
+    const record = item as Record<string, unknown>;
+    const theme = normalizeThemeName(record.theme);
+
+    if (!theme || seen.has(theme)) {
+      continue;
+    }
+
+    const fallbackDirection: ThemeChangeDirection =
+      index === 0 ? "strengthened" : "emerging";
+
+    normalized.push({
+      theme,
+      direction: normalizeThemeDirection(record.direction, fallbackDirection),
+    });
+    seen.add(theme);
+
+    if (normalized.length >= 3) {
+      break;
+    }
+  }
+
+  return normalized.length > 0
+    ? normalized
+    : [{ theme: "Reflection", direction: "emerging" }];
+}
+
+export function normalizeCheckInThemesInOutput(data: unknown): unknown {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return data;
+  }
+
+  const record = data as Record<string, unknown>;
+
+  return {
+    ...record,
+    theme_changes: normalizeThemeChangesArray(record.theme_changes),
+  };
 }
 
 export function normalizeCrossroadThemesInOutput(data: unknown): unknown {

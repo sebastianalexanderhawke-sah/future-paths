@@ -63,6 +63,22 @@ describe("prompt registry", () => {
     expect(systemPrompt).toContain("Never invent themes");
     expect(userPrompt).toContain("Never invent theme labels");
   });
+
+  it("requires check_in.generate to require theme and direction", () => {
+    const definition = getPromptDefinition("check_in.generate");
+    const systemPrompt = definition.buildSystemPrompt();
+    const userPrompt = definition.buildUserPrompt({
+      userId: "user-1",
+      profile: "check_in",
+    });
+
+    expect(systemPrompt).toContain("strengthened");
+    expect(systemPrompt).toContain("emerging");
+    expect(systemPrompt).toContain("weakened");
+    expect(systemPrompt).toContain("Never omit direction");
+    expect(userPrompt).toContain("Never omit direction");
+    expect(userPrompt).toContain('"direction"');
+  });
 });
 
 describe("context limits", () => {

@@ -1,4 +1,5 @@
-import { generateMockCheckIn } from "@/lib/mock-checkin-generator";
+import { runStructuredGeneration } from "@/lib/ai/orchestrator";
+import { checkInOutputSchema } from "@/lib/ai/schemas/check-in";
 import { createIdentityUpdateIfMeaningful } from "@/lib/identity-updates";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn } from "@/types/database";
@@ -120,11 +121,23 @@ export async function createCheckIn(
 
   const isFirstCheckIn = (count ?? 0) === 0;
 
-  const generated = generateMockCheckIn({
-    moment,
-    path: chosenPath,
-    reflection: trimmedReflection,
+  const generationResult = await runStructuredGeneration({
+    userId: auth.userId,
+    profile: "check_in",
+    promptId: "check_in.generate",
+    schema: checkInOutputSchema,
+    overrides: {
+      momentId,
+      pathId: chosenPath.id,
+      reflection: trimmedReflection,
+    },
   });
+
+  if (!generationResult.ok) {
+    return { error: generationResult.error };
+  }
+
+  const generated = generationResult.data;
 
   const { data: checkIn, error: checkInError } = await supabase
     .from("check_ins")

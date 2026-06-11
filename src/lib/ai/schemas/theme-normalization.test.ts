@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import { parseCheckInOutput } from "@/lib/ai/schemas/check-in";
 import { parseCrossroadOutput } from "@/lib/ai/schemas/crossroad";
 import {
+  normalizeCheckInThemesInOutput,
   normalizeCrossroadThemesInOutput,
+  normalizeThemeChangesArray,
   normalizeThemeName,
   normalizeThemesArray,
 } from "@/lib/ai/schemas/theme-normalization";
@@ -87,5 +90,34 @@ describe("theme normalization", () => {
     expect(parsed.paths[0].themes).toEqual(["Connection", "Independence"]);
     expect(parsed.paths[1].themes).toEqual(["Reflection", "Stability"]);
     expect(parsed.paths[2].themes).toEqual(["Curiosity", "Growth"]);
+  });
+
+  it("fills missing theme change directions before schema validation", () => {
+    expect(
+      normalizeThemeChangesArray([
+        { theme: "Growth" },
+        { theme: "Connection", direction: "weakened" },
+      ]),
+    ).toEqual([
+      { theme: "Growth", direction: "strengthened" },
+      { theme: "Connection", direction: "weakened" },
+    ]);
+  });
+
+  it("normalizes check-in output theme_changes before schema validation", () => {
+    const normalized = normalizeCheckInThemesInOutput({
+      reality_summary: "You may be noticing a shift in how this path feels.",
+      theme_changes: [
+        { theme: "communication" },
+        { theme: "Growth", direction: "emerging" },
+      ],
+      identity_impact: "This may suggest movement toward a more independent pattern.",
+    });
+
+    expect(() => parseCheckInOutput(normalized)).not.toThrow();
+    expect(parseCheckInOutput(normalized).theme_changes).toEqual([
+      { theme: "Connection", direction: "strengthened" },
+      { theme: "Growth", direction: "emerging" },
+    ]);
   });
 });

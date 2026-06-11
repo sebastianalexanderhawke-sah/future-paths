@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { MockCheckInResult } from "@/lib/mock-checkin-generator";
+import { normalizeCheckInThemesInOutput } from "@/lib/ai/schemas/theme-normalization";
 import { tentativeTextSchema, themeChangeSchema } from "@/lib/ai/schemas/shared";
 
 export const checkInOutputSchema = z.object({
@@ -10,5 +11,5 @@ export const checkInOutputSchema = z.object({
 }) satisfies z.ZodType<MockCheckInResult>;
 
 export function parseCheckInOutput(data: unknown): MockCheckInResult {
-  return checkInOutputSchema.parse(data);
+  return checkInOutputSchema.parse(normalizeCheckInThemesInOutput(data));
 }
