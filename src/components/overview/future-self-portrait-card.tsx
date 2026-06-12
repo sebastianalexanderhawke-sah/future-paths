@@ -15,6 +15,7 @@ const STAGE_LABELS: Record<FutureSelfStage, string> = {
 type FutureSelfPortraitCardProps = {
   futureSelf: FutureSelf;
   featured?: boolean;
+  className?: string;
 };
 
 function getDominantTheme(themes: ThemeName[]): ThemeName {
@@ -24,6 +25,7 @@ function getDominantTheme(themes: ThemeName[]): ThemeName {
 export function FutureSelfPortraitCard({
   futureSelf,
   featured = false,
+  className = "",
 }: FutureSelfPortraitCardProps) {
   const isFaded = futureSelf.status === "faded";
   const dominantTheme = getDominantTheme(futureSelf.themes);
@@ -36,6 +38,7 @@ export function FutureSelfPortraitCard({
         "flex h-full min-h-[22rem] w-[72vw] max-w-[20rem] flex-col overflow-hidden sm:min-w-[18rem] sm:max-w-[21rem]",
         featured ? "ring-1 ring-[var(--action-ring)]" : "",
         isFaded ? "opacity-75" : "",
+        className,
       ].join(" ")}
     >
       <div
