@@ -10,6 +10,7 @@ import { generateMockCheckIn } from "@/lib/mock-checkin-generator";
 import { generateMockContradictions } from "@/lib/mock-contradiction-generator";
 import { generateMockCrossroads } from "@/lib/mock-crossroad-generator";
 import { generateMockCurrentSelf } from "@/lib/mock-current-self-generator";
+import { generateMockForecast } from "@/lib/mock-forecast-generator";
 import { generateMockFutureSelves } from "@/lib/mock-future-self-generator";
 import { generateMockIdentityPrompts } from "@/lib/mock-identity-prompt-generator";
 import { generateMockIdentityUpdate } from "@/lib/mock-identity-update-generator";
@@ -82,6 +83,21 @@ export function runMockGenerator(
         identityUpdateThemes: (context.identityUpdates ?? []).flatMap(
           (update) => update.themes ?? [],
         ),
+      });
+
+    case "forecast.generate":
+      if (!context.moment) {
+        throw new Error("Forecast generation requires moment context.");
+      }
+
+      return generateMockForecast({
+        moment: context.moment,
+        selectedPath: context.selectedForecastPath
+          ? {
+              title: context.selectedForecastPath.title,
+              description: context.selectedForecastPath.description,
+            }
+          : null,
       });
 
     case "current_self.generate":

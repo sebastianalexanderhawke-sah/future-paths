@@ -1,4 +1,5 @@
 import type { ScannableFuture, ScannablePath } from "@/components/home/output-refinement";
+import type { ForecastOutput } from "@/lib/ai/schemas/forecast";
 import type { MockCrossroadResult, MockPathDraft } from "@/lib/mock-crossroad-generator";
 import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
 import type { Path } from "@/types/database";
@@ -93,6 +94,20 @@ function toRawFutureItem(source: string): RawFutureAuditItem {
   return {
     title: trimmed,
     futureImpact: trimmed,
+  };
+}
+
+export function buildRawForecastAuditFromGeneration(generated: ForecastOutput): RawForecastAudit {
+  const mapFuture = (future: { title: string; why: string; impact: string }): RawFutureAuditItem => ({
+    title: future.title,
+    whyItMightHappen: future.why,
+    futureImpact: future.impact,
+  });
+
+  return {
+    active: generated.active.map(mapFuture),
+    hidden: generated.hidden.map(mapFuture),
+    blind_spots: generated.blind_spots.map(mapFuture),
   };
 }
 

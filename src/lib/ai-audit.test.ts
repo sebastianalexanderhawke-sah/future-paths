@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildRawForecastAudit,
+  buildRawForecastAuditFromGeneration,
   toProcessedForecastAudit,
   toRawPathAudit,
 } from "@/lib/ai-audit";
@@ -55,6 +56,23 @@ describe("ai audit", () => {
       { title: "Competitor launches first", futureImpact: "Competitor launches first" },
     ]);
     expect(raw.blind_spots.length).toBe(2);
+  });
+
+  it("captures dedicated forecast generation for audit comparison", () => {
+    const raw = buildRawForecastAuditFromGeneration({
+      active: [
+        {
+          title: "She Says Yes To Coffee",
+          why: "A direct ask can lead to plans quickly.",
+          impact: "You meet outside work within the week.",
+        },
+      ],
+      hidden: [],
+      blind_spots: [],
+    });
+
+    expect(raw.active[0]?.title).toBe("She Says Yes To Coffee");
+    expect(raw.active[0]?.whyItMightHappen).toBe("A direct ask can lead to plans quickly.");
   });
 
   it("captures processed forecast sections for comparison", () => {

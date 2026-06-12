@@ -15,7 +15,7 @@ import {
 
 describe("prompt registry", () => {
   it("registers every migration-order prompt id at version 1", () => {
-    expect(PROMPT_MIGRATION_ORDER).toHaveLength(10);
+    expect(PROMPT_MIGRATION_ORDER).toHaveLength(11);
 
     for (const promptId of PROMPT_MIGRATION_ORDER) {
       const definition = getPromptDefinition(promptId);
@@ -63,6 +63,33 @@ describe("prompt registry", () => {
 
     expect(systemPrompt).toContain("Never invent themes");
     expect(userPrompt).toContain("Never invent theme labels");
+    expect(systemPrompt).toContain("distinct strategies");
+    expect(systemPrompt).toContain("inner landscape");
+    expect(systemPrompt).toContain("What happens?");
+  });
+
+  it("requires future_self.discover to ban reflective forecast language", () => {
+    const definition = getPromptDefinition("future_self.discover");
+    const systemPrompt = definition.buildSystemPrompt();
+
+    expect(systemPrompt).toContain("What happens?");
+    expect(systemPrompt).toContain("inner landscape");
+    expect(systemPrompt).toContain("gain clarity");
+  });
+
+  it("requires forecast.generate to produce dedicated future realities", () => {
+    const definition = getPromptDefinition("forecast.generate");
+    const systemPrompt = definition.buildSystemPrompt();
+    const userPrompt = definition.buildUserPrompt({
+      userId: "user-1",
+      profile: "forecast",
+    });
+
+    expect(systemPrompt).toContain("What could actually happen next?");
+    expect(systemPrompt).toContain("photograph");
+    expect(systemPrompt).toContain("blind_spots");
+    expect(userPrompt).toContain("active");
+    expect(userPrompt).toContain("hidden");
   });
 
   it("requires check_in.generate to require theme and direction", () => {

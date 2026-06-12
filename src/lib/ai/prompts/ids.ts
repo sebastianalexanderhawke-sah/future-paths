@@ -3,6 +3,7 @@ export const PROMPT_MIGRATION_ORDER = [
   "check_in.generate",
   "identity_update.generate",
   "future_self.discover",
+  "forecast.generate",
   "current_self.generate",
   "identity_prompt.generate",
   "contradiction.detect",

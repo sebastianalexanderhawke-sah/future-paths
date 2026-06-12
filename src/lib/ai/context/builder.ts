@@ -39,6 +39,8 @@ export async function buildIdentityContext(
       return enforceContextLimits(await loadIdentityUpdateContext(supabase, base, options));
     case "future_self":
       return enforceContextLimits(await loadFutureSelfContext(supabase, base));
+    case "forecast":
+      return enforceContextLimits(await loadForecastContext(supabase, base, options));
     case "current_self":
       return enforceContextLimits(await loadCurrentSelfContext(supabase, base));
     case "identity_prompt":
@@ -57,6 +59,51 @@ export async function buildIdentityContext(
 }
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+async function loadForecastContext(
+  supabase: SupabaseClient,
+  base: IdentityContextBundle,
+  options: BuildContextOptions,
+): Promise<IdentityContextBundle> {
+  let bundle = { ...base };
+
+  if (options.overrides?.momentId) {
+    const { data: moment } = await supabase
+      .from("moments")
+      .select("id, title, description")
+      .eq("id", options.overrides.momentId)
+      .eq("user_id", options.userId)
+      .maybeSingle();
+
+    bundle = { ...bundle, moment: moment ?? undefined };
+  }
+
+  if (options.overrides?.pathId) {
+    const { data: path } = await supabase
+      .from("paths")
+      .select("id, description, benefits, consequences, future_shift, themes")
+      .eq("id", options.overrides.pathId)
+      .eq("user_id", options.userId)
+      .maybeSingle();
+
+    if (path) {
+      bundle = {
+        ...bundle,
+        selectedForecastPath: {
+          id: path.id,
+          title: options.overrides.selectedPathTitle ?? path.description,
+          description: path.description,
+          benefits: path.benefits,
+          consequences: path.consequences,
+          future_shift: path.future_shift,
+          themes: path.themes,
+        },
+      };
+    }
+  }
+
+  return bundle;
+}
 
 async function loadCrossroadContext(
   supabase: SupabaseClient,

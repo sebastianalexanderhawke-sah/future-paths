@@ -1,12 +1,15 @@
 import type { MockCrossroadResult, MockPathDraft } from "@/lib/mock-crossroad-generator";
 import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
 
+import type { ForecastOutput } from "@/lib/ai/schemas/forecast";
+
 import {
   buildScannableForecastSections,
   type ScannableFuture,
   toFirstSentence,
   withScannableForecastFallbacks,
 } from "@/components/home/output-refinement";
+import { processGeneratedForecastSections } from "@/components/home/forecast-reality";
 
 export type ForecastSections = {
   activeFutures: ScannableFuture[];
@@ -22,6 +25,22 @@ export type ForecastResult = {
   sections: ForecastSections;
   audit?: import("@/lib/ai-audit").ForecastAudit;
 };
+
+export function buildForecastSectionsFromGeneration(
+  generated: ForecastOutput,
+  situationTitle = "",
+  selectedPathTitle?: string | null,
+  contextSummary?: string | null,
+  pathText: string[] = [],
+): ForecastSections {
+  return processGeneratedForecastSections(
+    generated,
+    situationTitle,
+    contextSummary,
+    selectedPathTitle,
+    pathText,
+  );
+}
 
 export function buildForecastSections(
   crossroad: MockCrossroadResult,

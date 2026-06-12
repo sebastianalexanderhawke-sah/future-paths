@@ -3,6 +3,7 @@ export const CONTEXT_PROFILES = [
   "check_in",
   "identity_update",
   "future_self",
+  "forecast",
   "current_self",
   "identity_prompt",
   "contradiction",
@@ -20,6 +21,7 @@ export type BuildContextOverrides = {
   checkInId?: string;
   crossroadId?: string;
   selectedPathId?: string;
+  selectedPathTitle?: string;
 };
 
 export type BuildContextOptions = {

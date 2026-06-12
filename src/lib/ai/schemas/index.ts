@@ -5,6 +5,7 @@ import { parseCheckInOutput } from "@/lib/ai/schemas/check-in";
 import { parseContradictionOutput } from "@/lib/ai/schemas/contradiction";
 import { parseCrossroadOutput } from "@/lib/ai/schemas/crossroad";
 import { parseCurrentSelfOutput } from "@/lib/ai/schemas/current-self";
+import { parseForecastOutput } from "@/lib/ai/schemas/forecast";
 import { parseFutureSelfOutput } from "@/lib/ai/schemas/future-self";
 import { parseIdentityPromptOutput } from "@/lib/ai/schemas/identity-prompt";
 import { parseIdentityUpdateOutput } from "@/lib/ai/schemas/identity-update";
@@ -17,6 +18,7 @@ const OUTPUT_PARSERS: Record<PromptId, (data: unknown) => unknown> = {
   "check_in.generate": parseCheckInOutput,
   "identity_update.generate": parseIdentityUpdateOutput,
   "future_self.discover": parseFutureSelfOutput,
+  "forecast.generate": parseForecastOutput,
   "current_self.generate": parseCurrentSelfOutput,
   "identity_prompt.generate": parseIdentityPromptOutput,
   "contradiction.detect": parseContradictionOutput,
@@ -36,6 +38,7 @@ export {
   parseCrossroadOutput,
   parseCurrentSelfOutput,
   parseFutureSelfOutput,
+  parseForecastOutput,
   parseIdentityPromptOutput,
   parseIdentityUpdateOutput,
   parsePastAlternativePathOutput,

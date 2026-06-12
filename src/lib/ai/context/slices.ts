@@ -12,6 +12,16 @@ import type {
 } from "@/types/database";
 import type { ThemeName } from "@/types/enums";
 
+export type ForecastPathContext = {
+  id: string;
+  title: string;
+  description: string;
+  benefits: string[];
+  consequences: string[];
+  future_shift: string;
+  themes: ThemeName[];
+};
+
 import type { AnsweredPromptResponse } from "@/lib/mock-contradiction-generator";
 import type { MockLifeChapterDraft } from "@/lib/mock-timeline-generator";
 
@@ -25,6 +35,7 @@ export type IdentityContextBundle = {
   profile: string;
   moment?: Pick<Moment, "id" | "title" | "description">;
   chosenPath?: Pick<Path, "id" | "description" | "themes" | "future_shift">;
+  selectedForecastPath?: ForecastPathContext;
   reflection?: string;
   checkIn?: Pick<CheckIn, "theme_changes" | "identity_impact" | "reflection">;
   checkInHistory?: Pick<CheckIn, "theme_changes">[];

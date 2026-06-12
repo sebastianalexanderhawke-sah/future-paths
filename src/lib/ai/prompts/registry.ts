@@ -5,6 +5,7 @@ import { checkInGenerateV1 } from "@/lib/ai/prompts/check_in.generate.v1";
 import { contradictionDetectV1 } from "@/lib/ai/prompts/contradiction.detect.v1";
 import { crossroadGenerateV1 } from "@/lib/ai/prompts/crossroad.generate.v1";
 import { currentSelfGenerateV1 } from "@/lib/ai/prompts/current_self.generate.v1";
+import { forecastGenerateV1 } from "@/lib/ai/prompts/forecast.generate.v1";
 import { futureSelfDiscoverV1 } from "@/lib/ai/prompts/future_self.discover.v1";
 import { identityPromptGenerateV1 } from "@/lib/ai/prompts/identity_prompt.generate.v1";
 import { identityUpdateGenerateV1 } from "@/lib/ai/prompts/identity_update.generate.v1";
@@ -43,6 +44,7 @@ const PROMPT_REGISTRY: Record<PromptId, PromptDefinition> = {
   "check_in.generate": registerPrompt(checkInGenerateV1),
   "identity_update.generate": registerPrompt(identityUpdateGenerateV1),
   "future_self.discover": registerPrompt(futureSelfDiscoverV1),
+  "forecast.generate": registerPrompt(forecastGenerateV1),
   "current_self.generate": registerPrompt(currentSelfGenerateV1),
   "identity_prompt.generate": registerPrompt(identityPromptGenerateV1),
   "contradiction.detect": registerPrompt(contradictionDetectV1),

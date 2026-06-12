@@ -1,5 +1,6 @@
 import type { MockPathDraft } from "@/lib/mock-crossroad-generator";
 import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
+import type { ForecastFutureDraft, ForecastOutput } from "@/lib/ai/schemas/forecast";
 
 import type { ScannableFuture } from "@/components/home/output-refinement";
 import {
@@ -1326,6 +1327,109 @@ function fillSection(
   }
 
   return merged.slice(0, limits.max);
+}
+
+function buildSignalsFromGeneratedFuture(draft: ForecastFutureDraft): string[] {
+  const candidates = [draft.title, draft.why, draft.impact]
+    .map((value) => toShortPhrase(value, 44))
+    .filter((value) => value.length > 0);
+
+  const seen = new Set<string>();
+  const signals: string[] = [];
+
+  for (const candidate of candidates) {
+    const key = normalizeComparable(candidate);
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    signals.push(toTitleCase(candidate));
+
+    if (signals.length >= MAX_SIGNALS) {
+      break;
+    }
+  }
+
+  return signals.length >= MIN_SIGNALS
+    ? signals
+    : [...signals, "Named decision", "Current momentum", "Open timeline"].slice(0, MAX_SIGNALS);
+}
+
+function mapGeneratedFutureToScannableFuture(
+  draft: ForecastFutureDraft,
+  bundle: GroundingBundle,
+): ScannableFuture {
+  const title = resolveForecastTitle(draft.title, bundle) || formatForecastTitle(draft.title);
+  const futureImpact =
+    formatForecastImpact(draft.impact, bundle) ||
+    recoverFutureImpact(draft.impact, bundle) ||
+    toFirstSentence(draft.impact, 140);
+
+  return sanitizeFuture(
+    {
+      title,
+      whyItMightHappen: buildGroundedWhy(title, bundle, toFirstSentence(draft.why, 160)),
+      signals: buildSignalsFromGeneratedFuture(draft),
+      futureImpact,
+      expansion: null,
+      sourceTrace: buildSourceTrace(bundle),
+    },
+    bundle,
+  );
+}
+
+export function processGeneratedForecastSections(
+  generated: ForecastOutput,
+  situationTitle: string,
+  contextSummary?: string | null,
+  selectedPathTitle?: string | null,
+  pathText: string[] = [],
+): {
+  activeFutures: ScannableFuture[];
+  hiddenFutures: ScannableFuture[];
+  blindSpotFutures: ScannableFuture[];
+} {
+  const contextTitle = selectedPathTitle ? `${situationTitle} — ${selectedPathTitle}` : situationTitle;
+  const bundle = buildGroundingBundle({
+    situationTitle,
+    contextSummary: contextSummary ?? null,
+    selectedPathTitle: selectedPathTitle ?? null,
+    pathText,
+  });
+  const fallbacks = buildSituationFallbackFutures(contextTitle, bundle);
+  const recoveryInput: ForecastRecoveryInput = {
+    situationTitle,
+    contextSummary: contextSummary ?? null,
+    selectedPathTitle: selectedPathTitle ?? null,
+    reasoningSources: [
+      ...generated.active.flatMap((future) => [future.title, future.why, future.impact]),
+      ...generated.hidden.flatMap((future) => [future.title, future.why, future.impact]),
+      ...generated.blind_spots.flatMap((future) => [future.title, future.why, future.impact]),
+      ...pathText,
+    ],
+  };
+
+  const activeGenerated = generated.active.map((draft) => mapGeneratedFutureToScannableFuture(draft, bundle));
+  const hiddenGenerated = generated.hidden.map((draft) => mapGeneratedFutureToScannableFuture(draft, bundle));
+  const blindSpotGenerated = generated.blind_spots.map((draft) =>
+    mapGeneratedFutureToScannableFuture(draft, bundle),
+  );
+
+  return {
+    activeFutures: fillSection(activeGenerated, fallbacks.activeFutures, bundle, {
+      min: MIN_ACTIVE_FUTURES,
+      max: MAX_ACTIVE_FUTURES,
+    }, recoveryInput),
+    hiddenFutures: fillSection(hiddenGenerated, fallbacks.hiddenFutures, bundle, {
+      min: MIN_HIDDEN_FUTURES,
+      max: MAX_HIDDEN_FUTURES,
+    }, recoveryInput),
+    blindSpotFutures: fillSection(blindSpotGenerated, fallbacks.blindSpotFutures, bundle, {
+      min: MIN_BLIND_SPOT_FUTURES,
+      max: MAX_BLIND_SPOT_FUTURES,
+    }, recoveryInput),
+  };
 }
 
 function buildContextBlindSpotFutures(

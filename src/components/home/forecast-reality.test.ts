@@ -6,6 +6,7 @@ import {
   isAbstractCategoryFuture,
   isPhotographableFuture,
   isReflectiveForecast,
+  processGeneratedForecastSections,
   scoreForecastSpecificity,
   withRealityForecastFallbacks,
 } from "@/components/home/forecast-reality";
@@ -102,5 +103,79 @@ describe("forecast reality", () => {
       ),
     ).toBe(true);
     expect(sections.activeFutures[0]?.sourceTrace).toContain("Situation:");
+  });
+
+  it("processes dedicated forecast generation through safeguards", () => {
+    const sections = processGeneratedForecastSections(
+      {
+        active: [
+          {
+            title: "She Says Yes To Coffee",
+            why: "A direct ask after daily rapport can lead to plans quickly.",
+            impact: "You meet outside work within the week.",
+          },
+          {
+            title: "She Says No But Stays Friendly",
+            why: "A clear question can end uncertainty without ending contact.",
+            impact: "Daily work stays workable even if the crush fades.",
+          },
+          {
+            title: "Coworkers Learn About The Ask",
+            why: "Workplace moments rarely stay fully private.",
+            impact: "Small talk feels strained for a few weeks.",
+          },
+          {
+            title: "The Friendship Deepens First",
+            why: "More time together can build comfort before romance.",
+            impact: "You talk every week but nothing romantic happens yet.",
+          },
+        ],
+        hidden: [
+          {
+            title: "She Leaves The Company",
+            why: "Job changes can remove the situation entirely.",
+            impact: "The crush fades because daily contact disappears.",
+          },
+          {
+            title: "The Timing Never Aligns",
+            why: "Busy schedules can keep things polite but static.",
+            impact: "Months pass without a clear moment to act.",
+          },
+          {
+            title: "You Receive Mixed Signals",
+            why: "Friendly behavior can be hard to read over time.",
+            impact: "You hesitate longer than planned.",
+          },
+        ],
+        blind_spots: [
+          {
+            title: "She Assumes You're Not Interested",
+            why: "Platonic behavior can read as disinterest when she initiates often.",
+            impact: "She stops looking for signs because the friendship feels settled.",
+          },
+          {
+            title: "A Mutual Friend Changes The Dynamic",
+            why: "Shared social ties can shift how you both act at work.",
+            impact: "Group plans replace one-on-one contact.",
+          },
+          {
+            title: "A One-On-One Opportunity Appears Naturally",
+            why: "Shared projects or social plans can create private time.",
+            impact: "You finally talk outside the usual work routine.",
+          },
+        ],
+      },
+      "I like a girl at work",
+      "How often does she initiate conversations?\nDaily",
+      "Ask Her Out",
+      ["Ask her out directly after work."],
+    );
+
+    expect(sections.activeFutures.length).toBeGreaterThanOrEqual(4);
+    expect(sections.hiddenFutures.length).toBeGreaterThanOrEqual(3);
+    expect(sections.blindSpotFutures.length).toBeGreaterThanOrEqual(3);
+    expect(
+      sections.activeFutures.every((future) => !isReflectiveForecast(future.title)),
+    ).toBe(true);
   });
 });
