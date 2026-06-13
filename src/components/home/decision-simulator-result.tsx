@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CardShell } from "@/components/ui/card-shell";
 import { toProcessedPathAudit, type DecisionSimulatorAudit } from "@/lib/ai-audit";
 import { computePathTextTransformationMetrics } from "@/lib/path-text-transformation-trace";
+import { computeFutureShiftPreservationMetrics } from "@/lib/future-shift-preservation";
 import type { Path } from "@/types/database";
 
 type DecisionSimulatorResultProps = {
@@ -134,7 +135,7 @@ export function DecisionSimulatorResultView({
   isForecastPending = false,
   forecastBridgeError = null,
 }: DecisionSimulatorResultProps) {
-  const { paths: scannablePaths, traces: pathTitleTraces, textTransformationAudit } =
+  const { paths: scannablePaths, traces: pathTitleTraces, textTransformationAudit, futureShiftAudit } =
     formatDecisionPathsWithTrace(paths, situationTitle);
   const selectedPath = paths.find((path) => path.id === selectedPathId);
   const selectedScannablePath = scannablePaths.find(
@@ -220,6 +221,12 @@ export function DecisionSimulatorResultView({
               textTransformationAudit
                 ? computePathTextTransformationMetrics(textTransformationAudit)
                 : audit.textTransformationMetrics
+            }
+            futureShiftAudit={futureShiftAudit ?? audit.futureShiftAudit}
+            futureShiftMetrics={
+              futureShiftAudit
+                ? computeFutureShiftPreservationMetrics(futureShiftAudit)
+                : audit.futureShiftMetrics
             }
           />
         </div>

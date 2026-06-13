@@ -4,6 +4,11 @@ import {
   buildPathTextTransformationTrace,
   type PathTextStageCapture,
 } from "@/lib/path-text-transformation-trace";
+import type {
+  FutureShiftPreservationStatus,
+  FutureShiftValidationResult,
+} from "@/lib/future-shift-preservation";
+import { buildFutureShiftAuditItem } from "@/lib/future-shift-preservation";
 
 export type { PathTextStageCapture } from "@/lib/path-text-transformation-trace";
 
@@ -40,6 +45,7 @@ const INCOMPLETE_ENDINGS =
   /\b(the|a|an|on|in|at|to|for|with|that|which|and|or|who|if|when|whether|your|you|feels|may|might|could|would|will|become|reveals?|shows?|whether|about|into|from|through|without|this|that)\s*[.!?]?$/i;
 
 const MAX_PRESERVE_LENGTH = 250;
+const MAX_FUTURE_SHIFT_PRESERVE_LENGTH = 300;
 
 const IMPERATIVE_VERB_START =
   /^(invite|ask|tell|say|choose|accept|decline|wait|move|stay|take|build|focus|keep|try|test|go|walk|face|negotiate|explore|push|hold|play|think|change|direct|make|create|start|stop|let|give|find|share|spend|reach|offer|plan|commit|defer|turn|reframe|prioritize|redirect|commit)\b/i;
@@ -278,6 +284,131 @@ function preservePathSentence(text: string, stages?: PathTextStageCapture): stri
     stages.preservedBypass = true;
   }
   return preserved;
+}
+
+function isReflectiveFutureShiftViolation(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return true;
+  }
+
+  if (/^you may become someone who .+/i.test(trimmed) && trimmed.length >= 30) {
+    return false;
+  }
+
+  if (/^you may become .+/i.test(trimmed) && trimmed.length >= 30) {
+    return false;
+  }
+
+  if (/^you may feel .+/i.test(trimmed) && trimmed.length >= 30) {
+    return false;
+  }
+
+  return isReflectivePathContent(trimmed);
+}
+
+export function validateFutureShift(text: string): FutureShiftValidationResult {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { valid: false, reason: "empty" };
+  }
+
+  if (trimmed.includes("…")) {
+    return { valid: false, reason: "fragment" };
+  }
+
+  if (trimmed.length > MAX_FUTURE_SHIFT_PRESERVE_LENGTH) {
+    return { valid: false, reason: "too-long" };
+  }
+
+  if (isReflectiveFutureShiftViolation(trimmed)) {
+    return { valid: false, reason: "reflection-language" };
+  }
+
+  const normalized = ensureTerminalPunctuation(trimmed);
+  if (!isCompleteSentence(normalized)) {
+    return { valid: false, reason: "incomplete" };
+  }
+
+  if (!hasSubjectAndVerb(normalized)) {
+    return { valid: false, reason: "invalid" };
+  }
+
+  return { valid: true };
+}
+
+export function shouldPreserveFutureShift(text: string): boolean {
+  return validateFutureShift(text).valid;
+}
+
+export type FutureYouResolution = {
+  futureYou: string;
+  status: FutureShiftPreservationStatus;
+  validation: FutureShiftValidationResult;
+  rawFutureShift: string;
+};
+
+export function resolveFutureYou(
+  title: string,
+  futureShift: string,
+  themes: string[] = [],
+): FutureYouResolution {
+  const rawFutureShift = futureShift.trim();
+  const validation = validateFutureShift(rawFutureShift);
+
+  if (validation.valid) {
+    return {
+      futureYou: preservePathSentence(rawFutureShift),
+      status: "preserved",
+      validation,
+      rawFutureShift,
+    };
+  }
+
+  if (FUTURE_YOU_BY_TITLE[title]) {
+    return {
+      futureYou: FUTURE_YOU_BY_TITLE[title]!,
+      status: "fallback",
+      validation,
+      rawFutureShift,
+    };
+  }
+
+  const refined = futureShift
+    .replace(/^you may become someone who\s+/i, "")
+    .replace(/^you may become\s+/i, "You become ")
+    .replace(/^you may feel\s+/i, "You feel ");
+  const rewritten = summarizeToCompleteSentence(refined, 140);
+
+  if (
+    rewritten &&
+    !isReflectivePathContent(rewritten) &&
+    isCompleteSentence(rewritten)
+  ) {
+    return {
+      futureYou: rewritten,
+      status: "rewritten",
+      validation,
+      rawFutureShift,
+    };
+  }
+
+  const theme = themes[0];
+  if (theme && FUTURE_YOU_BY_THEME[theme]) {
+    return {
+      futureYou: FUTURE_YOU_BY_THEME[theme]!,
+      status: "fallback",
+      validation,
+      rawFutureShift,
+    };
+  }
+
+  return {
+    futureYou: "More decisive about what you want and willing to live with the result.",
+    status: "fallback",
+    validation,
+    rawFutureShift,
+  };
 }
 
 export function summarizeToCompleteSentence(
@@ -698,33 +829,7 @@ export function formatPathFutureYou(
   futureShift: string,
   themes: string[] = [],
 ): string {
-  const trimmedFutureShift = futureShift.trim();
-  if (shouldPreservePathSentence(trimmedFutureShift)) {
-    return preservePathSentence(trimmedFutureShift);
-  }
-
-  if (FUTURE_YOU_BY_TITLE[title]) {
-    return FUTURE_YOU_BY_TITLE[title]!;
-  }
-
-  let sentence = summarizeToCompleteSentence(
-    futureShift
-      .replace(/^you may become someone who\s+/i, "")
-      .replace(/^you may become\s+/i, "You become ")
-      .replace(/^you may feel\s+/i, "You feel "),
-    140,
-  );
-
-  if (!isReflectivePathContent(sentence) && isCompleteSentence(sentence)) {
-    return sentence;
-  }
-
-  const theme = themes[0];
-  if (theme && FUTURE_YOU_BY_THEME[theme]) {
-    return FUTURE_YOU_BY_THEME[theme]!;
-  }
-
-  return "More decisive about what you want and willing to live with the result.";
+  return resolveFutureYou(title, futureShift, themes).futureYou;
 }
 
 export function ensureMinimumOutcomes(
@@ -922,52 +1027,34 @@ export function formatPathFutureYouWithTrace(
   title: string,
   futureShift: string,
   themes: string[] = [],
-): { futureYou: string; trace: ReturnType<typeof buildPathTextTransformationTrace> } {
-  const original = futureShift.trim();
+  pathIndex = 0,
+): {
+  futureYou: string;
+  trace: ReturnType<typeof buildPathTextTransformationTrace>;
+  futureShiftAudit: ReturnType<typeof buildFutureShiftAuditItem>;
+} {
+  const resolution = resolveFutureYou(title, futureShift, themes);
+  const futureYou = resolution.futureYou;
+  const preservedBypass = resolution.status === "preserved";
 
-  if (shouldPreservePathSentence(original)) {
-    const futureYou = preservePathSentence(original);
-    return {
-      futureYou,
-      trace: buildPathTextTransformationTrace(original, futureYou, futureYou, futureYou, true),
-    };
-  }
-
-  if (FUTURE_YOU_BY_TITLE[title]) {
-    const final = FUTURE_YOU_BY_TITLE[title]!;
-    return {
-      futureYou: final,
-      trace: buildPathTextTransformationTrace(original, title, final, final),
-    };
-  }
-
-  const refined = futureShift
-    .replace(/^you may become someone who\s+/i, "")
-    .replace(/^you may become\s+/i, "You become ")
-    .replace(/^you may feel\s+/i, "You feel ");
-  const sentenceResult = traceTransformText(refined, (text, stages) =>
-    summarizeToCompleteSentence(text, 140, stages),
+  const trace = buildPathTextTransformationTrace(
+    resolution.rawFutureShift,
+    preservedBypass ? futureYou : title,
+    preservedBypass ? futureYou : futureYou,
+    futureYou,
+    preservedBypass,
   );
 
-  if (
-    !isReflectivePathContent(sentenceResult.final) &&
-    isCompleteSentence(sentenceResult.final)
-  ) {
-    return { futureYou: sentenceResult.final, trace: sentenceResult.trace };
-  }
-
-  const theme = themes[0];
-  if (theme && FUTURE_YOU_BY_THEME[theme]) {
-    const final = FUTURE_YOU_BY_THEME[theme]!;
-    return {
-      futureYou: final,
-      trace: buildPathTextTransformationTrace(original, theme, final, final),
-    };
-  }
-
-  const final = "More decisive about what you want and willing to live with the result.";
   return {
-    futureYou: final,
-    trace: buildPathTextTransformationTrace(original, "default-fallback", final, final),
+    futureYou,
+    trace,
+    futureShiftAudit: buildFutureShiftAuditItem({
+      pathIndex,
+      pathTitle: title,
+      rawFutureShift: resolution.rawFutureShift,
+      validationResult: resolution.validation,
+      displayedFutureShift: futureYou,
+      status: resolution.status,
+    }),
   };
 }

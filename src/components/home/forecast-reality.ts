@@ -29,6 +29,12 @@ import {
   type SlotFillAuditEntry,
 } from "@/lib/forecast-slot-integrity";
 import { tagForecastFuture } from "@/lib/forecast-source-attribution";
+import { resolveForecastExplanation } from "@/lib/forecast-explanation-preservation";
+import { isAiAuditEnabled } from "@/lib/ai-audit";
+import {
+  buildForecastExplanationPreservationAudit,
+  type ForecastExplanationPreservationAudit,
+} from "@/lib/forecast-explanation-preservation";
 import {
   createForecastPipelineTraceCollector,
   type ForecastPipelineSectionKey,
@@ -595,7 +601,14 @@ function isValidRealityFuture(future: ScannableFuture, bundle?: GroundingBundle)
     }
   }
 
-  if (isReflectiveForecast(future.whyItMightHappen) || isReflectiveForecast(future.futureImpact)) {
+  if (isReflectiveForecast(future.futureImpact)) {
+    return false;
+  }
+
+  if (
+    isReflectiveForecast(future.whyItMightHappen) &&
+    future.explanationPreservation?.status !== "preserved"
+  ) {
     return false;
   }
 
@@ -618,12 +631,16 @@ function sanitizeFuture(future: ScannableFuture, bundle?: GroundingBundle): Scan
   return {
     ...future,
     title,
-    whyItMightHappen: toFirstSentence(rewriteFutureText(future.whyItMightHappen), 160),
+    whyItMightHappen:
+      future.explanationPreservation?.status === "preserved"
+        ? future.whyItMightHappen
+        : toFirstSentence(rewriteFutureText(future.whyItMightHappen), 160),
     futureImpact: toFirstSentence(rewriteFutureText(future.futureImpact), 140),
     sourceTrace: bundle ? buildSourceTrace(bundle) : future.sourceTrace,
     source: future.source,
     sourceStage: future.sourceStage,
     originalTitle: future.originalTitle,
+    explanationPreservation: future.explanationPreservation,
     signals: future.signals
       .map((signal) => toTitleCase(rewriteFutureText(signal)))
       .filter(
@@ -1401,7 +1418,14 @@ function explainInvalidFuture(future: ScannableFuture, bundle: GroundingBundle):
     return "impact not grounded in context";
   }
 
-  if (isReflectiveForecast(future.futureImpact) || isReflectiveForecast(future.whyItMightHappen)) {
+  if (isReflectiveForecast(future.futureImpact)) {
+    return "reflective language in forecast body";
+  }
+
+  if (
+    isReflectiveForecast(future.whyItMightHappen) &&
+    future.explanationPreservation?.status !== "preserved"
+  ) {
     return "reflective language in forecast body";
   }
 
@@ -1716,15 +1740,17 @@ function mapGeneratedFutureToScannableFuture(
     formatForecastImpact(draft.impact, bundle) ||
     recoverFutureImpact(draft.impact, bundle) ||
     toFirstSentence(draft.impact, 140);
+  const explanationResult = resolveForecastExplanation(draft.why, title, bundle);
 
   const sanitized = sanitizeFuture(
     {
       title,
-      whyItMightHappen: buildGroundedWhy(title, bundle, toFirstSentence(draft.why, 160)),
+      whyItMightHappen: explanationResult.displayedExplanation,
       signals: buildSignalsFromGeneratedFuture(draft),
       futureImpact,
       expansion: null,
       sourceTrace: buildSourceTrace(bundle),
+      explanationPreservation: explanationResult.trace,
     },
     bundle,
   );
@@ -1747,6 +1773,7 @@ export type ProcessedForecastSectionsResult = {
   blindSpotFutures: ScannableFuture[];
   pipelineTrace?: import("@/lib/ai-audit").ForecastPipelineTrace;
   integrityAudit?: ForecastIntegrityAudit;
+  explanationAudit?: ForecastExplanationPreservationAudit;
 };
 
 export function processGeneratedForecastSections(
@@ -1877,6 +1904,15 @@ export function processGeneratedForecastSections(
               blindSpotFill.fallbackAdds,
             ),
           },
+        }
+      : {}),
+    ...(isAiAuditEnabled()
+      ? {
+          explanationAudit: buildForecastExplanationPreservationAudit({
+            activeFutures: activeFill.futures,
+            hiddenFutures: hiddenFill.futures,
+            blindSpotFutures: blindSpotFill.futures,
+          }),
         }
       : {}),
   };

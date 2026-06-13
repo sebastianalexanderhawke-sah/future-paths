@@ -1,6 +1,9 @@
 "use client";
 
 import type {
+  ForecastExplanationPreservationAudit,
+  ForecastExplanationPreservationItem,
+  ForecastExplanationPreservationMetrics,
   ForecastIntegrityAudit,
   ForecastPipelineTrace,
   ForecastPipelineTraceItem,
@@ -10,6 +13,9 @@ import type {
   PathTextFieldTrace,
   PathTextTransformationAudit,
   PathTextTransformationMetrics,
+  FutureShiftPreservationAudit,
+  FutureShiftPreservationMetrics,
+  FutureShiftAuditItem,
   PreservationMetrics,
   ProcessedForecastAudit,
   ProcessedPathAudit,
@@ -65,6 +71,8 @@ type DecisionSimulatorAuditPanelProps = {
   pathTitleTraces?: PathTitleTraceItem[];
   textTransformationAudit?: PathTextTransformationAudit;
   textTransformationMetrics?: PathTextTransformationMetrics;
+  futureShiftAudit?: FutureShiftPreservationAudit;
+  futureShiftMetrics?: FutureShiftPreservationMetrics;
 };
 
 function PreservationMetricsBlock({ metrics }: { metrics: PreservationMetrics }) {
@@ -102,6 +110,83 @@ function PathTextTransformationMetricsBlock({
           {metrics.percentages.corruptedRefinements}%)
         </p>
       </div>
+    </div>
+  );
+}
+
+function FutureShiftPreservationMetricsBlock({
+  metrics,
+}: {
+  metrics: FutureShiftPreservationMetrics;
+}) {
+  return (
+    <div className="rounded-[var(--radius-whisper)] border border-amber-500/30 bg-[var(--surface)] p-3">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Future Shift Metrics
+      </p>
+      <div className="mt-3 grid gap-1 font-mono text-[11px] text-ink-secondary">
+        <p>
+          Preserved Future Shifts: {metrics.preservedFutureShifts} (
+          {metrics.percentages.preservedFutureShifts}%)
+        </p>
+        <p>
+          Rewritten Future Shifts: {metrics.rewrittenFutureShifts} (
+          {metrics.percentages.rewrittenFutureShifts}%)
+        </p>
+        <p>
+          Fallback Future Shifts: {metrics.fallbackFutureShifts} (
+          {metrics.percentages.fallbackFutureShifts}%)
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function FutureShiftPreservationItemView({ item }: { item: FutureShiftAuditItem }) {
+  return (
+    <div className="rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface)] p-3">
+      <p className="font-mono text-[11px] font-medium text-ink-primary">
+        Path {item.pathIndex + 1}: {item.pathTitle}
+      </p>
+      <div className="mt-3 grid gap-2 font-mono text-[11px] text-ink-secondary">
+        <p>
+          <span className="text-ink-tertiary">Raw Future Shift</span>
+          <span className="mt-1 block whitespace-pre-wrap">{item.rawFutureShift || "—"}</span>
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Validation Result</span>{" "}
+          {item.validationResult.valid
+            ? "Valid"
+            : `Invalid (${item.validationResult.reason ?? "unknown"})`}
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Displayed Future Shift</span>
+          <span className="mt-1 block whitespace-pre-wrap">
+            {item.displayedFutureShift || "—"}
+          </span>
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Status</span>{" "}
+          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function FutureShiftPreservationSection({
+  audit,
+}: {
+  audit: FutureShiftPreservationAudit;
+}) {
+  return (
+    <div className="flex flex-col gap-4 border-t border-[var(--ink-tertiary)]/10 pt-4">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Future Shift Preservation
+      </p>
+      {audit.paths.map((item) => (
+        <FutureShiftPreservationItemView key={`future-shift-${item.pathIndex}`} item={item} />
+      ))}
     </div>
   );
 }
@@ -180,6 +265,8 @@ export function DecisionSimulatorAuditPanel({
   pathTitleTraces,
   textTransformationAudit,
   textTransformationMetrics,
+  futureShiftAudit,
+  futureShiftMetrics,
 }: DecisionSimulatorAuditPanelProps) {
   if (!isAiAuditEnabled()) {
     return null;
@@ -227,6 +314,12 @@ export function DecisionSimulatorAuditPanel({
         </div>
       ) : null}
 
+      {futureShiftMetrics ? (
+        <FutureShiftPreservationMetricsBlock metrics={futureShiftMetrics} />
+      ) : null}
+
+      {futureShiftAudit ? <FutureShiftPreservationSection audit={futureShiftAudit} /> : null}
+
       {textTransformationMetrics ? (
         <PathTextTransformationMetricsBlock metrics={textTransformationMetrics} />
       ) : null}
@@ -265,6 +358,8 @@ type ForecastAuditPanelProps = {
   integrityAudit?: ForecastIntegrityAudit;
   sourceAttribution?: ForecastSourceAttributionAudit;
   sourceMetrics?: ForecastSourceMetrics;
+  explanationAudit?: ForecastExplanationPreservationAudit;
+  explanationMetrics?: ForecastExplanationPreservationMetrics;
 };
 
 function ForecastIntegritySection({ integrityAudit }: { integrityAudit: ForecastIntegrityAudit }) {
@@ -307,6 +402,84 @@ function ForecastIntegritySection({ integrityAudit }: { integrityAudit: Forecast
           ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+function ForecastExplanationPreservationMetricsBlock({
+  metrics,
+}: {
+  metrics: ForecastExplanationPreservationMetrics;
+}) {
+  return (
+    <div className="rounded-[var(--radius-whisper)] border border-amber-500/30 bg-[var(--surface)] p-3">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Forecast Explanation Metrics
+      </p>
+      <div className="mt-3 grid gap-1 font-mono text-[11px] text-ink-secondary">
+        <p>
+          Preserved Explanations: {metrics.preservedExplanations} (
+          {metrics.percentages.preservedExplanations}%)
+        </p>
+        <p>
+          Reconstructed Explanations: {metrics.reconstructedExplanations} (
+          {metrics.percentages.reconstructedExplanations}%)
+        </p>
+        <p>
+          Fallback Explanations: {metrics.fallbackExplanations} (
+          {metrics.percentages.fallbackExplanations}%)
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ForecastExplanationPreservationItemView({
+  item,
+}: {
+  item: ForecastExplanationPreservationItem;
+}) {
+  return (
+    <div className="rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface)] p-3">
+      <p className="font-mono text-[11px] font-medium text-ink-primary">
+        {item.section.replace("_", " ")} #{item.index + 1}: {item.title}
+      </p>
+      <div className="mt-3 grid gap-2 font-mono text-[11px] text-ink-secondary">
+        <p>
+          <span className="text-ink-tertiary">Raw</span>
+          <span className="mt-1 block whitespace-pre-wrap">{item.rawExplanation ?? "null"}</span>
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Displayed</span>
+          <span className="mt-1 block whitespace-pre-wrap">{item.displayedExplanation}</span>
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Status</span>{" "}
+          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ForecastExplanationPreservationSection({
+  audit,
+}: {
+  audit: ForecastExplanationPreservationAudit;
+}) {
+  return (
+    <div className="flex flex-col gap-4 border-t border-[var(--ink-tertiary)]/10 pt-4">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Forecast Explanation Preservation
+      </p>
+      {(["active", "hidden", "blind_spots"] as const).map((section) =>
+        audit[section].map((item) => (
+          <ForecastExplanationPreservationItemView
+            key={`explanation-${section}-${item.index}`}
+            item={item}
+          />
+        )),
+      )}
     </div>
   );
 }
@@ -469,6 +642,8 @@ export function ForecastAuditPanel({
   integrityAudit,
   sourceAttribution,
   sourceMetrics,
+  explanationAudit,
+  explanationMetrics,
 }: ForecastAuditPanelProps) {
   if (!isAiAuditEnabled()) {
     return null;
@@ -506,6 +681,14 @@ export function ForecastAuditPanel({
       ))}
 
       {integrityAudit ? <ForecastIntegritySection integrityAudit={integrityAudit} /> : null}
+
+      {explanationMetrics ? (
+        <ForecastExplanationPreservationMetricsBlock metrics={explanationMetrics} />
+      ) : null}
+
+      {explanationAudit ? (
+        <ForecastExplanationPreservationSection audit={explanationAudit} />
+      ) : null}
 
       {sourceMetrics ? <ForecastSourceMetricsBlock metrics={sourceMetrics} /> : null}
 

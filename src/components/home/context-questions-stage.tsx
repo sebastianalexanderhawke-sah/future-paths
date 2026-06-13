@@ -10,6 +10,7 @@ type ContextQuestionsStageProps = {
   answers: Record<string, string>;
   onAnswerChange: (questionId: string, value: string) => void;
   onComplete?: () => void;
+  onContinueFromLast?: () => boolean;
 };
 
 export function ContextQuestionsStage({
@@ -17,6 +18,7 @@ export function ContextQuestionsStage({
   answers,
   onAnswerChange,
   onComplete,
+  onContinueFromLast,
 }: ContextQuestionsStageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -40,7 +42,12 @@ export function ContextQuestionsStage({
     }
 
     if (isLastQuestion) {
-      onComplete?.();
+      const shouldComplete = onContinueFromLast?.() ?? true;
+      if (shouldComplete) {
+        onComplete?.();
+      } else {
+        setCurrentIndex((index) => index + 1);
+      }
       return;
     }
 

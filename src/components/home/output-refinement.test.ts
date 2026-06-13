@@ -31,8 +31,9 @@ describe("output refinement", () => {
     expect(formatted.explanation.split(/[.!?]/).filter(Boolean).length).toBeLessThanOrEqual(2);
     expect(formatted.benefits.length).toBeGreaterThanOrEqual(3);
     expect(formatted.consequences.length).toBeGreaterThanOrEqual(3);
-    expect(formatted.futureYou.length).toBeLessThanOrEqual(140);
-    expect(formatted.futureYou.toLowerCase()).not.toContain("you may become someone who");
+    expect(formatted.futureYou).toBe(
+      "You may become someone who is more adaptable, confident, and comfortable taking risks over time.",
+    );
   });
 
   it("normalizes long bullets into short scan-friendly phrases", () => {

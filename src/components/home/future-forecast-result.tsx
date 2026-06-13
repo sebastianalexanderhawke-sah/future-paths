@@ -146,6 +146,8 @@ export function FutureForecastResultView({ forecast }: FutureForecastResultProps
             integrityAudit={forecast.audit.integrityAudit}
             sourceAttribution={forecast.audit.sourceAttribution}
             sourceMetrics={forecast.audit.sourceMetrics}
+            explanationAudit={forecast.audit.explanationAudit}
+            explanationMetrics={forecast.audit.explanationMetrics}
           />
         </div>
       ) : null}

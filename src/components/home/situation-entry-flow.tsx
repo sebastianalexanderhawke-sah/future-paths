@@ -10,11 +10,19 @@ import {
 import { runFutureForecastAction } from "@/actions/future-forecast";
 import {
   areAllQuestionsAnswered,
-  selectContextQuestions,
+  buildDiscoveryQuestionAudit,
+  buildPreviousAnswersFromSession,
+  computeDiscoveryQuestionMetrics,
+  countBlockedDuplicateCandidates,
+  MAX_DISCOVERY_QUESTIONS,
+  planNextDiscoveryQuestion,
+  toContextQuestion,
   type ContextQuestion,
+  type PlannedDiscoveryQuestion,
   type SituationGoal,
 } from "@/components/home/context-questions";
 import { ContextQuestionsStage } from "@/components/home/context-questions-stage";
+import { DiscoveryQuestionAuditPanel } from "@/components/home/discovery-question-audit-panel";
 import { DecisionSimulatorResultView } from "@/components/home/decision-simulator-result";
 import { formatDecisionPaths } from "@/components/home/decision-simulator-utils";
 import { toPathTitleInput } from "@/components/home/path-titles";
@@ -78,6 +86,9 @@ export function SituationEntryFlow() {
   const [forecastResult, setForecastResult] = useState<ForecastResult | null>(null);
   const [pathForecastResult, setPathForecastResult] = useState<ForecastResult | null>(null);
   const [pathForecastError, setPathForecastError] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<ContextQuestion[]>([]);
+  const [plannedQuestions, setPlannedQuestions] = useState<PlannedDiscoveryQuestion[]>([]);
+  const [duplicateQuestionsBlocked, setDuplicateQuestionsBlocked] = useState(0);
   const [isPending, startTransition] = useTransition();
   const [isSelectingPath, startSelectTransition] = useTransition();
 
@@ -85,14 +96,6 @@ export function SituationEntryFlow() {
   const hasGoal = goal !== null;
   const isDecisionMode = goal === "decision";
   const isForecastMode = goal === "forecast";
-
-  const questions = useMemo(() => {
-    if (!hasSituation || !goal) {
-      return [];
-    }
-
-    return selectContextQuestions(situationText, goal);
-  }, [situationText, goal, hasSituation, hasGoal]);
 
   useEffect(() => {
     setAnswers({});
@@ -104,7 +107,40 @@ export function SituationEntryFlow() {
     setForecastResult(null);
     setPathForecastResult(null);
     setPathForecastError(null);
-  }, [situationText, goal]);
+    setDuplicateQuestionsBlocked(0);
+
+    if (!hasSituation || !goal) {
+      setQuestions([]);
+      setPlannedQuestions([]);
+      return;
+    }
+
+    const first = planNextDiscoveryQuestion({
+      title: situationText.trim(),
+      goal,
+    });
+
+    if (first) {
+      setQuestions([toContextQuestion(first)]);
+      setPlannedQuestions([first]);
+    } else {
+      setQuestions([]);
+      setPlannedQuestions([]);
+    }
+  }, [situationText, goal, hasSituation, hasGoal]);
+
+  const discoveryAudit = useMemo(
+    () => buildDiscoveryQuestionAudit(plannedQuestions),
+    [plannedQuestions],
+  );
+  const discoveryMetrics = useMemo(
+    () =>
+      computeDiscoveryQuestionMetrics({
+        plannedQuestions,
+        duplicateQuestionsBlocked,
+      }),
+    [plannedQuestions, duplicateQuestionsBlocked],
+  );
 
   const allQuestionsAnswered = areAllQuestionsAnswered(questions, answers);
 
@@ -119,6 +155,34 @@ export function SituationEntryFlow() {
       ...current,
       [questionId]: value,
     }));
+  }
+
+  function handleContinueFromLast(): boolean {
+    if (!goal || questions.length >= MAX_DISCOVERY_QUESTIONS) {
+      return true;
+    }
+
+    const previousAnswers = buildPreviousAnswersFromSession(questions, answers);
+    const blocked = countBlockedDuplicateCandidates({
+      title: situationText.trim(),
+      goal,
+      previousAnswers,
+    });
+    setDuplicateQuestionsBlocked(blocked);
+
+    const next = planNextDiscoveryQuestion({
+      title: situationText.trim(),
+      goal,
+      previousAnswers,
+    });
+
+    if (!next) {
+      return true;
+    }
+
+    setQuestions((current) => [...current, toContextQuestion(next)]);
+    setPlannedQuestions((current) => [...current, next]);
+    return false;
   }
 
   function handleGenerateForecast() {
@@ -317,7 +381,9 @@ export function SituationEntryFlow() {
           answers={answers}
           onAnswerChange={handleAnswerChange}
           onComplete={() => setQuestionsComplete(true)}
+          onContinueFromLast={handleContinueFromLast}
         />
+        <DiscoveryQuestionAuditPanel audit={discoveryAudit} metrics={discoveryMetrics} />
       </FlowStep>
 
       <FlowStep

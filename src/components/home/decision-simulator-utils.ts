@@ -6,6 +6,7 @@ import {
   type ScannablePath,
 } from "@/components/home/output-refinement";
 import { isAiAuditEnabled } from "@/lib/ai-audit";
+import { createFutureShiftPreservationAudit } from "@/lib/future-shift-preservation";
 import { createPathTextTransformationAudit } from "@/lib/path-text-transformation-trace";
 import type { Path } from "@/types/database";
 
@@ -19,7 +20,11 @@ export function formatDecisionPathsWithTrace(paths: Path[], situationTitle = "")
   const formatted = paths.map((path, index) =>
     collectTextTrace
       ? formatScannablePathWithTrace(path, index, titles[index])
-      : { path: formatScannablePath(path, index, titles[index]), textTraces: [] },
+      : {
+          path: formatScannablePath(path, index, titles[index]),
+          textTraces: [],
+          futureShiftAudit: undefined,
+        },
   );
 
   return {
@@ -34,6 +39,13 @@ export function formatDecisionPathsWithTrace(paths: Path[], situationTitle = "")
               entry.textTraces,
             ),
           ),
+        )
+      : undefined,
+    futureShiftAudit: collectTextTrace
+      ? createFutureShiftPreservationAudit(
+          formatted
+            .map((entry) => entry.futureShiftAudit)
+            .filter((item): item is NonNullable<typeof item> => item !== undefined),
         )
       : undefined,
   };

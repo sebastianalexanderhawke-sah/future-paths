@@ -322,6 +322,7 @@ export async function runFutureForecastAction(input: {
             pipelineTrace: processedForecast?.pipelineTrace,
           }),
           integrityAudit: processedForecast?.integrityAudit,
+          explanationAudit: processedForecast?.explanationAudit,
         }),
       }
     : undefined;

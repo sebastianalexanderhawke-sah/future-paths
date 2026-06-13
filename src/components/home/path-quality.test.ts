@@ -101,4 +101,16 @@ describe("path quality", () => {
     );
     expect(formatPathSummary(explanation, [], "Ask Her Out")).toBe(explanation);
   });
+
+  it("preserves substantive Claude future_shift statements unchanged", () => {
+    const earlyInterestShift =
+      "You may become someone who acts on interest early rather than waiting for certainty to arrive on its own.";
+    const relationalGroundworkShift =
+      "You may become someone who builds relational groundwork before making a move and becomes better at reading mutual interest.";
+
+    expect(formatPathFutureYou("Ask Her Out", earlyInterestShift)).toBe(earlyInterestShift);
+    expect(formatPathFutureYou("Friendship First", relationalGroundworkShift)).toBe(
+      relationalGroundworkShift,
+    );
+  });
 });

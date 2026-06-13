@@ -23,6 +23,7 @@ import type {
   PathTextFieldTrace,
   PathTextTransformationPathAudit,
 } from "@/lib/path-text-transformation-trace";
+import type { FutureShiftAuditItem } from "@/lib/future-shift-preservation";
 
 export type ScannablePath = {
   title: string;
@@ -45,6 +46,7 @@ export type ScannableFuture = {
   source?: ForecastFutureSource;
   sourceStage?: string;
   originalTitle?: string | null;
+  explanationPreservation?: import("@/lib/forecast-explanation-preservation").ForecastExplanationPreservationTrace;
   expansion: string | null;
 };
 
@@ -188,13 +190,19 @@ export function formatScannablePathWithTrace(
 ): {
   path: ScannablePath;
   textTraces: PathTextFieldTrace[];
+  futureShiftAudit: FutureShiftAuditItem;
 } {
   const { description } = toPathTitleInput(path);
   const title = titleOverride ?? formatPathTitle(description, path.themes ?? [], index);
   const explanationResult = formatPathSummaryWithTrace(description, path.benefits, title);
   const benefitsResult = formatPathBenefitsWithTrace(path.benefits, title);
   const consequencesResult = formatPathConsequencesWithTrace(path.consequences, title);
-  const futureYouResult = formatPathFutureYouWithTrace(title, path.future_shift, path.themes ?? []);
+  const futureYouResult = formatPathFutureYouWithTrace(
+    title,
+    path.future_shift,
+    path.themes ?? [],
+    index,
+  );
   const explanation = explanationResult.summary;
   const benefits = benefitsResult.bullets;
   const consequences = consequencesResult.bullets;
@@ -230,6 +238,7 @@ export function formatScannablePathWithTrace(
         : null,
     },
     textTraces,
+    futureShiftAudit: futureYouResult.futureShiftAudit,
   };
 }
 

@@ -11,6 +11,18 @@ import {
   computeForecastSourceMetricsFromSections,
 } from "@/lib/forecast-source-attribution";
 import type {
+  ForecastExplanationPreservationAudit,
+  ForecastExplanationPreservationMetrics,
+} from "@/lib/forecast-explanation-preservation";
+import {
+  buildForecastExplanationPreservationAudit,
+  computeForecastExplanationPreservationMetrics,
+} from "@/lib/forecast-explanation-preservation";
+import type {
+  FutureShiftPreservationAudit,
+  FutureShiftPreservationMetrics,
+} from "@/lib/future-shift-preservation";
+import type {
   PathTextTransformationAudit,
   PathTextTransformationMetrics,
 } from "@/lib/path-text-transformation-trace";
@@ -71,6 +83,8 @@ export type DecisionSimulatorAudit = {
   rawPaths: RawPathAudit[];
   textTransformationAudit?: PathTextTransformationAudit;
   textTransformationMetrics?: PathTextTransformationMetrics;
+  futureShiftAudit?: FutureShiftPreservationAudit;
+  futureShiftMetrics?: FutureShiftPreservationMetrics;
 };
 
 export type PreservationMetrics = {
@@ -90,6 +104,8 @@ export type ForecastAudit = {
   integrityAudit?: ForecastIntegrityAudit;
   sourceAttribution?: ForecastSourceAttributionAudit;
   sourceMetrics?: ForecastSourceMetrics;
+  explanationAudit?: ForecastExplanationPreservationAudit;
+  explanationMetrics?: ForecastExplanationPreservationMetrics;
 };
 
 export type { ForecastIntegrityAudit, ForecastSectionIntegrity, ForecastSlotIntegrityItem } from "@/lib/forecast-slot-integrity";
@@ -106,6 +122,20 @@ export type {
   PathTextTransformationStatus,
   PathTextTransformationTrace,
 } from "@/lib/path-text-transformation-trace";
+export type {
+  FutureShiftAuditItem,
+  FutureShiftPreservationAudit,
+  FutureShiftPreservationMetrics,
+  FutureShiftPreservationStatus,
+  FutureShiftValidationResult,
+} from "@/lib/future-shift-preservation";
+export type {
+  ForecastExplanationPreservationAudit,
+  ForecastExplanationPreservationItem,
+  ForecastExplanationPreservationMetrics,
+  ForecastExplanationPreservationStatus,
+  ForecastExplanationValidationResult,
+} from "@/lib/forecast-explanation-preservation";
 
 export type ForecastPipelineTraceStatus =
   | "preserved"
@@ -246,14 +276,26 @@ export function buildForecastAuditFromSections(
     pipelineTrace?: ForecastPipelineTrace;
     preservationMetrics?: PreservationMetrics;
     integrityAudit?: ForecastIntegrityAudit;
+    explanationAudit?: ForecastExplanationPreservationAudit;
   },
 ): Pick<
   ForecastAudit,
-  "sourceAttribution" | "sourceMetrics" | "pipelineTrace" | "preservationMetrics" | "integrityAudit"
+  | "sourceAttribution"
+  | "sourceMetrics"
+  | "pipelineTrace"
+  | "preservationMetrics"
+  | "integrityAudit"
+  | "explanationAudit"
+  | "explanationMetrics"
 > {
+  const explanationAudit =
+    extras?.explanationAudit ?? buildForecastExplanationPreservationAudit(sections);
+
   return {
     sourceAttribution: buildForecastSourceAttributionAudit(sections),
     sourceMetrics: computeForecastSourceMetricsFromSections(sections),
+    explanationAudit,
+    explanationMetrics: computeForecastExplanationPreservationMetrics(explanationAudit),
     ...extras,
   };
 }
