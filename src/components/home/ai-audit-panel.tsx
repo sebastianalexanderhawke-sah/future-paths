@@ -4,6 +4,9 @@ import type {
   ForecastExplanationPreservationAudit,
   ForecastExplanationPreservationItem,
   ForecastExplanationPreservationMetrics,
+  ForecastSimplificationAudit,
+  ForecastSimplificationItem,
+  ForecastSimplificationMetrics,
   ForecastIntegrityAudit,
   ForecastPipelineTrace,
   ForecastPipelineTraceItem,
@@ -24,6 +27,10 @@ import type {
 } from "@/lib/ai-audit";
 import { isAiAuditEnabled } from "@/lib/ai-audit";
 import { formatIntegrityScore } from "@/lib/forecast-slot-integrity";
+import {
+  CurrentForecastFutureCard,
+  SimplifiedForecastFutureCard,
+} from "@/components/home/forecast-simplification-cards";
 import type { PathTitleTraceItem } from "@/components/home/path-titles";
 import { CardShell } from "@/components/ui/card-shell";
 
@@ -360,6 +367,8 @@ type ForecastAuditPanelProps = {
   sourceMetrics?: ForecastSourceMetrics;
   explanationAudit?: ForecastExplanationPreservationAudit;
   explanationMetrics?: ForecastExplanationPreservationMetrics;
+  simplificationAudit?: ForecastSimplificationAudit;
+  simplificationMetrics?: ForecastSimplificationMetrics;
 };
 
 function ForecastIntegritySection({ integrityAudit }: { integrityAudit: ForecastIntegrityAudit }) {
@@ -480,6 +489,95 @@ function ForecastExplanationPreservationSection({
           />
         )),
       )}
+    </div>
+  );
+}
+
+function ForecastSimplificationMetricsBlock({
+  metrics,
+}: {
+  metrics: ForecastSimplificationMetrics;
+}) {
+  return (
+    <div className="rounded-[var(--radius-whisper)] border border-amber-500/30 bg-[var(--surface)] p-3">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Forecast Simplification Metrics
+      </p>
+      <div className="mt-3 grid gap-1 font-mono text-[11px] text-ink-secondary">
+        <p>Raw Claude Characters: {metrics.rawClaudeCharacters}</p>
+        <p>Displayed Characters: {metrics.displayedCharacters}</p>
+        <p>Signal Characters: {metrics.signalCharacters}</p>
+        <p>Trace Characters: {metrics.traceCharacters}</p>
+        <p>Display Expansion Ratio: {metrics.displayExpansionRatio}%</p>
+        <p>
+          Matched Futures: {metrics.matchedFutures} / {metrics.totalDisplayedFutures}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ForecastSimplificationItemView({ item }: { item: ForecastSimplificationItem }) {
+  return (
+    <div className="flex flex-col gap-4 rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface)] p-3">
+      <div>
+        <p className="font-mono text-[11px] font-medium text-ink-primary">
+          {item.section.replace("_", " ")} #{item.index + 1}: {item.displayedTitle}
+        </p>
+        <div className="mt-2 grid gap-1 font-mono text-[11px] text-ink-secondary">
+          <p>
+            <span className="text-ink-tertiary">Character Delta</span>{" "}
+            {item.characterDelta >= 0 ? `+${item.characterDelta}` : item.characterDelta}
+          </p>
+          {item.displayExpansionRatio !== null ? (
+            <p>
+              <span className="text-ink-tertiary">Expansion</span> {item.displayExpansionRatio}%
+            </p>
+          ) : (
+            <p>
+              <span className="text-ink-tertiary">Raw Claude Match</span> None
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {item.raw ? (
+          <SimplifiedForecastFutureCard future={item.raw} />
+        ) : (
+          <div className="rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface-muted)] p-4">
+            <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+              Version A (Raw Claude)
+            </p>
+            <p className="mt-3 text-body-small text-ink-secondary">
+              No matching Claude raw future for this displayed slot.
+            </p>
+          </div>
+        )}
+        <CurrentForecastFutureCard future={item.current} label="Version B (Current Display)" />
+      </div>
+    </div>
+  );
+}
+
+function ForecastSimplificationExperimentSection({
+  audit,
+}: {
+  audit: ForecastSimplificationAudit;
+}) {
+  const items = [...audit.active, ...audit.hidden, ...audit.blind_spots];
+
+  return (
+    <div className="flex flex-col gap-4 border-t border-[var(--ink-tertiary)]/10 pt-4">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Forecast Simplification Experiment
+      </p>
+      {items.map((item) => (
+        <ForecastSimplificationItemView
+          key={`simplification-${item.section}-${item.index}`}
+          item={item}
+        />
+      ))}
     </div>
   );
 }
@@ -644,6 +742,8 @@ export function ForecastAuditPanel({
   sourceMetrics,
   explanationAudit,
   explanationMetrics,
+  simplificationAudit,
+  simplificationMetrics,
 }: ForecastAuditPanelProps) {
   if (!isAiAuditEnabled()) {
     return null;
@@ -688,6 +788,14 @@ export function ForecastAuditPanel({
 
       {explanationAudit ? (
         <ForecastExplanationPreservationSection audit={explanationAudit} />
+      ) : null}
+
+      {simplificationMetrics ? (
+        <ForecastSimplificationMetricsBlock metrics={simplificationMetrics} />
+      ) : null}
+
+      {simplificationAudit ? (
+        <ForecastSimplificationExperimentSection audit={simplificationAudit} />
       ) : null}
 
       {sourceMetrics ? <ForecastSourceMetricsBlock metrics={sourceMetrics} /> : null}

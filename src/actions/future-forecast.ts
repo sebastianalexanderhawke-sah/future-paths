@@ -34,6 +34,7 @@ import {
   type ForecastAudit,
 
 } from "@/lib/ai-audit";
+import { buildForecastSimplificationExperiment } from "@/lib/forecast-simplification-experiment";
 
 import { createMoment, getMoment, updateMoment } from "@/lib/moments";
 
@@ -314,17 +315,27 @@ export async function runFutureForecastAction(input: {
   );
 
   const audit: ForecastAudit | undefined = isAiAuditEnabled()
-    ? {
-        rawForecast: buildRawForecastAuditFromGeneration(forecastGeneration.data),
-        ...buildForecastAuditFromSections(sections, {
-          pipelineTrace: processedForecast?.pipelineTrace,
-          preservationMetrics: computePreservationMetrics({
+    ? (() => {
+        const rawForecast = buildRawForecastAuditFromGeneration(forecastGeneration.data);
+        const simplification = buildForecastSimplificationExperiment({
+          rawForecast,
+          sections,
+        });
+
+        return {
+          rawForecast,
+          ...buildForecastAuditFromSections(sections, {
             pipelineTrace: processedForecast?.pipelineTrace,
+            preservationMetrics: computePreservationMetrics({
+              pipelineTrace: processedForecast?.pipelineTrace,
+            }),
+            integrityAudit: processedForecast?.integrityAudit,
+            explanationAudit: processedForecast?.explanationAudit,
+            simplificationAudit: simplification.audit,
+            simplificationMetrics: simplification.metrics,
           }),
-          integrityAudit: processedForecast?.integrityAudit,
-          explanationAudit: processedForecast?.explanationAudit,
-        }),
-      }
+        };
+      })()
     : undefined;
 
 

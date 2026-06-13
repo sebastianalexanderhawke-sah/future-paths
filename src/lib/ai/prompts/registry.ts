@@ -4,6 +4,7 @@ import { alternateSelfGenerateV1 } from "@/lib/ai/prompts/alternate_self.generat
 import { checkInGenerateV1 } from "@/lib/ai/prompts/check_in.generate.v1";
 import { contradictionDetectV1 } from "@/lib/ai/prompts/contradiction.detect.v1";
 import { crossroadGenerateV1 } from "@/lib/ai/prompts/crossroad.generate.v1";
+import { discoveryQuestionGenerateV1 } from "@/lib/ai/prompts/discovery_question.generate.v1";
 import { currentSelfGenerateV1 } from "@/lib/ai/prompts/current_self.generate.v1";
 import { forecastGenerateV1 } from "@/lib/ai/prompts/forecast.generate.v1";
 import { futureSelfDiscoverV1 } from "@/lib/ai/prompts/future_self.discover.v1";
@@ -41,6 +42,7 @@ function registerPrompt(module: PromptModule): PromptDefinition {
 
 const PROMPT_REGISTRY: Record<PromptId, PromptDefinition> = {
   "crossroad.generate": registerPrompt(crossroadGenerateV1),
+  "discovery_question.generate": registerPrompt(discoveryQuestionGenerateV1),
   "check_in.generate": registerPrompt(checkInGenerateV1),
   "identity_update.generate": registerPrompt(identityUpdateGenerateV1),
   "future_self.discover": registerPrompt(futureSelfDiscoverV1),

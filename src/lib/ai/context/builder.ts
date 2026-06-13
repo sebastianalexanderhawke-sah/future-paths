@@ -33,6 +33,8 @@ export async function buildIdentityContext(
   switch (options.profile) {
     case "crossroad":
       return enforceContextLimits(await loadCrossroadContext(supabase, base, options));
+    case "discovery_question":
+      return enforceContextLimits(loadDiscoveryQuestionContext(base, options));
     case "check_in":
       return enforceContextLimits(await loadCheckInContext(supabase, base, options));
     case "identity_update":
@@ -103,6 +105,27 @@ async function loadForecastContext(
   }
 
   return bundle;
+}
+
+function loadDiscoveryQuestionContext(
+  base: IdentityContextBundle,
+  options: BuildContextOptions,
+): IdentityContextBundle {
+  const situationText = options.overrides?.situationText?.trim();
+
+  if (!situationText) {
+    return base;
+  }
+
+  return {
+    ...base,
+    moment: {
+      id: "discovery-inline",
+      title: situationText,
+      description: null,
+    },
+    discoveryGoal: options.overrides?.situationGoal,
+  };
 }
 
 async function loadCrossroadContext(

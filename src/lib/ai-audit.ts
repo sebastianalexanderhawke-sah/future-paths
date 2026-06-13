@@ -14,6 +14,10 @@ import type {
   ForecastExplanationPreservationAudit,
   ForecastExplanationPreservationMetrics,
 } from "@/lib/forecast-explanation-preservation";
+import type {
+  ForecastSimplificationAudit,
+  ForecastSimplificationMetrics,
+} from "@/lib/forecast-simplification-experiment";
 import {
   buildForecastExplanationPreservationAudit,
   computeForecastExplanationPreservationMetrics,
@@ -106,6 +110,8 @@ export type ForecastAudit = {
   sourceMetrics?: ForecastSourceMetrics;
   explanationAudit?: ForecastExplanationPreservationAudit;
   explanationMetrics?: ForecastExplanationPreservationMetrics;
+  simplificationAudit?: ForecastSimplificationAudit;
+  simplificationMetrics?: ForecastSimplificationMetrics;
 };
 
 export type { ForecastIntegrityAudit, ForecastSectionIntegrity, ForecastSlotIntegrityItem } from "@/lib/forecast-slot-integrity";
@@ -136,6 +142,14 @@ export type {
   ForecastExplanationPreservationStatus,
   ForecastExplanationValidationResult,
 } from "@/lib/forecast-explanation-preservation";
+export type {
+  ForecastSimplificationAudit,
+  ForecastSimplificationItem,
+  ForecastSimplificationMetrics,
+  ForecastSimplificationSection,
+  SimplifiedFutureRendering,
+  CurrentFutureRendering,
+} from "@/lib/forecast-simplification-experiment";
 
 export type ForecastPipelineTraceStatus =
   | "preserved"
@@ -277,6 +291,8 @@ export function buildForecastAuditFromSections(
     preservationMetrics?: PreservationMetrics;
     integrityAudit?: ForecastIntegrityAudit;
     explanationAudit?: ForecastExplanationPreservationAudit;
+    simplificationAudit?: ForecastSimplificationAudit;
+    simplificationMetrics?: ForecastSimplificationMetrics;
   },
 ): Pick<
   ForecastAudit,
@@ -287,6 +303,8 @@ export function buildForecastAuditFromSections(
   | "integrityAudit"
   | "explanationAudit"
   | "explanationMetrics"
+  | "simplificationAudit"
+  | "simplificationMetrics"
 > {
   const explanationAudit =
     extras?.explanationAudit ?? buildForecastExplanationPreservationAudit(sections);

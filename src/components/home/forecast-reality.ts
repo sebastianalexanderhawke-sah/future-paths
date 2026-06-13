@@ -1588,60 +1588,52 @@ function fillSection(
     }
   };
 
-  if (
-    recoveryInput &&
-    (shouldRunRecoveryGeneration(survivorCount) || slots.some((slot) => slot === null))
-  ) {
+
+  const DISABLE_RECOVERY_EXPERIMENT = true;
+
+  if (!DISABLE_RECOVERY_EXPERIMENT && recoveryInput) {
     fillVacantSlots(
-      filterGroundedFutures(generateRecoveredFutures(recoveryInput, bundle), bundle),
+      filterGroundedFutures(
+        generateRecoveredFutures(recoveryInput, bundle),
+        bundle,
+      ),
       "recovery",
     );
   }
-
-  if (slots.some((slot) => slot === null)) {
+  
+  if (!DISABLE_RECOVERY_EXPERIMENT) {
     fillVacantSlots(groundedFallback, "fallback");
   }
-
-  let final: ScannableFuture[] = slots.filter((future): future is ScannableFuture => future !== null);
-
-  if (final.length < limits.min && recoveryInput) {
+  
+  let final: ScannableFuture[] = slots.filter(
+    (future): future is ScannableFuture => future !== null,
+  );
+  
+  if (
+    !DISABLE_RECOVERY_EXPERIMENT &&
+    final.length < limits.min &&
+    recoveryInput
+  ) {
     const appendCandidates = [
-      ...filterGroundedFutures(generateRecoveredFutures(recoveryInput, bundle), bundle),
+      ...filterGroundedFutures(
+        generateRecoveredFutures(recoveryInput, bundle),
+        bundle,
+      ),
       ...groundedFallback,
     ];
-
+  
     for (const candidate of appendCandidates) {
       if (final.length >= limits.min) {
         break;
       }
-
+  
       const key = normalizeComparable(candidate.title);
       if (lockedKeys.has(key)) {
         continue;
       }
-
+  
       final.push(tagForecastFuture(candidate, "recovery", "recovery", null));
       lockedKeys.add(key);
-      recoveryAdds += 1;
-      traceContext?.collector.recordRecovered(traceContext.section, candidate.title);
-    }
-
-    if (final.length < limits.min) {
-      for (const candidate of groundedFallback) {
-        if (final.length >= limits.min) {
-          break;
-        }
-
-        const key = normalizeComparable(candidate.title);
-        if (lockedKeys.has(key)) {
-          continue;
-        }
-
-        final.push(tagForecastFuture(candidate, "fallback", "fallback", null));
-        lockedKeys.add(key);
-        fallbackAdds += 1;
-        traceContext?.collector.recordFallback(traceContext.section, candidate.title);
-      }
     }
   }
 

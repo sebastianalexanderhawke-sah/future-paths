@@ -65,15 +65,28 @@ function DiscoveryQuestionMetricsBlock({ metrics }: { metrics: DiscoveryQuestion
 type DiscoveryQuestionAuditPanelProps = {
   audit: DiscoveryQuestionAudit;
   metrics: DiscoveryQuestionMetrics;
+  source: "ai" | "fallback" | null;
 };
 
-export function DiscoveryQuestionAuditPanel({ audit, metrics }: DiscoveryQuestionAuditPanelProps) {
+export function DiscoveryQuestionAuditPanel({
+  audit,
+  metrics,
+  source,
+}: DiscoveryQuestionAuditPanelProps) {
   if (!isAiAuditEnabled()) {
     return null;
   }
 
   return (
     <AiAuditShell title="Discovery Questions">
+      {source ? (
+        <div className="rounded-[var(--radius-whisper)] border border-amber-500/30 bg-[var(--surface)] p-3">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+            Question Set Source
+          </p>
+          <p className="mt-2 font-mono text-[11px] text-ink-secondary">{source}</p>
+        </div>
+      ) : null}
       <DiscoveryQuestionMetricsBlock metrics={metrics} />
       <div className="flex flex-col gap-3">
         <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">

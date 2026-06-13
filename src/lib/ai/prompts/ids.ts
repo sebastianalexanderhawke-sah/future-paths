@@ -1,5 +1,6 @@
 export const PROMPT_MIGRATION_ORDER = [
   "crossroad.generate",
+  "discovery_question.generate",
   "check_in.generate",
   "identity_update.generate",
   "future_self.discover",

@@ -15,7 +15,7 @@ import {
 
 describe("prompt registry", () => {
   it("registers every migration-order prompt id at version 1", () => {
-    expect(PROMPT_MIGRATION_ORDER).toHaveLength(11);
+    expect(PROMPT_MIGRATION_ORDER).toHaveLength(12);
 
     for (const promptId of PROMPT_MIGRATION_ORDER) {
       const definition = getPromptDefinition(promptId);

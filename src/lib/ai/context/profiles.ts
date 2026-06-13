@@ -1,5 +1,6 @@
 export const CONTEXT_PROFILES = [
   "crossroad",
+  "discovery_question",
   "check_in",
   "identity_update",
   "future_self",
@@ -22,6 +23,8 @@ export type BuildContextOverrides = {
   crossroadId?: string;
   selectedPathId?: string;
   selectedPathTitle?: string;
+  situationText?: string;
+  situationGoal?: "decision" | "forecast";
 };
 
 export type BuildContextOptions = {

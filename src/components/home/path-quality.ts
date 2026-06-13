@@ -457,7 +457,7 @@ export function summarizeToCompleteSentence(
 
   let formatted = core;
   if (/relationship|interest|crush|dating|friend|workplace|colleague/i.test(core)) {
-    formatted = `${capitalize(core)} and see how she responds`;
+    formatted = capitalize(core);
   } else if (/job|offer|move|relocate|career|role|city|dallas/i.test(core)) {
     formatted = `${capitalize(core)} and commit to the next step`;
   } else if (/business|startup|launch|company/i.test(core)) {
@@ -467,7 +467,7 @@ export function summarizeToCompleteSentence(
       core = core.split(/\s+/).slice(0, 12).join(" ");
     }
 
-    formatted = `${capitalize(core)} and see what follows`;
+    formatted = capitalize(core);
   }
 
   if (stages) {

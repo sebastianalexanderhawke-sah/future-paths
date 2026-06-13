@@ -9,6 +9,7 @@ import { generateMockAlternateSelf } from "@/lib/mock-alternate-self-generator";
 import { generateMockCheckIn } from "@/lib/mock-checkin-generator";
 import { generateMockContradictions } from "@/lib/mock-contradiction-generator";
 import { generateMockCrossroads } from "@/lib/mock-crossroad-generator";
+import { generateMockDiscoveryQuestions } from "@/lib/mock-discovery-question-generator";
 import { generateMockCurrentSelf } from "@/lib/mock-current-self-generator";
 import { generateMockForecast } from "@/lib/mock-forecast-generator";
 import { generateMockFutureSelves } from "@/lib/mock-future-self-generator";
@@ -49,6 +50,16 @@ export function runMockGenerator(
       }
 
       return generateMockCrossroads(context.moment);
+
+    case "discovery_question.generate":
+      if (!context.moment) {
+        throw new Error("Discovery question generation requires moment context.");
+      }
+
+      return generateMockDiscoveryQuestions({
+        moment: context.moment,
+        goal: context.discoveryGoal ?? "decision",
+      });
 
     case "check_in.generate":
       if (!context.moment || !context.chosenPath || !context.reflection) {

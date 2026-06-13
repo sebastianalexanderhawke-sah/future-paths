@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 
 import {
+  generateDiscoveryQuestionsAction,
+  type DiscoveryQuestionsSource,
+} from "@/actions/discovery-questions";
+import {
   runDecisionSimulatorAction,
   selectDecisionPathAction,
   type DecisionSimulatorResult,
@@ -11,11 +15,9 @@ import { runFutureForecastAction } from "@/actions/future-forecast";
 import {
   areAllQuestionsAnswered,
   buildDiscoveryQuestionAudit,
-  buildPreviousAnswersFromSession,
   computeDiscoveryQuestionMetrics,
-  countBlockedDuplicateCandidates,
   MAX_DISCOVERY_QUESTIONS,
-  planNextDiscoveryQuestion,
+  planDiscoveryQuestionSession,
   toContextQuestion,
   type ContextQuestion,
   type PlannedDiscoveryQuestion,
@@ -88,8 +90,13 @@ export function SituationEntryFlow() {
   const [pathForecastError, setPathForecastError] = useState<string | null>(null);
   const [questions, setQuestions] = useState<ContextQuestion[]>([]);
   const [plannedQuestions, setPlannedQuestions] = useState<PlannedDiscoveryQuestion[]>([]);
+  const [discoveryQuestionSource, setDiscoveryQuestionSource] =
+    useState<DiscoveryQuestionsSource | null>(null);
+  // AI batches questions upfront; duplicate blocking only applies to rule-based fallback.
   const [duplicateQuestionsBlocked, setDuplicateQuestionsBlocked] = useState(0);
+  const [questionsError, setQuestionsError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isLoadingQuestions, startQuestionsTransition] = useTransition();
   const [isSelectingPath, startSelectTransition] = useTransition();
 
   const hasSituation = situationText.trim().length > 0;
@@ -108,6 +115,8 @@ export function SituationEntryFlow() {
     setPathForecastResult(null);
     setPathForecastError(null);
     setDuplicateQuestionsBlocked(0);
+    setDiscoveryQuestionSource(null);
+    setQuestionsError(null);
 
     if (!hasSituation || !goal) {
       setQuestions([]);
@@ -115,18 +124,31 @@ export function SituationEntryFlow() {
       return;
     }
 
-    const first = planNextDiscoveryQuestion({
-      title: situationText.trim(),
-      goal,
-    });
+    startQuestionsTransition(async () => {
+      const response = await generateDiscoveryQuestionsAction({
+        situationText: situationText.trim(),
+        goal,
+      });
 
-    if (first) {
-      setQuestions([toContextQuestion(first)]);
-      setPlannedQuestions([first]);
-    } else {
-      setQuestions([]);
-      setPlannedQuestions([]);
-    }
+      if ("error" in response) {
+        const fallback = planDiscoveryQuestionSession(
+          {
+            title: situationText.trim(),
+            goal,
+          },
+          MAX_DISCOVERY_QUESTIONS,
+        );
+        setPlannedQuestions(fallback);
+        setQuestions(fallback.map(toContextQuestion));
+        setDiscoveryQuestionSource("fallback");
+        setQuestionsError(response.error);
+        return;
+      }
+
+      setPlannedQuestions(response.questions);
+      setQuestions(response.questions.map(toContextQuestion));
+      setDiscoveryQuestionSource(response.source);
+    });
   }, [situationText, goal, hasSituation, hasGoal]);
 
   const discoveryAudit = useMemo(
@@ -158,31 +180,7 @@ export function SituationEntryFlow() {
   }
 
   function handleContinueFromLast(): boolean {
-    if (!goal || questions.length >= MAX_DISCOVERY_QUESTIONS) {
-      return true;
-    }
-
-    const previousAnswers = buildPreviousAnswersFromSession(questions, answers);
-    const blocked = countBlockedDuplicateCandidates({
-      title: situationText.trim(),
-      goal,
-      previousAnswers,
-    });
-    setDuplicateQuestionsBlocked(blocked);
-
-    const next = planNextDiscoveryQuestion({
-      title: situationText.trim(),
-      goal,
-      previousAnswers,
-    });
-
-    if (!next) {
-      return true;
-    }
-
-    setQuestions((current) => [...current, toContextQuestion(next)]);
-    setPlannedQuestions((current) => [...current, next]);
-    return false;
+    return true;
   }
 
   function handleGenerateForecast() {
@@ -376,6 +374,16 @@ export function SituationEntryFlow() {
         <p className="mb-5 text-body-small text-ink-secondary">
           One question at a time. Your answers shape what comes next.
         </p>
+        {isLoadingQuestions ? (
+          <p className="text-body-small text-ink-secondary">
+            Thinking of questions for your situation…
+          </p>
+        ) : null}
+        {questionsError ? (
+          <p className="mb-5 text-body-small text-[var(--state-contradiction-detected)]">
+            {questionsError}
+          </p>
+        ) : null}
         <ContextQuestionsStage
           questions={questions}
           answers={answers}
@@ -383,7 +391,11 @@ export function SituationEntryFlow() {
           onComplete={() => setQuestionsComplete(true)}
           onContinueFromLast={handleContinueFromLast}
         />
-        <DiscoveryQuestionAuditPanel audit={discoveryAudit} metrics={discoveryMetrics} />
+        <DiscoveryQuestionAuditPanel
+          audit={discoveryAudit}
+          metrics={discoveryMetrics}
+          source={discoveryQuestionSource}
+        />
       </FlowStep>
 
       <FlowStep

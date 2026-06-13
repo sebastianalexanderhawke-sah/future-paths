@@ -82,4 +82,5 @@ export type IdentityContextBundle = {
     "id" | "name" | "momentum" | "themes" | "status" | "updated_at"
   >[];
   chapterCandidates?: MockLifeChapterDraft[];
+  discoveryGoal?: "decision" | "forecast";
 };
