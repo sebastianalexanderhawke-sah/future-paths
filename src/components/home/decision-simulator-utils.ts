@@ -1,11 +1,42 @@
-import { assignUniquePathTitles } from "@/components/home/path-titles";
-import { formatScannablePath, type ScannablePath } from "@/components/home/output-refinement";
+import { assignUniquePathTitlesWithTrace, toPathTitleInput } from "@/components/home/path-titles";
+import {
+  buildPathTextTransformationPathAudit,
+  formatScannablePath,
+  formatScannablePathWithTrace,
+  type ScannablePath,
+} from "@/components/home/output-refinement";
+import { isAiAuditEnabled } from "@/lib/ai-audit";
+import { createPathTextTransformationAudit } from "@/lib/path-text-transformation-trace";
 import type { Path } from "@/types/database";
 
 export function formatDecisionPaths(paths: Path[], situationTitle = ""): ScannablePath[] {
-  const titles = assignUniquePathTitles(paths, situationTitle);
+  return formatDecisionPathsWithTrace(paths, situationTitle).paths;
+}
 
-  return paths.map((path, index) => formatScannablePath(path, index, titles[index]));
+export function formatDecisionPathsWithTrace(paths: Path[], situationTitle = "") {
+  const { titles, traces } = assignUniquePathTitlesWithTrace(paths, situationTitle);
+  const collectTextTrace = isAiAuditEnabled();
+  const formatted = paths.map((path, index) =>
+    collectTextTrace
+      ? formatScannablePathWithTrace(path, index, titles[index])
+      : { path: formatScannablePath(path, index, titles[index]), textTraces: [] },
+  );
+
+  return {
+    paths: formatted.map((entry) => entry.path),
+    traces,
+    textTransformationAudit: collectTextTrace
+      ? createPathTextTransformationAudit(
+          formatted.map((entry, index) =>
+            buildPathTextTransformationPathAudit(
+              index,
+              entry.path.title,
+              entry.textTraces,
+            ),
+          ),
+        )
+      : undefined,
+  };
 }
 
 export type SelectedPathContext = {
@@ -19,9 +50,11 @@ export type SelectedPathContext = {
 };
 
 export function buildSelectedPathSummary(path: SelectedPathContext): string {
+  const { description } = toPathTitleInput(path);
+
   return [
     `Selected path: ${path.title}`,
-    `Summary: ${path.description}`,
+    `Summary: ${description}`,
     "Potential outcomes:",
     ...path.benefits.map((benefit) => `- ${benefit}`),
     ...path.consequences.map((consequence) => `- ${consequence}`),

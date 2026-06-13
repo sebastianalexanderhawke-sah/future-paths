@@ -8,6 +8,7 @@ import {
   formatPathSummary,
   isCompleteSentence,
   isReflectivePathContent,
+  shouldPreservePathSentence,
   summarizeToCompleteSentence,
 } from "@/components/home/path-quality";
 
@@ -78,5 +79,26 @@ describe("path quality", () => {
 
     expect(sentence).not.toContain("…");
     expect(isCompleteSentence(sentence)).toBe(true);
+  });
+
+  it("preserves complete Claude sentences unchanged during refinement", () => {
+    const signalConsequence =
+      "She may not pick up on the signals, leaving you no clearer than before.";
+    const interestConsequence =
+      "She may not share the interest or connection you assumed, making the setup feel forced.";
+    const explanation =
+      "Invite her to a specific activity outside of work — coffee, lunch, or an event — making your interest clear with a direct ask.";
+
+    expect(shouldPreservePathSentence(signalConsequence)).toBe(true);
+    expect(shouldPreservePathSentence(interestConsequence)).toBe(true);
+    expect(shouldPreservePathSentence(explanation)).toBe(true);
+
+    expect(formatPathConsequences([signalConsequence], "Ask Her Out")).toContain(
+      signalConsequence,
+    );
+    expect(formatPathConsequences([interestConsequence], "Ask Her Out")).toContain(
+      interestConsequence,
+    );
+    expect(formatPathSummary(explanation, [], "Ask Her Out")).toBe(explanation);
   });
 });

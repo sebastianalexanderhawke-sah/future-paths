@@ -1,7 +1,11 @@
 import type { ThemeName } from "@/types/enums";
+import { decodeNativePathFields } from "@/components/home/path-native-title";
 
 const MIN_PATH_TITLE_WORDS = 2;
-const MAX_PATH_TITLE_WORDS = 5;
+const MAX_PATH_TITLE_WORDS = 6;
+
+const TRAILING_FRAGMENT_WORD =
+  /\b(and|or|that|the|a|an|to|with|for|but|perhaps|honestly|directly|strictly|alone|rather)$/i;
 
 export type StrategyCategory =
   | "launch"
@@ -97,6 +101,9 @@ const THEME_STRATEGY: Partial<Record<ThemeName, StrategyCategory>> = {
 const FRAGMENT_TITLE_START =
   /^(choose|rather|explore taking|spend defined|you might|you may|perhaps|ideally|look for|carrying|treat)\b/i;
 
+const INVALID_PRESERVABLE_PATH_TITLE =
+  /(reflect on the situation|explore your feelings|gain clarity|understand yourself|inner landscape|process emotions|choose spend defined|rather carrying|self[- ]awareness|emotional processing|see what happens|wait and see|let it play out)/i;
+
 export type SituationDomain = "work-crush" | "relocation" | "business" | "general";
 
 export function detectSituationDomain(...texts: string[]): SituationDomain {
@@ -159,8 +166,158 @@ export function isValidStrategyTitle(title: string): boolean {
     return false;
   }
 
+  if (TRAILING_FRAGMENT_WORD.test(trimmed)) {
+    return false;
+  }
+
   return /^[A-Z]/.test(trimmed);
 }
+
+export function isNativePathTitle(title: string): boolean {
+  const trimmed = title.trim();
+  if (!isValidStrategyTitle(trimmed)) {
+    return false;
+  }
+
+  if (INVALID_PRESERVABLE_PATH_TITLE.test(trimmed)) {
+    return false;
+  }
+
+  return true;
+}
+
+export function isPreservablePathTitle(title: string): boolean {
+  return isNativePathTitle(title);
+}
+
+export type NativePathTitleValidation = {
+  valid: boolean;
+  reason?: string;
+};
+
+export function validateNativePathTitle(title: string): NativePathTitleValidation {
+  const normalized = normalizeNativeTitle(title);
+
+  if (!normalized) {
+    return { valid: false, reason: "missing title" };
+  }
+
+  if (FRAGMENT_TITLE_START.test(normalized)) {
+    return { valid: false, reason: "sentence fragment" };
+  }
+
+  const wordCount = countWords(normalized);
+  if (wordCount < MIN_PATH_TITLE_WORDS) {
+    return {
+      valid: false,
+      reason: `${wordCount} word${wordCount === 1 ? "" : "s"} (minimum ${MIN_PATH_TITLE_WORDS})`,
+    };
+  }
+
+  if (wordCount > MAX_PATH_TITLE_WORDS) {
+    return {
+      valid: false,
+      reason: `${wordCount} words (maximum ${MAX_PATH_TITLE_WORDS})`,
+    };
+  }
+
+  if (/^(the|a|an|you|your|to|and|or|but|with|from|into|that|this)\b/i.test(normalized)) {
+    return { valid: false, reason: "starts mid-sentence" };
+  }
+
+  if (TRAILING_FRAGMENT_WORD.test(normalized)) {
+    return { valid: false, reason: "ends with conjunction or fragment" };
+  }
+
+  if (INVALID_PRESERVABLE_PATH_TITLE.test(normalized)) {
+    return { valid: false, reason: "not strategy-oriented" };
+  }
+
+  if (!/^[A-Z]/.test(normalized)) {
+    return { valid: false, reason: "not human-readable" };
+  }
+
+  return { valid: true };
+}
+
+function salvageInvalidNativeTitle(title: string): string | null {
+  const normalized = normalizeNativeTitle(title);
+  if (!normalized) {
+    return null;
+  }
+
+  let words = normalized.split(/\s+/).filter(Boolean);
+
+  while (
+    words.length > MIN_PATH_TITLE_WORDS &&
+    TRAILING_FRAGMENT_WORD.test(words[words.length - 1] ?? "")
+  ) {
+    words = words.slice(0, -1);
+  }
+
+  const maxLength = Math.min(MAX_PATH_TITLE_WORDS, words.length);
+  for (let length = maxLength; length >= MIN_PATH_TITLE_WORDS; length -= 1) {
+    const candidate = words.slice(0, length).join(" ");
+    if (isNativePathTitle(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function normalizeNativeTitle(title: string): string {
+  return toTitleCase(title.trim().replace(/[.!?]+$/, ""));
+}
+
+/** @deprecated Native titles come from Claude output, not description parsing. */
+export function extractPreservedPathTitle(description: string): string | null {
+  const trimmed = description.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const candidates: string[] = [];
+
+  const quoted = trimmed.match(/^"([^"]+)"/);
+  if (quoted?.[1]) {
+    candidates.push(quoted[1]);
+  }
+
+  const beforeBreak = trimmed.match(/^(.+?)(?:\s*[—:-]\s)/);
+  if (beforeBreak?.[1]) {
+    candidates.push(beforeBreak[1]);
+  }
+
+  const firstSentence = trimmed.match(/^[^.!?]+/)?.[0];
+  if (firstSentence) {
+    candidates.push(firstSentence);
+  }
+
+  const leadingPhrase = trimmed.match(/^([A-Za-z]+(?:\s+[A-Za-z]+){1,5})/);
+  if (leadingPhrase?.[1]) {
+    candidates.push(leadingPhrase[1]);
+  }
+
+  for (const candidate of candidates) {
+    const title = toTitleCase(candidate.replace(/[.!?]+$/, "").trim());
+    if (isPreservablePathTitle(title)) {
+      return title;
+    }
+  }
+
+  return null;
+}
+
+export type PathTitleResolutionStatus = "native" | "recovered" | "generated";
+
+export type PathTitleTraceItem = {
+  rawClaudeTitle: string | null;
+  validationResult: NativePathTitleValidation;
+  fallbackTitle: string | null;
+  processedTitle: string;
+  status: PathTitleResolutionStatus;
+};
 
 export function classifyStrategyCategory(
   description: string,
@@ -320,9 +477,23 @@ export function buildPathTitleCandidates(
 }
 
 type PathTitleInput = {
+  title?: string | null;
   description: string;
   themes?: ThemeName[];
 };
+
+export function toPathTitleInput(path: {
+  description: string;
+  themes?: ThemeName[];
+}): PathTitleInput {
+  const { nativeTitle, description } = decodeNativePathFields(path.description);
+
+  return {
+    title: nativeTitle,
+    description,
+    themes: path.themes,
+  };
+}
 
 function isSelfHelpTitle(title: string): boolean {
   return /^(focus on yourself|go your own way|push forward|choose growth|stretch yourself|stand alone)$/i.test(
@@ -342,65 +513,161 @@ function isTitleAllowedForDomain(title: string, domain: SituationDomain): boolea
   return isValidStrategyTitle(title);
 }
 
-export function assignUniquePathTitles(
-  paths: PathTitleInput[],
+function resolvePathTitleForPath(
+  path: PathTitleInput,
+  index: number,
+  domain: SituationDomain,
+  usedTitles: Set<string>,
+  usedCategories: Set<StrategyCategory>,
+): PathTitleTraceItem {
+  const rawClaudeTitle = path.title?.trim() ? normalizeNativeTitle(path.title) : null;
+  const validationResult = rawClaudeTitle
+    ? validateNativePathTitle(rawClaudeTitle)
+    : { valid: false, reason: "missing title" };
+  const category = classifyStrategyCategory(path.description, path.themes ?? []);
+
+  if (
+    rawClaudeTitle &&
+    validationResult.valid &&
+    isTitleAllowedForDomain(rawClaudeTitle, domain) &&
+    !usedTitles.has(rawClaudeTitle)
+  ) {
+    usedTitles.add(rawClaudeTitle);
+    if (category) {
+      usedCategories.add(category);
+    }
+
+    return {
+      rawClaudeTitle,
+      validationResult,
+      fallbackTitle: null,
+      processedTitle: rawClaudeTitle,
+      status: "native",
+    };
+  }
+
+  const salvagedTitle =
+    rawClaudeTitle && !validationResult.valid ? salvageInvalidNativeTitle(rawClaudeTitle) : null;
+
+  if (
+    salvagedTitle &&
+    isTitleAllowedForDomain(salvagedTitle, domain) &&
+    !usedTitles.has(salvagedTitle)
+  ) {
+    usedTitles.add(salvagedTitle);
+    if (category) {
+      usedCategories.add(category);
+    }
+
+    return {
+      rawClaudeTitle,
+      validationResult,
+      fallbackTitle: salvagedTitle,
+      processedTitle: salvagedTitle,
+      status: "recovered",
+    };
+  }
+
+  const candidates = buildPathTitleCandidates(path.description, path.themes ?? [], index, domain);
+
+  if (category) {
+    for (let variant = 0; variant < 3; variant += 1) {
+      const strategyTitle = generateStrategyTitle(category, domain, variant);
+      if (
+        isTitleAllowedForDomain(strategyTitle, domain) &&
+        !usedTitles.has(strategyTitle) &&
+        !usedCategories.has(category)
+      ) {
+        usedTitles.add(strategyTitle);
+        usedCategories.add(category);
+        return {
+          rawClaudeTitle,
+          validationResult,
+          fallbackTitle: strategyTitle,
+          processedTitle: strategyTitle,
+          status: "recovered",
+        };
+      }
+    }
+  }
+
+  for (const candidate of candidates) {
+    const candidateCategory = classifyStrategyCategory(path.description, path.themes ?? []);
+    if (
+      isTitleAllowedForDomain(candidate, domain) &&
+      !usedTitles.has(candidate) &&
+      (!candidateCategory || !usedCategories.has(candidateCategory))
+    ) {
+      usedTitles.add(candidate);
+      if (candidateCategory) {
+        usedCategories.add(candidateCategory);
+      }
+
+      return {
+        rawClaudeTitle,
+        validationResult,
+        fallbackTitle: candidate,
+        processedTitle: candidate,
+        status: "recovered",
+      };
+    }
+  }
+
+  for (let variant = 0; variant < 6; variant += 1) {
+    const fallbackCategory =
+      classifyStrategyCategory(path.description, path.themes ?? []) ??
+      THEME_STRATEGY[path.themes?.[0] ?? "Reflection"] ??
+      "explore";
+    const fallbackTitle = generateStrategyTitle(fallbackCategory, domain, index + variant);
+    if (isTitleAllowedForDomain(fallbackTitle, domain) && !usedTitles.has(fallbackTitle)) {
+      usedTitles.add(fallbackTitle);
+      usedCategories.add(fallbackCategory);
+      return {
+        rawClaudeTitle,
+        validationResult,
+        fallbackTitle,
+        processedTitle: fallbackTitle,
+        status: "recovered",
+      };
+    }
+  }
+
+  const numberedTitle = `Path ${index + 1}`;
+  usedTitles.add(numberedTitle);
+  return {
+    rawClaudeTitle,
+    validationResult,
+    fallbackTitle: numberedTitle,
+    processedTitle: numberedTitle,
+    status: "generated",
+  };
+}
+
+export function assignUniquePathTitlesWithTrace(
+  paths: Array<{ description: string; themes?: ThemeName[] }>,
   situationTitle = "",
-): string[] {
+): { titles: string[]; traces: PathTitleTraceItem[] } {
+  const titleInputs = paths.map((path) => toPathTitleInput(path));
   const domain = detectSituationDomain(
     situationTitle,
-    ...paths.map((path) => path.description),
+    ...titleInputs.map((path) => path.description),
   );
   const usedTitles = new Set<string>();
   const usedCategories = new Set<StrategyCategory>();
 
-  return paths.map((path, index) => {
-    const category = classifyStrategyCategory(path.description, path.themes ?? []);
-    const candidates = buildPathTitleCandidates(path.description, path.themes ?? [], index, domain);
+  const traces = titleInputs.map((path, index) =>
+    resolvePathTitleForPath(path, index, domain, usedTitles, usedCategories),
+  );
 
-    if (category) {
-      for (let variant = 0; variant < 3; variant += 1) {
-        const strategyTitle = generateStrategyTitle(category, domain, variant);
-        if (
-          isTitleAllowedForDomain(strategyTitle, domain) &&
-          !usedTitles.has(strategyTitle) &&
-          !usedCategories.has(category)
-        ) {
-          usedTitles.add(strategyTitle);
-          usedCategories.add(category);
-          return strategyTitle;
-        }
-      }
-    }
+  return {
+    titles: traces.map((trace) => trace.processedTitle),
+    traces,
+  };
+}
 
-    for (const candidate of candidates) {
-      const candidateCategory = classifyStrategyCategory(path.description, path.themes ?? []);
-      if (
-        isTitleAllowedForDomain(candidate, domain) &&
-        !usedTitles.has(candidate) &&
-        (!candidateCategory || !usedCategories.has(candidateCategory))
-      ) {
-        usedTitles.add(candidate);
-        if (candidateCategory) {
-          usedCategories.add(candidateCategory);
-        }
-        return candidate;
-      }
-    }
-
-    for (let variant = 0; variant < 6; variant += 1) {
-      const fallbackCategory = classifyStrategyCategory(path.description, path.themes ?? []) ??
-        THEME_STRATEGY[path.themes?.[0] ?? "Reflection"] ??
-        "explore";
-      const fallbackTitle = generateStrategyTitle(fallbackCategory, domain, index + variant);
-      if (isTitleAllowedForDomain(fallbackTitle, domain) && !usedTitles.has(fallbackTitle)) {
-        usedTitles.add(fallbackTitle);
-        usedCategories.add(fallbackCategory);
-        return fallbackTitle;
-      }
-    }
-
-    const numberedTitle = `Path ${index + 1}`;
-    usedTitles.add(numberedTitle);
-    return numberedTitle;
-  });
+export function assignUniquePathTitles(
+  paths: PathTitleInput[],
+  situationTitle = "",
+): string[] {
+  return assignUniquePathTitlesWithTrace(paths, situationTitle).titles;
 }

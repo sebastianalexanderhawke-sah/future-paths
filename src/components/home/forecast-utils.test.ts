@@ -10,6 +10,7 @@ const crossroad = {
   current_understanding: "You are exploring a move.",
   paths: [
     {
+      title: "Take The Job",
       description: "Accept the role in Dallas",
       benefits: ["Build a new social circle", "Career growth"],
       consequences: ["Temporary loneliness", "Distance from familiar places"],
@@ -17,6 +18,7 @@ const crossroad = {
       themes: ["Growth"],
     },
     {
+      title: "Delay The Move",
       description: "Delay the move",
       benefits: ["Keep current stability"],
       consequences: ["The opportunity may pass"],
@@ -24,6 +26,7 @@ const crossroad = {
       themes: ["Stability"],
     },
     {
+      title: "Negotiate Remote Work",
       description: "Negotiate remote work",
       benefits: ["Career growth without relocating"],
       consequences: ["Less immersion in a new city"],
@@ -31,6 +34,7 @@ const crossroad = {
       themes: ["Independence"],
     },
     {
+      title: "Explore Other Cities",
       description: "Path four",
       benefits: ["Benefit four"],
       consequences: ["Consequence four"],
@@ -38,6 +42,7 @@ const crossroad = {
       themes: ["Connection"],
     },
     {
+      title: "Stay Where You Are",
       description: "Path five",
       benefits: ["Benefit five"],
       consequences: ["Consequence five"],

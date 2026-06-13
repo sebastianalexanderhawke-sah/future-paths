@@ -1,11 +1,12 @@
 import Link from "next/link";
 
 import { DecisionSimulatorAuditPanel } from "@/components/home/ai-audit-panel";
-import { formatDecisionPaths } from "@/components/home/decision-simulator-utils";
-import { compressCurrentUnderstanding } from "@/components/home/output-refinement";
+import { formatDecisionPathsWithTrace } from "@/components/home/decision-simulator-utils";
+import { compressCurrentUnderstanding, type ScannablePath } from "@/components/home/output-refinement";
 import { Button } from "@/components/ui/button";
 import { CardShell } from "@/components/ui/card-shell";
 import { toProcessedPathAudit, type DecisionSimulatorAudit } from "@/lib/ai-audit";
+import { computePathTextTransformationMetrics } from "@/lib/path-text-transformation-trace";
 import type { Path } from "@/types/database";
 
 type DecisionSimulatorResultProps = {
@@ -24,7 +25,7 @@ type DecisionSimulatorResultProps = {
 };
 
 type ScannablePathCardProps = {
-  path: ReturnType<typeof formatDecisionPaths>[number];
+  path: ScannablePath;
   rawPath: Path;
   index: number;
   isSelected: boolean;
@@ -133,7 +134,8 @@ export function DecisionSimulatorResultView({
   isForecastPending = false,
   forecastBridgeError = null,
 }: DecisionSimulatorResultProps) {
-  const scannablePaths = formatDecisionPaths(paths, situationTitle);
+  const { paths: scannablePaths, traces: pathTitleTraces, textTransformationAudit } =
+    formatDecisionPathsWithTrace(paths, situationTitle);
   const selectedPath = paths.find((path) => path.id === selectedPathId);
   const selectedScannablePath = scannablePaths.find(
     (_, index) => paths[index]?.id === selectedPathId,
@@ -210,6 +212,15 @@ export function DecisionSimulatorResultView({
           <DecisionSimulatorAuditPanel
             rawPaths={audit.rawPaths}
             processedPaths={scannablePaths.map(toProcessedPathAudit)}
+            pathTitleTraces={pathTitleTraces}
+            textTransformationAudit={
+              textTransformationAudit ?? audit.textTransformationAudit
+            }
+            textTransformationMetrics={
+              textTransformationAudit
+                ? computePathTextTransformationMetrics(textTransformationAudit)
+                : audit.textTransformationMetrics
+            }
           />
         </div>
       ) : null}

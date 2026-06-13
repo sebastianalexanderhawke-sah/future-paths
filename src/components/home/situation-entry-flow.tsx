@@ -17,6 +17,7 @@ import {
 import { ContextQuestionsStage } from "@/components/home/context-questions-stage";
 import { DecisionSimulatorResultView } from "@/components/home/decision-simulator-result";
 import { formatDecisionPaths } from "@/components/home/decision-simulator-utils";
+import { toPathTitleInput } from "@/components/home/path-titles";
 import type { ForecastResult } from "@/components/home/forecast-utils";
 import { FutureForecastResultView } from "@/components/home/future-forecast-result";
 import { SituationRotatingExamples } from "@/components/home/situation-rotating-examples";
@@ -208,6 +209,8 @@ export function SituationEntryFlow() {
 
     setPathForecastError(null);
 
+    const cleanedSelectedPath = toPathTitleInput(selectedPath);
+
     startTransition(async () => {
       const response = await runFutureForecastAction({
         situationText: situationText.trim(),
@@ -216,7 +219,7 @@ export function SituationEntryFlow() {
         selectedPath: {
           id: selectedPath.id,
           title: formattedPath.title,
-          description: selectedPath.description,
+          description: cleanedSelectedPath.description,
           benefits: selectedPath.benefits,
           consequences: selectedPath.consequences,
           future_shift: selectedPath.future_shift,

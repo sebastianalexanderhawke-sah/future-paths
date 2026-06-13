@@ -1,12 +1,24 @@
 "use client";
 
 import type {
+  ForecastIntegrityAudit,
+  ForecastPipelineTrace,
+  ForecastPipelineTraceItem,
+  ForecastSourceAttribution,
+  ForecastSourceAttributionAudit,
+  ForecastSourceMetrics,
+  PathTextFieldTrace,
+  PathTextTransformationAudit,
+  PathTextTransformationMetrics,
+  PreservationMetrics,
   ProcessedForecastAudit,
   ProcessedPathAudit,
   RawForecastAudit,
   RawPathAudit,
 } from "@/lib/ai-audit";
 import { isAiAuditEnabled } from "@/lib/ai-audit";
+import { formatIntegrityScore } from "@/lib/forecast-slot-integrity";
+import type { PathTitleTraceItem } from "@/components/home/path-titles";
 import { CardShell } from "@/components/ui/card-shell";
 
 function AuditJsonBlock({ label, data }: { label: string; data: unknown }) {
@@ -50,11 +62,124 @@ export function AiAuditShell({ title, children }: AiAuditShellProps) {
 type DecisionSimulatorAuditPanelProps = {
   rawPaths: RawPathAudit[];
   processedPaths: ProcessedPathAudit[];
+  pathTitleTraces?: PathTitleTraceItem[];
+  textTransformationAudit?: PathTextTransformationAudit;
+  textTransformationMetrics?: PathTextTransformationMetrics;
 };
+
+function PreservationMetricsBlock({ metrics }: { metrics: PreservationMetrics }) {
+  return (
+    <AuditJsonBlock label="Preservation Metrics" data={metrics} />
+  );
+}
+
+function PathTextTransformationMetricsBlock({
+  metrics,
+}: {
+  metrics: PathTextTransformationMetrics;
+}) {
+  return (
+    <div className="rounded-[var(--radius-whisper)] border border-amber-500/30 bg-[var(--surface)] p-3">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Text Transformation Metrics
+      </p>
+      <div className="mt-3 grid gap-1 font-mono text-[11px] text-ink-secondary">
+        <p>Preserved Fields: {metrics.preservedFields} ({metrics.percentages.preserved}%)</p>
+        <p>Modified Fields: {metrics.modifiedFields} ({metrics.percentages.modified}%)</p>
+        <p>Corrupted Fields: {metrics.corruptedFields} ({metrics.percentages.corrupted}%)</p>
+        <p>Appended Fields: {metrics.appendedFields} ({metrics.percentages.appended}%)</p>
+        <p>Truncated Fields: {metrics.truncatedFields} ({metrics.percentages.truncated}%)</p>
+        <p>
+          Bypassed Refinements: {metrics.bypassedRefinements} (
+          {metrics.percentages.bypassedRefinements}%)
+        </p>
+        <p>
+          Rewritten Refinements: {metrics.rewrittenRefinements} (
+          {metrics.percentages.rewrittenRefinements}%)
+        </p>
+        <p>
+          Corrupted Refinements: {metrics.corruptedRefinements} (
+          {metrics.percentages.corruptedRefinements}%)
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PathTextTransformationTraceItemView({
+  field,
+}: {
+  field: PathTextFieldTrace;
+}) {
+  const { trace } = field;
+
+  return (
+    <div className="rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface)] p-3">
+      <p className="font-mono text-[11px] font-medium text-ink-primary">{field.label}</p>
+      <div className="mt-3 grid gap-2 font-mono text-[11px] text-ink-secondary">
+        <p>
+          <span className="text-ink-tertiary">Original</span>
+          <span className="mt-1 block whitespace-pre-wrap">{trace.original || "—"}</span>
+        </p>
+        <p>
+          <span className="text-ink-tertiary">After Refinement</span>
+          <span className="mt-1 block whitespace-pre-wrap">{trace.afterRefinement || "—"}</span>
+        </p>
+        <p>
+          <span className="text-ink-tertiary">After Formatting</span>
+          <span className="mt-1 block whitespace-pre-wrap">{trace.afterFormatting || "—"}</span>
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Final</span>
+          <span className="mt-1 block whitespace-pre-wrap">{trace.final || "—"}</span>
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Status</span>{" "}
+          {trace.status.charAt(0).toUpperCase() + trace.status.slice(1)}
+        </p>
+        {trace.preservedBypass ? (
+          <p>
+            <span className="text-ink-tertiary">Preserved Bypass</span> Yes
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function PathTextTransformationTraceSection({
+  audit,
+}: {
+  audit: PathTextTransformationAudit;
+}) {
+  return (
+    <div className="flex flex-col gap-4 border-t border-[var(--ink-tertiary)]/10 pt-4">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Text Transformation Trace
+      </p>
+      {audit.paths.map((pathAudit) => (
+        <div key={`text-trace-path-${pathAudit.pathIndex}`} className="flex flex-col gap-3">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-ink-tertiary">
+            Path {pathAudit.pathIndex + 1}: {pathAudit.pathTitle}
+          </p>
+          {pathAudit.fields.map((field, index) => (
+            <PathTextTransformationTraceItemView
+              key={`text-trace-${pathAudit.pathIndex}-${field.field}-${index}`}
+              field={field}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function DecisionSimulatorAuditPanel({
   rawPaths,
   processedPaths,
+  pathTitleTraces,
+  textTransformationAudit,
+  textTransformationMetrics,
 }: DecisionSimulatorAuditPanelProps) {
   if (!isAiAuditEnabled()) {
     return null;
@@ -62,6 +187,54 @@ export function DecisionSimulatorAuditPanel({
 
   return (
     <AiAuditShell title="Decision Simulator">
+      {pathTitleTraces && pathTitleTraces.length > 0 ? (
+        <div className="flex flex-col gap-3">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+            Path Title Resolution
+          </p>
+          {pathTitleTraces.map((trace, index) => (
+            <div
+              key={`path-title-trace-${index}`}
+              className="rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface)] p-3"
+            >
+              <p className="font-mono text-[11px] font-medium text-ink-primary">
+                {trace.processedTitle}
+              </p>
+              {trace.rawClaudeTitle ? (
+                <p className="mt-2 font-mono text-[11px] text-ink-secondary">
+                  <span className="text-ink-tertiary">Raw Claude Title</span> {trace.rawClaudeTitle}
+                </p>
+              ) : null}
+              <p className="mt-1 font-mono text-[11px] text-ink-secondary">
+                <span className="text-ink-tertiary">Validation</span>{" "}
+                {trace.validationResult.valid
+                  ? "Valid"
+                  : `Invalid (${trace.validationResult.reason ?? "unknown"})`}
+              </p>
+              <p className="mt-1 font-mono text-[11px] text-ink-secondary">
+                <span className="text-ink-tertiary">Fallback</span>{" "}
+                {trace.fallbackTitle ?? "—"}
+              </p>
+              <p className="mt-1 font-mono text-[11px] text-ink-secondary">
+                <span className="text-ink-tertiary">Final Displayed Title</span>{" "}
+                {trace.processedTitle}
+              </p>
+              <p className="mt-1 font-mono text-[11px] text-ink-secondary">
+                <span className="text-ink-tertiary">Status</span> {trace.status}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {textTransformationMetrics ? (
+        <PathTextTransformationMetricsBlock metrics={textTransformationMetrics} />
+      ) : null}
+
+      {textTransformationAudit ? (
+        <PathTextTransformationTraceSection audit={textTransformationAudit} />
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <AuditJsonBlock label="Raw AI Paths" data={rawPaths} />
         <AuditJsonBlock label="Processed Paths" data={processedPaths} />
@@ -87,11 +260,215 @@ export function DecisionSimulatorAuditPanel({
 type ForecastAuditPanelProps = {
   rawForecast: RawForecastAudit;
   processedForecast: ProcessedForecastAudit;
+  pipelineTrace?: ForecastPipelineTrace;
+  preservationMetrics?: PreservationMetrics;
+  integrityAudit?: ForecastIntegrityAudit;
+  sourceAttribution?: ForecastSourceAttributionAudit;
+  sourceMetrics?: ForecastSourceMetrics;
 };
+
+function ForecastIntegritySection({ integrityAudit }: { integrityAudit: ForecastIntegrityAudit }) {
+  return (
+    <div className="flex flex-col gap-4 border-t border-[var(--ink-tertiary)]/10 pt-4">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Forecast Slot Integrity
+      </p>
+      {(["active", "hidden", "blind_spots"] as const).map((section) => (
+        <div key={section} className="flex flex-col gap-3">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-ink-tertiary">
+            {section.replace("_", " ")} Integrity Score:{" "}
+            {formatIntegrityScore(integrityAudit[section].integrityScore)}
+          </p>
+          <AuditJsonBlock label={`${section} integrity metrics`} data={integrityAudit[section]} />
+          {integrityAudit[section].slots.map((slot, index) => (
+            <div
+              key={`${section}-integrity-${index}`}
+              className="rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface)] p-3"
+            >
+              <p className="font-mono text-[11px] font-medium text-ink-primary">{slot.raw}</p>
+              <div className="mt-2 grid gap-1 font-mono text-[11px] text-ink-secondary">
+                <p>
+                  <span className="text-ink-tertiary">Survived</span> {slot.survived ? "Yes" : "No"}
+                </p>
+                <p>
+                  <span className="text-ink-tertiary">Final Slot</span>{" "}
+                  {slot.finalSlot ?? "—"}
+                </p>
+                <p>
+                  <span className="text-ink-tertiary">Replaced</span> {slot.replaced ? "Yes" : "No"}
+                </p>
+                {slot.replacedBy ? (
+                  <p>
+                    <span className="text-ink-tertiary">Replaced By</span> {slot.replacedBy}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ForecastSourceMetricsBlock({ metrics }: { metrics: ForecastSourceMetrics }) {
+  return (
+    <div className="rounded-[var(--radius-whisper)] border border-amber-500/30 bg-[var(--surface)] p-3">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Forecast Source Metrics
+      </p>
+      <div className="mt-3 grid gap-1 font-mono text-[11px] text-ink-secondary">
+        <p>Claude Futures Displayed: {metrics.claude} ({metrics.percentages.claude}%)</p>
+        <p>Recovery Futures Displayed: {metrics.recovery} ({metrics.percentages.recovery}%)</p>
+        <p>Fallback Futures Displayed: {metrics.fallback} ({metrics.percentages.fallback}%)</p>
+        <p>Future Self Futures Displayed: {metrics.future_self} ({metrics.percentages.future_self}%)</p>
+        <p>Merge Futures Displayed: {metrics.merge} ({metrics.percentages.merge}%)</p>
+        <p>Unknown Source Futures Displayed: {metrics.unknown} ({metrics.percentages.unknown}%)</p>
+      </div>
+    </div>
+  );
+}
+
+function ForecastSourceAttributionItemView({ item }: { item: ForecastSourceAttribution }) {
+  return (
+    <div className="rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface)] p-3">
+      <p className="font-mono text-[11px] font-medium text-ink-primary">{item.title}</p>
+      <div className="mt-2 grid gap-1 font-mono text-[11px] text-ink-secondary">
+        <p>
+          <span className="text-ink-tertiary">Source</span> {item.source}
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Stage</span> {item.sourceStage}
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Original</span> {item.originalTitle ?? "null"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ForecastSourceAttributionSection({
+  sourceAttribution,
+}: {
+  sourceAttribution: ForecastSourceAttributionAudit;
+}) {
+  return (
+    <div className="flex flex-col gap-4 border-t border-[var(--ink-tertiary)]/10 pt-4">
+      <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+        Forecast Source Attribution
+      </p>
+      {(["active", "hidden", "blind_spots"] as const).map((section) => (
+        <div key={section} className="flex flex-col gap-3">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-ink-tertiary">
+            {section.replace("_", " ")}
+          </p>
+          {sourceAttribution[section].length > 0 ? (
+            sourceAttribution[section].map((item, index) => (
+              <ForecastSourceAttributionItemView key={`${section}-source-${index}`} item={item} />
+            ))
+          ) : (
+            <p className="text-body-small text-ink-tertiary">No attributed futures.</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function stageLabel(value: string | null | undefined, pass = true): string {
+  if (value === undefined) {
+    return "—";
+  }
+
+  if (!value) {
+    return pass ? "✗ Removed" : "✗";
+  }
+
+  return pass ? "✓" : value;
+}
+
+function ForecastPipelineTraceItemView({ item }: { item: ForecastPipelineTraceItem }) {
+  const headline = item.final ?? item.afterRewrite ?? item.afterGrounding ?? item.original;
+
+  return (
+    <div className="rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface)] p-3">
+      <p className="font-mono text-[11px] font-medium text-ink-primary">{headline}</p>
+      <div className="mt-3 grid gap-2 font-mono text-[11px] text-ink-secondary">
+        <p>
+          <span className="text-ink-tertiary">RAW</span> {stageLabel(item.original)} Present
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Reality Filter</span>{" "}
+          {item.afterReality ? "✓ Survived" : item.afterReality === null ? "✗ Removed" : "—"}
+          {item.afterReality ? `: ${item.afterReality}` : ""}
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Grounding Filter</span>{" "}
+          {item.afterGrounding ? "✓ Survived" : item.afterGrounding === null ? "✗ Removed" : "—"}
+          {item.afterGrounding ? `: ${item.afterGrounding}` : ""}
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Rewrite</span>{" "}
+          {item.afterRewrite
+            ? item.afterRewrite !== item.afterGrounding && item.afterRewrite !== item.original
+              ? `→ ${item.afterRewrite}`
+              : "✓"
+            : "—"}
+        </p>
+        {item.afterRecovery ? (
+          <p>
+            <span className="text-ink-tertiary">Recovery</span> → {item.afterRecovery}
+          </p>
+        ) : null}
+        <p>
+          <span className="text-ink-tertiary">Final</span>{" "}
+          {item.final ? "✓ Displayed" : "✗ Not displayed"}
+          {item.final ? `: ${item.final}` : ""}
+        </p>
+        <p>
+          <span className="text-ink-tertiary">Status</span> {item.status}
+          {item.generatedBy ? ` (${item.generatedBy})` : ""}
+        </p>
+        {item.reason ? (
+          <p>
+            <span className="text-ink-tertiary">Reason</span> {item.reason}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ForecastPipelineTraceSection({ trace }: { trace: ForecastPipelineTrace }) {
+  return (
+    <div className="flex flex-col gap-4">
+      {(["active", "hidden", "blind_spots"] as const).map((section) => (
+        <div key={section} className="flex flex-col gap-3">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-ink-tertiary">
+            Pipeline Trace — {section.replace("_", " ")}
+          </p>
+          {trace[section].length > 0 ? (
+            trace[section].map((item, index) => (
+              <ForecastPipelineTraceItemView key={`${section}-${index}-${item.original}`} item={item} />
+            ))
+          ) : (
+            <p className="text-body-small text-ink-tertiary">No trace entries.</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function ForecastAuditPanel({
   rawForecast,
   processedForecast,
+  pipelineTrace,
+  preservationMetrics,
+  integrityAudit,
+  sourceAttribution,
+  sourceMetrics,
 }: ForecastAuditPanelProps) {
   if (!isAiAuditEnabled()) {
     return null;
@@ -99,6 +476,8 @@ export function ForecastAuditPanel({
 
   return (
     <AiAuditShell title="Future Forecast">
+      {preservationMetrics ? <PreservationMetricsBlock metrics={preservationMetrics} /> : null}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <AuditJsonBlock label="Raw Forecast" data={rawForecast} />
         <AuditJsonBlock label="Processed Forecast" data={processedForecast} />
@@ -125,6 +504,25 @@ export function ForecastAuditPanel({
           ))}
         </div>
       ))}
+
+      {integrityAudit ? <ForecastIntegritySection integrityAudit={integrityAudit} /> : null}
+
+      {sourceMetrics ? <ForecastSourceMetricsBlock metrics={sourceMetrics} /> : null}
+
+      {sourceAttribution ? (
+        <ForecastSourceAttributionSection sourceAttribution={sourceAttribution} />
+      ) : null}
+
+      {pipelineTrace ? (
+        <div className="border-t border-[var(--ink-tertiary)]/10 pt-4">
+          <p className="font-mono text-[11px] uppercase tracking-wide text-amber-700">
+            Forecast Pipeline Trace
+          </p>
+          <div className="mt-4">
+            <ForecastPipelineTraceSection trace={pipelineTrace} />
+          </div>
+        </div>
+      ) : null}
     </AiAuditShell>
   );
 }

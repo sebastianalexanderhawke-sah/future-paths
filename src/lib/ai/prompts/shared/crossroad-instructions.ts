@@ -14,8 +14,12 @@ export const GENERATION_PREFERENCE_LIST = `Generation preference list (use these
 
 export const CROSSROAD_PATH_RULES = `Path rules (Decision Simulator):
 - Generate exactly five distinct strategies — not five variations of the same idea.
-- Each path.description must name a specific decision or approach someone could take.
-- Paths must read like strategy titles expanded into one sentence: "Reach out directly", "Send a casual message", "Wait for the right moment", "Let the friendship go", "Reconnect through mutual friends".
+- Each path must include a native title and a description.
+- path.title must be 2-6 words, human-readable, strategy-oriented, and stand on its own.
+- Good titles: "Ask Her Out", "Friendship First", "Launch The MVP", "Find A Co-Founder", "Take The Job", "Stay Where You Are".
+- Bad titles: sentence fragments, mid-sentence cuts, conjunction leftovers like "... And That", or titles copied from the description opening.
+- Each path.description must expand the title into one concrete sentence about the strategy.
+- Paths must read like distinct strategies someone could actually choose.
 - Do not generate therapy paths, coaching paths, or reflection-only paths.
 - Do not generate sentence fragments or vague inner-work directions.`;
 

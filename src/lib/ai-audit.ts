@@ -1,4 +1,19 @@
 import type { ScannableFuture, ScannablePath } from "@/components/home/output-refinement";
+import type { PathTitleTraceItem } from "@/components/home/path-titles";
+import { decodeNativePathFields } from "@/components/home/path-native-title";
+import type { ForecastIntegrityAudit } from "@/lib/forecast-slot-integrity";
+import type {
+  ForecastSourceAttributionAudit,
+  ForecastSourceMetrics,
+} from "@/lib/forecast-source-attribution";
+import {
+  buildForecastSourceAttributionAudit,
+  computeForecastSourceMetricsFromSections,
+} from "@/lib/forecast-source-attribution";
+import type {
+  PathTextTransformationAudit,
+  PathTextTransformationMetrics,
+} from "@/lib/path-text-transformation-trace";
 import type { ForecastOutput } from "@/lib/ai/schemas/forecast";
 import type { MockCrossroadResult, MockPathDraft } from "@/lib/mock-crossroad-generator";
 import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
@@ -6,6 +21,7 @@ import type { Path } from "@/types/database";
 import type { ThemeName } from "@/types/enums";
 
 export type RawPathAudit = {
+  title: string | null;
   description: string;
   benefits: string[];
   consequences: string[];
@@ -40,6 +56,9 @@ export type ProcessedFutureAuditItem = {
   signals: string[];
   futureImpact: string;
   sourceTrace?: string;
+  source?: string;
+  sourceStage?: string;
+  originalTitle?: string | null;
 };
 
 export type ProcessedForecastAudit = {
@@ -50,10 +69,69 @@ export type ProcessedForecastAudit = {
 
 export type DecisionSimulatorAudit = {
   rawPaths: RawPathAudit[];
+  textTransformationAudit?: PathTextTransformationAudit;
+  textTransformationMetrics?: PathTextTransformationMetrics;
+};
+
+export type PreservationMetrics = {
+  nativePathTitles: number;
+  recoveredPathTitles: number;
+  generatedPathTitles: number;
+  preservedClaudeFutures: number;
+  rewrittenFutures: number;
+  recoveryGeneratedFutures: number;
+  fallbackGeneratedFutures: number;
 };
 
 export type ForecastAudit = {
   rawForecast: RawForecastAudit;
+  pipelineTrace?: ForecastPipelineTrace;
+  preservationMetrics?: PreservationMetrics;
+  integrityAudit?: ForecastIntegrityAudit;
+  sourceAttribution?: ForecastSourceAttributionAudit;
+  sourceMetrics?: ForecastSourceMetrics;
+};
+
+export type { ForecastIntegrityAudit, ForecastSectionIntegrity, ForecastSlotIntegrityItem } from "@/lib/forecast-slot-integrity";
+export type {
+  ForecastFutureSource,
+  ForecastSourceAttribution,
+  ForecastSourceAttributionAudit,
+  ForecastSourceMetrics,
+} from "@/lib/forecast-source-attribution";
+export type {
+  PathTextFieldTrace,
+  PathTextTransformationAudit,
+  PathTextTransformationMetrics,
+  PathTextTransformationStatus,
+  PathTextTransformationTrace,
+} from "@/lib/path-text-transformation-trace";
+
+export type ForecastPipelineTraceStatus =
+  | "preserved"
+  | "rewritten"
+  | "removed"
+  | "recovered"
+  | "fallback";
+
+export type ForecastPipelineTraceGeneratedBy = "claude" | "recovery" | "fallback";
+
+export type ForecastPipelineTraceItem = {
+  original: string;
+  afterReality?: string | null;
+  afterGrounding?: string | null;
+  afterRewrite?: string | null;
+  afterRecovery?: string | null;
+  final?: string | null;
+  status: ForecastPipelineTraceStatus;
+  reason?: string;
+  generatedBy?: ForecastPipelineTraceGeneratedBy;
+};
+
+export type ForecastPipelineTrace = {
+  active: ForecastPipelineTraceItem[];
+  hidden: ForecastPipelineTraceItem[];
+  blind_spots: ForecastPipelineTraceItem[];
 };
 
 export function isAiAuditEnabled(): boolean {
@@ -66,8 +144,11 @@ type PathLike = Pick<
 >;
 
 export function toRawPathAudit(path: PathLike): RawPathAudit {
+  const { nativeTitle, description } = decodeNativePathFields(path.description);
+
   return {
-    description: path.description,
+    title: nativeTitle,
+    description,
     benefits: [...path.benefits],
     consequences: [...path.consequences],
     future_shift: path.future_shift,
@@ -137,6 +218,9 @@ export function toProcessedFutureAuditItem(future: ScannableFuture): ProcessedFu
     signals: [...future.signals],
     futureImpact: future.futureImpact,
     ...(future.sourceTrace ? { sourceTrace: future.sourceTrace } : {}),
+    ...(future.source ? { source: future.source } : {}),
+    ...(future.sourceStage ? { sourceStage: future.sourceStage } : {}),
+    ...(future.originalTitle !== undefined ? { originalTitle: future.originalTitle } : {}),
   };
 }
 
@@ -150,4 +234,67 @@ export function toProcessedForecastAudit(sections: {
     hidden: sections.hiddenFutures.map(toProcessedFutureAuditItem),
     blind_spots: sections.blindSpotFutures.map(toProcessedFutureAuditItem),
   };
+}
+
+export function buildForecastAuditFromSections(
+  sections: {
+    activeFutures: ScannableFuture[];
+    hiddenFutures: ScannableFuture[];
+    blindSpotFutures: ScannableFuture[];
+  },
+  extras?: {
+    pipelineTrace?: ForecastPipelineTrace;
+    preservationMetrics?: PreservationMetrics;
+    integrityAudit?: ForecastIntegrityAudit;
+  },
+): Pick<
+  ForecastAudit,
+  "sourceAttribution" | "sourceMetrics" | "pipelineTrace" | "preservationMetrics" | "integrityAudit"
+> {
+  return {
+    sourceAttribution: buildForecastSourceAttributionAudit(sections),
+    sourceMetrics: computeForecastSourceMetricsFromSections(sections),
+    ...extras,
+  };
+}
+
+export function computePreservationMetrics(input: {
+  pathTitleTraces?: PathTitleTraceItem[];
+  pipelineTrace?: ForecastPipelineTrace;
+}): PreservationMetrics {
+  const metrics: PreservationMetrics = {
+    nativePathTitles: 0,
+    recoveredPathTitles: 0,
+    generatedPathTitles: 0,
+    preservedClaudeFutures: 0,
+    rewrittenFutures: 0,
+    recoveryGeneratedFutures: 0,
+    fallbackGeneratedFutures: 0,
+  };
+
+  for (const trace of input.pathTitleTraces ?? []) {
+    if (trace.status === "native") {
+      metrics.nativePathTitles += 1;
+    } else if (trace.status === "recovered") {
+      metrics.recoveredPathTitles += 1;
+    } else if (trace.status === "generated") {
+      metrics.generatedPathTitles += 1;
+    }
+  }
+
+  for (const section of ["active", "hidden", "blind_spots"] as const) {
+    for (const item of input.pipelineTrace?.[section] ?? []) {
+      if (item.status === "preserved" && item.generatedBy === "claude") {
+        metrics.preservedClaudeFutures += 1;
+      } else if (item.status === "rewritten" && item.generatedBy === "claude") {
+        metrics.rewrittenFutures += 1;
+      } else if (item.status === "recovered") {
+        metrics.recoveryGeneratedFutures += 1;
+      } else if (item.status === "fallback") {
+        metrics.fallbackGeneratedFutures += 1;
+      }
+    }
+  }
+
+  return metrics;
 }

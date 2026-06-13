@@ -131,6 +131,7 @@ describe("theme normalization", () => {
       current_understanding: "You may be weighing what comes next.",
       paths: [
         {
+          title: "Take The Leap",
           description: "One direction.",
           benefits: ["Benefit one.", "Benefit two."],
           consequences: ["Consequence one.", "Consequence two."],
@@ -138,6 +139,7 @@ describe("theme normalization", () => {
           themes: ["communication", "boundaries"],
         },
         {
+          title: "Wait And Observe",
           description: "Another direction.",
           benefits: ["Benefit one.", "Benefit two."],
           consequences: ["Consequence one.", "Consequence two."],
@@ -145,6 +147,7 @@ describe("theme normalization", () => {
           themes: ["uncertainty", "patience"],
         },
         {
+          title: "Explore Other Options",
           description: "Third direction.",
           benefits: ["Benefit one.", "Benefit two."],
           consequences: ["Consequence one.", "Consequence two."],
@@ -152,6 +155,7 @@ describe("theme normalization", () => {
           themes: ["self-discovery", "healing"],
         },
         {
+          title: "Build Closer Ties",
           description: "Fourth direction.",
           benefits: ["Benefit one.", "Benefit two."],
           consequences: ["Consequence one.", "Consequence two."],
@@ -159,6 +163,7 @@ describe("theme normalization", () => {
           themes: ["Connection", "Belonging"],
         },
         {
+          title: "Lead The Change",
           description: "Fifth direction.",
           benefits: ["Benefit one.", "Benefit two."],
           consequences: ["Consequence one.", "Consequence two."],

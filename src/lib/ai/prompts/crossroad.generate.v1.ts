@@ -23,7 +23,9 @@ ${STRICT_THEME_SELECTION_RULES}`,
       context,
       `Produce JSON with current_understanding and paths (length 5).
 
-Each path needs description, benefits (2-4), consequences (2-4), future_shift, and themes (1-3).
+Each path needs title, description, benefits (2-4), consequences (2-4), future_shift, and themes (1-3).
+
+Each path.title must be a standalone 2-6 word strategy label. Each path.description must explain that strategy in one concrete sentence.
 
 Each path must be a distinct strategy with observable benefits, realistic consequences, and a behavioral future_shift.
 

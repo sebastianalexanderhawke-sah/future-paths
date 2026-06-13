@@ -6,18 +6,23 @@ import {
   toProcessedForecastAudit,
   toRawPathAudit,
 } from "@/lib/ai-audit";
+import { encodePathDescriptionWithNativeTitle } from "@/components/home/path-native-title";
 
 describe("ai audit", () => {
   it("captures raw path fields before post-processing", () => {
     expect(
       toRawPathAudit({
-        description: "Launch now and ship quickly.",
+        description: encodePathDescriptionWithNativeTitle(
+          "Launch Now",
+          "Launch now and ship quickly.",
+        ),
         benefits: ["Early users arrive"],
         consequences: ["Launch slips"],
         future_shift: "The product becomes your main focus.",
         themes: ["Courage"],
       }),
     ).toEqual({
+      title: "Launch Now",
       description: "Launch now and ship quickly.",
       benefits: ["Early users arrive"],
       consequences: ["Launch slips"],
@@ -32,6 +37,7 @@ describe("ai audit", () => {
         current_understanding: "You are starting a business.",
         paths: [
           {
+            title: "Launch Now",
             description: "Launch now.",
             benefits: ["First users arrive"],
             consequences: ["Competitor launches first"],

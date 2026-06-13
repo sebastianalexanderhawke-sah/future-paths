@@ -141,6 +141,11 @@ export function FutureForecastResultView({ forecast }: FutureForecastResultProps
           <ForecastAuditPanel
             rawForecast={forecast.audit.rawForecast}
             processedForecast={toProcessedForecastAudit(forecast.sections)}
+            pipelineTrace={forecast.audit.pipelineTrace}
+            preservationMetrics={forecast.audit.preservationMetrics}
+            integrityAudit={forecast.audit.integrityAudit}
+            sourceAttribution={forecast.audit.sourceAttribution}
+            sourceMetrics={forecast.audit.sourceMetrics}
           />
         </div>
       ) : null}

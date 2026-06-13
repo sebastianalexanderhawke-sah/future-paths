@@ -12,8 +12,17 @@ import {
   formatPathConsequences,
   formatPathFutureYou,
   formatPathSummary,
+  formatPathBenefitsWithTrace,
+  formatPathConsequencesWithTrace,
+  formatPathFutureYouWithTrace,
+  formatPathSummaryWithTrace,
 } from "@/components/home/path-quality";
-import { formatPathTitle } from "@/components/home/path-titles";
+import { formatPathTitle, toPathTitleInput } from "@/components/home/path-titles";
+import type { ForecastFutureSource } from "@/lib/forecast-source-attribution";
+import type {
+  PathTextFieldTrace,
+  PathTextTransformationPathAudit,
+} from "@/lib/path-text-transformation-trace";
 
 export type ScannablePath = {
   title: string;
@@ -33,6 +42,9 @@ export type ScannableFuture = {
   signals: string[];
   futureImpact: string;
   sourceTrace?: string;
+  source?: ForecastFutureSource;
+  sourceStage?: string;
+  originalTitle?: string | null;
   expansion: string | null;
 };
 
@@ -166,24 +178,70 @@ export function formatScannablePath(
   index = 0,
   titleOverride?: string,
 ): ScannablePath {
-  const title = titleOverride ?? formatPathTitle(path.description, path.themes ?? [], index);
-  const explanation = formatPathSummary(path.description, path.benefits, title);
-  const benefits = formatPathBenefits(path.benefits, title);
-  const consequences = formatPathConsequences(path.consequences, title);
-  const futureYou = formatPathFutureYou(title, path.future_shift, path.themes ?? []);
+  return formatScannablePathWithTrace(path, index, titleOverride).path;
+}
+
+export function formatScannablePathWithTrace(
+  path: PathLike,
+  index = 0,
+  titleOverride?: string,
+): {
+  path: ScannablePath;
+  textTraces: PathTextFieldTrace[];
+} {
+  const { description } = toPathTitleInput(path);
+  const title = titleOverride ?? formatPathTitle(description, path.themes ?? [], index);
+  const explanationResult = formatPathSummaryWithTrace(description, path.benefits, title);
+  const benefitsResult = formatPathBenefitsWithTrace(path.benefits, title);
+  const consequencesResult = formatPathConsequencesWithTrace(path.consequences, title);
+  const futureYouResult = formatPathFutureYouWithTrace(title, path.future_shift, path.themes ?? []);
+  const explanation = explanationResult.summary;
+  const benefits = benefitsResult.bullets;
+  const consequences = consequencesResult.bullets;
+  const futureYou = futureYouResult.futureYou;
+
+  const textTraces: PathTextFieldTrace[] = [
+    {
+      field: "explanation",
+      label: "Explanation",
+      trace: explanationResult.trace,
+    },
+    ...benefitsResult.traces,
+    ...consequencesResult.traces,
+    {
+      field: "futureYou",
+      label: "Future You",
+      trace: futureYouResult.trace,
+    },
+  ];
 
   return {
-    title,
-    explanation,
-    benefits,
-    consequences,
-    futureYou,
-    expansion: hasExpansionText(path, explanation, futureYou)
-      ? {
-          description: path.description.trim(),
-          futureShift: path.future_shift.trim(),
-        }
-      : null,
+    path: {
+      title,
+      explanation,
+      benefits,
+      consequences,
+      futureYou,
+      expansion: hasExpansionText({ ...path, description }, explanation, futureYou)
+        ? {
+            description: description.trim(),
+            futureShift: path.future_shift.trim(),
+          }
+        : null,
+    },
+    textTraces,
+  };
+}
+
+export function buildPathTextTransformationPathAudit(
+  pathIndex: number,
+  pathTitle: string,
+  textTraces: PathTextFieldTrace[],
+): PathTextTransformationPathAudit {
+  return {
+    pathIndex,
+    pathTitle,
+    fields: textTraces,
   };
 }
 

@@ -33,12 +33,35 @@ export function buildForecastSectionsFromGeneration(
   contextSummary?: string | null,
   pathText: string[] = [],
 ): ForecastSections {
+  const result = processGeneratedForecastSections(
+    generated,
+    situationTitle,
+    contextSummary,
+    selectedPathTitle,
+    pathText,
+  );
+
+  return {
+    activeFutures: result.activeFutures,
+    hiddenFutures: result.hiddenFutures,
+    blindSpotFutures: result.blindSpotFutures,
+  };
+}
+
+export function buildForecastSectionsWithTrace(
+  generated: ForecastOutput,
+  situationTitle = "",
+  selectedPathTitle?: string | null,
+  contextSummary?: string | null,
+  pathText: string[] = [],
+) {
   return processGeneratedForecastSections(
     generated,
     situationTitle,
     contextSummary,
     selectedPathTitle,
     pathText,
+    { collectPipelineTrace: true },
   );
 }
 

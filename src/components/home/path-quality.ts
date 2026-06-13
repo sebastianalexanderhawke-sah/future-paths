@@ -1,3 +1,12 @@
+import type { PathTextFieldTrace } from "@/lib/path-text-transformation-trace";
+import {
+  buildPathTextFieldLabel,
+  buildPathTextTransformationTrace,
+  type PathTextStageCapture,
+} from "@/lib/path-text-transformation-trace";
+
+export type { PathTextStageCapture } from "@/lib/path-text-transformation-trace";
+
 const REFLECTIVE_PATH_PATTERNS: RegExp[] = [
   /\bclarity\b/i,
   /\breflect(ion|ive|ing| further)?\b/i,
@@ -28,7 +37,18 @@ const REFLECTIVE_ACTION_START =
   /^(gain|observe|reflect|learn|understand|explore|process|consider|think about|work on|focus on|notice|gather|build understanding)\b/i;
 
 const INCOMPLETE_ENDINGS =
-  /\b(the|a|an|on|in|at|to|for|with|that|which|and|or|who|if|when|whether|your|you|feels|may|might|could|would|will|become|reveals?|shows?|whether|about|into|from|through|without|before|after|if|this|that)\s*[.!?]?$/i;
+  /\b(the|a|an|on|in|at|to|for|with|that|which|and|or|who|if|when|whether|your|you|feels|may|might|could|would|will|become|reveals?|shows?|whether|about|into|from|through|without|this|that)\s*[.!?]?$/i;
+
+const MAX_PRESERVE_LENGTH = 250;
+
+const IMPERATIVE_VERB_START =
+  /^(invite|ask|tell|say|choose|accept|decline|wait|move|stay|take|build|focus|keep|try|test|go|walk|face|negotiate|explore|push|hold|play|think|change|direct|make|create|start|stop|let|give|find|share|spend|reach|offer|plan|commit|defer|turn|reframe|prioritize|redirect|commit)\b/i;
+
+const SUBJECT_PATTERN =
+  /\b(you|she|he|they|it|we|someone|people|work|the|a|an|your|her|his|their|coworkers?|friends?|family|employer|role|offer|job|move|relationship|friendship|situation|connection|interest|message|timing|path|decision)\b/i;
+
+const VERB_PATTERN =
+  /\b(is|are|was|were|may|might|will|would|can|could|feel|feels|make|makes|leave|leaves|invite|invites|become|becomes|share|shares|pick|picks|signal|signals|start|starts|keep|keeps|create|creates|go|goes|get|gets|move|moves|turn|turns|help|helps|need|needs|want|wants|allow|allows|offer|offers|ask|asks|say|says|see|sees|learn|learns|build|builds|grow|grows|show|shows|bring|brings|take|takes|give|gives|find|finds|lose|loses|gain|gains|stay|stays|remain|remains|disappear|disappears|fade|fades|hit|hits|receive|receives|accept|accepts|decline|declines|notice|notices|assume|assumes|clear|force|forces|unanswered|pick up|decline|declines|overhear|overhears|text|texts|date|dates|plan|plans|renew|renews|relocate|relocates|negotiate|negotiates|commit|commits|defer|defers|explore|explores|redirect|redirects|spend|spends|meet|meets|talk|talks|work|works|feel|feels|read|reads|look|looks|seem|seems|assume|assumes|making|leaving|leaving|forcing|creating|building|inviting|asking|choosing|taking|staying|moving|waiting|holding|trying|testing|going|walking|facing|offering|planning|sharing|picking|signaling|starting|keeping|turning|helping|needing|wanting|allowing|saying|seeing|learning|growing|showing|bringing|giving|finding|losing|gaining|remaining|disappearing|fading|hitting|receiving|accepting|declining|noticing|clearing|forcing)\b/i;
 
 const OUTCOME_REWRITES: Array<{ pattern: RegExp; replacement: string }> = [
   { pattern: /gain clarity/i, replacement: "You get a clear answer sooner." },
@@ -219,17 +239,75 @@ export function isCompleteSentence(text: string): boolean {
   return trimmed.split(/\s+/).length >= 8 && !INCOMPLETE_ENDINGS.test(trimmed);
 }
 
-export function summarizeToCompleteSentence(text: string, maxLength = 180): string {
+function hasSubjectAndVerb(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (IMPERATIVE_VERB_START.test(trimmed)) {
+    return true;
+  }
+
+  return SUBJECT_PATTERN.test(trimmed) && VERB_PATTERN.test(trimmed);
+}
+
+export function shouldPreservePathSentence(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length > MAX_PRESERVE_LENGTH || trimmed.includes("…")) {
+    return false;
+  }
+
+  if (isReflectivePathContent(trimmed)) {
+    return false;
+  }
+
+  const normalized = ensureTerminalPunctuation(trimmed);
+  if (!isCompleteSentence(normalized)) {
+    return false;
+  }
+
+  return hasSubjectAndVerb(normalized);
+}
+
+function preservePathSentence(text: string, stages?: PathTextStageCapture): string {
+  const preserved = ensureTerminalPunctuation(text.trim());
+  if (stages) {
+    stages.afterRefinement = preserved;
+    stages.afterFormatting = preserved;
+    stages.preservedBypass = true;
+  }
+  return preserved;
+}
+
+export function summarizeToCompleteSentence(
+  text: string,
+  maxLength = 180,
+  stages?: PathTextStageCapture,
+): string {
   const trimmed = text.trim().replace(/…/g, "");
   if (!trimmed) {
+    if (stages) {
+      stages.afterRefinement = "";
+      stages.afterFormatting = "";
+    }
     return "";
+  }
+
+  if (shouldPreservePathSentence(trimmed)) {
+    return preservePathSentence(trimmed, stages);
   }
 
   let sentence = extractFirstSentence(trimmed);
   sentence = sentence.replace(/[.!?]+$/, "").trim();
 
   if (isCompleteSentence(`${sentence}.`)) {
-    return ensureTerminalPunctuation(sentence);
+    const complete = ensureTerminalPunctuation(sentence);
+    if (stages) {
+      stages.afterRefinement = complete;
+      stages.afterFormatting = complete;
+    }
+    return complete;
   }
 
   const words = sentence.split(/\s+/).filter(Boolean);
@@ -242,33 +320,52 @@ export function summarizeToCompleteSentence(text: string, maxLength = 180): stri
     core = trimmed.split(/\s+/).slice(0, 10).join(" ");
   }
 
+  if (stages) {
+    stages.afterRefinement = ensureTerminalPunctuation(capitalize(core));
+  }
+
+  let formatted = core;
   if (/relationship|interest|crush|dating|friend|workplace|colleague/i.test(core)) {
-    return ensureTerminalPunctuation(`${capitalize(core)} and see how she responds`);
+    formatted = `${capitalize(core)} and see how she responds`;
+  } else if (/job|offer|move|relocate|career|role|city|dallas/i.test(core)) {
+    formatted = `${capitalize(core)} and commit to the next step`;
+  } else if (/business|startup|launch|company/i.test(core)) {
+    formatted = `${capitalize(core)} and test what traction follows`;
+  } else {
+    if (core.length > maxLength) {
+      core = core.split(/\s+/).slice(0, 12).join(" ");
+    }
+
+    formatted = `${capitalize(core)} and see what follows`;
   }
 
-  if (/job|offer|move|relocate|career|role|city|dallas/i.test(core)) {
-    return ensureTerminalPunctuation(`${capitalize(core)} and commit to the next step`);
+  if (stages) {
+    stages.afterFormatting = ensureTerminalPunctuation(formatted).replace(/[.!?]+$/, "");
   }
 
-  if (/business|startup|launch|company/i.test(core)) {
-    return ensureTerminalPunctuation(`${capitalize(core)} and test what traction follows`);
-  }
-
-  if (core.length > maxLength) {
-    core = core.split(/\s+/).slice(0, 12).join(" ");
-  }
-
-  return ensureTerminalPunctuation(`${capitalize(core)} and see what follows`);
+  return ensureTerminalPunctuation(formatted);
 }
 
-function rewriteOutcome(text: string): string {
+function rewriteOutcome(text: string, stages?: PathTextStageCapture): string {
   const trimmed = text.trim();
   if (!trimmed) {
+    if (stages) {
+      stages.afterRefinement = "";
+      stages.afterFormatting = "";
+    }
     return "";
+  }
+
+  if (shouldPreservePathSentence(trimmed)) {
+    return preservePathSentence(trimmed, stages);
   }
 
   for (const { pattern, replacement } of OUTCOME_REWRITES) {
     if (pattern.test(trimmed)) {
+      if (stages) {
+        stages.afterRefinement = replacement;
+        stages.afterFormatting = ensureTerminalPunctuation(replacement).replace(/[.!?]+$/, "");
+      }
       return ensureTerminalPunctuation(replacement);
     }
   }
@@ -281,15 +378,26 @@ function rewriteOutcome(text: string): string {
 
   outcome = outcome.replace(/[.!?]+$/, "").trim();
 
+  if (stages) {
+    stages.afterRefinement = outcome;
+  }
+
   if (isReflectivePathContent(outcome)) {
+    if (stages) {
+      stages.afterFormatting = "";
+    }
     return "";
   }
 
   if (!isCompleteSentence(`${outcome}.`)) {
-    return summarizeToCompleteSentence(outcome, 90);
+    return summarizeToCompleteSentence(outcome, 90, stages);
   }
 
-  return ensureTerminalPunctuation(capitalize(outcome));
+  const final = ensureTerminalPunctuation(capitalize(outcome));
+  if (stages) {
+    stages.afterFormatting = final.replace(/[.!?]+$/, "");
+  }
+  return final;
 }
 
 function normalizeOutcomeKey(text: string): string {
@@ -553,6 +661,11 @@ export function formatPathSummary(
   benefits: string[],
   title: string,
 ): string {
+  const trimmedDescription = description.trim();
+  if (shouldPreservePathSentence(trimmedDescription)) {
+    return preservePathSentence(trimmedDescription);
+  }
+
   if (SUMMARY_BY_TITLE[title]) {
     return SUMMARY_BY_TITLE[title]!;
   }
@@ -585,6 +698,11 @@ export function formatPathFutureYou(
   futureShift: string,
   themes: string[] = [],
 ): string {
+  const trimmedFutureShift = futureShift.trim();
+  if (shouldPreservePathSentence(trimmedFutureShift)) {
+    return preservePathSentence(trimmedFutureShift);
+  }
+
   if (FUTURE_YOU_BY_TITLE[title]) {
     return FUTURE_YOU_BY_TITLE[title]!;
   }
@@ -641,4 +759,215 @@ export function ensureMinimumOutcomes(
   }
 
   return merged.slice(0, 5);
+}
+
+function traceTransformText(
+  original: string,
+  transform: (text: string, stages?: PathTextStageCapture) => string,
+): { final: string; trace: ReturnType<typeof buildPathTextTransformationTrace> } {
+  const stages: PathTextStageCapture = {
+    afterRefinement: "",
+    afterFormatting: "",
+  };
+  const final = transform(original, stages);
+
+  return {
+    final,
+    trace: buildPathTextTransformationTrace(
+      original,
+      stages.afterRefinement,
+      stages.afterFormatting,
+      final,
+      stages.preservedBypass === true,
+    ),
+  };
+}
+
+function formatPathBulletListWithTrace(
+  items: string[],
+  fallbackPool: string[],
+  field: "benefit" | "consequence",
+): { bullets: string[]; traces: PathTextFieldTrace[] } {
+  const seen = new Set<string>();
+  const bullets: string[] = [];
+  const traces: PathTextFieldTrace[] = [];
+
+  const pushCandidate = (original: string) => {
+    const { final, trace } = traceTransformText(original, rewriteOutcome);
+    const key = normalizeOutcomeKey(final);
+    if (!final || !key || seen.has(key) || isReflectivePathContent(final)) {
+      return false;
+    }
+
+    seen.add(key);
+    bullets.push(final);
+    traces.push({
+      field,
+      index: traces.length,
+      label: buildPathTextFieldLabel(field, traces.length),
+      trace,
+    });
+    return true;
+  };
+
+  for (const candidate of items) {
+    pushCandidate(candidate);
+    if (bullets.length >= 5) {
+      break;
+    }
+  }
+
+  if (bullets.length >= 3) {
+    return { bullets: bullets.slice(0, 5), traces: traces.slice(0, 5) };
+  }
+
+  for (const candidate of fallbackPool) {
+    pushCandidate(candidate);
+    if (bullets.length >= 3) {
+      break;
+    }
+  }
+
+  return { bullets: bullets.slice(0, 5), traces: traces.slice(0, 5) };
+}
+
+export function formatPathBenefitsWithTrace(
+  benefits: string[],
+  title: string,
+): { bullets: string[]; traces: PathTextFieldTrace[] } {
+  return formatPathBulletListWithTrace(
+    benefits,
+    BENEFIT_FALLBACKS_BY_TITLE[title] ?? [
+      "You gain a concrete upside from this choice.",
+      "The best-case outcome becomes more reachable.",
+      "You move closer to the result you want.",
+    ],
+    "benefit",
+  );
+}
+
+export function formatPathConsequencesWithTrace(
+  consequences: string[],
+  title: string,
+): { bullets: string[]; traces: PathTextFieldTrace[] } {
+  return formatPathBulletListWithTrace(
+    consequences,
+    CONSEQUENCE_FALLBACKS_BY_TITLE[title] ?? [
+      "You risk an outcome you would rather avoid.",
+      "A downside may show up sooner than expected.",
+      "This path may close off an alternative you wanted.",
+    ],
+    "consequence",
+  );
+}
+
+export function formatPathSummaryWithTrace(
+  description: string,
+  benefits: string[],
+  title: string,
+): { summary: string; trace: ReturnType<typeof buildPathTextTransformationTrace> } {
+  const original = description.trim();
+
+  if (shouldPreservePathSentence(original)) {
+    const summary = preservePathSentence(original);
+    return {
+      summary,
+      trace: buildPathTextTransformationTrace(original, summary, summary, summary, true),
+    };
+  }
+
+  if (SUMMARY_BY_TITLE[title]) {
+    const final = SUMMARY_BY_TITLE[title]!;
+    return {
+      summary: final,
+      trace: buildPathTextTransformationTrace(original, title, final, final),
+    };
+  }
+
+  const sentences = splitSentences(description);
+  if (sentences.length > 1) {
+    const candidate = sentences.slice(1).join(" ");
+    const { final, trace } = traceTransformText(candidate, (text, stages) =>
+      summarizeToCompleteSentence(text, 180, stages),
+    );
+    if (!isReflectivePathContent(final)) {
+      return { summary: final, trace };
+    }
+  }
+
+  const descriptionResult = traceTransformText(description, (text, stages) =>
+    summarizeToCompleteSentence(text, 180, stages),
+  );
+  if (!isReflectivePathContent(descriptionResult.final)) {
+    return { summary: descriptionResult.final, trace: descriptionResult.trace };
+  }
+
+  for (const benefit of benefits) {
+    const benefitResult = traceTransformText(benefit, (text, stages) =>
+      summarizeToCompleteSentence(text, 180, stages),
+    );
+    if (!isReflectivePathContent(benefitResult.final)) {
+      return { summary: benefitResult.final, trace: benefitResult.trace };
+    }
+  }
+
+  const final = SUMMARY_BY_TITLE[title] ?? `This path follows a ${title.toLowerCase()} strategy.`;
+  return {
+    summary: final,
+    trace: buildPathTextTransformationTrace(original, title, final, final),
+  };
+}
+
+export function formatPathFutureYouWithTrace(
+  title: string,
+  futureShift: string,
+  themes: string[] = [],
+): { futureYou: string; trace: ReturnType<typeof buildPathTextTransformationTrace> } {
+  const original = futureShift.trim();
+
+  if (shouldPreservePathSentence(original)) {
+    const futureYou = preservePathSentence(original);
+    return {
+      futureYou,
+      trace: buildPathTextTransformationTrace(original, futureYou, futureYou, futureYou, true),
+    };
+  }
+
+  if (FUTURE_YOU_BY_TITLE[title]) {
+    const final = FUTURE_YOU_BY_TITLE[title]!;
+    return {
+      futureYou: final,
+      trace: buildPathTextTransformationTrace(original, title, final, final),
+    };
+  }
+
+  const refined = futureShift
+    .replace(/^you may become someone who\s+/i, "")
+    .replace(/^you may become\s+/i, "You become ")
+    .replace(/^you may feel\s+/i, "You feel ");
+  const sentenceResult = traceTransformText(refined, (text, stages) =>
+    summarizeToCompleteSentence(text, 140, stages),
+  );
+
+  if (
+    !isReflectivePathContent(sentenceResult.final) &&
+    isCompleteSentence(sentenceResult.final)
+  ) {
+    return { futureYou: sentenceResult.final, trace: sentenceResult.trace };
+  }
+
+  const theme = themes[0];
+  if (theme && FUTURE_YOU_BY_THEME[theme]) {
+    const final = FUTURE_YOU_BY_THEME[theme]!;
+    return {
+      futureYou: final,
+      trace: buildPathTextTransformationTrace(original, theme, final, final),
+    };
+  }
+
+  const final = "More decisive about what you want and willing to live with the result.";
+  return {
+    futureYou: final,
+    trace: buildPathTextTransformationTrace(original, "default-fallback", final, final),
+  };
 }

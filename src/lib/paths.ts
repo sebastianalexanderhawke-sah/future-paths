@@ -1,4 +1,5 @@
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
+import { encodePathDescriptionWithNativeTitle } from "@/components/home/path-native-title";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
 import { createClient } from "@/lib/supabase/server";
 import type { Path } from "@/types/database";
@@ -124,7 +125,7 @@ export async function generatePaths(
   const pathRows = generated.paths.map((path, index) => ({
     moment_id: momentId,
     user_id: auth.userId,
-    description: path.description,
+    description: encodePathDescriptionWithNativeTitle(path.title ?? "", path.description),
     benefits: path.benefits,
     consequences: path.consequences,
     future_shift: path.future_shift,

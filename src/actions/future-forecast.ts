@@ -7,10 +7,13 @@ import { forecastOutputSchema } from "@/lib/ai/schemas/forecast";
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 
 import { buildSelectedPathSummary } from "@/components/home/decision-simulator-utils";
+import { toPathTitleInput } from "@/components/home/path-titles";
 
 import {
 
   buildForecastSectionsFromGeneration,
+
+  buildForecastSectionsWithTrace,
 
   formatForecastSituationSummary,
 
@@ -20,7 +23,11 @@ import {
 
 import {
 
+  buildForecastAuditFromSections,
+
   buildRawForecastAuditFromGeneration,
+
+  computePreservationMetrics,
 
   isAiAuditEnabled,
 
@@ -126,7 +133,7 @@ function buildSelectedPathText(selectedPath?: FutureForecastSelectedPath): strin
 
   return [
 
-    selectedPath.description,
+    toPathTitleInput(selectedPath).description,
 
     ...selectedPath.benefits,
 
@@ -288,30 +295,35 @@ export async function runFutureForecastAction(input: {
 
   const pathText = buildSelectedPathText(input.selectedPath);
 
-  const sections = buildForecastSectionsFromGeneration(
+  const processedForecast = isAiAuditEnabled()
+    ? buildForecastSectionsWithTrace(
+        forecastGeneration.data,
+        title,
+        input.selectedPath?.title ?? null,
+        mergedContextSummary,
+        pathText,
+      )
+    : null;
 
+  const sections = processedForecast ?? buildForecastSectionsFromGeneration(
     forecastGeneration.data,
-
     title,
-
     input.selectedPath?.title ?? null,
-
     mergedContextSummary,
-
     pathText,
-
   );
 
-
-
   const audit: ForecastAudit | undefined = isAiAuditEnabled()
-
     ? {
-
         rawForecast: buildRawForecastAuditFromGeneration(forecastGeneration.data),
-
+        ...buildForecastAuditFromSections(sections, {
+          pipelineTrace: processedForecast?.pipelineTrace,
+          preservationMetrics: computePreservationMetrics({
+            pipelineTrace: processedForecast?.pipelineTrace,
+          }),
+          integrityAudit: processedForecast?.integrityAudit,
+        }),
       }
-
     : undefined;
 
 

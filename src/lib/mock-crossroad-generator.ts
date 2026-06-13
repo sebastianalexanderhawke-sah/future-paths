@@ -2,6 +2,7 @@ import type { Moment } from "@/types/database";
 import type { ThemeName } from "@/types/enums";
 
 export type MockPathDraft = {
+  title: string;
   description: string;
   benefits: string[];
   consequences: string[];
@@ -26,6 +27,7 @@ export function generateMockCrossroads(
 
   const paths: MockPathDraft[] = [
     {
+      title: "Take The Leap",
       description: `Move forward with "${title}" and commit to seeing it through.`,
       benefits: [
         "Clarity may come from decisive action rather than prolonged uncertainty.",
@@ -39,6 +41,7 @@ export function generateMockCrossroads(
       themes: ["Courage", "Growth"],
     },
     {
+      title: "Wait And Observe",
       description: `Pause on "${title}" and gather more information before acting.`,
       benefits: [
         "Space to notice patterns in what you truly want versus what you fear.",
@@ -52,6 +55,7 @@ export function generateMockCrossroads(
       themes: ["Reflection", "Stability"],
     },
     {
+      title: "Test A Smaller Step",
       description: `Reframe "${title}" and pursue a smaller, experimental version first.`,
       benefits: [
         "Lower stakes may make it easier to learn without overcommitting.",
@@ -65,6 +69,7 @@ export function generateMockCrossroads(
       themes: ["Curiosity", "Creativity"],
     },
     {
+      title: "Build Closer Ties",
       description: `Choose a path adjacent to "${title}" that honors connection and shared context.`,
       benefits: [
         "Important relationships may stay intact through the transition.",
@@ -78,6 +83,7 @@ export function generateMockCrossroads(
       themes: ["Connection", "Belonging"],
     },
     {
+      title: "Go Your Own Way",
       description: `Step back from "${title}" and prioritize independence on your own terms.`,
       benefits: [
         "Freedom to define success without external expectations.",

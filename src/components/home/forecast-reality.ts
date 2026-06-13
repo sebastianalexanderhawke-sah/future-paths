@@ -22,6 +22,18 @@ import {
   type ForecastRecoveryInput,
 } from "@/components/home/forecast-recovery";
 import { detectSituationDomain } from "@/components/home/path-titles";
+import type { ForecastPipelineTraceItem } from "@/lib/ai-audit";
+import {
+  buildForecastSectionIntegrity,
+  type ForecastIntegrityAudit,
+  type SlotFillAuditEntry,
+} from "@/lib/forecast-slot-integrity";
+import { tagForecastFuture } from "@/lib/forecast-source-attribution";
+import {
+  createForecastPipelineTraceCollector,
+  type ForecastPipelineSectionKey,
+  type ForecastPipelineTraceCollector,
+} from "@/lib/forecast-pipeline-trace";
 
 const MIN_SIGNALS = 3;
 const MAX_SIGNALS = 5;
@@ -338,6 +350,48 @@ function resolveForecastTitle(titleSource: string, bundle: GroundingBundle): str
   return formatted && !mentionsInventedTopic(formatted, bundle) ? formatted : "";
 }
 
+function normalizePreservableForecastTitle(title: string): string {
+  return toTitleCase(title.trim().replace(/[.!?]+$/, ""));
+}
+
+function shouldPreserveForecastTitle(title: string, bundle: GroundingBundle): boolean {
+  const normalized = normalizePreservableForecastTitle(title);
+  if (!normalized) {
+    return false;
+  }
+
+  if (isReflectiveForecast(normalized)) {
+    return false;
+  }
+
+  if (ARCHETYPE_NAME_PATTERN.test(normalized)) {
+    return false;
+  }
+
+  if (!isPhotographableFuture(normalized)) {
+    return false;
+  }
+
+  if (!isGroundedFutureText(normalized, bundle)) {
+    return false;
+  }
+
+  if (mentionsInventedTopic(normalized, bundle)) {
+    return false;
+  }
+
+  return true;
+}
+
+function preserveOrResolveForecastTitle(titleSource: string, bundle: GroundingBundle): string {
+  const normalized = normalizePreservableForecastTitle(titleSource);
+  if (shouldPreserveForecastTitle(normalized, bundle)) {
+    return normalized;
+  }
+
+  return resolveForecastTitle(titleSource, bundle) || formatForecastTitle(titleSource);
+}
+
 function upgradeToSceneTitle(title: string): string {
   const normalized = normalizeComparable(title);
   const sceneTitle = SCENE_TITLE_BY_KEY[normalized];
@@ -549,9 +603,17 @@ function isValidRealityFuture(future: ScannableFuture, bundle?: GroundingBundle)
 }
 
 function sanitizeFuture(future: ScannableFuture, bundle?: GroundingBundle): ScannableFuture {
-  const title = bundle
-    ? resolveForecastTitle(future.title, bundle) || upgradeToSceneTitle(formatForecastTitle(rewriteFutureText(future.title)))
-    : upgradeToSceneTitle(formatForecastTitle(rewriteFutureText(future.title)));
+  let title: string;
+
+  if (bundle && shouldPreserveForecastTitle(future.title, bundle)) {
+    title = normalizePreservableForecastTitle(future.title);
+  } else if (bundle) {
+    title =
+      resolveForecastTitle(future.title, bundle) ||
+      upgradeToSceneTitle(formatForecastTitle(rewriteFutureText(future.title)));
+  } else {
+    title = upgradeToSceneTitle(formatForecastTitle(rewriteFutureText(future.title)));
+  }
 
   return {
     ...future,
@@ -559,6 +621,9 @@ function sanitizeFuture(future: ScannableFuture, bundle?: GroundingBundle): Scan
     whyItMightHappen: toFirstSentence(rewriteFutureText(future.whyItMightHappen), 160),
     futureImpact: toFirstSentence(rewriteFutureText(future.futureImpact), 140),
     sourceTrace: bundle ? buildSourceTrace(bundle) : future.sourceTrace,
+    source: future.source,
+    sourceStage: future.sourceStage,
+    originalTitle: future.originalTitle,
     signals: future.signals
       .map((signal) => toTitleCase(rewriteFutureText(signal)))
       .filter(
@@ -628,7 +693,9 @@ function buildRealityFuture(
     bundle,
   );
 
-  return isValidRealityFuture(future, bundle) ? future : null;
+  const attributed = tagForecastFuture(future, "merge", "merge", titleSource.trim() || null);
+
+  return isValidRealityFuture(attributed, bundle) ? attributed : null;
 }
 
 function buildActiveRealityFuture(
@@ -689,13 +756,31 @@ function buildBlindSpotRealityFuture(
   const titleSource =
     pickBestRealityCandidate(detailCandidates, bundle) ?? path.future_shift ?? path.consequences[0];
 
-  return buildRealityFuture(
+  const futureSelfOriginal = futureSelf
+    ? `${futureSelf.name}: ${futureSelf.description}`.trim()
+    : null;
+  const usesFutureSelf =
+    futureSelf !== null &&
+    (titleSource.trim() === futureSelf.name.trim() ||
+      titleSource.trim() === futureSelf.description.trim());
+
+  const built = buildRealityFuture(
     titleSource,
     path,
     bundle,
     futureSelf?.description ?? path.future_shift,
     futureSelf?.description ?? path.future_shift,
   );
+
+  if (!built) {
+    return null;
+  }
+
+  if (usesFutureSelf) {
+    return tagForecastFuture(built, "future_self", "future_self", futureSelfOriginal);
+  }
+
+  return built;
 }
 
 function uniqueRealityFutures(futures: ScannableFuture[], maxItems: number): ScannableFuture[] {
@@ -717,6 +802,20 @@ function uniqueRealityFutures(futures: ScannableFuture[], maxItems: number): Sca
   }
 
   return result;
+}
+
+function prioritizeSurvivorFutures(
+  merged: ScannableFuture[],
+  survivors: ScannableFuture[],
+  maxItems: number,
+): ScannableFuture[] {
+  const survivorKeys = new Set(survivors.map((future) => normalizeComparable(future.title)));
+  const prioritized = [
+    ...merged.filter((future) => survivorKeys.has(normalizeComparable(future.title))),
+    ...merged.filter((future) => !survivorKeys.has(normalizeComparable(future.title))),
+  ];
+
+  return uniqueRealityFutures(prioritized, maxItems);
 }
 
 function buildRelationshipFallbacks(bundle: GroundingBundle): {
@@ -1277,10 +1376,109 @@ export function buildSituationFallbackFutures(
   return buildGenericFallbacks(situationTitle, groundingBundle);
 }
 
-function filterGroundedFutures(futures: ScannableFuture[], bundle: GroundingBundle): ScannableFuture[] {
-  return futures
-    .map((future) => sanitizeFuture(future, bundle))
-    .filter((future) => future.title.length > 0 && isValidRealityFuture(future, bundle));
+function explainInvalidFuture(future: ScannableFuture, bundle: GroundingBundle): string {
+  if (!future.title.trim()) {
+    return "empty title";
+  }
+
+  if (isReflectiveForecast(future.title)) {
+    return "failed reality filter";
+  }
+
+  if (!isGroundedFutureText(future.title, bundle)) {
+    if (mentionsInventedTopic(future.title, bundle)) {
+      return "invented topic not found in context";
+    }
+
+    return "no evidence found in context";
+  }
+
+  if (!isGroundedFutureText(future.futureImpact, bundle)) {
+    if (mentionsInventedTopic(future.futureImpact, bundle)) {
+      return "impact references invented topic";
+    }
+
+    return "impact not grounded in context";
+  }
+
+  if (isReflectiveForecast(future.futureImpact) || isReflectiveForecast(future.whyItMightHappen)) {
+    return "reflective language in forecast body";
+  }
+
+  if (future.signals.length < 1) {
+    return "missing signals";
+  }
+
+  return "failed validation";
+}
+
+function filterGroundedFutureAtSlot(
+  future: ScannableFuture,
+  bundle: GroundingBundle,
+  traceItem?: ForecastPipelineTraceItem,
+): ScannableFuture | null {
+  const sanitized = sanitizeFuture(future, bundle);
+
+  if (traceItem) {
+    traceItem.afterRewrite = sanitized.title;
+    if (normalizeComparable(sanitized.title) === normalizeComparable(traceItem.original)) {
+      traceItem.status = "preserved";
+    } else if (normalizeComparable(sanitized.title) !== normalizeComparable(traceItem.original)) {
+      traceItem.status = "rewritten";
+    }
+  }
+
+  if (sanitized.title.length > 0 && isValidRealityFuture(sanitized, bundle)) {
+    return sanitized;
+  }
+
+  if (traceItem) {
+    traceItem.status = "removed";
+    traceItem.reason = explainInvalidFuture(sanitized, bundle);
+    traceItem.final = null;
+  }
+
+  return null;
+}
+
+function filterGroundedFutures(
+  futures: ScannableFuture[],
+  bundle: GroundingBundle,
+  traceItems?: ForecastPipelineTraceItem[],
+): ScannableFuture[] {
+  const results: ScannableFuture[] = [];
+
+  futures.forEach((future, index) => {
+    const sanitized = filterGroundedFutureAtSlot(future, bundle, traceItems?.[index]);
+    if (sanitized) {
+      results.push(sanitized);
+    }
+  });
+
+  return results;
+}
+
+type FillSectionResult = {
+  futures: ScannableFuture[];
+  slotAudit: SlotFillAuditEntry[];
+  recoveryAdds: number;
+  fallbackAdds: number;
+};
+
+function attributeSurvivorFuture(
+  survivor: ScannableFuture,
+  rawTitle: string,
+): ScannableFuture {
+  const source = survivor.source ?? "unknown";
+  const sourceStage = survivor.sourceStage ?? "unknown";
+  const originalTitle =
+    survivor.originalTitle !== undefined
+      ? survivor.originalTitle
+      : source === "claude"
+        ? rawTitle
+        : null;
+
+  return tagForecastFuture(survivor, source, sourceStage, originalTitle);
 }
 
 function fillSection(
@@ -1289,44 +1487,163 @@ function fillSection(
   bundle: GroundingBundle,
   limits: { min: number; max: number },
   recoveryInput?: ForecastRecoveryInput,
-): ScannableFuture[] {
-  let groundedGenerated = filterGroundedFutures(generated, bundle);
+  traceContext?: {
+    collector: ForecastPipelineTraceCollector;
+    section: ForecastPipelineSectionKey;
+    traceItems: ForecastPipelineTraceItem[];
+  },
+): FillSectionResult {
+  const slots: (ScannableFuture | null)[] = [];
+  const slotAudit: SlotFillAuditEntry[] = [];
 
-  if (recoveryInput && shouldRunRecoveryGeneration(groundedGenerated.length)) {
-    const recovered = filterGroundedFutures(generateRecoveredFutures(recoveryInput, bundle), bundle);
-    groundedGenerated = uniqueRealityFutures([...groundedGenerated, ...recovered], limits.max);
+  for (let index = 0; index < generated.length; index += 1) {
+    const traceItem = traceContext?.traceItems[index];
+    const raw = traceItem?.original ?? generated[index]!.title;
+    const survivor = filterGroundedFutureAtSlot(generated[index]!, bundle, traceItem);
+    const attributedSurvivor = survivor ? attributeSurvivorFuture(survivor, raw) : null;
+    slots.push(attributedSurvivor);
+    slotAudit.push({
+      raw,
+      survived: attributedSurvivor !== null,
+      displayedTitle: attributedSurvivor?.title ?? null,
+      source: attributedSurvivor ? "survivor" : "none",
+    });
   }
 
+  const lockedKeys = new Set(
+    slots
+      .filter((future): future is ScannableFuture => future !== null)
+      .map((future) => normalizeComparable(future.title)),
+  );
+  const survivorCount = slots.filter((future) => future !== null).length;
+  let recoveryAdds = 0;
+  let fallbackAdds = 0;
   const groundedFallback = filterGroundedFutures(fallback, bundle);
-  let merged = uniqueRealityFutures([...groundedGenerated, ...groundedFallback], limits.max);
 
-  if (merged.length < limits.min) {
-    for (const candidate of groundedFallback) {
-      if (merged.length >= limits.min) {
+  const fillVacantSlots = (
+    candidates: ScannableFuture[],
+    source: "recovery" | "fallback",
+  ): void => {
+    let candidateIndex = 0;
+
+    for (let slotIndex = 0; slotIndex < slots.length; slotIndex += 1) {
+      if (slots[slotIndex] !== null) {
+        continue;
+      }
+
+      while (candidateIndex < candidates.length) {
+        const candidate = candidates[candidateIndex];
+        candidateIndex += 1;
+        const key = normalizeComparable(candidate.title);
+        if (lockedKeys.has(key)) {
+          continue;
+        }
+
+        slots[slotIndex] = tagForecastFuture(candidate, source, source, null);
+        lockedKeys.add(key);
+        if (source === "recovery") {
+          recoveryAdds += 1;
+        } else {
+          fallbackAdds += 1;
+        }
+        slotAudit[slotIndex] = {
+          raw: slotAudit[slotIndex]!.raw,
+          survived: false,
+          displayedTitle: candidate.title,
+          source,
+        };
+        if (traceContext) {
+          if (source === "recovery") {
+            traceContext.collector.recordRecovered(traceContext.section, candidate.title);
+          } else {
+            traceContext.collector.recordFallback(traceContext.section, candidate.title);
+          }
+        }
+        break;
+      }
+    }
+  };
+
+  if (
+    recoveryInput &&
+    (shouldRunRecoveryGeneration(survivorCount) || slots.some((slot) => slot === null))
+  ) {
+    fillVacantSlots(
+      filterGroundedFutures(generateRecoveredFutures(recoveryInput, bundle), bundle),
+      "recovery",
+    );
+  }
+
+  if (slots.some((slot) => slot === null)) {
+    fillVacantSlots(groundedFallback, "fallback");
+  }
+
+  let final: ScannableFuture[] = slots.filter((future): future is ScannableFuture => future !== null);
+
+  if (final.length < limits.min && recoveryInput) {
+    const appendCandidates = [
+      ...filterGroundedFutures(generateRecoveredFutures(recoveryInput, bundle), bundle),
+      ...groundedFallback,
+    ];
+
+    for (const candidate of appendCandidates) {
+      if (final.length >= limits.min) {
         break;
       }
 
       const key = normalizeComparable(candidate.title);
-      if (!merged.some((future) => normalizeComparable(future.title) === key)) {
-        merged.push(candidate);
+      if (lockedKeys.has(key)) {
+        continue;
+      }
+
+      final.push(tagForecastFuture(candidate, "recovery", "recovery", null));
+      lockedKeys.add(key);
+      recoveryAdds += 1;
+      traceContext?.collector.recordRecovered(traceContext.section, candidate.title);
+    }
+
+    if (final.length < limits.min) {
+      for (const candidate of groundedFallback) {
+        if (final.length >= limits.min) {
+          break;
+        }
+
+        const key = normalizeComparable(candidate.title);
+        if (lockedKeys.has(key)) {
+          continue;
+        }
+
+        final.push(tagForecastFuture(candidate, "fallback", "fallback", null));
+        lockedKeys.add(key);
+        fallbackAdds += 1;
+        traceContext?.collector.recordFallback(traceContext.section, candidate.title);
       }
     }
   }
 
-  if (merged.length < limits.min) {
-    for (const candidate of groundedGenerated) {
-      if (merged.length >= limits.min) {
-        break;
-      }
+  final = final.slice(0, limits.max);
 
-      const key = normalizeComparable(candidate.title);
-      if (!merged.some((future) => normalizeComparable(future.title) === key)) {
-        merged.push(candidate);
+  if (traceContext) {
+    for (let slotIndex = 0; slotIndex < traceContext.traceItems.length; slotIndex += 1) {
+      const traceItem = traceContext.traceItems[slotIndex]!;
+      const slotFuture = slots[slotIndex];
+
+      if (slotFuture && traceItem.status !== "removed") {
+        traceContext.collector.markFinal(traceItem, slotFuture.title);
+      } else if (!slotFuture && traceItem.status !== "removed") {
+        traceItem.status = "removed";
+        traceItem.reason = traceItem.reason ?? "vacant slot could not be filled";
+        traceItem.final = null;
       }
     }
   }
 
-  return merged.slice(0, limits.max);
+  return {
+    futures: final,
+    slotAudit,
+    recoveryAdds,
+    fallbackAdds,
+  };
 }
 
 function buildSignalsFromGeneratedFuture(draft: ForecastFutureDraft): string[] {
@@ -1359,14 +1676,48 @@ function buildSignalsFromGeneratedFuture(draft: ForecastFutureDraft): string[] {
 function mapGeneratedFutureToScannableFuture(
   draft: ForecastFutureDraft,
   bundle: GroundingBundle,
+  traceItem?: ForecastPipelineTraceItem,
 ): ScannableFuture {
-  const title = resolveForecastTitle(draft.title, bundle) || formatForecastTitle(draft.title);
+  const original = draft.title.trim();
+  const preservedTitle = shouldPreserveForecastTitle(original, bundle)
+    ? normalizePreservableForecastTitle(original)
+    : "";
+  const realityTitle =
+    preservedTitle || upgradeToSceneTitle(formatForecastTitle(original));
+
+  if (traceItem) {
+    if (!realityTitle || isReflectiveForecast(realityTitle)) {
+      traceItem.afterReality = realityTitle || null;
+    } else {
+      traceItem.afterReality = realityTitle;
+    }
+  }
+
+  const resolvedTitle =
+    preserveOrResolveForecastTitle(draft.title, bundle) || formatForecastTitle(draft.title);
+
+  if (traceItem) {
+    if (!resolvedTitle || !isGroundedFutureText(resolvedTitle, bundle)) {
+      traceItem.afterGrounding = resolvedTitle || null;
+      if (!resolvedTitle) {
+        traceItem.reason = "failed grounding: no evidence found in context";
+      } else if (mentionsInventedTopic(resolvedTitle, bundle)) {
+        traceItem.reason = "failed grounding: invented topic not found in context";
+      } else {
+        traceItem.reason = "failed grounding: no evidence found in context";
+      }
+    } else {
+      traceItem.afterGrounding = resolvedTitle;
+    }
+  }
+
+  const title = resolvedTitle || realityTitle || "";
   const futureImpact =
     formatForecastImpact(draft.impact, bundle) ||
     recoverFutureImpact(draft.impact, bundle) ||
     toFirstSentence(draft.impact, 140);
 
-  return sanitizeFuture(
+  const sanitized = sanitizeFuture(
     {
       title,
       whyItMightHappen: buildGroundedWhy(title, bundle, toFirstSentence(draft.why, 160)),
@@ -1377,7 +1728,26 @@ function mapGeneratedFutureToScannableFuture(
     },
     bundle,
   );
+
+  if (traceItem) {
+    traceItem.afterRewrite = sanitized.title || null;
+    if (sanitized.title && normalizeComparable(sanitized.title) === normalizeComparable(original)) {
+      traceItem.status = "preserved";
+    } else if (sanitized.title) {
+      traceItem.status = "rewritten";
+    }
+  }
+
+  return tagForecastFuture(sanitized, "claude", "generation", original);
 }
+
+export type ProcessedForecastSectionsResult = {
+  activeFutures: ScannableFuture[];
+  hiddenFutures: ScannableFuture[];
+  blindSpotFutures: ScannableFuture[];
+  pipelineTrace?: import("@/lib/ai-audit").ForecastPipelineTrace;
+  integrityAudit?: ForecastIntegrityAudit;
+};
 
 export function processGeneratedForecastSections(
   generated: ForecastOutput,
@@ -1385,11 +1755,8 @@ export function processGeneratedForecastSections(
   contextSummary?: string | null,
   selectedPathTitle?: string | null,
   pathText: string[] = [],
-): {
-  activeFutures: ScannableFuture[];
-  hiddenFutures: ScannableFuture[];
-  blindSpotFutures: ScannableFuture[];
-} {
+  options?: { collectPipelineTrace?: boolean },
+): ProcessedForecastSectionsResult {
   const contextTitle = selectedPathTitle ? `${situationTitle} — ${selectedPathTitle}` : situationTitle;
   const bundle = buildGroundingBundle({
     situationTitle,
@@ -1410,25 +1777,108 @@ export function processGeneratedForecastSections(
     ],
   };
 
-  const activeGenerated = generated.active.map((draft) => mapGeneratedFutureToScannableFuture(draft, bundle));
-  const hiddenGenerated = generated.hidden.map((draft) => mapGeneratedFutureToScannableFuture(draft, bundle));
-  const blindSpotGenerated = generated.blind_spots.map((draft) =>
-    mapGeneratedFutureToScannableFuture(draft, bundle),
+  const collector = options?.collectPipelineTrace
+    ? createForecastPipelineTraceCollector()
+    : undefined;
+
+  const activeTraceItems = generated.active.map((draft) =>
+    collector ? collector.beginGeneratedItem("active", draft.title) : undefined,
+  );
+  const hiddenTraceItems = generated.hidden.map((draft) =>
+    collector ? collector.beginGeneratedItem("hidden", draft.title) : undefined,
+  );
+  const blindSpotTraceItems = generated.blind_spots.map((draft) =>
+    collector ? collector.beginGeneratedItem("blind_spots", draft.title) : undefined,
+  );
+
+  const activeGenerated = generated.active.map((draft, index) =>
+    mapGeneratedFutureToScannableFuture(draft, bundle, activeTraceItems[index]),
+  );
+  const hiddenGenerated = generated.hidden.map((draft, index) =>
+    mapGeneratedFutureToScannableFuture(draft, bundle, hiddenTraceItems[index]),
+  );
+  const blindSpotGenerated = generated.blind_spots.map((draft, index) =>
+    mapGeneratedFutureToScannableFuture(draft, bundle, blindSpotTraceItems[index]),
+  );
+
+  const activeFill = fillSection(
+    activeGenerated,
+    fallbacks.activeFutures,
+    bundle,
+    {
+      min: MIN_ACTIVE_FUTURES,
+      max: MAX_ACTIVE_FUTURES,
+    },
+    recoveryInput,
+    collector
+      ? {
+          collector,
+          section: "active",
+          traceItems: activeTraceItems.filter(Boolean) as ForecastPipelineTraceItem[],
+        }
+      : undefined,
+  );
+  const hiddenFill = fillSection(
+    hiddenGenerated,
+    fallbacks.hiddenFutures,
+    bundle,
+    {
+      min: MIN_HIDDEN_FUTURES,
+      max: MAX_HIDDEN_FUTURES,
+    },
+    recoveryInput,
+    collector
+      ? {
+          collector,
+          section: "hidden",
+          traceItems: hiddenTraceItems.filter(Boolean) as ForecastPipelineTraceItem[],
+        }
+      : undefined,
+  );
+  const blindSpotFill = fillSection(
+    blindSpotGenerated,
+    fallbacks.blindSpotFutures,
+    bundle,
+    {
+      min: MIN_BLIND_SPOT_FUTURES,
+      max: MAX_BLIND_SPOT_FUTURES,
+    },
+    recoveryInput,
+    collector
+      ? {
+          collector,
+          section: "blind_spots",
+          traceItems: blindSpotTraceItems.filter(Boolean) as ForecastPipelineTraceItem[],
+        }
+      : undefined,
   );
 
   return {
-    activeFutures: fillSection(activeGenerated, fallbacks.activeFutures, bundle, {
-      min: MIN_ACTIVE_FUTURES,
-      max: MAX_ACTIVE_FUTURES,
-    }, recoveryInput),
-    hiddenFutures: fillSection(hiddenGenerated, fallbacks.hiddenFutures, bundle, {
-      min: MIN_HIDDEN_FUTURES,
-      max: MAX_HIDDEN_FUTURES,
-    }, recoveryInput),
-    blindSpotFutures: fillSection(blindSpotGenerated, fallbacks.blindSpotFutures, bundle, {
-      min: MIN_BLIND_SPOT_FUTURES,
-      max: MAX_BLIND_SPOT_FUTURES,
-    }, recoveryInput),
+    activeFutures: activeFill.futures,
+    hiddenFutures: hiddenFill.futures,
+    blindSpotFutures: blindSpotFill.futures,
+    ...(collector
+      ? {
+          pipelineTrace: collector.build(),
+          integrityAudit: {
+            active: buildForecastSectionIntegrity(
+              activeFill.slotAudit,
+              activeFill.recoveryAdds,
+              activeFill.fallbackAdds,
+            ),
+            hidden: buildForecastSectionIntegrity(
+              hiddenFill.slotAudit,
+              hiddenFill.recoveryAdds,
+              hiddenFill.fallbackAdds,
+            ),
+            blind_spots: buildForecastSectionIntegrity(
+              blindSpotFill.slotAudit,
+              blindSpotFill.recoveryAdds,
+              blindSpotFill.fallbackAdds,
+            ),
+          },
+        }
+      : {}),
   };
 }
 
@@ -1704,15 +2154,15 @@ function buildSelectedPathForecastSections(
     activeFutures: fillSection(activeGenerated, fallbacks.activeFutures, bundle, {
       min: MIN_ACTIVE_FUTURES,
       max: MAX_ACTIVE_FUTURES,
-    }, recoveryInput),
+    }, recoveryInput).futures,
     hiddenFutures: fillSection(hiddenGenerated, fallbacks.hiddenFutures, bundle, {
       min: MIN_HIDDEN_FUTURES,
       max: MAX_HIDDEN_FUTURES,
-    }, recoveryInput),
+    }, recoveryInput).futures,
     blindSpotFutures: fillSection(blindSpotGenerated, fallbacks.blindSpotFutures, bundle, {
       min: MIN_BLIND_SPOT_FUTURES,
       max: MAX_BLIND_SPOT_FUTURES,
-    }, recoveryInput),
+    }, recoveryInput).futures,
   };
 }
 
@@ -1792,15 +2242,15 @@ export function buildRealityForecastSections(
     activeFutures: fillSection(activeGenerated, fallbacks.activeFutures, bundle, {
       min: MIN_ACTIVE_FUTURES,
       max: MAX_ACTIVE_FUTURES,
-    }, recoveryInput),
+    }, recoveryInput).futures,
     hiddenFutures: fillSection(hiddenGenerated, fallbacks.hiddenFutures, bundle, {
       min: MIN_HIDDEN_FUTURES,
       max: MAX_HIDDEN_FUTURES,
-    }, recoveryInput),
+    }, recoveryInput).futures,
     blindSpotFutures: fillSection(blindSpotGenerated, fallbacks.blindSpotFutures, bundle, {
       min: MIN_BLIND_SPOT_FUTURES,
       max: MAX_BLIND_SPOT_FUTURES,
-    }, recoveryInput),
+    }, recoveryInput).futures,
   };
 }
 
@@ -1838,14 +2288,14 @@ export function withRealityForecastFallbacks(
     activeFutures: fillSection(sections.activeFutures, fallbacks.activeFutures, bundle, {
       min: MIN_ACTIVE_FUTURES,
       max: MAX_ACTIVE_FUTURES,
-    }, recoveryInput),
+    }, recoveryInput).futures,
     hiddenFutures: fillSection(sections.hiddenFutures, fallbacks.hiddenFutures, bundle, {
       min: MIN_HIDDEN_FUTURES,
       max: MAX_HIDDEN_FUTURES,
-    }, recoveryInput),
+    }, recoveryInput).futures,
     blindSpotFutures: fillSection(sections.blindSpotFutures, fallbacks.blindSpotFutures, bundle, {
       min: MIN_BLIND_SPOT_FUTURES,
       max: MAX_BLIND_SPOT_FUTURES,
-    }, recoveryInput),
+    }, recoveryInput).futures,
   };
 }
