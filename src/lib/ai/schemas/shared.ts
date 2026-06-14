@@ -17,6 +17,43 @@ const BANNED_PHRASES = [
   "you have to",
 ];
 
+// Sanitizes banned directive/diagnostic phrases rather than rejecting the whole
+// string. Sentence-start occurrences are removed and the remainder is
+// re-capitalised. Mid-sentence occurrences are removed with surrounding
+// whitespace collapsed to a single space; a console.warn is emitted so
+// we can monitor how often Claude produces these in practice.
+function sanitizeBannedPhrases(value: string): string {
+  let result = value;
+
+  for (const phrase of BANNED_PHRASES) {
+    // Escape any regex-special characters (defensive; current phrases have none).
+    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    // Sentence-start: phrase is the very first token (trim has already run).
+    const startRe = new RegExp(`^${escaped}[,\\s]*`, "i");
+    if (startRe.test(result)) {
+      result = result.replace(startRe, "");
+      if (result.length > 0) {
+        result = result.charAt(0).toUpperCase() + result.slice(1);
+      }
+      // Only one phrase can occupy the start; move on to the next phrase.
+      continue;
+    }
+
+    // Mid-sentence: phrase appears after the start.
+    const midRe = new RegExp(`\\s*${escaped}\\s*`, "ig");
+    if (midRe.test(result)) {
+      const original = result;
+      result = result.replace(midRe, " ").replace(/\s{2,}/g, " ").trim();
+      console.warn(
+        `[tentativeTextSchema] Sanitized mid-sentence directive language. Before: "${original}" After: "${result}"`,
+      );
+    }
+  }
+
+  return result;
+}
+
 export const themeNameSchema = z.enum(THEME_NAMES);
 
 export const themeChangeSchema = z.object({
@@ -24,15 +61,14 @@ export const themeChangeSchema = z.object({
   direction: z.enum(["strengthened", "emerging", "weakened"]),
 });
 
+// .transform() sanitizes banned phrases; .pipe() then enforces min/max on the
+// sanitised result (a string that was fully composed of banned phrases becomes
+// empty and fails .min(1)).
 export const tentativeTextSchema = z
   .string()
   .trim()
-  .min(1)
-  .max(2000)
-  .refine(
-    (value) => !BANNED_PHRASES.some((phrase) => value.toLowerCase().includes(phrase)),
-    "Text must avoid directive or diagnostic language.",
-  );
+  .transform(sanitizeBannedPhrases)
+  .pipe(z.string().min(1).max(2000));
 
 export const themesSchema = z.array(themeNameSchema).min(1).max(3);
 

@@ -32,8 +32,8 @@ describe("forecast schema", () => {
     expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
   });
 
-  it("drops a single invalid item without throwing, keeping the rest", () => {
-    const banned = {
+  it("sanitizes directive language in items without dropping them", () => {
+    const withBannedWhy = {
       title: "Talk It Over",
       why: "You should talk to her about how you feel.",
       impact: "You meet outside work within the week.",
@@ -45,24 +45,21 @@ describe("forecast schema", () => {
         { title: "She Leaves The Team", why: "Job changes happen.", impact: "Daily contact ends." },
         { title: "You Get Coffee", why: "A casual invite may land well.", impact: "Plans happen quickly." },
         { title: "Timing Slips", why: "Busy weeks can delay the moment.", impact: "Months pass quietly." },
-        banned,
+        withBannedWhy,
       ],
       hidden: [VALID_ITEM_B],
       blind_spots: [VALID_ITEM_C],
     });
 
-    expect(() => parseForecastOutput({
-      active: [VALID_ITEM_A, banned],
-      hidden: [VALID_ITEM_B],
-      blind_spots: [VALID_ITEM_C],
-    })).not.toThrow();
-
-    expect(parsed.active).toHaveLength(4);
+    // Item is sanitized and kept — all 5 survive.
+    expect(parsed.active).toHaveLength(5);
+    // Banned phrase removed; sentence re-capitalised at the start.
+    expect(parsed.active[4]?.why).toBe("Talk to her about how you feel.");
     expect(parsed.active.every((item) => !item.why.toLowerCase().includes("you should"))).toBe(true);
     expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
   });
 
-  it("returns an empty array when all items in a section are invalid", () => {
+  it("sanitizes directive language across all items in a section", () => {
     const parsed = parseForecastOutput({
       active: [VALID_ITEM_A],
       hidden: [
@@ -73,7 +70,11 @@ describe("forecast schema", () => {
       blind_spots: [VALID_ITEM_C],
     });
 
-    expect(parsed.hidden).toHaveLength(0);
+    // All three items are sanitized and preserved — the section is no longer empty.
+    expect(parsed.hidden).toHaveLength(3);
+    expect(parsed.hidden[0]?.why).toBe("Act now.");
+    expect(parsed.hidden[1]?.why).toBe("Tell her.");
+    expect(parsed.hidden[2]?.why).toBe("Decide.");
     expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
   });
 

@@ -102,6 +102,25 @@ describe("path quality", () => {
     expect(formatPathSummary(explanation, [], "Ask Her Out")).toBe(explanation);
   });
 
+  it("preserves complete sentences with verbs not previously in VERB_PATTERN", () => {
+    const s1 = "A genuine friendship forms that survives regardless of romantic outcome.";
+    const s2 =
+      "Any relationship that develops begins on a legally and professionally informed footing.";
+    const s3 = "The group setting provides social cover if the moment does not land.";
+    const s4 =
+      "If the moment lands well, it may lead directly to plans between just the two of you.";
+
+    expect(shouldPreservePathSentence(s1)).toBe(true);
+    expect(shouldPreservePathSentence(s2)).toBe(true);
+    expect(shouldPreservePathSentence(s3)).toBe(true);
+    expect(shouldPreservePathSentence(s4)).toBe(true);
+
+    expect(formatPathOutcomes([s1], [])).toEqual([s1]);
+    expect(formatPathOutcomes([s2], [])).toEqual([s2]);
+    expect(formatPathOutcomes([s3], [])).toEqual([s3]);
+    expect(formatPathOutcomes([s4], [])).toEqual([s4]);
+  });
+
   it("preserves sentences with 'begins' and does not apply overly-broad OUTCOME_REWRITES", () => {
     const sentence = "A romantic relationship begins before the moment passes.";
     expect(shouldPreservePathSentence(sentence)).toBe(true);
