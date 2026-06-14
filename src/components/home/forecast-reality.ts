@@ -1594,6 +1594,8 @@ function fillSection(
 
   const DISABLE_RECOVERY_EXPERIMENT = true;
 
+  // AI recovery: fill vacant slots from generated+reasoned candidates.
+  // Disabled while DISABLE_RECOVERY_EXPERIMENT is true.
   if (!DISABLE_RECOVERY_EXPERIMENT && recoveryInput) {
     fillVacantSlots(
       filterGroundedFutures(
@@ -1603,40 +1605,57 @@ function fillSection(
       "recovery",
     );
   }
-  
-  if (!DISABLE_RECOVERY_EXPERIMENT) {
-    fillVacantSlots(groundedFallback, "fallback");
-  }
-  
+
+  // Curated fallback: always fill remaining vacant slots from static content.
+  // No AI calls — groundedFallback is pre-filtered static ScannableFuture[].
+  fillVacantSlots(groundedFallback, "fallback");
+
   let final: ScannableFuture[] = slots.filter(
     (future): future is ScannableFuture => future !== null,
   );
-  
+
+  // (a) AI recovery append — still disabled while DISABLE_RECOVERY_EXPERIMENT is true.
   if (
     !DISABLE_RECOVERY_EXPERIMENT &&
     final.length < limits.min &&
     recoveryInput
   ) {
-    const appendCandidates = [
-      ...filterGroundedFutures(
-        generateRecoveredFutures(recoveryInput, bundle),
-        bundle,
-      ),
-      ...groundedFallback,
-    ];
-  
-    for (const candidate of appendCandidates) {
+    const aiRecoveryCandidates = filterGroundedFutures(
+      generateRecoveredFutures(recoveryInput, bundle),
+      bundle,
+    );
+
+    for (const candidate of aiRecoveryCandidates) {
       if (final.length >= limits.min) {
         break;
       }
-  
+
       const key = normalizeComparable(candidate.title);
       if (lockedKeys.has(key)) {
         continue;
       }
-  
+
       final.push(tagForecastFuture(candidate, "recovery", "recovery", null));
       lockedKeys.add(key);
+    }
+  }
+
+  // (b) Curated fallback append — always runs to reach the section minimum.
+  // Uses static groundedFallback only; no AI calls.
+  if (final.length < limits.min) {
+    for (const candidate of groundedFallback) {
+      if (final.length >= limits.min) {
+        break;
+      }
+
+      const key = normalizeComparable(candidate.title);
+      if (lockedKeys.has(key)) {
+        continue;
+      }
+
+      final.push(tagForecastFuture(candidate, "fallback", "fallback", null));
+      lockedKeys.add(key);
+      fallbackAdds += 1;
     }
   }
 
