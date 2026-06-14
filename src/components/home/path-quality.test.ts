@@ -129,6 +129,14 @@ describe("path quality", () => {
     expect(outcomes).not.toContain("A relationship begins.");
   });
 
+  it("preserves sentences ending in a stranded preposition 'to' and does not truncate them", () => {
+    const sentence = "A direct approach may signal confidence she responds well to.";
+    expect(shouldPreservePathSentence(sentence)).toBe(true);
+    const outcomes = formatPathOutcomes([sentence], []);
+    expect(outcomes).toContain(sentence);
+    expect(outcomes[0]).not.toMatch(/responds well\.?$/);
+  });
+
   it("preserves sentences ending in 'you' and does not truncate them", () => {
     const sentence =
       "If the moment lands well, it may lead directly to plans between just the two of you.";

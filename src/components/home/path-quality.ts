@@ -42,7 +42,7 @@ const REFLECTIVE_ACTION_START =
   /^(gain|observe|reflect|learn|understand|explore|process|consider|think about|work on|focus on|notice|gather|build understanding)\b/i;
 
 const INCOMPLETE_ENDINGS =
-  /\b(the|a|an|on|in|at|to|for|with|that|which|and|or|who|if|when|whether|your|feels|may|might|could|would|will|become|reveals?|shows?|whether|about|into|from|through|without|this|that)\s*[.!?]?$/i;
+  /\b(the|a|an|on|in|at|for|with|that|which|and|or|who|if|when|whether|your|feels|may|might|could|would|will|become|reveals?|shows?|whether|about|into|from|through|without|this|that)\s*[.!?]?$/i;
 
 const MAX_PRESERVE_LENGTH = 250;
 const MAX_FUTURE_SHIFT_PRESERVE_LENGTH = 300;
