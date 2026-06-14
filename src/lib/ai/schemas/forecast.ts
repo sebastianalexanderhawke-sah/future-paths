@@ -20,12 +20,49 @@ export const forecastFutureSchema = z.object({
   impact: tentativeTextSchema,
 }) satisfies z.ZodType<ForecastFutureDraft>;
 
+// Arrays use .min(0) so an empty section (all items dropped by per-item
+// validation) is still a valid parse result. fillSection's curated fallback
+// append handles padding sparse or empty arrays to display minimums.
 export const forecastOutputSchema = z.object({
-  active: z.array(forecastFutureSchema).min(1).max(6),
-  hidden: z.array(forecastFutureSchema).min(1).max(5),
-  blind_spots: z.array(forecastFutureSchema).min(1).max(5),
+  active: z.array(forecastFutureSchema).min(0).max(6),
+  hidden: z.array(forecastFutureSchema).min(0).max(5),
+  blind_spots: z.array(forecastFutureSchema).min(0).max(5),
 }) satisfies z.ZodType<ForecastOutput>;
 
+const looseForecastShape = z.object({
+  active: z.array(z.unknown()),
+  hidden: z.array(z.unknown()),
+  blind_spots: z.array(z.unknown()),
+});
+
+function filterItems(raw: unknown[]): ForecastFutureDraft[] {
+  const kept: ForecastFutureDraft[] = [];
+
+  for (const item of raw) {
+    const result = forecastFutureSchema.safeParse(item);
+    if (result.success) {
+      kept.push(result.data);
+    } else {
+      const title =
+        item !== null && typeof item === "object" && "title" in item
+          ? String((item as Record<string, unknown>).title)
+          : "(unknown)";
+      console.warn(
+        `[parseForecastOutput] Dropping item "${title}": ${result.error.issues.map((i) => i.message).join("; ")}`,
+      );
+    }
+  }
+
+  return kept;
+}
+
 export function parseForecastOutput(data: unknown): ForecastOutput {
-  return forecastOutputSchema.parse(data);
+  // Throw on malformed top-level structure (not an object with the three arrays).
+  const shape = looseForecastShape.parse(data);
+
+  return {
+    active: filterItems(shape.active),
+    hidden: filterItems(shape.hidden),
+    blind_spots: filterItems(shape.blind_spots),
+  };
 }

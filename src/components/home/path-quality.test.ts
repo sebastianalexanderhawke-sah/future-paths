@@ -102,6 +102,23 @@ describe("path quality", () => {
     expect(formatPathSummary(explanation, [], "Ask Her Out")).toBe(explanation);
   });
 
+  it("preserves sentences with 'begins' and does not apply overly-broad OUTCOME_REWRITES", () => {
+    const sentence = "A romantic relationship begins before the moment passes.";
+    expect(shouldPreservePathSentence(sentence)).toBe(true);
+    const outcomes = formatPathOutcomes([sentence], []);
+    expect(outcomes).toContain(sentence);
+    expect(outcomes).not.toContain("A relationship begins.");
+  });
+
+  it("preserves sentences ending in 'you' and does not truncate them", () => {
+    const sentence =
+      "If the moment lands well, it may lead directly to plans between just the two of you.";
+    expect(shouldPreservePathSentence(sentence)).toBe(true);
+    const outcomes = formatPathOutcomes([sentence], []);
+    expect(outcomes).toContain(sentence);
+    expect(outcomes[0]).not.toMatch(/two of\.?$/);
+  });
+
   it("preserves substantive Claude future_shift statements unchanged", () => {
     const earlyInterestShift =
       "You may become someone who acts on interest early rather than waiting for certainty to arrive on its own.";
