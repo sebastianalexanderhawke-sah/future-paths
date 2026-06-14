@@ -118,15 +118,14 @@ describe("forecast source attribution", () => {
     const audit = buildForecastSourceAttributionAudit(result);
     const metrics = computeForecastSourceMetricsFromSections(result);
 
-    expect(audit.active.filter((item) => item.source === "claude").length).toBe(4);
-    expect(audit.active.find((item) => item.source === "recovery")).toEqual({
-      title: "She Starts Texting You Outside Work",
-      source: "recovery",
-      sourceStage: "recovery",
-      originalTitle: null,
-    });
+    // All 5 active inputs now survive the reality filter as claude-sourced futures.
+    // "The Ask Happens Over Lunch" was previously dropped by the over-broad
+    // ARCHETYPE_NAME_PATTERN and replaced by a recovery slot; the fixed pattern
+    // lets it pass through correctly.
+    expect(audit.active.filter((item) => item.source === "claude").length).toBe(5);
+    expect(audit.active.find((item) => item.source === "recovery")).toBeUndefined();
     expect(metrics.claude).toBeGreaterThan(0);
-    expect(metrics.recovery).toBeGreaterThan(0);
-    expect(metrics.percentages.claude + metrics.percentages.recovery).toBe(100);
+    expect(metrics.recovery).toBe(0);
+    expect(metrics.percentages.claude).toBeGreaterThan(0);
   });
 });
