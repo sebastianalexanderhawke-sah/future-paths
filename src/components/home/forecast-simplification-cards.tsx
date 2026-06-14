@@ -50,9 +50,6 @@ export function CurrentForecastFutureCard({
         <div>
           <p className="text-label text-ink-tertiary">Why it might happen</p>
           <p className="mt-1 text-body-small text-ink-secondary">{future.whyItMightHappen}</p>
-          {future.sourceTrace ? (
-            <p className="mt-2 text-body-small text-ink-tertiary">{future.sourceTrace}</p>
-          ) : null}
         </div>
 
         <div>

@@ -192,6 +192,175 @@ describe("forecast reality", () => {
     ).toBe(true);
   });
 
+  it("uses Claude-supplied signals directly when present on the draft", () => {
+    const claudeSignals = [
+      "Pay jumps from $12 to $20",
+      "Notice period at current job",
+      "Moving logistics begin",
+    ];
+
+    const sections = processGeneratedForecastSections(
+      {
+        active: [
+          {
+            title: "She Says Yes To Coffee",
+            why: "A direct ask after daily rapport can lead to plans quickly.",
+            impact: "You meet outside work within the week.",
+            signals: claudeSignals,
+          },
+          {
+            title: "She Says No But Stays Friendly",
+            why: "A clear question can end uncertainty without ending contact.",
+            impact: "Daily work stays workable even if the crush fades.",
+            signals: ["Clear refusal given", "Work stays polite", "Crush fades quietly"],
+          },
+          {
+            title: "Coworkers Learn About The Ask",
+            why: "Workplace moments rarely stay fully private.",
+            impact: "Small talk feels strained for a few weeks.",
+            signals: ["Colleague overheard the ask", "Lunch table goes quiet", "Glances exchanged at work"],
+          },
+          {
+            title: "The Friendship Deepens First",
+            why: "More time together can build comfort before romance.",
+            impact: "You talk every week but nothing romantic happens yet.",
+            signals: ["Lunch plans happen weekly", "Personal topics come up", "Weekend plans suggested"],
+          },
+        ],
+        hidden: [
+          {
+            title: "She Leaves The Company",
+            why: "Job changes can remove the situation entirely.",
+            impact: "The crush fades because daily contact disappears.",
+            signals: ["LinkedIn update noticed", "Farewell email arrives", "Desk cleared out"],
+          },
+          {
+            title: "The Timing Never Aligns",
+            why: "Busy schedules can keep things polite but static.",
+            impact: "Months pass without a clear moment to act.",
+            signals: ["Schedules keep conflicting", "Good moment never comes", "Weeks pass unmarked"],
+          },
+          {
+            title: "You Receive Mixed Signals",
+            why: "Friendly behavior can be hard to read over time.",
+            impact: "You hesitate longer than planned.",
+            signals: ["Warm then distant again", "Eye contact then avoided", "Reply comes then stops"],
+          },
+        ],
+        blind_spots: [
+          {
+            title: "She Assumes You're Not Interested",
+            why: "Platonic behavior can read as disinterest when she initiates often.",
+            impact: "She stops looking for signs because the friendship feels settled.",
+            signals: ["She stops initiating", "Tone becomes purely friendly", "Social plans dry up"],
+          },
+          {
+            title: "A Mutual Friend Changes The Dynamic",
+            why: "Shared social ties can shift how you both act at work.",
+            impact: "Group plans replace one-on-one contact.",
+            signals: ["Mutual friend makes plans", "Group chat created", "One-on-one time stops"],
+          },
+          {
+            title: "A One-On-One Opportunity Appears Naturally",
+            why: "Shared projects or social plans can create private time.",
+            impact: "You finally talk outside the usual work routine.",
+            signals: ["Project assigned together", "After-work errand overlap", "Quiet moment found"],
+          },
+        ],
+      },
+      "I like a girl at work",
+      "How often does she initiate conversations?\nDaily",
+      "Ask Her Out",
+      ["Ask her out directly after work."],
+    );
+
+    const future = sections.activeFutures.find((f) => f.title === "She Says Yes To Coffee");
+    expect(future).toBeDefined();
+    // Signals come directly from Claude's output, title-cased.
+    expect(future?.signals).toEqual([
+      "Pay Jumps From $12 To $20",
+      "Notice Period At Current Job",
+      "Moving Logistics Begin",
+    ]);
+  });
+
+  it("falls back to title/why truncation when draft has no signals", () => {
+    const sections = processGeneratedForecastSections(
+      {
+        active: [
+          {
+            title: "She Says Yes To Coffee",
+            why: "A direct ask after daily rapport can lead to plans quickly.",
+            impact: "You meet outside work within the week.",
+            // signals intentionally omitted — exercises fallback path
+          },
+          {
+            title: "She Says No But Stays Friendly",
+            why: "A clear question can end uncertainty without ending contact.",
+            impact: "Daily work stays workable even if the crush fades.",
+          },
+          {
+            title: "Coworkers Learn About The Ask",
+            why: "Workplace moments rarely stay fully private.",
+            impact: "Small talk feels strained for a few weeks.",
+          },
+          {
+            title: "The Friendship Deepens First",
+            why: "More time together can build comfort before romance.",
+            impact: "You talk every week but nothing romantic happens yet.",
+          },
+        ],
+        hidden: [
+          {
+            title: "She Leaves The Company",
+            why: "Job changes can remove the situation entirely.",
+            impact: "The crush fades because daily contact disappears.",
+          },
+          {
+            title: "The Timing Never Aligns",
+            why: "Busy schedules can keep things polite but static.",
+            impact: "Months pass without a clear moment to act.",
+          },
+          {
+            title: "You Receive Mixed Signals",
+            why: "Friendly behavior can be hard to read over time.",
+            impact: "You hesitate longer than planned.",
+          },
+        ],
+        blind_spots: [
+          {
+            title: "She Assumes You're Not Interested",
+            why: "Platonic behavior can read as disinterest when she initiates often.",
+            impact: "She stops looking for signs because the friendship feels settled.",
+          },
+          {
+            title: "A Mutual Friend Changes The Dynamic",
+            why: "Shared social ties can shift how you both act at work.",
+            impact: "Group plans replace one-on-one contact.",
+          },
+          {
+            title: "A One-On-One Opportunity Appears Naturally",
+            why: "Shared projects or social plans can create private time.",
+            impact: "You finally talk outside the usual work routine.",
+          },
+        ],
+      },
+      "I like a girl at work",
+      "How often does she initiate conversations?\nDaily",
+      "Ask Her Out",
+      ["Ask her out directly after work."],
+    );
+
+    const future = sections.activeFutures.find((f) => f.title === "She Says Yes To Coffee");
+    expect(future).toBeDefined();
+    // Without Claude signals the fallback derives from title/why/impact — not empty.
+    expect(future?.signals.length).toBeGreaterThan(0);
+    // The title itself is one of the truncation candidates.
+    expect(future?.signals.some((s) => s.toLowerCase().includes("she says yes"))).toBe(true);
+    // Must not match the Claude-specific signals from the other test.
+    expect(future?.signals).not.toContain("Pay Jumps From $12 To $20");
+  });
+
   it("preserves Claude forecast explanations instead of rebuilding source-trace templates", () => {
     const workInitiationWhy =
       "She initiates conversation every time you are both at work, which may signal she enjoys your company and welcomes more of it.";

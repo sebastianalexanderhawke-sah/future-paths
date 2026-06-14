@@ -6,6 +6,10 @@ export type ForecastFutureDraft = {
   title: string;
   why: string;
   impact: string;
+  /** Exactly 3 concrete early-evidence phrases supplied by the AI. Optional
+   *  so that inline test fixtures and older cached data shapes without signals
+   *  remain valid; buildSignalsFromGeneratedFuture falls back to truncation. */
+  signals?: string[];
 };
 
 export type ForecastOutput = {
@@ -18,6 +22,7 @@ export const forecastFutureSchema = z.object({
   title: tentativeTextSchema,
   why: tentativeTextSchema,
   impact: tentativeTextSchema,
+  signals: z.array(tentativeTextSchema).length(3),
 }) satisfies z.ZodType<ForecastFutureDraft>;
 
 // Arrays use .min(0) so an empty section (all items dropped by per-item

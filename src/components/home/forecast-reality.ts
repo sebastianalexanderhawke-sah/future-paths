@@ -1685,6 +1685,28 @@ function fillSection(
 }
 
 function buildSignalsFromGeneratedFuture(draft: ForecastFutureDraft): string[] {
+  // Prefer Claude's own signals when present (schema-validated to exactly 3).
+  const draftSignals = draft.signals ?? [];
+  if (draftSignals.length >= MIN_SIGNALS) {
+    const seen = new Set<string>();
+    const signals: string[] = [];
+
+    for (const signal of draftSignals) {
+      const key = normalizeComparable(signal);
+      if (!seen.has(key)) {
+        seen.add(key);
+        signals.push(toTitleCase(signal));
+      }
+      if (signals.length >= MAX_SIGNALS) break;
+    }
+
+    return signals.length >= MIN_SIGNALS
+      ? signals
+      : [...signals, "Named decision", "Current momentum", "Open timeline"].slice(0, MAX_SIGNALS);
+  }
+
+  // Fallback: derive signals from title/why/impact via truncation.
+  // Used for older cached data shapes or inline test fixtures without signals.
   const candidates = [draft.title, draft.why, draft.impact]
     .map((value) => toShortPhrase(value, 44))
     .filter((value) => value.length > 0);
