@@ -141,7 +141,10 @@ const REFLECTIVE_FORECAST_PATTERNS: RegExp[] = [
 const REFLECTIVE_ACTION_START =
   /^(gain|observe|reflect|learn|understand|explore|process|consider|think about|work on|focus on|notice|gather)\b/i;
 
-const ARCHETYPE_NAME_PATTERN = /^the [a-z\s]+$/i;
+// Matches short Future-Self archetype names like "The Explorer" or
+// "The Stable Professional" (at most 2 words after "The"), NOT full
+// sentence-style forecast titles like "The Friendship Deepens First".
+const ARCHETYPE_NAME_PATTERN = /^the [a-z]+(\s[a-z]+)?$/i;
 
 const OUTCOME_INDICATOR_PATTERNS: RegExp[] = [
   /\b(relationship|friendship|friend group|dating|crush|partner|significant other)\b/i,

@@ -39,6 +39,19 @@ describe("forecast reality", () => {
     expect(formatForecastTitle("The Independent Explorer")).toBe("");
   });
 
+  it("does not treat multi-word forecast titles as archetype names", () => {
+    // Short archetype names (1-2 words after "The") should still be suppressed
+    expect(formatForecastTitle("The Explorer")).toBe("");
+    expect(formatForecastTitle("The Stable Professional")).toBe("");
+
+    // Full sentence-style titles (3+ words after "The") must survive
+    const friendship = formatForecastTitle("The Friendship Deepens First");
+    expect(friendship.length).toBeGreaterThan(0);
+
+    const job = formatForecastTitle("The Job Becomes The Reason To Wait");
+    expect(job.length).toBeGreaterThan(0);
+  });
+
   it("grounds relocation futures in the situation instead of inventing hobbies", () => {
     const sections = buildRealityForecastSections(
       [
