@@ -1,4 +1,4 @@
-import type { MockPathDraft } from "@/lib/mock-crossroad-generator";
+﻿import type { MockPathDraft } from "@/lib/mock-crossroad-generator";
 import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
 import type { ForecastFutureDraft, ForecastOutput } from "@/lib/ai/schemas/forecast";
 
@@ -838,7 +838,7 @@ function prioritizeSurvivorFutures(
   return uniqueRealityFutures(prioritized, maxItems);
 }
 
-function buildRelationshipFallbacks(bundle: GroundingBundle): {
+function buildRelationshipFallbacks(_bundle: GroundingBundle): {
   activeFutures: ScannableFuture[];
   hiddenFutures: ScannableFuture[];
   blindSpotFutures: ScannableFuture[];
@@ -847,80 +847,55 @@ function buildRelationshipFallbacks(bundle: GroundingBundle): {
     activeFutures: [
       {
         title: "You Keep Talking Every Week But Nothing Changes",
-        whyItMightHappen: buildGroundedWhy(
-          "You Keep Talking Every Week But Nothing Changes",
-          bundle,
-          "Daily contact continues without a clear shift in tone.",
-        ),
-        signals: ["Same workplace", "Limited alone time", "No direct move", "Existing rapport"],
-        futureImpact: "Lunch stays friendly and nothing crosses into dating.",
+        whyItMightHappen:
+          "Regular contact without a clear shift in tone can keep things stuck in a familiar pattern.",
+        signals: ["Same recurring pattern", "No direct move made", "Existing rapport holds"],
+        futureImpact: "Your time together stays friendly and nothing crosses into something more.",
         expansion: null,
       },
       {
         title: "She Starts Texting You Outside Work",
-        whyItMightHappen: buildGroundedWhy(
-          "She Starts Texting You Outside Work",
-          bundle,
-          "Repeated interactions create space for something closer to form.",
-        ),
-        signals: ["Regular contact", "Shared projects", "Outside-work overlap", "Mutual interest"],
-        futureImpact: "Plans start happening on weekends, not just at the office.",
+        whyItMightHappen: "Repeated interactions create space for something closer to form.",
+        signals: ["Regular contact established", "Overlap outside usual setting", "Shared interest surfaces"],
+        futureImpact: "Plans start happening in a new setting, not just where you usually meet.",
         expansion: null,
       },
       {
         title: "A Coworker Becomes Her Focus",
-        whyItMightHappen: buildGroundedWhy(
-          "A Coworker Becomes Her Focus",
-          bundle,
-          "Workplace proximity puts others in the same position.",
-        ),
-        signals: ["New coworker", "Shift in team", "Outside dating life", "Changed schedule"],
-        futureImpact: "She starts spending breaks with someone else.",
+        whyItMightHappen: "Proximity puts others in the same position as you at the same time.",
+        signals: ["New person appears nearby", "Her attention visibly shifts", "Existing dynamic breaks"],
+        futureImpact: "She starts spending time with someone else.",
         expansion: null,
       },
       {
         title: "Every Good Moment Gets Interrupted At Work",
-        whyItMightHappen: buildGroundedWhy(
-          "Every Good Moment Gets Interrupted At Work",
-          bundle,
-          "Work boundaries can keep things from progressing.",
-        ),
-        signals: ["Busy seasons", "Policy constraints", "Different priorities", "Limited overlap"],
-        futureImpact: "Every almost-moment gets cut short by a meeting or coworker.",
+        whyItMightHappen:
+          "External circumstances can keep things from progressing before a clear moment arrives.",
+        signals: ["Timing keeps missing", "Environment works against progress", "Momentum gets cut short"],
+        futureImpact: "Every almost-moment gets interrupted before anything can happen.",
         expansion: null,
       },
     ],
     hiddenFutures: [
       {
         title: "She Assumes You're Not Interested",
-        whyItMightHappen: buildGroundedWhy(
-          "She Assumes You're Not Interested",
-          bundle,
-          "Platonic behavior can read as disinterest over time.",
-        ),
-        signals: ["Daily work contact", "No romantic signals", "Mixed messages", "Long timeline"],
-        futureImpact: "She stops looking for signs because the friendship feels settled.",
+        whyItMightHappen: "Platonic behavior can read as disinterest over time.",
+        signals: ["No clear signal sent", "Pattern stays friendly only", "Long timeline continues"],
+        futureImpact: "She stops looking for signs because the dynamic feels settled.",
         expansion: null,
       },
       {
         title: "A One-On-One Opportunity Appears Naturally",
-        whyItMightHappen: buildGroundedWhy(
-          "A One-On-One Opportunity Appears Naturally",
-          bundle,
-          "Shared projects or social plans can create private time.",
-        ),
-        signals: ["After-work invite", "Shared project", "Team event", "Mutual friend"],
-        futureImpact: "You finally talk outside the usual work routine.",
+        whyItMightHappen:
+          "A change in circumstances or a mutual connection can create private time outside the usual setting.",
+        signals: ["Circumstances shift unexpectedly", "Natural opening emerges", "Usual setting bypassed"],
+        futureImpact: "You end up somewhere other than where you usually meet, with time to talk.",
         expansion: null,
       },
       {
         title: "You Never Learn How She Feels",
-        whyItMightHappen: buildGroundedWhy(
-          "You Never Learn How She Feels",
-          bundle,
-          "Without a direct move, ambiguity can last indefinitely.",
-        ),
-        signals: ["Limited alone time", "Polite friendship", "No clear signals", "Long timeline"],
+        whyItMightHappen: "Without a direct move, ambiguity can last indefinitely.",
+        signals: ["No direct question asked", "Pattern stays polite", "Long timeline continues"],
         futureImpact: "The answer stays unknown even after months of contact.",
         expansion: null,
       },
@@ -928,34 +903,22 @@ function buildRelationshipFallbacks(bundle: GroundingBundle): {
     blindSpotFutures: [
       {
         title: "She Says Yes On The First Ask",
-        whyItMightHappen: buildGroundedWhy(
-          "She Says Yes On The First Ask",
-          bundle,
-          "A clear moment can cut through months of ambiguity.",
-        ),
-        signals: ["Outside-work invite", "Direct question", "Private setting", "Mutual rapport"],
-        futureImpact: "Plans move from lunch at work to a date that week.",
+        whyItMightHappen: "A clear, direct ask can cut through months of ambiguity in a single moment.",
+        signals: ["Direct question posed", "Private setting found", "Existing rapport leveraged"],
+        futureImpact: "Plans move from where you usually meet to somewhere entirely new.",
         expansion: null,
       },
       {
         title: "She Says No But Stays Friendly At Work",
-        whyItMightHappen: buildGroundedWhy(
-          "She Says No But Stays Friendly At Work",
-          bundle,
-          "A direct ask can end uncertainty without ending contact.",
-        ),
-        signals: ["Clear question", "Existing rapport", "Professional setting", "Honest answer"],
-        futureImpact: "The crush fades but daily work stays workable.",
+        whyItMightHappen: "A direct ask can resolve uncertainty without necessarily ending the connection.",
+        signals: ["Clear question asked", "Existing rapport present", "Honest answer given"],
+        futureImpact: "The crush ends but the connection stays workable.",
         expansion: null,
       },
       {
         title: "A Coworker Overhears And It Gets Awkward",
-        whyItMightHappen: buildGroundedWhy(
-          "A Coworker Overhears And It Gets Awkward",
-          bundle,
-          "Workplace moments rarely stay fully private.",
-        ),
-        signals: ["Open office", "Shared team", "Break room", "Office gossip"],
+        whyItMightHappen: "Shared spaces rarely stay fully private when personal moments happen.",
+        signals: ["Shared environment nearby", "Private moment interrupted", "Third party becomes aware"],
         futureImpact: "Small talk feels strained for a few weeks.",
         expansion: null,
       },
@@ -972,45 +935,32 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
     activeFutures: [
       {
         title: pickGroundedSocialCircleTitle(bundle),
-        whyItMightHappen: buildGroundedWhy(
-          pickGroundedSocialCircleTitle(bundle),
-          bundle,
-          "Moving alone usually pushes new friendships through daily routines like work.",
-        ),
-        signals: ["New city", "New job", "Daily coworkers", "Limited existing ties"],
-        futureImpact: "Coworker lunches and team events become your main social life.",
+        whyItMightHappen:
+          "Moving to a new place usually builds new friendships through daily routines like work or local activities.",
+        signals: ["New location, no existing circle", "Daily routine establishing", "Work or activity overlap"],
+        futureImpact: "New acquaintances from work or daily life become your main social world.",
         expansion: null,
       },
       {
         title: "You Receive A Promotion Within The First Year",
-        whyItMightHappen: buildGroundedWhy(
-          "You Receive A Promotion Within The First Year",
-          bundle,
-          "Taking the role puts you closer to responsibility and visibility.",
-        ),
-        signals: ["New role", "More responsibility", "Fresh start", "Performance window"],
+        whyItMightHappen: "Taking on a new role puts you closer to responsibility and visibility.",
+        signals: ["New role just started", "Performance window open", "Responsibility increasing"],
         futureImpact: "Your title and pay change before the first anniversary.",
         expansion: null,
       },
       {
         title: "Homesickness Hits After The Initial Excitement Fades",
-        whyItMightHappen: buildGroundedWhy(
-          "Homesickness Hits After The Initial Excitement Fades",
-          bundle,
+        whyItMightHappen:
           "Distance from familiar people often feels louder once the move stops feeling new.",
-        ),
-        signals: ["Move alone", "Far from home", "Holiday visits", "Old friendships"],
+        signals: ["Far from home base", "Holiday season arrives", "Old friendships feel distant"],
         futureImpact: "You start booking trips home more often than planned.",
         expansion: null,
       },
       {
-        title: "You Stay In Dallas Longer Than Planned",
-        whyItMightHappen: buildGroundedWhy(
-          "You Stay In Dallas Longer Than Planned",
-          bundle,
-          "A workable job and routine can turn a tentative move into a longer stay.",
-        ),
-        signals: ["Lease term", "Job fit", "New routines", "Local ties"],
+        title: "You Stay Longer Than You Originally Planned",
+        whyItMightHappen:
+          "A workable routine can make a tentative situation feel more permanent before you decide to leave.",
+        signals: ["Routine takes hold", "New local ties form", "Original timeline fades"],
         futureImpact: "What felt temporary starts to feel like your base.",
         expansion: null,
       },
@@ -1018,34 +968,24 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
     hiddenFutures: [
       {
         title: "The Opportunity Disappears Before You Decide",
-        whyItMightHappen: buildGroundedWhy(
-          "The Opportunity Disappears Before You Decide",
-          bundle,
-          "Job offers rarely stay open indefinitely.",
-        ),
-        signals: ["Pending offer", "Delayed decision", "Competing candidate", "Budget timing"],
+        whyItMightHappen:
+          "Open decisions rarely stay open indefinitely — someone else's timeline may end yours.",
+        signals: ["Decision still pending", "Outside timeline ticking", "Competing factors present"],
         futureImpact: "The role goes to someone else while you are still deciding.",
         expansion: null,
       },
       {
         title: "Visiting Home Becomes More Expensive Than Expected",
-        whyItMightHappen: buildGroundedWhy(
-          "Visiting Home Becomes More Expensive Than Expected",
-          bundle,
-          "Distance makes every trip home cost more time and money than planned.",
-        ),
-        signals: ["Far from home", "Flight costs", "Holiday travel", "Old ties"],
+        whyItMightHappen:
+          "Distance makes every trip home cost more time and money than initially imagined.",
+        signals: ["Home feels far away", "Travel costs add up", "Visits happen less often"],
         futureImpact: "You visit less often than you first imagined.",
         expansion: null,
       },
       {
         title: "Your Daily Life Stays Exactly The Same",
-        whyItMightHappen: buildGroundedWhy(
-          "Your Daily Life Stays Exactly The Same",
-          bundle,
-          "Staying put keeps the current routine intact.",
-        ),
-        signals: ["Current city", "Existing network", "No move yet", "Stable role"],
+        whyItMightHappen: "Staying put keeps the current routine intact until circumstances change.",
+        signals: ["Current setting remains", "Existing network preserved", "No move made yet"],
         futureImpact: "The offer becomes a what-if story instead of a new chapter.",
         expansion: null,
       },
@@ -1053,34 +993,25 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
     blindSpotFutures: [
       {
         title: "You Renew Your Lease After One Year",
-        whyItMightHappen: buildGroundedWhy(
-          "You Renew Your Lease After One Year",
-          bundle,
-          "A workable job and routine can turn a tentative move into a longer stay.",
-        ),
-        signals: ["Lease term", "Job fit", "New routines", "Local ties"],
+        whyItMightHappen:
+          "A workable routine and new local ties can turn a tentative move into a longer stay.",
+        signals: ["Local ties formed", "Routine established", "Original plan extended"],
         futureImpact: "What felt temporary starts to feel like your base.",
         expansion: null,
       },
       {
         title: "Most New Friendships Begin At Work",
-        whyItMightHappen: buildGroundedWhy(
-          "Most New Friendships Begin At Work",
-          bundle,
-          "A new job becomes the main place you meet people when you move alone.",
-        ),
-        signals: ["New job", "Coworker lunches", "Team events", "Limited existing ties"],
+        whyItMightHappen:
+          "A new job becomes the main place to meet people when you arrive without an existing social circle.",
+        signals: ["New workplace surroundings", "Shared daily schedule", "Limited existing local ties"],
         futureImpact: "Your social life starts revolving around colleagues.",
         expansion: null,
       },
       {
         title: "The Job Matters Less Than The New Life You Build",
-        whyItMightHappen: buildGroundedWhy(
-          "The Job Matters Less Than The New Life You Build",
-          bundle,
-          "Daily routines outside the office can become the reason you stay.",
-        ),
-        signals: ["New routines", "Local friendships", "Weekend plans", "Apartment setup"],
+        whyItMightHappen:
+          "Daily routines outside the primary reason for the change can become the real reason to stay.",
+        signals: ["New routines form", "Local friendships start", "Weekend life develops"],
         futureImpact: "The move stops being only about the role.",
         expansion: null,
       },
@@ -1088,7 +1019,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
   };
 }
 
-function buildBusinessFallbacks(bundle: GroundingBundle): {
+function buildBusinessFallbacks(_bundle: GroundingBundle): {
   activeFutures: ScannableFuture[];
   hiddenFutures: ScannableFuture[];
   blindSpotFutures: ScannableFuture[];
@@ -1097,45 +1028,31 @@ function buildBusinessFallbacks(bundle: GroundingBundle): {
     activeFutures: [
       {
         title: "The First 10 Users Arrive",
-        whyItMightHappen: buildGroundedWhy(
-          "The First 10 Users Arrive",
-          bundle,
-          "Early outreach and a simple MVP can attract the first real users quickly.",
-        ),
-        signals: ["Early launch", "Simple MVP", "Direct outreach", "First customers"],
+        whyItMightHappen:
+          "Early outreach and a simple working product can attract the first real users quickly.",
+        signals: ["Early product launched", "Direct outreach started", "First usage seen"],
         futureImpact: "Real usage starts replacing theory within weeks.",
         expansion: null,
       },
       {
         title: "Early Feedback Changes The Product",
-        whyItMightHappen: buildGroundedWhy(
-          "Early Feedback Changes The Product",
-          bundle,
-          "Real users reveal what the product should actually do.",
-        ),
-        signals: ["User interviews", "Beta testers", "Feature requests", "Usage data"],
+        whyItMightHappen: "Real users reveal what the product should actually do, often unexpectedly.",
+        signals: ["Real users arrived", "Feature gaps surface", "Usage patterns emerge"],
         futureImpact: "The roadmap shifts after the first serious feedback.",
         expansion: null,
       },
       {
         title: "Launch Slips By Several Months",
-        whyItMightHappen: buildGroundedWhy(
-          "Launch Slips By Several Months",
-          bundle,
-          "Building, testing, and life timing often push the first launch later.",
-        ),
-        signals: ["Scope growth", "Part-time build", "Testing cycles", "Life timing"],
+        whyItMightHappen:
+          "Building, testing, and life timing often push the first launch later than planned.",
+        signals: ["Scope has grown", "Build pace is slower", "Launch target shifts"],
         futureImpact: "The public launch moves from this season to the next.",
         expansion: null,
       },
       {
         title: "The MVP Solves A Different Problem Than Expected",
-        whyItMightHappen: buildGroundedWhy(
-          "The MVP Solves A Different Problem Than Expected",
-          bundle,
-          "Usage often reveals a sharper problem than the original idea assumed.",
-        ),
-        signals: ["Early users", "Unexpected use cases", "Feature misuse", "New demand"],
+        whyItMightHappen: "Usage often reveals a sharper problem than the original idea assumed.",
+        signals: ["Unexpected use pattern", "Original assumption challenged", "New demand visible"],
         futureImpact: "The product pivots toward what users actually use.",
         expansion: null,
       },
@@ -1143,45 +1060,31 @@ function buildBusinessFallbacks(bundle: GroundingBundle): {
     hiddenFutures: [
       {
         title: "The Wrong Audience Loves It",
-        whyItMightHappen: buildGroundedWhy(
-          "The Wrong Audience Loves It",
-          bundle,
-          "Early traction can come from users you did not originally target.",
-        ),
-        signals: ["Unexpected users", "Strong niche fit", "Surprising retention", "New segment"],
+        whyItMightHappen: "Early traction can come from users you did not originally target.",
+        signals: ["Unexpected user profile", "Surprising retention seen", "Niche demand visible"],
         futureImpact: "You rebuild the go-to-market around an unplanned audience.",
         expansion: null,
       },
       {
         title: "An Early User Becomes Your Biggest Advocate",
-        whyItMightHappen: buildGroundedWhy(
-          "An Early User Becomes Your Biggest Advocate",
-          bundle,
-          "One enthusiastic early user can shape momentum more than marketing.",
-        ),
-        signals: ["Power user", "Referrals", "Testimonials", "Repeat usage"],
+        whyItMightHappen:
+          "One enthusiastic early user can shape momentum more than any marketing effort.",
+        signals: ["Repeat usage noticed", "Referrals coming in", "Unprompted testimonials appear"],
         futureImpact: "Word of mouth starts carrying the product forward.",
         expansion: null,
       },
       {
         title: "Building Stops Feeling Fun",
-        whyItMightHappen: buildGroundedWhy(
-          "Building Stops Feeling Fun",
-          bundle,
+        whyItMightHappen:
           "Long solo building stretches can drain motivation before traction arrives.",
-        ),
-        signals: ["Long build", "Slow feedback", "Solo effort", "Delayed launch"],
+        signals: ["Build phase dragging on", "Slow or no feedback", "Motivation visibly dipping"],
         futureImpact: "Momentum drops before the next milestone feels reachable.",
         expansion: null,
       },
       {
         title: "A Competitor Launches First",
-        whyItMightHappen: buildGroundedWhy(
-          "A Competitor Launches First",
-          bundle,
-          "Similar ideas often reach the market while you are still building.",
-        ),
-        signals: ["Market timing", "Similar products", "Delayed launch", "Category heat"],
+        whyItMightHappen: "Similar ideas often reach the market while you are still building.",
+        signals: ["Market timing pressure", "Similar product appears", "Category gaining attention"],
         futureImpact: "You enter a market that already has a visible alternative.",
         expansion: null,
       },
@@ -1189,45 +1092,30 @@ function buildBusinessFallbacks(bundle: GroundingBundle): {
     blindSpotFutures: [
       {
         title: "Graduation Creates More Time Than Expected",
-        whyItMightHappen: buildGroundedWhy(
-          "Graduation Creates More Time Than Expected",
-          bundle,
-          "A major life transition can open more build time than planned.",
-        ),
-        signals: ["Graduation", "Schedule change", "Less coursework", "New routine"],
+        whyItMightHappen: "A major life transition can open more build time than planned.",
+        signals: ["Schedule clears significantly", "Coursework load ends", "New routine begins"],
         futureImpact: "The project gets more focused hours after the transition.",
         expansion: null,
       },
       {
         title: "A Job Offer Delays The Launch",
-        whyItMightHappen: buildGroundedWhy(
-          "A Job Offer Delays The Launch",
-          bundle,
-          "Income pressure can push the business behind employment.",
-        ),
-        signals: ["Job search", "Income need", "Offer timing", "Split focus"],
+        whyItMightHappen: "Income pressure can push the business behind employment priorities.",
+        signals: ["Income need is pressing", "Offer timing conflicts", "Focus splits between both"],
         futureImpact: "Launch moves to nights and weekends for a while.",
         expansion: null,
       },
       {
         title: "An Early User Wants To Help Build It",
-        whyItMightHappen: buildGroundedWhy(
-          "An Early User Wants To Help Build It",
-          bundle,
-          "Strong early believers sometimes offer more than feedback.",
-        ),
-        signals: ["Power user", "Frequent feedback", "Shared excitement", "Skill overlap"],
+        whyItMightHappen: "Strong early believers sometimes offer more than feedback.",
+        signals: ["Power user identified", "Enthusiasm exceeds feedback", "Skill overlap apparent"],
         futureImpact: "A user becomes part of the build process.",
         expansion: null,
       },
       {
         title: "The Business Becomes A Side Project",
-        whyItMightHappen: buildGroundedWhy(
-          "The Business Becomes A Side Project",
-          bundle,
-          "Other priorities can keep the idea alive without full commitment.",
-        ),
-        signals: ["Split focus", "Income need", "Life timing", "Slow progress"],
+        whyItMightHappen:
+          "Other priorities can keep the idea alive without the focused push it needs.",
+        signals: ["Focus divided by other work", "Income need dominant", "Progress slows to spare hours"],
         futureImpact: "Progress continues, but only in spare hours.",
         expansion: null,
       },
@@ -1235,7 +1123,7 @@ function buildBusinessFallbacks(bundle: GroundingBundle): {
   };
 }
 
-function buildGenericFallbacks(situationTitle: string, bundle: GroundingBundle): {
+function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle): {
   activeFutures: ScannableFuture[];
   hiddenFutures: ScannableFuture[];
   blindSpotFutures: ScannableFuture[];
@@ -1244,45 +1132,31 @@ function buildGenericFallbacks(situationTitle: string, bundle: GroundingBundle):
     activeFutures: [
       {
         title: "Your Routine Settles Into A New Normal",
-        whyItMightHappen: buildGroundedWhy(
-          "Your Routine Settles Into A New Normal",
-          bundle,
-          `Events around "${situationTitle}" keep unfolding in a concrete direction.`,
-        ),
-        signals: ["Recent change", "Active decision", "New circumstances", "Open timeline"],
+        whyItMightHappen:
+          "Once a decision is in motion, daily life tends to adjust around it faster than expected.",
+        signals: ["Recent change underway", "Active decision made", "New circumstances settling"],
         futureImpact: "Daily life looks noticeably different within a few months.",
         expansion: null,
       },
       {
         title: "The Timeline Stretches Longer Than You Expected",
-        whyItMightHappen: buildGroundedWhy(
-          "The Timeline Stretches Longer Than You Expected",
-          bundle,
-          `Life around "${situationTitle}" may last longer than first assumed.`,
-        ),
-        signals: ["New routines", "Unexpected fit", "Changing priorities", "Old ties fading"],
+        whyItMightHappen:
+          "Situations that feel urgent often unfold more slowly than the moment of decision suggests.",
+        signals: ["New routines forming", "Priorities shifting", "Old ties fading"],
         futureImpact: "A temporary situation starts to feel permanent.",
         expansion: null,
       },
       {
         title: "A Smaller Detail Becomes The Main Story",
-        whyItMightHappen: buildGroundedWhy(
-          "A Smaller Detail Becomes The Main Story",
-          bundle,
-          "A side effect may become more important than expected.",
-        ),
-        signals: ["Side effects", "Relationship shifts", "Delayed reactions", "Background tradeoffs"],
+        whyItMightHappen: "A side effect may become more important than expected.",
+        signals: ["Side effects compound", "Delayed reactions surface", "Background tradeoffs grow"],
         futureImpact: "What felt secondary starts driving the next year.",
         expansion: null,
       },
       {
         title: "Momentum Builds Faster Than Planned",
-        whyItMightHappen: buildGroundedWhy(
-          "Momentum Builds Faster Than Planned",
-          bundle,
-          "Once action starts, consequences can compound quickly.",
-        ),
-        signals: ["Recent decision", "Visible progress", "New feedback", "Changed routine"],
+        whyItMightHappen: "Once action starts, consequences can compound quickly.",
+        signals: ["Visible progress starts", "New feedback arrives", "Routine shifts quickly"],
         futureImpact: "The next few months move faster than expected.",
         expansion: null,
       },
@@ -1290,34 +1164,22 @@ function buildGenericFallbacks(situationTitle: string, bundle: GroundingBundle):
     hiddenFutures: [
       {
         title: "An Overlooked Tradeoff Becomes Hard To Ignore",
-        whyItMightHappen: buildGroundedWhy(
-          "An Overlooked Tradeoff Becomes Hard To Ignore",
-          bundle,
-          "Secondary consequences can become central over time.",
-        ),
-        signals: ["Hidden costs", "Delayed effects", "Side consequences", "Background tension"],
+        whyItMightHappen: "Secondary consequences can become central over time.",
+        signals: ["Hidden costs emerge", "Delayed effects surface", "Background tension grows"],
         futureImpact: "What felt minor starts shaping daily choices.",
         expansion: null,
       },
       {
         title: "Timing Shifts The Outcome",
-        whyItMightHappen: buildGroundedWhy(
-          "Timing Shifts The Outcome",
-          bundle,
-          "When something happens can matter as much as what happens.",
-        ),
-        signals: ["Calendar pressure", "External timing", "Competing events", "Delayed action"],
+        whyItMightHappen: "When something happens can matter as much as what happens.",
+        signals: ["External timing matters", "Competing events appear", "Window of action shifts"],
         futureImpact: "The same choice plays out differently than expected.",
         expansion: null,
       },
       {
         title: "Someone Else Moves First",
-        whyItMightHappen: buildGroundedWhy(
-          "Someone Else Moves First",
-          bundle,
-          "Other people’s choices can reshape your options.",
-        ),
-        signals: ["Outside actors", "Changed dynamics", "New competition", "Lost window"],
+        whyItMightHappen: "Other people’s choices can reshape your options.",
+        signals: ["Outside actor moves", "Dynamics change unexpectedly", "Window narrows quickly"],
         futureImpact: "The situation changes before you commit.",
         expansion: null,
       },
@@ -1325,34 +1187,22 @@ function buildGenericFallbacks(situationTitle: string, bundle: GroundingBundle):
     blindSpotFutures: [
       {
         title: "A Detail You Mentioned Becomes Central",
-        whyItMightHappen: buildGroundedWhy(
-          "A Detail You Mentioned Becomes Central",
-          bundle,
-          "Small context details can drive the real outcome.",
-        ),
-        signals: ["Personal detail", "Constraint named", "Timing note", "Relationship factor"],
+        whyItMightHappen: "Small context details can drive the real outcome.",
+        signals: ["Mentioned constraint tightens", "Background detail matters", "Timing factor turns key"],
         futureImpact: "The future turns on something that seemed secondary.",
         expansion: null,
       },
       {
         title: "The Decision Lasts Longer Than Expected",
-        whyItMightHappen: buildGroundedWhy(
-          "The Decision Lasts Longer Than Expected",
-          bundle,
-          "Important choices often echo longer than planned.",
-        ),
-        signals: ["Long timeline", "Repeated effects", "New routines", "Changed priorities"],
+        whyItMightHappen: "Important choices often echo longer than planned.",
+        signals: ["Effects keep repeating", "New routines form around it", "Timeline extends past plan"],
         futureImpact: "The choice keeps shaping life after the first month.",
         expansion: null,
       },
       {
         title: "An Unexpected Opportunity Appears",
-        whyItMightHappen: buildGroundedWhy(
-          "An Unexpected Opportunity Appears",
-          bundle,
-          "New options often emerge once a decision is in motion.",
-        ),
-        signals: ["New information", "Outside offer", "Changed context", "Fresh opening"],
+        whyItMightHappen: "New options often emerge once a decision is in motion.",
+        signals: ["New information arrives", "Outside offer appears", "Context shifts favorably"],
         futureImpact: "A path you had not weighed becomes realistic.",
         expansion: null,
       },
