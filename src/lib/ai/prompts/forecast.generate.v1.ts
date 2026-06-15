@@ -15,6 +15,7 @@ Inputs available in context:
 - moment.title: the situation
 - moment.description: context answers and selected path summary when present
 - selectedForecastPath: the chosen decision path (title, description, strategy details) when forecasting a selected path
+- checkInSummaries: array of check-in reality summaries (chronological, oldest first) — present only when regenerating after check-ins
 
 ${FORECAST_GENERATE_RULES}`,
   buildUserPrompt: (context) =>

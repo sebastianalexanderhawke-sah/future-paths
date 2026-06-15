@@ -104,10 +104,14 @@ async function loadForecastContext(
     }
   }
 
+  if (options.overrides?.checkInHistory?.length) {
+    bundle = { ...bundle, checkInSummaries: options.overrides.checkInHistory };
+  }
+
   return bundle;
 }
 
-function loadDiscoveryQuestionContext(
+export function loadDiscoveryQuestionContext(
   base: IdentityContextBundle,
   options: BuildContextOptions,
 ): IdentityContextBundle {
@@ -117,6 +121,8 @@ function loadDiscoveryQuestionContext(
     return base;
   }
 
+  const additionalContext = options.overrides?.additionalContext?.trim() || undefined;
+
   return {
     ...base,
     moment: {
@@ -125,6 +131,7 @@ function loadDiscoveryQuestionContext(
       description: null,
     },
     discoveryGoal: options.overrides?.situationGoal,
+    discoveryAdditionalContext: additionalContext,
   };
 }
 

@@ -1,4 +1,6 @@
-export const DISCOVERY_QUESTION_GENERATION_RULES = `Ask only about things that are plausible given the situation as written. NEVER assume unstated facts. Do not ask about "the offer" unless the user's text mentions an offer. Do not ask about a partner unless a relationship is mentioned. Do not invent deadlines, people, places, or constraints that are not supported by the situation text.
+export const DISCOVERY_QUESTION_GENERATION_RULES = `If discoveryAdditionalContext is present in the context, treat every fact it contains as already known — do not ask questions whose answers are already given there. Generate questions only about what remains genuinely unclear after reading both the situation text AND the additional context together.
+
+Ask only about things that are plausible given the situation as written. NEVER assume unstated facts. Do not ask about "the offer" unless the user's text mentions an offer. Do not ask about a partner unless a relationship is mentioned. Do not invent deadlines, people, places, or constraints that are not supported by the situation text.
 
 Each question must reference something concrete and specific to THIS situation. Avoid generic life-coaching questions such as "What result would feel like a win?" or "What limits your options?" unless nothing more specific applies from the text provided.
 

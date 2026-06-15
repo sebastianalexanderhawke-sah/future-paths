@@ -63,6 +63,7 @@ function buildFallbackQuestions(input: {
 export async function generateDiscoveryQuestionsAction(input: {
   situationText: string;
   goal: SituationGoal;
+  additionalContext?: string;
 }): Promise<GenerateDiscoveryQuestionsResponse | { error: string }> {
   const situationText = input.situationText.trim();
 
@@ -84,12 +85,13 @@ export async function generateDiscoveryQuestionsAction(input: {
       overrides: {
         situationText,
         situationGoal: input.goal,
+        additionalContext: input.additionalContext,
       },
     });
 
     if (
       !generationResult.ok ||
-      generationResult.data.questions.length < 4
+      generationResult.data.questions.length < 5
     ) {
       return {
         questions: buildFallbackQuestions({ situationText, goal: input.goal }),

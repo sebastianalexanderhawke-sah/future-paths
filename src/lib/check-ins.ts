@@ -1,5 +1,11 @@
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { checkInOutputSchema } from "@/lib/ai/schemas/check-in";
+import { forecastOutputSchema } from "@/lib/ai/schemas/forecast";
+import {
+  buildForecastSectionsFromGeneration,
+  formatForecastSituationSummary,
+} from "@/components/home/forecast-utils";
+import { hasForecastForMomentAndPath, saveForecast } from "@/lib/forecasts";
 import { createIdentityUpdateIfMeaningful } from "@/lib/identity-updates";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn } from "@/types/database";
@@ -195,6 +201,56 @@ export async function createCheckIn(
     moment: { id: moment.id, title: moment.title },
     checkIn,
   });
+
+  // Trigger forecast regeneration if a path-specific forecast already exists.
+  const shouldRegenerate = await hasForecastForMomentAndPath(
+    momentId,
+    chosenPath.id,
+    auth.userId,
+  );
+
+  if (shouldRegenerate) {
+    const { data: allCheckIns } = await supabase
+      .from("check_ins")
+      .select("reality_summary, created_at")
+      .eq("moment_id", momentId)
+      .eq("user_id", auth.userId)
+      .order("created_at", { ascending: true });
+
+    const checkInHistory = (allCheckIns ?? []).map((ci) => ci.reality_summary);
+
+    const regenResult = await runStructuredGeneration({
+      userId: auth.userId,
+      profile: "forecast",
+      promptId: "forecast.generate",
+      schema: forecastOutputSchema,
+      overrides: {
+        momentId,
+        pathId: chosenPath.id,
+        checkInHistory,
+      },
+    });
+
+    if (regenResult.ok) {
+      const regenSections = buildForecastSectionsFromGeneration(
+        regenResult.data,
+        moment.title,
+        null,
+        moment.description,
+        [],
+      );
+      const situationSummary = formatForecastSituationSummary(
+        moment.description ?? moment.title,
+      );
+      await saveForecast({
+        userId: auth.userId,
+        momentId,
+        pathId: chosenPath.id,
+        sections: regenSections,
+        situationSummary,
+      }).catch(() => {});
+    }
+  }
 
   return { checkIn };
 }

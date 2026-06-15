@@ -5,35 +5,47 @@ import {
   parseDiscoveryQuestionOutput,
 } from "@/lib/ai/schemas/discovery-question";
 
+function makeQuestion(index: number, category = "Relocation") {
+  return {
+    question: `Question ${index + 1}?`,
+    category,
+    reason: `Reason ${index + 1}.`,
+  };
+}
+
 describe("discovery question schema", () => {
-  it("parses valid 4-5 question payload", () => {
+  it("parses valid 5-question payload", () => {
     const parsed = parseDiscoveryQuestionOutput({
-      questions: [
-        {
-          question: "What is the biggest reason you're considering moving?",
-          category: "Relocation",
-          reason: "Primary motivation strongly influences path generation.",
-        },
-        {
-          question: "Do you already know where you'd move?",
-          category: "Relocation",
-          reason: "A known destination changes what paths are realistic.",
-        },
-        {
-          question: "What would be hardest to leave behind?",
-          category: "Relocation",
-          reason: "Tradeoffs reveal what the move would cost emotionally and practically.",
-        },
-        {
-          question: "How soon would you realistically make this decision?",
-          category: "Relocation",
-          reason: "Timing determines whether waiting, preparing, or acting is the live path.",
-        },
-      ],
+      questions: Array.from({ length: 5 }, (_, i) => makeQuestion(i)),
     });
 
-    expect(parsed.questions).toHaveLength(4);
+    expect(parsed.questions).toHaveLength(5);
     expect(discoveryQuestionOutputSchema.safeParse(parsed).success).toBe(true);
+  });
+
+  it("parses valid 6-question payload", () => {
+    const parsed = parseDiscoveryQuestionOutput({
+      questions: Array.from({ length: 6 }, (_, i) => makeQuestion(i)),
+    });
+
+    expect(parsed.questions).toHaveLength(6);
+    expect(discoveryQuestionOutputSchema.safeParse(parsed).success).toBe(true);
+  });
+
+  it("rejects payload with 4 questions (below minimum)", () => {
+    expect(() =>
+      parseDiscoveryQuestionOutput({
+        questions: Array.from({ length: 4 }, (_, i) => makeQuestion(i)),
+      }),
+    ).toThrow();
+  });
+
+  it("rejects payload with 7 questions (above maximum)", () => {
+    expect(() =>
+      parseDiscoveryQuestionOutput({
+        questions: Array.from({ length: 7 }, (_, i) => makeQuestion(i)),
+      }),
+    ).toThrow();
   });
 
   it("rejects payload with 3 questions", () => {

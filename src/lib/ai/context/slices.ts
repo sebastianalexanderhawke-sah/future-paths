@@ -83,4 +83,6 @@ export type IdentityContextBundle = {
   >[];
   chapterCandidates?: MockLifeChapterDraft[];
   discoveryGoal?: "decision" | "forecast";
+  discoveryAdditionalContext?: string;
+  checkInSummaries?: string[];
 };

@@ -36,6 +36,7 @@ import {
 } from "@/lib/ai-audit";
 import { buildForecastSimplificationExperiment } from "@/lib/forecast-simplification-experiment";
 
+import { saveForecast } from "@/lib/forecasts";
 import { createMoment, getMoment, updateMoment } from "@/lib/moments";
 
 import { createClient } from "@/lib/supabase/server";
@@ -338,7 +339,18 @@ export async function runFutureForecastAction(input: {
       })()
     : undefined;
 
+  const situationSummary = formatForecastSituationSummary(
+    refreshedMoment.moment.description ?? title,
+  );
 
+  // Persist forecast — non-blocking: failure does not affect the return value.
+  await saveForecast({
+    userId: auth.userId,
+    momentId,
+    pathId: input.selectedPath?.id ?? null,
+    sections,
+    situationSummary,
+  }).catch(() => {});
 
   return {
 
@@ -352,11 +364,7 @@ export async function runFutureForecastAction(input: {
 
       selectedPathTitle: input.selectedPath?.title,
 
-      situationSummary: formatForecastSituationSummary(
-
-        refreshedMoment.moment.description ?? title,
-
-      ),
+      situationSummary,
 
       sections,
 

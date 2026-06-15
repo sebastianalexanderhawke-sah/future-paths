@@ -494,7 +494,7 @@ export function formatForecastTitle(text: string): string {
 }
 
 function formatForecastImpact(text: string, bundle?: GroundingBundle): string {
-  let sentence = toFirstSentence(text, 140);
+  let sentence = text.trim();
   sentence = sentence.replace(/^you may become someone who\s+/i, "");
   sentence = sentence.replace(/^you may become\s+/i, "");
   sentence = sentence.replace(/^you may stay\s+/i, "You stay ");
@@ -637,8 +637,8 @@ function sanitizeFuture(future: ScannableFuture, bundle?: GroundingBundle): Scan
     whyItMightHappen:
       future.explanationPreservation?.status === "preserved"
         ? future.whyItMightHappen
-        : toFirstSentence(rewriteFutureText(future.whyItMightHappen), 160),
-    futureImpact: toFirstSentence(rewriteFutureText(future.futureImpact), 140),
+        : rewriteFutureText(future.whyItMightHappen),
+    futureImpact: rewriteFutureText(future.futureImpact),
     sourceTrace: bundle ? buildSourceTrace(bundle) : future.sourceTrace,
     source: future.source,
     sourceStage: future.sourceStage,
@@ -851,6 +851,7 @@ function buildRelationshipFallbacks(_bundle: GroundingBundle): {
           "Regular contact without a clear shift in tone can keep things stuck in a familiar pattern.",
         signals: ["Same recurring pattern", "No direct move made", "Existing rapport holds"],
         futureImpact: "Your time together stays friendly and nothing crosses into something more.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -858,6 +859,7 @@ function buildRelationshipFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Repeated interactions create space for something closer to form.",
         signals: ["Regular contact established", "Overlap outside usual setting", "Shared interest surfaces"],
         futureImpact: "Plans start happening in a new setting, not just where you usually meet.",
+        timeframe: "weeks",
         expansion: null,
       },
       {
@@ -865,6 +867,7 @@ function buildRelationshipFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Proximity puts others in the same position as you at the same time.",
         signals: ["New person appears nearby", "Her attention visibly shifts", "Existing dynamic breaks"],
         futureImpact: "She starts spending time with someone else.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -873,6 +876,7 @@ function buildRelationshipFallbacks(_bundle: GroundingBundle): {
           "External circumstances can keep things from progressing before a clear moment arrives.",
         signals: ["Timing keeps missing", "Environment works against progress", "Momentum gets cut short"],
         futureImpact: "Every almost-moment gets interrupted before anything can happen.",
+        timeframe: "weeks",
         expansion: null,
       },
     ],
@@ -882,6 +886,7 @@ function buildRelationshipFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Platonic behavior can read as disinterest over time.",
         signals: ["No clear signal sent", "Pattern stays friendly only", "Long timeline continues"],
         futureImpact: "She stops looking for signs because the dynamic feels settled.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -890,6 +895,7 @@ function buildRelationshipFallbacks(_bundle: GroundingBundle): {
           "A change in circumstances or a mutual connection can create private time outside the usual setting.",
         signals: ["Circumstances shift unexpectedly", "Natural opening emerges", "Usual setting bypassed"],
         futureImpact: "You end up somewhere other than where you usually meet, with time to talk.",
+        timeframe: "weeks",
         expansion: null,
       },
       {
@@ -897,6 +903,7 @@ function buildRelationshipFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Without a direct move, ambiguity can last indefinitely.",
         signals: ["No direct question asked", "Pattern stays polite", "Long timeline continues"],
         futureImpact: "The answer stays unknown even after months of contact.",
+        timeframe: "longer_term",
         expansion: null,
       },
     ],
@@ -906,6 +913,7 @@ function buildRelationshipFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "A clear, direct ask can cut through months of ambiguity in a single moment.",
         signals: ["Direct question posed", "Private setting found", "Existing rapport leveraged"],
         futureImpact: "Plans move from where you usually meet to somewhere entirely new.",
+        timeframe: "weeks",
         expansion: null,
       },
       {
@@ -913,6 +921,7 @@ function buildRelationshipFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "A direct ask can resolve uncertainty without necessarily ending the connection.",
         signals: ["Clear question asked", "Existing rapport present", "Honest answer given"],
         futureImpact: "The crush ends but the connection stays workable.",
+        timeframe: "weeks",
         expansion: null,
       },
       {
@@ -920,6 +929,7 @@ function buildRelationshipFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Shared spaces rarely stay fully private when personal moments happen.",
         signals: ["Shared environment nearby", "Private moment interrupted", "Third party becomes aware"],
         futureImpact: "Small talk feels strained for a few weeks.",
+        timeframe: "weeks",
         expansion: null,
       },
     ],
@@ -939,6 +949,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
           "Moving to a new place usually builds new friendships through daily routines like work or local activities.",
         signals: ["New location, no existing circle", "Daily routine establishing", "Work or activity overlap"],
         futureImpact: "New acquaintances from work or daily life become your main social world.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -946,6 +957,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
         whyItMightHappen: "Taking on a new role puts you closer to responsibility and visibility.",
         signals: ["New role just started", "Performance window open", "Responsibility increasing"],
         futureImpact: "Your title and pay change before the first anniversary.",
+        timeframe: "longer_term",
         expansion: null,
       },
       {
@@ -954,6 +966,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
           "Distance from familiar people often feels louder once the move stops feeling new.",
         signals: ["Far from home base", "Holiday season arrives", "Old friendships feel distant"],
         futureImpact: "You start booking trips home more often than planned.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -962,6 +975,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
           "A workable routine can make a tentative situation feel more permanent before you decide to leave.",
         signals: ["Routine takes hold", "New local ties form", "Original timeline fades"],
         futureImpact: "What felt temporary starts to feel like your base.",
+        timeframe: "longer_term",
         expansion: null,
       },
     ],
@@ -972,6 +986,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
           "Open decisions rarely stay open indefinitely — someone else's timeline may end yours.",
         signals: ["Decision still pending", "Outside timeline ticking", "Competing factors present"],
         futureImpact: "The role goes to someone else while you are still deciding.",
+        timeframe: "weeks",
         expansion: null,
       },
       {
@@ -980,6 +995,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
           "Distance makes every trip home cost more time and money than initially imagined.",
         signals: ["Home feels far away", "Travel costs add up", "Visits happen less often"],
         futureImpact: "You visit less often than you first imagined.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -987,6 +1003,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
         whyItMightHappen: "Staying put keeps the current routine intact until circumstances change.",
         signals: ["Current setting remains", "Existing network preserved", "No move made yet"],
         futureImpact: "The offer becomes a what-if story instead of a new chapter.",
+        timeframe: "weeks",
         expansion: null,
       },
     ],
@@ -997,6 +1014,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
           "A workable routine and new local ties can turn a tentative move into a longer stay.",
         signals: ["Local ties formed", "Routine established", "Original plan extended"],
         futureImpact: "What felt temporary starts to feel like your base.",
+        timeframe: "longer_term",
         expansion: null,
       },
       {
@@ -1005,6 +1023,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
           "A new job becomes the main place to meet people when you arrive without an existing social circle.",
         signals: ["New workplace surroundings", "Shared daily schedule", "Limited existing local ties"],
         futureImpact: "Your social life starts revolving around colleagues.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1013,6 +1032,7 @@ function buildRelocationFallbacks(bundle: GroundingBundle): {
           "Daily routines outside the primary reason for the change can become the real reason to stay.",
         signals: ["New routines form", "Local friendships start", "Weekend life develops"],
         futureImpact: "The move stops being only about the role.",
+        timeframe: "longer_term",
         expansion: null,
       },
     ],
@@ -1032,6 +1052,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
           "Early outreach and a simple working product can attract the first real users quickly.",
         signals: ["Early product launched", "Direct outreach started", "First usage seen"],
         futureImpact: "Real usage starts replacing theory within weeks.",
+        timeframe: "weeks",
         expansion: null,
       },
       {
@@ -1039,6 +1060,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Real users reveal what the product should actually do, often unexpectedly.",
         signals: ["Real users arrived", "Feature gaps surface", "Usage patterns emerge"],
         futureImpact: "The roadmap shifts after the first serious feedback.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1047,6 +1069,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
           "Building, testing, and life timing often push the first launch later than planned.",
         signals: ["Scope has grown", "Build pace is slower", "Launch target shifts"],
         futureImpact: "The public launch moves from this season to the next.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1054,6 +1077,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Usage often reveals a sharper problem than the original idea assumed.",
         signals: ["Unexpected use pattern", "Original assumption challenged", "New demand visible"],
         futureImpact: "The product pivots toward what users actually use.",
+        timeframe: "months",
         expansion: null,
       },
     ],
@@ -1063,6 +1087,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Early traction can come from users you did not originally target.",
         signals: ["Unexpected user profile", "Surprising retention seen", "Niche demand visible"],
         futureImpact: "You rebuild the go-to-market around an unplanned audience.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1071,6 +1096,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
           "One enthusiastic early user can shape momentum more than any marketing effort.",
         signals: ["Repeat usage noticed", "Referrals coming in", "Unprompted testimonials appear"],
         futureImpact: "Word of mouth starts carrying the product forward.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1079,6 +1105,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
           "Long solo building stretches can drain motivation before traction arrives.",
         signals: ["Build phase dragging on", "Slow or no feedback", "Motivation visibly dipping"],
         futureImpact: "Momentum drops before the next milestone feels reachable.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1086,6 +1113,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Similar ideas often reach the market while you are still building.",
         signals: ["Market timing pressure", "Similar product appears", "Category gaining attention"],
         futureImpact: "You enter a market that already has a visible alternative.",
+        timeframe: "months",
         expansion: null,
       },
     ],
@@ -1095,6 +1123,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "A major life transition can open more build time than planned.",
         signals: ["Schedule clears significantly", "Coursework load ends", "New routine begins"],
         futureImpact: "The project gets more focused hours after the transition.",
+        timeframe: "weeks",
         expansion: null,
       },
       {
@@ -1102,6 +1131,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Income pressure can push the business behind employment priorities.",
         signals: ["Income need is pressing", "Offer timing conflicts", "Focus splits between both"],
         futureImpact: "Launch moves to nights and weekends for a while.",
+        timeframe: "weeks",
         expansion: null,
       },
       {
@@ -1109,6 +1139,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
         whyItMightHappen: "Strong early believers sometimes offer more than feedback.",
         signals: ["Power user identified", "Enthusiasm exceeds feedback", "Skill overlap apparent"],
         futureImpact: "A user becomes part of the build process.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1117,6 +1148,7 @@ function buildBusinessFallbacks(_bundle: GroundingBundle): {
           "Other priorities can keep the idea alive without the focused push it needs.",
         signals: ["Focus divided by other work", "Income need dominant", "Progress slows to spare hours"],
         futureImpact: "Progress continues, but only in spare hours.",
+        timeframe: "months",
         expansion: null,
       },
     ],
@@ -1136,6 +1168,7 @@ function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle
           "Once a decision is in motion, daily life tends to adjust around it faster than expected.",
         signals: ["Recent change underway", "Active decision made", "New circumstances settling"],
         futureImpact: "Daily life looks noticeably different within a few months.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1144,6 +1177,7 @@ function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle
           "Situations that feel urgent often unfold more slowly than the moment of decision suggests.",
         signals: ["New routines forming", "Priorities shifting", "Old ties fading"],
         futureImpact: "A temporary situation starts to feel permanent.",
+        timeframe: "longer_term",
         expansion: null,
       },
       {
@@ -1151,6 +1185,7 @@ function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle
         whyItMightHappen: "A side effect may become more important than expected.",
         signals: ["Side effects compound", "Delayed reactions surface", "Background tradeoffs grow"],
         futureImpact: "What felt secondary starts driving the next year.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1158,6 +1193,7 @@ function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle
         whyItMightHappen: "Once action starts, consequences can compound quickly.",
         signals: ["Visible progress starts", "New feedback arrives", "Routine shifts quickly"],
         futureImpact: "The next few months move faster than expected.",
+        timeframe: "weeks",
         expansion: null,
       },
     ],
@@ -1167,6 +1203,7 @@ function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle
         whyItMightHappen: "Secondary consequences can become central over time.",
         signals: ["Hidden costs emerge", "Delayed effects surface", "Background tension grows"],
         futureImpact: "What felt minor starts shaping daily choices.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1174,6 +1211,7 @@ function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle
         whyItMightHappen: "When something happens can matter as much as what happens.",
         signals: ["External timing matters", "Competing events appear", "Window of action shifts"],
         futureImpact: "The same choice plays out differently than expected.",
+        timeframe: "weeks",
         expansion: null,
       },
       {
@@ -1181,6 +1219,7 @@ function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle
         whyItMightHappen: "Other people’s choices can reshape your options.",
         signals: ["Outside actor moves", "Dynamics change unexpectedly", "Window narrows quickly"],
         futureImpact: "The situation changes before you commit.",
+        timeframe: "weeks",
         expansion: null,
       },
     ],
@@ -1190,6 +1229,7 @@ function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle
         whyItMightHappen: "Small context details can drive the real outcome.",
         signals: ["Mentioned constraint tightens", "Background detail matters", "Timing factor turns key"],
         futureImpact: "The future turns on something that seemed secondary.",
+        timeframe: "months",
         expansion: null,
       },
       {
@@ -1197,6 +1237,7 @@ function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle
         whyItMightHappen: "Important choices often echo longer than planned.",
         signals: ["Effects keep repeating", "New routines form around it", "Timeline extends past plan"],
         futureImpact: "The choice keeps shaping life after the first month.",
+        timeframe: "longer_term",
         expansion: null,
       },
       {
@@ -1204,6 +1245,7 @@ function buildGenericFallbacks(_situationTitle: string, _bundle: GroundingBundle
         whyItMightHappen: "New options often emerge once a decision is in motion.",
         signals: ["New information arrives", "Outside offer appears", "Context shifts favorably"],
         futureImpact: "A path you had not weighed becomes realistic.",
+        timeframe: "months",
         expansion: null,
       },
     ],
@@ -1625,7 +1667,7 @@ function mapGeneratedFutureToScannableFuture(
   const futureImpact =
     formatForecastImpact(draft.impact, bundle) ||
     recoverFutureImpact(draft.impact, bundle) ||
-    toFirstSentence(draft.impact, 140);
+    draft.impact.trim();
   const explanationResult = resolveForecastExplanation(draft.why, title, bundle);
 
   const sanitized = sanitizeFuture(

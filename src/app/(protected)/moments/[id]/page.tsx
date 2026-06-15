@@ -5,13 +5,16 @@ import { generatePathsAction } from "@/actions/paths";
 import { archiveMomentAction } from "@/actions/moments";
 import { CheckInCard } from "@/components/check-ins/check-in-card";
 import { CheckInForm } from "@/components/check-ins/check-in-form";
+import { CurrentForecastFutureCard } from "@/components/home/forecast-simplification-cards";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { MomentForm } from "@/components/moments/moment-form";
 import { PathCard } from "@/components/paths/path-card";
 import { listCheckInsForMoment } from "@/lib/check-ins";
+import { getLatestForecastForMoment, parseForecastSections } from "@/lib/forecasts";
 import { listIdentityUpdatesForMoment } from "@/lib/identity-updates";
 import { getMoment } from "@/lib/moments";
 import { listPathsForMoment } from "@/lib/paths";
+import { toCurrentFutureRendering } from "@/lib/forecast-simplification-experiment";
 
 type MomentPageProps = {
   params: Promise<{ id: string }>;
@@ -42,6 +45,8 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
     "identityUpdates" in identityUpdatesResult
       ? identityUpdatesResult.identityUpdates
       : [];
+
+  const forecastResult = await getLatestForecastForMoment(id);
 
   const { moment } = momentResult;
   const { paths } = pathsResult;
@@ -115,6 +120,67 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
             </div>
           )}
         </section>
+
+        {forecastResult ? (
+          <section className="rounded-lg border border-zinc-200 bg-white p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-medium text-zinc-900">Forecast</h2>
+                {forecastResult.isRegenerated ? (
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Updated based on your check-in on{" "}
+                    {new Date(forecastResult.forecast.generated_at).toLocaleDateString()}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            {(() => {
+              const sections = parseForecastSections(forecastResult.forecast.sections_json);
+              const groups = [
+                {
+                  label: "Active Futures",
+                  question: "What seems most likely to happen next?",
+                  futures: sections.activeFutures,
+                },
+                {
+                  label: "Hidden Futures",
+                  question: "What future are you probably not considering?",
+                  futures: sections.hiddenFutures,
+                },
+                {
+                  label: "Blind Spot Futures",
+                  question: "What futures emerge from details you provided?",
+                  futures: sections.blindSpotFutures,
+                },
+              ];
+              return (
+                <div className="mt-5 flex flex-col gap-6">
+                  {groups.map((group) =>
+                    group.futures.length > 0 ? (
+                      <div key={group.label} className="flex flex-col gap-3">
+                        <div>
+                          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                            {group.label}
+                          </p>
+                          <p className="mt-0.5 text-xs text-zinc-400">{group.question}</p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {group.futures.map((future) => (
+                            <CurrentForecastFutureCard
+                              key={future.title}
+                              future={toCurrentFutureRendering(future)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ) : null,
+                  )}
+                </div>
+              );
+            })()}
+          </section>
+        ) : null}
 
         {chosenPath ? (
           <section className="rounded-lg border border-zinc-200 bg-white p-6">

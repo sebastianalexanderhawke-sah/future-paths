@@ -19,7 +19,7 @@ export const discoveryQuestionItemSchema = z.object({
 });
 
 export const discoveryQuestionOutputSchema = z.object({
-  questions: z.array(discoveryQuestionItemSchema).min(4).max(5),
+  questions: z.array(discoveryQuestionItemSchema).min(5).max(6),
 });
 
 export type DiscoveryQuestionOutput = z.infer<typeof discoveryQuestionOutputSchema>;

@@ -3,12 +3,24 @@ import {
   GENERATION_PREFERENCE_LIST,
 } from "@/lib/ai/prompts/shared/crossroad-instructions";
 
-export const FORECAST_GENERATE_RULES = `Forecast generation rules (strict):
+export const FORECAST_GENERATE_RULES = `Check-in history rule (applies only when checkInSummaries is present in context):
+When checkInSummaries contains one or more entries, treat them as a record of what has actually happened since the original forecast. Each entry is a reality summary the user wrote after checking in. Before generating futures:
+- Read each summary in chronological order (oldest first).
+- Identify any futures from the original set that have clearly already happened, clearly been refuted, or are no longer relevant given what occurred.
+- Do NOT include futures that have already resolved. Do NOT repeat situations the check-in confirms are settled.
+- Generate a forecast that reflects where things stand NOW — given the full check-in history — not just the original situation. The forecast should feel updated, not a re-run of the original.
+Good: If a check-in says "she agreed to meet up", don't generate "She Says Yes On The First Ask" — it already happened. Do generate what might happen NEXT given that it happened.
+Bad: Ignoring the check-in history and regenerating the same futures as the original forecast.
+
+Forecast generation rules (strict):
 - Generate possible future realities — not benefits, consequences, personality shifts, or self-understanding.
 - Every forecast must answer: "What could actually happen next?"
 - Use the photograph test: "Could I take a picture of this?" If no, rewrite before responding.
 - Do not derive forecasts from path benefits or consequences. Invent distinct future events grounded in the situation, selected path, and context answers.
 - Distinctness rule: Every future across active, hidden, and blind_spots must represent a DIFFERENT underlying mechanism or trigger — not a variation, escalation, or restatement of another future's idea in the same set. Before finalising, check each pair of futures: if two futures would happen for essentially the same reason (e.g., both are "cost eats into the raise" or both are "someone notices the dynamic"), merge them into one sharper future and replace the other with a future about a genuinely different mechanism.
+- Self rule: When a situation centres on another person (a friend, coworker, romantic interest, family member), most futures tend to focus on that person's actions, responses, or what others say about the situation. But the user's own life continues independently of that person — new relationships, how an absence feels over time, new interests, or changes the user makes on their own initiative. Across active, hidden, and blind_spots combined, at least one future should focus on the user's own life, feelings, or relationships progressing on their own track — NOT as a reaction to or about the central other person, but as independent forward motion.
+  Good: "A New Friendship Fills The Space", "The Loneliness Becomes Noticeable Before It Resolves", "You Redirect Energy Into Something New"
+  Bad: "You Feel Sad About Him" (still centred on the other person, just framed as the user's emotion); "You Wonder If You Made The Right Call" (still about the decision/the other person, not independent life progression)
 - Cast rule: Most situations involve more people than just the user and the one other person at the centre of the situation. When the situation or context answers mention or plausibly imply other people — coworkers, friends, mutual connections, teammates, family members — consider futures where THOSE people take independent action that changes the situation, not just futures driven by the user or the central other person. Do not invent specific named individuals or roles that are not implied by the situation or context. But DO use roles already implied — "a coworker," "a mutual friend," "a teammate," "a friend who also knows her" — as agents in their own right. Across active, hidden, and blind_spots combined, at least one future should involve a third party (someone other than the user and the central other person) taking an action that shapes the outcome — not merely noticing or reacting to what the user or central person does.
   Good: "A Mutual Friend Asks Her Out First", "A Teammate Mentions Your Interest To Her Directly", "Her Friend Encourages Her To Make The First Move"
   Bad: "Sarah From Accounting Confronts You" (invents a specific named person not implied by context); "Someone Notices The Dynamic" (third party only observes, does not act)

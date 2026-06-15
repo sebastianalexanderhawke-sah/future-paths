@@ -70,6 +70,25 @@ export type CheckIn = {
   created_at: string;
 };
 
+export type Forecast = {
+  id: string;
+  user_id: string;
+  moment_id: string;
+  path_id: string | null;
+  sections_json: Record<string, unknown>;
+  situation_summary: string | null;
+  generated_at: string;
+  created_at: string;
+};
+
+export type ForecastInsert = Pick<
+  Forecast,
+  "user_id" | "moment_id" | "sections_json"
+> & {
+  path_id?: string | null;
+  situation_summary?: string | null;
+};
+
 export type IdentityUpdate = {
   id: string;
   user_id: string;
@@ -586,6 +605,31 @@ export type Database = {
             foreignKeyName: "timeline_events_user_id_fkey";
             columns: ["user_id"];
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      forecasts: {
+        Row: Forecast;
+        Insert: ForecastInsert;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "forecasts_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "forecasts_moment_id_fkey";
+            columns: ["moment_id"];
+            referencedRelation: "moments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "forecasts_path_id_fkey";
+            columns: ["path_id"];
+            referencedRelation: "paths";
             referencedColumns: ["id"];
           },
         ];

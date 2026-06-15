@@ -51,22 +51,46 @@ export function selectContextQuestions(
   ).map(toContextQuestion);
 }
 
-/** Maximum questions shown in the decision simulator — one focused question before path generation. */
-export const DECISION_MODE_QUESTION_COUNT = 1;
-
 /**
- * Trims a question list to the appropriate count for the goal.
- * - decision: 1 question (the highest-priority one, which is first by convention)
- * - forecast: all questions (unchanged)
+ * Returns the full question list for any goal — all 5-6 AI-generated questions
+ * are shown regardless of whether the user chose "decision" or "forecast".
  */
 export function selectQuestionsForGoal(
   questions: ContextQuestion[],
   goal: SituationGoal,
 ): ContextQuestion[] {
-  if (goal === "decision") {
-    return questions.slice(0, DECISION_MODE_QUESTION_COUNT);
-  }
+  void goal;
   return questions;
+}
+
+/**
+ * Assembles the context summary string sent to forecast/crossroad generation.
+ * Prepends optional free-text additionalContext before Q&A pairs.
+ */
+export function buildContextSummary(
+  questions: ContextQuestion[],
+  answers: Record<string, string>,
+  additionalContext?: string,
+): string | null {
+  const parts: string[] = [];
+
+  if (additionalContext?.trim()) {
+    parts.push(additionalContext.trim());
+  }
+
+  const qaLines = questions
+    .map((question) => {
+      const answer = answers[question.id]?.trim();
+      if (!answer) {
+        return null;
+      }
+      return `${question.prompt}\n${answer}`;
+    })
+    .filter((line): line is string => line !== null);
+
+  parts.push(...qaLines);
+
+  return parts.length > 0 ? parts.join("\n\n") : null;
 }
 
 export function areAllQuestionsAnswered(

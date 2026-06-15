@@ -14,6 +14,7 @@ import {
 import { runFutureForecastAction } from "@/actions/future-forecast";
 import {
   areAllQuestionsAnswered,
+  buildContextSummary,
   buildDiscoveryQuestionAudit,
   computeDiscoveryQuestionMetrics,
   MAX_DISCOVERY_QUESTIONS,
@@ -59,26 +60,9 @@ function FlowStep({
   );
 }
 
-function buildContextSummary(
-  questions: ContextQuestion[],
-  answers: Record<string, string>,
-): string | null {
-  const lines = questions
-    .map((question) => {
-      const answer = answers[question.id]?.trim();
-      if (!answer) {
-        return null;
-      }
-
-      return `${question.prompt}\n${answer}`;
-    })
-    .filter((line): line is string => line !== null);
-
-  return lines.length > 0 ? lines.join("\n\n") : null;
-}
-
 export function SituationEntryFlow() {
   const [situationText, setSituationText] = useState("");
+  const [additionalContext, setAdditionalContext] = useState("");
   const [goal, setGoal] = useState<SituationGoal | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [questionsComplete, setQuestionsComplete] = useState(false);
@@ -129,6 +113,7 @@ export function SituationEntryFlow() {
       const response = await generateDiscoveryQuestionsAction({
         situationText: situationText.trim(),
         goal,
+        additionalContext: additionalContext.trim() || undefined,
       });
 
       if ("error" in response) {
@@ -194,7 +179,7 @@ export function SituationEntryFlow() {
     startTransition(async () => {
       const response = await runFutureForecastAction({
         situationText: situationText.trim(),
-        contextSummary: buildContextSummary(questions, answers),
+        contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
       });
 
       if (response.error) {
@@ -225,7 +210,7 @@ export function SituationEntryFlow() {
     startTransition(async () => {
       const response = await runDecisionSimulatorAction({
         situationText: situationText.trim(),
-        contextSummary: buildContextSummary(questions, answers),
+        contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
       });
 
       if (response.error) {
@@ -277,7 +262,7 @@ export function SituationEntryFlow() {
     startTransition(async () => {
       const response = await runFutureForecastAction({
         situationText: situationText.trim(),
-        contextSummary: buildContextSummary(questions, answers),
+        contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
         momentId: simulatorResult.momentId,
         selectedPath: {
           id: selectedPath.id,
@@ -315,11 +300,23 @@ export function SituationEntryFlow() {
             setSituationText(nextValue);
             if (nextValue.trim().length === 0) {
               setGoal(null);
+              setAdditionalContext("");
             }
           }}
           placeholder="Describe what's happening or what you're thinking about…"
           rows={5}
           className="mt-4 w-full resize-y rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/25 bg-[var(--surface)] px-4 py-3 text-body text-ink-primary placeholder:text-ink-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)]"
+        />
+        <label htmlFor="additional-context-input" className="mt-5 block text-body-small font-medium text-ink-secondary">
+          Anything else that&apos;s relevant?
+        </label>
+        <textarea
+          id="additional-context-input"
+          value={additionalContext}
+          onChange={(event) => setAdditionalContext(event.target.value)}
+          placeholder="Background, history, constraints, people involved — anything that gives more context…"
+          rows={4}
+          className="mt-2 w-full resize-y rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/25 bg-[var(--surface)] px-4 py-3 text-body text-ink-primary placeholder:text-ink-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)]"
         />
       </FlowStep>
 

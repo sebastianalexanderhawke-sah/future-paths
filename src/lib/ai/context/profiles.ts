@@ -25,6 +25,8 @@ export type BuildContextOverrides = {
   selectedPathTitle?: string;
   situationText?: string;
   situationGoal?: "decision" | "forecast";
+  additionalContext?: string;
+  checkInHistory?: string[];
 };
 
 export type BuildContextOptions = {
