@@ -38,6 +38,8 @@ Each future object needs:
 - signals: exactly 3 short, concrete, distinct phrases (2-5 words each) that a careful observer could point to as early evidence this future is starting to happen. Each signal must reference a SPECIFIC detail from the situation, context answers, or selected path (names, numbers, places, dates, roles — whatever is concrete). Do not restate or paraphrase the title.
   Good signals example for a future titled "You Accept And Relocate" in a situation mentioning a $12→$20 pay change: "Pay jumps from $12 to $20", "Notice period at current job", "Moving logistics begin"
   Bad: "Acceptance Happens", "Relocation Occurs", "Decision Is Made" (these just restate the title)
+- timeframe: one of "days", "weeks", "months", "longer_term" — your honest estimate of how soon this future could realistically happen, based on its own content (not based on which section it's in). A future in blind_spots can be "days" if it's immediate; a future in active can be "longer_term" if it naturally takes time. Judge each future on its own merits.
+  Examples: "He Sends A Second Message" after 6 months of silence → "months" or "longer_term". "You Stop Checking His Profile" → "weeks". "Mutual Friends Notice The Distance" → "months".
 
 ${GENERATION_BAN_LIST}
 

@@ -10,6 +10,8 @@ export type ForecastFutureDraft = {
    *  so that inline test fixtures and older cached data shapes without signals
    *  remain valid; buildSignalsFromGeneratedFuture falls back to truncation. */
   signals?: string[];
+  /** AI's honest estimate of how soon this future could realistically occur. */
+  timeframe?: "days" | "weeks" | "months" | "longer_term";
 };
 
 export type ForecastOutput = {
@@ -23,6 +25,7 @@ export const forecastFutureSchema = z.object({
   why: tentativeTextSchema,
   impact: tentativeTextSchema,
   signals: z.array(tentativeTextSchema).length(3),
+  timeframe: z.enum(["days", "weeks", "months", "longer_term"]),
 }) satisfies z.ZodType<ForecastFutureDraft>;
 
 // Arrays use .min(0) so an empty section (all items dropped by per-item

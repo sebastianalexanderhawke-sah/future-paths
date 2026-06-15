@@ -1787,6 +1787,7 @@ function mapGeneratedFutureToScannableFuture(
       expansion: null,
       sourceTrace: buildSourceTrace(bundle),
       explanationPreservation: explanationResult.trace,
+      ...(draft.timeframe ? { timeframe: draft.timeframe } : {}),
     },
     bundle,
   );

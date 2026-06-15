@@ -7,6 +7,7 @@ const VALID_ITEM_A = {
   why: "A direct ask after daily rapport can lead to plans quickly.",
   impact: "You meet outside work within the week.",
   signals: ["Direct ask made after work", "Daily rapport established", "Plans set within the week"],
+  timeframe: "weeks",
 };
 
 const VALID_ITEM_B = {
@@ -14,6 +15,7 @@ const VALID_ITEM_B = {
   why: "Timing or interest may not align when you reach out.",
   impact: "You stop expecting a reply after several days.",
   signals: ["Message sent without reply", "Several days have passed", "Expectation of reply fades"],
+  timeframe: "days",
 };
 
 const VALID_ITEM_C = {
@@ -21,6 +23,7 @@ const VALID_ITEM_C = {
   why: "Shared shifts put others in the same position.",
   impact: "She starts spending breaks with someone else.",
   signals: ["Shared shift patterns overlap", "Break time spent together", "Coworker showing interest"],
+  timeframe: "months",
 };
 
 describe("forecast schema", () => {
@@ -47,11 +50,24 @@ describe("forecast schema", () => {
     expect(parsed.active[0]?.signals?.[0]).toBe("Direct ask made after work");
   });
 
+  it("parsed forecast item includes a valid timeframe enum value", () => {
+    const parsed = parseForecastOutput({
+      active: [VALID_ITEM_A],
+      hidden: [VALID_ITEM_B],
+      blind_spots: [VALID_ITEM_C],
+    });
+
+    expect(parsed.active[0]?.timeframe).toBe("weeks");
+    expect(parsed.hidden[0]?.timeframe).toBe("days");
+    expect(parsed.blind_spots[0]?.timeframe).toBe("months");
+  });
+
   it("drops items with missing signals", () => {
     const noSignals = {
       title: "She Leaves The Team",
       why: "Job changes happen without warning.",
       impact: "Daily contact ends.",
+      timeframe: "months",
     };
 
     const parsed = parseForecastOutput({
@@ -70,16 +86,55 @@ describe("forecast schema", () => {
       why: "Initiative often comes from genuine interest.",
       impact: "Plans follow quickly.",
       signals: ["Only one signal"],
+      timeframe: "days",
     };
     const fiveSignals = {
       title: "She Accepts The Invite",
       why: "A clear ask makes it easy to say yes.",
       impact: "You spend time together outside work.",
       signals: ["Signal one", "Signal two", "Signal three", "Signal four", "Signal five"],
+      timeframe: "weeks",
     };
 
     const parsed = parseForecastOutput({
       active: [VALID_ITEM_A, oneSignal, fiveSignals],
+      hidden: [VALID_ITEM_B],
+      blind_spots: [VALID_ITEM_C],
+    });
+
+    expect(parsed.active).toHaveLength(1);
+    expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
+  });
+
+  it("drops items with missing timeframe", () => {
+    const noTimeframe = {
+      title: "She Leaves The Team",
+      why: "Job changes happen without warning.",
+      impact: "Daily contact ends.",
+      signals: ["Job posting noticed online", "Resignation handed in", "Last day approaches"],
+    };
+
+    const parsed = parseForecastOutput({
+      active: [VALID_ITEM_A, noTimeframe],
+      hidden: [VALID_ITEM_B],
+      blind_spots: [VALID_ITEM_C],
+    });
+
+    expect(parsed.active).toHaveLength(1);
+    expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
+  });
+
+  it("drops items with invalid timeframe value", () => {
+    const badTimeframe = {
+      title: "She Texts Tomorrow",
+      why: "Interest often expresses itself quickly.",
+      impact: "Plans appear within a day.",
+      signals: ["Message arrives tonight", "Reply comes fast", "Plans set right away"],
+      timeframe: "soon",
+    };
+
+    const parsed = parseForecastOutput({
+      active: [VALID_ITEM_A, badTimeframe],
       hidden: [VALID_ITEM_B],
       blind_spots: [VALID_ITEM_C],
     });
@@ -94,6 +149,7 @@ describe("forecast schema", () => {
       why: "You should talk to her about how you feel.",
       impact: "You meet outside work within the week.",
       signals: ["Honest conversation scheduled", "Feelings expressed directly", "Outcome becomes clear"],
+      timeframe: "weeks",
     };
 
     const parsed = parseForecastOutput({
@@ -104,18 +160,21 @@ describe("forecast schema", () => {
           why: "Job changes happen.",
           impact: "Daily contact ends.",
           signals: ["Job posting noticed online", "Resignation handed in", "Last day approaches"],
+          timeframe: "months",
         },
         {
           title: "You Get Coffee",
           why: "A casual invite may land well.",
           impact: "Plans happen quickly.",
           signals: ["Casual invite extended", "Nearby coffee spot chosen", "Time slot agreed on"],
+          timeframe: "days",
         },
         {
           title: "Timing Slips",
           why: "Busy weeks can delay the moment.",
           impact: "Months pass quietly.",
           signals: ["Busy week starts again", "Planned moment delayed", "Calendar stays full"],
+          timeframe: "months",
         },
         withBannedWhy,
       ],
@@ -140,18 +199,21 @@ describe("forecast schema", () => {
           why: "You must act now.",
           impact: "Something shifts.",
           signals: ["Deadline arrives soon", "Window closing fast", "Decision point reached"],
+          timeframe: "days",
         },
         {
           title: "Second Hidden",
           why: "You need to tell her.",
           impact: "Things become clear.",
           signals: ["Unsaid feelings build", "Natural moment appears", "Clarity needed soon"],
+          timeframe: "weeks",
         },
         {
           title: "Third Hidden",
           why: "You have to decide.",
           impact: "The moment passes.",
           signals: ["Decision point arrives", "Options become fewer", "Moment of choice here"],
+          timeframe: "weeks",
         },
       ],
       blind_spots: [VALID_ITEM_C],
@@ -174,6 +236,7 @@ describe("forecast schema", () => {
           why: "Job changes happen without warning.",
           impact: "Daily contact ends.",
           signals: ["Job posting noticed online", "Resignation handed in", "Last day approaches"],
+          timeframe: "months",
         },
       ],
       hidden: [VALID_ITEM_B],

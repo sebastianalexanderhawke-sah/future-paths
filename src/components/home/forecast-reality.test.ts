@@ -444,4 +444,107 @@ describe("forecast reality", () => {
     expect(preservedWork?.explanationPreservation?.status).toBe("preserved");
     expect(preservedPersonality?.explanationPreservation?.status).toBe("preserved");
   });
+
+  it("passes timeframe from draft through to ScannableFuture", () => {
+    const sections = processGeneratedForecastSections(
+      {
+        active: [
+          {
+            title: "She Says Yes To Coffee",
+            why: "A direct ask after daily rapport can lead to plans quickly.",
+            impact: "You meet outside work within the week.",
+            signals: ["Direct ask made after work", "Daily rapport established", "Plans set within the week"],
+            timeframe: "weeks",
+          },
+          {
+            title: "She Says No But Stays Friendly",
+            why: "A clear question can end uncertainty without ending contact.",
+            impact: "Daily work stays workable even if the crush fades.",
+            signals: ["Clear refusal given", "Work stays polite", "Crush fades quietly"],
+            timeframe: "days",
+          },
+          {
+            title: "Coworkers Learn About The Ask",
+            why: "Workplace moments rarely stay fully private.",
+            impact: "Small talk feels strained for a few weeks.",
+            signals: ["Colleague overheard the ask", "Lunch table goes quiet", "Glances exchanged at work"],
+            timeframe: "weeks",
+          },
+          {
+            title: "The Friendship Deepens First",
+            why: "More time together can build comfort before romance.",
+            impact: "You talk every week but nothing romantic happens yet.",
+            signals: ["Lunch plans happen weekly", "Personal topics come up", "Weekend plans suggested"],
+            timeframe: "months",
+          },
+        ],
+        hidden: [
+          {
+            title: "She Leaves The Company",
+            why: "Job changes can remove the situation entirely.",
+            impact: "The crush fades because daily contact disappears.",
+            signals: ["LinkedIn update noticed", "Farewell email arrives", "Desk cleared out"],
+            timeframe: "longer_term",
+          },
+          {
+            title: "The Timing Never Aligns",
+            why: "Busy schedules can keep things polite but static.",
+            impact: "Months pass without a clear moment to act.",
+            signals: ["Schedules keep conflicting", "Good moment never comes", "Weeks pass unmarked"],
+            timeframe: "months",
+          },
+          {
+            title: "You Receive Mixed Signals",
+            why: "Friendly behavior can be hard to read over time.",
+            impact: "You hesitate longer than planned.",
+            signals: ["Warm then distant again", "Eye contact then avoided", "Reply comes then stops"],
+            timeframe: "weeks",
+          },
+        ],
+        blind_spots: [
+          {
+            title: "She Assumes You're Not Interested",
+            why: "Platonic behavior can read as disinterest when she initiates often.",
+            impact: "She stops looking for signs because the friendship feels settled.",
+            signals: ["She stops initiating", "Tone becomes purely friendly", "Social plans dry up"],
+            timeframe: "weeks",
+          },
+          {
+            title: "A Mutual Friend Changes The Dynamic",
+            why: "Shared social ties can shift how you both act at work.",
+            impact: "Group plans replace one-on-one contact.",
+            signals: ["Mutual friend makes plans", "Group chat created", "One-on-one time stops"],
+            timeframe: "months",
+          },
+          {
+            title: "A One-On-One Opportunity Appears Naturally",
+            why: "Shared projects or social plans can create private time.",
+            impact: "You finally talk outside the usual work routine.",
+            signals: ["Project assigned together", "After-work errand overlap", "Quiet moment found"],
+            timeframe: "months",
+          },
+        ],
+      },
+      "I like a girl at work",
+      "How often does she initiate conversations?\nDaily",
+      "Ask Her Out",
+      ["Ask her out directly after work."],
+    );
+
+    // Timeframe should flow from draft through to ScannableFuture.
+    const coffeeFuture = sections.activeFutures.find((f) => f.title === "She Says Yes To Coffee");
+    expect(coffeeFuture?.timeframe).toBe("weeks");
+
+    const leaveFuture = sections.hiddenFutures.find((f) => f.title === "She Leaves The Company");
+    expect(leaveFuture?.timeframe).toBe("longer_term");
+
+    // Fallback-generated futures (source: "fallback") will have undefined timeframe.
+    const allFutures = [
+      ...sections.activeFutures,
+      ...sections.hiddenFutures,
+      ...sections.blindSpotFutures,
+    ];
+    const fallbackFutures = allFutures.filter((f) => f.source === "fallback");
+    expect(fallbackFutures.every((f) => f.timeframe === undefined)).toBe(true);
+  });
 });

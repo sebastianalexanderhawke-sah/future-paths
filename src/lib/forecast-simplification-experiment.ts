@@ -14,6 +14,7 @@ export type CurrentFutureRendering = {
   whyItMightHappen: string;
   signals: string[];
   sourceTrace?: string;
+  timeframe?: string;
   futureImpact: string;
   expansion?: string | null;
 };
@@ -71,6 +72,7 @@ export function toCurrentFutureRendering(future: ScannableFuture): CurrentFuture
     whyItMightHappen: future.whyItMightHappen,
     signals: [...future.signals],
     ...(future.sourceTrace ? { sourceTrace: future.sourceTrace } : {}),
+    ...(future.timeframe ? { timeframe: future.timeframe } : {}),
     futureImpact: future.futureImpact,
     expansion: future.expansion,
   };

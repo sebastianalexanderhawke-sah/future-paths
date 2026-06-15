@@ -43,6 +43,9 @@ export type ScannableFuture = {
   signals: string[];
   futureImpact: string;
   sourceTrace?: string;
+  /** AI's estimate of how soon this future could occur. Absent for
+   *  fallback-generated futures (source: "fallback"). */
+  timeframe?: string;
   source?: ForecastFutureSource;
   sourceStage?: string;
   originalTitle?: string | null;
