@@ -13,7 +13,7 @@ export const GENERATION_PREFERENCE_LIST = `Generation preference list (use these
 - concrete outcomes the user could observe in real life within months`;
 
 export const CROSSROAD_PATH_RULES = `Path rules (Decision Simulator):
-- Generate exactly five distinct strategies — not five variations of the same idea.
+- Default to exactly 5 distinct strategies. Only generate 6 or 7 if the situation genuinely supports that many MEANINGFULLY DISTINCT approaches — each representing a different underlying strategy or posture, not a variation of another path. Do not pad to reach 6 or 7, and never exceed 7.
 - Each path must include a native title and a description.
 - path.title must be 2-6 words, human-readable, strategy-oriented, and stand on its own.
 - Good titles: "Ask Her Out", "Friendship First", "Launch The MVP", "Find A Co-Founder", "Take The Job", "Stay Where You Are".
@@ -21,7 +21,11 @@ export const CROSSROAD_PATH_RULES = `Path rules (Decision Simulator):
 - Each path.description must expand the title into one concrete sentence about the strategy.
 - Paths must read like distinct strategies someone could actually choose.
 - Do not generate therapy paths, coaching paths, or reflection-only paths.
-- Do not generate sentence fragments or vague inner-work directions.`;
+- Do not generate sentence fragments or vague inner-work directions.
+
+- Anti-fabrication rule: The situation summary and paths must not invent specific facts the user did not provide — no fabricated timeframes ("a year ago"), no fabricated prior actions ("you already told him..."). Stick to what was actually said. For anything unspecified, use open or hedged language ("at some point," "after a falling out") rather than inventing specifics. Before finalising, check: does any path assume or contradict a detail that was invented rather than stated by the user? If so, remove the invented detail from the summary and adjust the path.
+
+- Move-on rule: When the situation centres on whether to reconnect, re-engage, or pursue something involving another person, at least one path must represent deliberately choosing NOT to pursue it — accepting the situation as it stands and moving forward without re-engaging. This is a distinct, dignified choice, not the same as "wait and see" (which is passive and temporary). Only include this if genuinely relevant to the situation; not all situations involve a relationship to disengage from.`;
 
 export const CROSSROAD_BENEFIT_RULES = `Benefit rules (2-4 per path):
 - Benefits must describe observable outcomes — what happens if this path works.

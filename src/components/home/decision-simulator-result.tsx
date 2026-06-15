@@ -153,7 +153,7 @@ export function DecisionSimulatorResultView({
       </div>
 
       <div className="flex flex-col gap-4 p-4 sm:p-6">
-        <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {scannablePaths.map((path, index) => (
             <ScannablePathCard
               key={paths[index]?.id ?? `${path.title}-${index}`}

@@ -15,7 +15,7 @@ export const pathDraftSchema = z.object({
 
 export const crossroadOutputSchema = z.object({
   current_understanding: tentativeTextSchema,
-  paths: z.array(pathDraftSchema).length(5),
+  paths: z.array(pathDraftSchema).min(5).max(7),
 });
 
 export function parseCrossroadOutput(data: unknown): MockCrossroadResult {

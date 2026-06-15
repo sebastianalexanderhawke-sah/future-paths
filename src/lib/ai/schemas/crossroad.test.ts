@@ -2,10 +2,37 @@ import { describe, expect, it } from "vitest";
 
 import { parseCrossroadOutput } from "@/lib/ai/schemas/crossroad";
 
+const BASE_PATH = {
+  description: "Be direct after work and ask her on a date.",
+  benefits: ["She may say yes.", "You stop wondering."],
+  consequences: ["She may say no.", "Work may feel awkward."],
+  future_shift: "More willing to make direct moves when interest is clear.",
+  themes: ["Courage"],
+};
+
+function makePaths(count: number) {
+  const titles = [
+    "Ask Her Out",
+    "Friendship First",
+    "Keep It Professional",
+    "Message Her Outside Work",
+    "Move On",
+    "Wait And See",
+    "Talk To A Friend First",
+    "Do Nothing For Now",
+  ];
+  return Array.from({ length: count }, (_, i) => ({
+    ...BASE_PATH,
+    title: titles[i] ?? `Path ${i + 1}`,
+  }));
+}
+
+const CURRENT_UNDERSTANDING = "You are deciding how to approach someone at work.";
+
 describe("crossroad schema", () => {
   it("requires native titles on every generated path", () => {
     const parsed = parseCrossroadOutput({
-      current_understanding: "You are deciding how to approach someone at work.",
+      current_understanding: CURRENT_UNDERSTANDING,
       paths: [
         {
           title: "Ask Her Out",
@@ -56,7 +83,7 @@ describe("crossroad schema", () => {
 
   it("accepts imperfect native titles without failing generation", () => {
     const parsed = parseCrossroadOutput({
-      current_understanding: "You are deciding how to approach someone at work.",
+      current_understanding: CURRENT_UNDERSTANDING,
       paths: [
         {
           title: "Tell Her Directly And Honestly That",
@@ -102,5 +129,39 @@ describe("crossroad schema", () => {
     });
 
     expect(parsed.paths[0]?.title).toBe("Tell Her Directly And Honestly That");
+  });
+
+  it("accepts exactly 6 paths", () => {
+    const parsed = parseCrossroadOutput({
+      current_understanding: CURRENT_UNDERSTANDING,
+      paths: makePaths(6),
+    });
+    expect(parsed.paths).toHaveLength(6);
+  });
+
+  it("accepts exactly 7 paths", () => {
+    const parsed = parseCrossroadOutput({
+      current_understanding: CURRENT_UNDERSTANDING,
+      paths: makePaths(7),
+    });
+    expect(parsed.paths).toHaveLength(7);
+  });
+
+  it("rejects fewer than 5 paths", () => {
+    expect(() =>
+      parseCrossroadOutput({
+        current_understanding: CURRENT_UNDERSTANDING,
+        paths: makePaths(4),
+      }),
+    ).toThrow();
+  });
+
+  it("rejects more than 7 paths", () => {
+    expect(() =>
+      parseCrossroadOutput({
+        current_understanding: CURRENT_UNDERSTANDING,
+        paths: makePaths(8),
+      }),
+    ).toThrow();
   });
 });

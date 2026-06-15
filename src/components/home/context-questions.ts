@@ -51,6 +51,24 @@ export function selectContextQuestions(
   ).map(toContextQuestion);
 }
 
+/** Maximum questions shown in the decision simulator — one focused question before path generation. */
+export const DECISION_MODE_QUESTION_COUNT = 1;
+
+/**
+ * Trims a question list to the appropriate count for the goal.
+ * - decision: 1 question (the highest-priority one, which is first by convention)
+ * - forecast: all questions (unchanged)
+ */
+export function selectQuestionsForGoal(
+  questions: ContextQuestion[],
+  goal: SituationGoal,
+): ContextQuestion[] {
+  if (goal === "decision") {
+    return questions.slice(0, DECISION_MODE_QUESTION_COUNT);
+  }
+  return questions;
+}
+
 export function areAllQuestionsAnswered(
   questions: ContextQuestion[],
   answers: Record<string, string>,

@@ -18,6 +18,7 @@ import {
   computeDiscoveryQuestionMetrics,
   MAX_DISCOVERY_QUESTIONS,
   planDiscoveryQuestionSession,
+  selectQuestionsForGoal,
   toContextQuestion,
   type ContextQuestion,
   type PlannedDiscoveryQuestion,
@@ -139,14 +140,14 @@ export function SituationEntryFlow() {
           MAX_DISCOVERY_QUESTIONS,
         );
         setPlannedQuestions(fallback);
-        setQuestions(fallback.map(toContextQuestion));
+        setQuestions(selectQuestionsForGoal(fallback.map(toContextQuestion), goal));
         setDiscoveryQuestionSource("fallback");
         setQuestionsError(response.error);
         return;
       }
 
       setPlannedQuestions(response.questions);
-      setQuestions(response.questions.map(toContextQuestion));
+      setQuestions(selectQuestionsForGoal(response.questions.map(toContextQuestion), goal));
       setDiscoveryQuestionSource(response.source);
     });
   }, [situationText, goal, hasSituation, hasGoal]);
@@ -368,11 +369,13 @@ export function SituationEntryFlow() {
 
       <FlowStep
         step={3}
-        title="Let's understand your situation"
+        title={isDecisionMode ? "One quick question" : "Let's understand your situation"}
         visible={hasSituation && hasGoal && !simulatorResult && !forecastResult && !pathForecastResult}
       >
         <p className="mb-5 text-body-small text-ink-secondary">
-          One question at a time. Your answers shape what comes next.
+          {isDecisionMode
+            ? "Your answer helps generate more accurate, relevant paths."
+            : "One question at a time. Your answers shape what comes next."}
         </p>
         {isLoadingQuestions ? (
           <p className="text-body-small text-ink-secondary">

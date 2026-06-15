@@ -11,7 +11,7 @@ import {
 export const crossroadGenerateV1 = createPromptModule({
   promptId: "crossroad.generate",
   promptVersion: "1",
-  taskInstructions: `Generate a current understanding and exactly five distinct decision paths for the user's moment.
+  taskInstructions: `Generate a current understanding and five to seven distinct decision paths for the user's moment.
 
 This output powers both the Decision Simulator and Future Forecast. Raw output must already be concrete, strategic, and event-oriented. Post-processing will refine it — not rescue vague or reflective language.
 
@@ -21,7 +21,7 @@ ${STRICT_THEME_SELECTION_RULES}`,
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
-      `Produce JSON with current_understanding and paths (length 5).
+      `Produce JSON with current_understanding and paths (5-7 items, default 5).
 
 Each path needs title, description, benefits (2-4), consequences (2-4), future_shift, and themes (1-3).
 

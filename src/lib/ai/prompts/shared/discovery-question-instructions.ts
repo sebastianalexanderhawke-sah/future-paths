@@ -10,7 +10,7 @@ Assign each question one category from the approved category list: Relationships
 
 Provide a one-sentence "reason" explaining what this question's answer would unlock for path or forecast generation. Write reasons for an internal audit log, not for the end user.
 
-Generate exactly 4 or 5 questions, ordered roughly by how much they would change the generated paths or forecast, with the most impactful question first.
+Generate exactly 4 or 5 questions, ordered by how much they would change the generated paths or forecast, with the most impactful question first. For decision mode, only the first question will be shown to the user — so ensure that first question is the single best clarifying question for path generation.
 
 Write each question in plain, conversational language, as ONE simple question — not a compound question joined with "and" or a semicolon. If a topic needs two pieces of information, either pick the more important one or split it into two separate question items (within the 4-5 item budget).
 Good: "What does the new job pay compared to your current one?"
