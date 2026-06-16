@@ -7,6 +7,7 @@ import {
 } from "@/components/home/forecast-utils";
 import { hasForecastForMomentAndPath, saveForecast } from "@/lib/forecasts";
 import { createIdentityUpdateIfMeaningful } from "@/lib/identity-updates";
+import { evaluateReflectionQuestion } from "@/lib/reflection-question";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn } from "@/types/database";
 
@@ -281,6 +282,22 @@ export async function createCheckIn(
         situationSummary,
       }).catch(() => {});
     }
+  }
+
+  const reflectionEvaluation = await evaluateReflectionQuestion(
+    trimmedReflection,
+    generated.reality_summary,
+  ).catch(() => null);
+
+  if (reflectionEvaluation?.should_reflect && reflectionEvaluation.question) {
+    await supabase
+      .from("check_ins")
+      .update({ reflection_question: reflectionEvaluation.question })
+      .eq("id", checkIn.id)
+      .eq("user_id", auth.userId)
+      .catch(() => {});
+
+    checkIn.reflection_question = reflectionEvaluation.question;
   }
 
   return { checkIn };

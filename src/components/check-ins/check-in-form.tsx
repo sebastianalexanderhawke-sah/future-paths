@@ -11,16 +11,21 @@ const initialState: CheckInFormState = { error: null };
 
 type CheckInFormProps = {
   momentId: string;
+  onBeforeSubmit?: () => void;
 };
 
-export function CheckInForm({ momentId }: CheckInFormProps) {
+export function CheckInForm({ momentId, onBeforeSubmit }: CheckInFormProps) {
   const [state, formAction, pending] = useActionState(
     createCheckInAction,
     initialState,
   );
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form
+      action={formAction}
+      onSubmit={() => onBeforeSubmit?.()}
+      className="flex flex-col gap-4"
+    >
       <input type="hidden" name="momentId" value={momentId} />
 
       <div className="flex flex-col gap-2">

@@ -49,6 +49,7 @@ export async function saveForecast(input: {
 
 export async function getLatestForecastForMoment(momentId: string): Promise<{
   forecast: Forecast;
+  previous: Forecast | null;
   isRegenerated: boolean;
 } | null> {
   const auth = await requireUser();
@@ -71,8 +72,30 @@ export async function getLatestForecastForMoment(momentId: string): Promise<{
 
   return {
     forecast: data[0],
+    previous: data[1] ?? null,
     isRegenerated: data.length > 1,
   };
+}
+
+/**
+ * Returns all forecasts for a moment, sorted oldest-first (ASC by generated_at).
+ * Useful for timeline matching: finding which forecast was generated after a
+ * specific check-in.
+ */
+export async function getAllForecastsForMoment(momentId: string): Promise<Forecast[]> {
+  const auth = await requireUser();
+  if ("error" in auth) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("forecasts")
+    .select("*")
+    .eq("moment_id", momentId)
+    .eq("user_id", auth.userId)
+    .order("generated_at", { ascending: true });
+
+  if (error || !data) return [];
+  return data;
 }
 
 /**
@@ -123,7 +146,13 @@ export async function hasForecastForMomentAndPath(
 export function parseForecastSections(
   sectionsJson: Record<string, unknown>,
 ): ForecastSections {
-  return sectionsJson as unknown as ForecastSections;
+  const sections = sectionsJson as unknown as ForecastSections;
+  return {
+    activeFutures: sections.activeFutures ?? [],
+    hiddenFutures: sections.hiddenFutures ?? [],
+    blindSpotFutures: sections.blindSpotFutures ?? [],
+    wildCardFutures: sections.wildCardFutures ?? [],
+  };
 }
 
 /**

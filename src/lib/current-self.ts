@@ -121,7 +121,18 @@ async function loadGenerationInput(userId: string): Promise<GenerationInput> {
   };
 }
 
-export async function generateCurrentSelf(): Promise<
+export type GenerateCurrentSelfInput = {
+  reflection?: {
+    question: string;
+    answer: string;
+    checkInReflection: string;
+    momentTitle: string;
+  };
+};
+
+export async function generateCurrentSelf(
+  reflectionInput?: GenerateCurrentSelfInput,
+): Promise<
   { currentSelf: CurrentSelf } | { error: string }
 > {
   const auth = await requireUser();
@@ -147,6 +158,9 @@ export async function generateCurrentSelf(): Promise<
     profile: "current_self",
     promptId: "current_self.generate",
     schema: currentSelfNullableOutputSchema,
+    overrides: reflectionInput?.reflection
+      ? { reflectionQA: reflectionInput.reflection }
+      : undefined,
   });
 
   if (!generationResult.ok) {

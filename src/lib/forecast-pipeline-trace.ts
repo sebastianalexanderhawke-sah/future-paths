@@ -1,6 +1,6 @@
 import type { ForecastPipelineTrace, ForecastPipelineTraceItem } from "@/lib/ai-audit";
 
-export type ForecastPipelineSectionKey = "active" | "hidden" | "blind_spots";
+export type ForecastPipelineSectionKey = "active" | "hidden" | "blind_spots" | "wild_card";
 
 function normalizeTraceKey(title: string): string {
   return title.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
@@ -11,6 +11,7 @@ export class ForecastPipelineTraceCollector {
     active: [],
     hidden: [],
     blind_spots: [],
+    wild_card: [],
   };
 
   beginGeneratedItem(section: ForecastPipelineSectionKey, original: string): ForecastPipelineTraceItem {

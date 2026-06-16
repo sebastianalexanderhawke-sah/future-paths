@@ -85,4 +85,10 @@ export type IdentityContextBundle = {
   discoveryGoal?: "decision" | "forecast";
   discoveryAdditionalContext?: string;
   checkInSummaries?: string[];
+  reflectionQA?: {
+    question: string;
+    answer: string;
+    checkInReflection: string;
+    momentTitle: string;
+  };
 };

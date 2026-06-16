@@ -18,6 +18,7 @@ export type ForecastOutput = {
   active: ForecastFutureDraft[];
   hidden: ForecastFutureDraft[];
   blind_spots: ForecastFutureDraft[];
+  wild_card: ForecastFutureDraft[];
 };
 
 export const forecastFutureSchema = z.object({
@@ -35,12 +36,14 @@ export const forecastOutputSchema = z.object({
   active: z.array(forecastFutureSchema).min(0).max(6),
   hidden: z.array(forecastFutureSchema).min(0).max(5),
   blind_spots: z.array(forecastFutureSchema).min(0).max(5),
+  wild_card: z.array(forecastFutureSchema).min(0).max(4),
 }) satisfies z.ZodType<ForecastOutput>;
 
 const looseForecastShape = z.object({
   active: z.array(z.unknown()),
   hidden: z.array(z.unknown()),
   blind_spots: z.array(z.unknown()),
+  wild_card: z.array(z.unknown()).optional(),
 });
 
 function filterItems(raw: unknown[]): ForecastFutureDraft[] {
@@ -72,5 +75,6 @@ export function parseForecastOutput(data: unknown): ForecastOutput {
     active: filterItems(shape.active),
     hidden: filterItems(shape.hidden),
     blind_spots: filterItems(shape.blind_spots),
+    wild_card: filterItems(shape.wild_card ?? []),
   };
 }

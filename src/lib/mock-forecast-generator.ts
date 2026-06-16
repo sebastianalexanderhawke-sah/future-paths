@@ -6,6 +6,24 @@ type ForecastPathContext = {
   description: string;
 };
 
+const DEFAULT_WILD_CARDS: ForecastOutput["wild_card"] = [
+  {
+    title: "A Mutual Friend Changes Everything",
+    why: "Shared connections can create unexpected openings.",
+    impact: "The situation shifts through someone neither of you planned on.",
+  },
+  {
+    title: "She Reaches Out First After Silence",
+    why: "Long pauses sometimes end with an unexpected message.",
+    impact: "The dynamic reverses without you making the next move.",
+  },
+  {
+    title: "A Small Coincidence Reopens The Door",
+    why: "Everyday overlap can restart contact when timing aligns.",
+    impact: "A chance encounter changes what felt settled.",
+  },
+];
+
 function buildWorkCrushForecast(selectedPathTitle?: string): ForecastOutput {
   const direct = /ask her out|direct approach|change the context/i.test(selectedPathTitle ?? "");
 
@@ -89,6 +107,7 @@ function buildWorkCrushForecast(selectedPathTitle?: string): ForecastOutput {
         impact: "You finally talk outside the usual work routine.",
       },
     ],
+    wild_card: DEFAULT_WILD_CARDS,
   };
 }
 
@@ -150,6 +169,7 @@ function buildBusinessForecast(): ForecastOutput {
         impact: "You split responsibilities and ship faster.",
       },
     ],
+    wild_card: DEFAULT_WILD_CARDS,
   };
 }
 
@@ -211,6 +231,7 @@ function buildRelocationForecast(): ForecastOutput {
         impact: "The city becomes a stepping stone, not a destination.",
       },
     ],
+    wild_card: DEFAULT_WILD_CARDS,
   };
 }
 
@@ -272,6 +293,7 @@ function buildGenericForecast(title: string): ForecastOutput {
         impact: "Other priorities start competing for attention.",
       },
     ],
+    wild_card: DEFAULT_WILD_CARDS,
   };
 }
 

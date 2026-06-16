@@ -3,9 +3,12 @@ import {
   createPromptModule,
 } from "@/lib/ai/prompts/shared/create-prompt-module";
 import {
-  APPROVED_THEMES_PROMPT_TEXT,
+  CHECK_IN_DIFFICULT_THEMES_PROMPT_TEXT,
+  CHECK_IN_POSITIVE_THEMES_PROMPT_TEXT,
+} from "@/lib/check-in-themes";
+import {
+  CHECK_IN_HONEST_THEME_RULES,
   STRICT_THEME_CHANGE_RULES,
-  STRICT_THEME_SELECTION_RULES,
 } from "@/lib/ai/prompts/shared/theme-instructions";
 
 export const checkInGenerateV1 = createPromptModule({
@@ -13,19 +16,23 @@ export const checkInGenerateV1 = createPromptModule({
   promptVersion: "1",
   taskInstructions: `Summarize lived reality for this check-in. Return reality_summary, theme_changes (1-3), and identity_impact using tentative language.
 
-${STRICT_THEME_CHANGE_RULES}
+${CHECK_IN_HONEST_THEME_RULES}
 
-${STRICT_THEME_SELECTION_RULES}`,
+${STRICT_THEME_CHANGE_RULES}`,
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
       `Produce JSON with reality_summary, theme_changes, and identity_impact.
 
 Each theme_changes item MUST be an object with both fields:
-{ "theme": "<approved theme>", "direction": "strengthened" | "emerging" | "weakened" }
+Positive themes → { "theme": "<positive theme>", "direction": "strengthened" | "emerging" | "weakened" }
+Difficult themes → { "theme": "<difficult theme>", "direction": "present" | "processing" | "fading" }
 
-Approved themes:
-${APPROVED_THEMES_PROMPT_TEXT}
+Positive themes:
+${CHECK_IN_POSITIVE_THEMES_PROMPT_TEXT}
+
+Difficult themes:
+${CHECK_IN_DIFFICULT_THEMES_PROMPT_TEXT}
 
 Never omit direction. Never output theme-only strings.`,
     ),

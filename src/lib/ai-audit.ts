@@ -64,6 +64,7 @@ export type RawForecastAudit = {
   active: RawFutureAuditItem[];
   hidden: RawFutureAuditItem[];
   blind_spots: RawFutureAuditItem[];
+  wild_card?: RawFutureAuditItem[];
 };
 
 export type ProcessedFutureAuditItem = {
@@ -81,6 +82,7 @@ export type ProcessedForecastAudit = {
   active: ProcessedFutureAuditItem[];
   hidden: ProcessedFutureAuditItem[];
   blind_spots: ProcessedFutureAuditItem[];
+  wild_card?: ProcessedFutureAuditItem[];
 };
 
 export type DecisionSimulatorAudit = {
@@ -176,6 +178,7 @@ export type ForecastPipelineTrace = {
   active: ForecastPipelineTraceItem[];
   hidden: ForecastPipelineTraceItem[];
   blind_spots: ForecastPipelineTraceItem[];
+  wild_card: ForecastPipelineTraceItem[];
 };
 
 export function isAiAuditEnabled(): boolean {
@@ -233,6 +236,7 @@ export function buildRawForecastAuditFromGeneration(generated: ForecastOutput): 
     active: generated.active.map(mapFuture),
     hidden: generated.hidden.map(mapFuture),
     blind_spots: generated.blind_spots.map(mapFuture),
+    wild_card: generated.wild_card?.map(mapFuture) ?? [],
   };
 }
 
@@ -272,11 +276,13 @@ export function toProcessedForecastAudit(sections: {
   activeFutures: ScannableFuture[];
   hiddenFutures: ScannableFuture[];
   blindSpotFutures: ScannableFuture[];
+  wildCardFutures?: ScannableFuture[];
 }): ProcessedForecastAudit {
   return {
     active: sections.activeFutures.map(toProcessedFutureAuditItem),
     hidden: sections.hiddenFutures.map(toProcessedFutureAuditItem),
     blind_spots: sections.blindSpotFutures.map(toProcessedFutureAuditItem),
+    wild_card: (sections.wildCardFutures ?? []).map(toProcessedFutureAuditItem),
   };
 }
 
@@ -342,7 +348,7 @@ export function computePreservationMetrics(input: {
     }
   }
 
-  for (const section of ["active", "hidden", "blind_spots"] as const) {
+  for (const section of ["active", "hidden", "blind_spots", "wild_card"] as const) {
     for (const item of input.pipelineTrace?.[section] ?? []) {
       if (item.status === "preserved" && item.generatedBy === "claude") {
         metrics.preservedClaudeFutures += 1;

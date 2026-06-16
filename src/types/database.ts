@@ -16,6 +16,8 @@ import type {
   ThemeName,
   TimelineEventType,
   TimelineReferenceType,
+  type CheckInThemeName,
+  type ThemeChangeDirection,
 } from "@/types/enums";
 
 export type Profile = {
@@ -54,8 +56,8 @@ export type Path = {
 };
 
 export type ThemeChange = {
-  theme: ThemeName;
-  direction: "strengthened" | "weakened" | "emerging";
+  theme: CheckInThemeName;
+  direction: ThemeChangeDirection;
 };
 
 export type CheckIn = {
@@ -67,6 +69,8 @@ export type CheckIn = {
   reality_summary: string;
   theme_changes: ThemeChange[];
   identity_impact: string;
+  reflection_question?: string | null;
+  reflection_answer?: string | null;
   created_at: string;
 };
 

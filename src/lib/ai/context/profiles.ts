@@ -27,6 +27,12 @@ export type BuildContextOverrides = {
   situationGoal?: "decision" | "forecast";
   additionalContext?: string;
   checkInHistory?: string[];
+  reflectionQA?: {
+    question: string;
+    answer: string;
+    checkInReflection: string;
+    momentTitle: string;
+  };
 };
 
 export type BuildContextOptions = {

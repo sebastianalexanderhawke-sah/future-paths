@@ -1,5 +1,8 @@
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
-import { encodePathDescriptionWithNativeTitle } from "@/components/home/path-native-title";
+import {
+  decodeNativePathFields,
+  encodePathDescriptionWithNativeTitle,
+} from "@/components/home/path-native-title";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
 import { createClient } from "@/lib/supabase/server";
 import type { Path } from "@/types/database";

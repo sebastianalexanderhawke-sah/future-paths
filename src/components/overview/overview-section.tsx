@@ -2,7 +2,7 @@ import Link from "next/link";
 
 type OverviewSectionProps = {
   label: string;
-  title: string;
+  title: React.ReactNode;
   description?: string;
   viewAllHref?: string;
   viewAllLabel?: string;

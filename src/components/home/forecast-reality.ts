@@ -1,4 +1,4 @@
-﻿import type { MockPathDraft } from "@/lib/mock-crossroad-generator";
+import type { MockPathDraft } from "@/lib/mock-crossroad-generator";
 import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
 import type { ForecastFutureDraft, ForecastOutput } from "@/lib/ai/schemas/forecast";
 
@@ -49,6 +49,8 @@ const MIN_HIDDEN_FUTURES = 3;
 const MAX_HIDDEN_FUTURES = 5;
 const MIN_BLIND_SPOT_FUTURES = 3;
 const MAX_BLIND_SPOT_FUTURES = 5;
+const MIN_WILD_CARD_FUTURES = 3;
+const MAX_WILD_CARD_FUTURES = 3;
 const MAX_TITLE_LENGTH = 52;
 const MAX_SUMMARY_LENGTH = 160;
 
@@ -1259,6 +1261,7 @@ export function buildSituationFallbackFutures(
   activeFutures: ScannableFuture[];
   hiddenFutures: ScannableFuture[];
   blindSpotFutures: ScannableFuture[];
+  wildCardFutures: ScannableFuture[];
 } {
   const groundingBundle =
     bundle ??
@@ -1270,22 +1273,31 @@ export function buildSituationFallbackFutures(
   const lower = situationTitle.toLowerCase();
   const domain = detectSituationDomain(situationTitle);
 
-  if (/\b(girl|guy|boy|crush|like|dating|relationship|work crush)\b/.test(lower) || domain === "work-crush") {
-    return buildRelationshipFallbacks(groundingBundle);
-  }
+  let base: {
+    activeFutures: ScannableFuture[];
+    hiddenFutures: ScannableFuture[];
+    blindSpotFutures: ScannableFuture[];
+  };
 
-  if (
+  if (/\b(girl|guy|boy|crush|like|dating|relationship|work crush)\b/.test(lower) || domain === "work-crush") {
+    base = buildRelationshipFallbacks(groundingBundle);
+  } else if (
     /\b(dallas|move|relocat|new city|new job|moved to|moving to|job offer|might get a job)\b/.test(lower) ||
     domain === "relocation"
   ) {
-    return buildRelocationFallbacks(groundingBundle);
+    base = buildRelocationFallbacks(groundingBundle);
+  } else if (domain === "business" || /\b(starting a business|start a business|thinking about starting)\b/.test(lower)) {
+    base = buildBusinessFallbacks(groundingBundle);
+  } else {
+    base = buildGenericFallbacks(situationTitle, groundingBundle);
   }
 
-  if (domain === "business" || /\b(starting a business|start a business|thinking about starting)\b/.test(lower)) {
-    return buildBusinessFallbacks(groundingBundle);
-  }
-
-  return buildGenericFallbacks(situationTitle, groundingBundle);
+  return {
+    ...base,
+    wildCardFutures: base.hiddenFutures.slice(0, MIN_WILD_CARD_FUTURES).map((future) => ({
+      ...future,
+    })),
+  };
 }
 
 function explainInvalidFuture(future: ScannableFuture, bundle: GroundingBundle): string {
@@ -1700,6 +1712,7 @@ export type ProcessedForecastSectionsResult = {
   activeFutures: ScannableFuture[];
   hiddenFutures: ScannableFuture[];
   blindSpotFutures: ScannableFuture[];
+  wildCardFutures: ScannableFuture[];
   pipelineTrace?: import("@/lib/ai-audit").ForecastPipelineTrace;
   integrityAudit?: ForecastIntegrityAudit;
   explanationAudit?: ForecastExplanationPreservationAudit;
@@ -1729,6 +1742,7 @@ export function processGeneratedForecastSections(
       ...generated.active.flatMap((future) => [future.title, future.why, future.impact]),
       ...generated.hidden.flatMap((future) => [future.title, future.why, future.impact]),
       ...generated.blind_spots.flatMap((future) => [future.title, future.why, future.impact]),
+      ...(generated.wild_card ?? []).flatMap((future) => [future.title, future.why, future.impact]),
       ...pathText,
     ],
   };
@@ -1746,6 +1760,9 @@ export function processGeneratedForecastSections(
   const blindSpotTraceItems = generated.blind_spots.map((draft) =>
     collector ? collector.beginGeneratedItem("blind_spots", draft.title) : undefined,
   );
+  const wildCardTraceItems = generated.wild_card?.map((draft) =>
+    collector ? collector.beginGeneratedItem("wild_card", draft.title) : undefined,
+  ) ?? [];
 
   const activeGenerated = generated.active.map((draft, index) =>
     mapGeneratedFutureToScannableFuture(draft, bundle, activeTraceItems[index]),
@@ -1755,6 +1772,9 @@ export function processGeneratedForecastSections(
   );
   const blindSpotGenerated = generated.blind_spots.map((draft, index) =>
     mapGeneratedFutureToScannableFuture(draft, bundle, blindSpotTraceItems[index]),
+  );
+  const wildCardGenerated = (generated.wild_card ?? []).map((draft, index) =>
+    mapGeneratedFutureToScannableFuture(draft, bundle, wildCardTraceItems[index]),
   );
 
   const activeFill = fillSection(
@@ -1808,11 +1828,29 @@ export function processGeneratedForecastSections(
         }
       : undefined,
   );
+  const wildCardFill = fillSection(
+    wildCardGenerated,
+    fallbacks.wildCardFutures,
+    bundle,
+    {
+      min: MIN_WILD_CARD_FUTURES,
+      max: MAX_WILD_CARD_FUTURES,
+    },
+    recoveryInput,
+    collector
+      ? {
+          collector,
+          section: "wild_card",
+          traceItems: wildCardTraceItems.filter(Boolean) as ForecastPipelineTraceItem[],
+        }
+      : undefined,
+  );
 
   return {
     activeFutures: activeFill.futures,
     hiddenFutures: hiddenFill.futures,
     blindSpotFutures: blindSpotFill.futures,
+    wildCardFutures: wildCardFill.futures,
     ...(collector
       ? {
           pipelineTrace: collector.build(),
@@ -2046,6 +2084,7 @@ function buildSelectedPathForecastSections(
   activeFutures: ScannableFuture[];
   hiddenFutures: ScannableFuture[];
   blindSpotFutures: ScannableFuture[];
+  wildCardFutures: ScannableFuture[];
 } {
   const contextTitle = `${situationTitle} — ${selectedPathTitle}`;
   const bundle = buildGroundingBundle({
@@ -2128,6 +2167,10 @@ function buildSelectedPathForecastSections(
       min: MIN_BLIND_SPOT_FUTURES,
       max: MAX_BLIND_SPOT_FUTURES,
     }, recoveryInput).futures,
+    wildCardFutures: fillSection([], fallbacks.wildCardFutures, bundle, {
+      min: MIN_WILD_CARD_FUTURES,
+      max: MAX_WILD_CARD_FUTURES,
+    }, recoveryInput).futures,
   };
 }
 
@@ -2142,6 +2185,7 @@ export function buildRealityForecastSections(
   activeFutures: ScannableFuture[];
   hiddenFutures: ScannableFuture[];
   blindSpotFutures: ScannableFuture[];
+  wildCardFutures: ScannableFuture[];
 } {
   if (selectedPath && selectedPathTitle) {
     return buildSelectedPathForecastSections(
@@ -2216,6 +2260,10 @@ export function buildRealityForecastSections(
       min: MIN_BLIND_SPOT_FUTURES,
       max: MAX_BLIND_SPOT_FUTURES,
     }, recoveryInput).futures,
+    wildCardFutures: fillSection([], fallbacks.wildCardFutures, bundle, {
+      min: MIN_WILD_CARD_FUTURES,
+      max: MAX_WILD_CARD_FUTURES,
+    }, recoveryInput).futures,
   };
 }
 
@@ -2224,6 +2272,7 @@ export function withRealityForecastFallbacks(
     activeFutures: ScannableFuture[];
     hiddenFutures: ScannableFuture[];
     blindSpotFutures: ScannableFuture[];
+    wildCardFutures?: ScannableFuture[];
   },
   situationTitle: string,
   contextSummary?: string | null,
@@ -2231,6 +2280,7 @@ export function withRealityForecastFallbacks(
   activeFutures: ScannableFuture[];
   hiddenFutures: ScannableFuture[];
   blindSpotFutures: ScannableFuture[];
+  wildCardFutures: ScannableFuture[];
 } {
   const bundle = buildGroundingBundle({
     situationTitle,
@@ -2261,6 +2311,10 @@ export function withRealityForecastFallbacks(
     blindSpotFutures: fillSection(sections.blindSpotFutures, fallbacks.blindSpotFutures, bundle, {
       min: MIN_BLIND_SPOT_FUTURES,
       max: MAX_BLIND_SPOT_FUTURES,
+    }, recoveryInput).futures,
+    wildCardFutures: fillSection(sections.wildCardFutures ?? [], fallbacks.wildCardFutures, bundle, {
+      min: MIN_WILD_CARD_FUTURES,
+      max: MAX_WILD_CARD_FUTURES,
     }, recoveryInput).futures,
   };
 }

@@ -1,5 +1,14 @@
 import type { CurrentFutureRendering, SimplifiedFutureRendering } from "@/lib/forecast-simplification-experiment";
+import type { FutureMovement } from "@/lib/forecast-diff";
 import { CardShell } from "@/components/ui/card-shell";
+import type { CardShellVariant } from "@/lib/design/tokens";
+
+const MOVEMENT_INDICATOR: Record<FutureMovement, { symbol: string; className: string }> = {
+  up: { symbol: "↑", className: "text-emerald-600" },
+  down: { symbol: "↓", className: "text-red-400" },
+  neutral: { symbol: "−", className: "text-zinc-300" },
+  new: { symbol: "↑", className: "text-emerald-600" },
+};
 
 const TIMEFRAME_LABELS: Record<string, string> = {
   days: "Likely within days",
@@ -40,16 +49,21 @@ export function SimplifiedForecastFutureCard({
 type CurrentForecastFutureCardProps = {
   future: CurrentFutureRendering;
   label?: string;
+  movement?: FutureMovement;
+  cardVariant?: CardShellVariant;
 };
 
 export function CurrentForecastFutureCard({
   future,
   label,
+  movement,
+  cardVariant = "elevated",
 }: CurrentForecastFutureCardProps) {
   const timeframeLabel = future.timeframe ? TIMEFRAME_LABELS[future.timeframe] : undefined;
+  const indicator = movement ? MOVEMENT_INDICATOR[movement] : null;
 
   return (
-    <CardShell variant="elevated" className="overflow-hidden">
+    <CardShell variant={cardVariant} className="overflow-hidden">
       {label ? (
         <p className="border-b border-[var(--ink-tertiary)]/10 px-4 py-2 font-mono text-[11px] uppercase tracking-wide text-amber-700 sm:px-5">
           {label}
@@ -59,7 +73,17 @@ export function CurrentForecastFutureCard({
       <details className="group">
         <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 hover:bg-[var(--surface-muted)] sm:px-5 [&::-webkit-details-marker]:hidden">
           <div className="flex flex-col gap-1.5">
-            <h4 className="text-h2 text-ink-primary">{future.title}</h4>
+            <div className="flex items-baseline gap-1.5">
+              <h4 className="text-h2 text-ink-primary">{future.title}</h4>
+              {indicator ? (
+                <span
+                  aria-label={movement}
+                  className={`shrink-0 font-mono text-[10px] font-semibold leading-none ${indicator.className}`}
+                >
+                  {indicator.symbol}
+                </span>
+              ) : null}
+            </div>
             {timeframeLabel ? (
               <span className="self-start rounded-full bg-[var(--state-emerging)]/15 px-2.5 py-0.5 text-label text-[var(--state-emerging)]">
                 {timeframeLabel}

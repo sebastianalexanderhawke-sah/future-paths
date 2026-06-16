@@ -15,6 +15,7 @@ export type ForecastSections = {
   activeFutures: ScannableFuture[];
   hiddenFutures: ScannableFuture[];
   blindSpotFutures: ScannableFuture[];
+  wildCardFutures: ScannableFuture[];
 };
 
 export type ForecastResult = {
@@ -45,6 +46,7 @@ export function buildForecastSectionsFromGeneration(
     activeFutures: result.activeFutures,
     hiddenFutures: result.hiddenFutures,
     blindSpotFutures: result.blindSpotFutures,
+    wildCardFutures: result.wildCardFutures,
   };
 }
 

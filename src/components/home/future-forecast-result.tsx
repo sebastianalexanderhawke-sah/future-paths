@@ -17,10 +17,16 @@ type FutureForecastResultProps = {
 
 type ForecastFutureCardProps = {
   future: ScannableFuture;
+  cardVariant?: "elevated" | "wildcard";
 };
 
-function ForecastFutureCard({ future }: ForecastFutureCardProps) {
-  return <CurrentForecastFutureCard future={toCurrentFutureRendering(future)} />;
+function ForecastFutureCard({ future, cardVariant = "elevated" }: ForecastFutureCardProps) {
+  return (
+    <CurrentForecastFutureCard
+      future={toCurrentFutureRendering(future)}
+      cardVariant={cardVariant}
+    />
+  );
 }
 
 type ForecastSectionProps = {
@@ -28,18 +34,34 @@ type ForecastSectionProps = {
   question: string;
   futures: ScannableFuture[];
   accentClass: string;
+  titlePrefix?: string;
+  cardVariant?: "elevated" | "wildcard";
 };
 
-function ForecastSection({ title, question, futures, accentClass }: ForecastSectionProps) {
+function ForecastSection({
+  title,
+  question,
+  futures,
+  accentClass,
+  titlePrefix,
+  cardVariant = "elevated",
+}: ForecastSectionProps) {
   return (
     <section className="flex flex-col gap-3">
       <div>
-        <p className={`text-label ${accentClass}`}>{title}</p>
+        <p className={`text-label ${accentClass}`}>
+          {titlePrefix ? (
+            <span aria-hidden="true" className="mr-1.5">
+              {titlePrefix}
+            </span>
+          ) : null}
+          {title}
+        </p>
         <p className="mt-1 text-body-small text-ink-secondary">{question}</p>
       </div>
       <div className="flex flex-col gap-3">
         {futures.map((future) => (
-          <ForecastFutureCard key={future.title} future={future} />
+          <ForecastFutureCard key={future.title} future={future} cardVariant={cardVariant} />
         ))}
       </div>
     </section>
@@ -86,6 +108,14 @@ export function FutureForecastResultView({ forecast }: FutureForecastResultProps
           question="What futures emerge from details you provided?"
           futures={forecast.sections.blindSpotFutures}
           accentClass="text-[var(--state-contradiction-detected)]"
+        />
+        <ForecastSection
+          title="Wild Card Futures"
+          question="What could happen that you'd never expect?"
+          futures={forecast.sections.wildCardFutures ?? []}
+          accentClass="text-[var(--state-emerging)]"
+          titlePrefix="🃏"
+          cardVariant="wildcard"
         />
 
         <Link

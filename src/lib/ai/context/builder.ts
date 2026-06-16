@@ -44,7 +44,7 @@ export async function buildIdentityContext(
     case "forecast":
       return enforceContextLimits(await loadForecastContext(supabase, base, options));
     case "current_self":
-      return enforceContextLimits(await loadCurrentSelfContext(supabase, base));
+      return enforceContextLimits(await loadCurrentSelfContext(supabase, base, options));
     case "identity_prompt":
       return enforceContextLimits(await loadIdentityPromptContext(supabase, base));
     case "contradiction":
@@ -287,6 +287,7 @@ async function loadFutureSelfContext(
 async function loadCurrentSelfContext(
   supabase: SupabaseClient,
   base: IdentityContextBundle,
+  options?: BuildContextOptions,
 ): Promise<IdentityContextBundle> {
   const [{ count: momentCount }, { count: checkInCount }] = await Promise.all([
     supabase
@@ -334,6 +335,9 @@ async function loadCurrentSelfContext(
     pathThemes: (chosenPaths ?? []).flatMap((path) => path.themes as ThemeName[]),
     checkIns: checkIns ?? [],
     identityUpdates: identityUpdates ?? [],
+    ...(options?.overrides?.reflectionQA
+      ? { reflectionQA: options.overrides.reflectionQA }
+      : {}),
   };
 }
 

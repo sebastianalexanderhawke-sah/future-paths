@@ -39,6 +39,48 @@ export const THEME_NAMES = [
 ] as const;
 export type ThemeName = (typeof THEME_NAMES)[number];
 
+/** Positive themes for check-in theme_changes (paths/decisions use THEME_NAMES). */
+export const CHECK_IN_POSITIVE_THEME_NAMES = [
+  "Courage",
+  "Connection",
+  "Stability",
+  "Independence",
+  "Reflection",
+  "Growth",
+  "Belonging",
+  "Curiosity",
+  "Leadership",
+  "Creativity",
+] as const;
+export type CheckInPositiveThemeName = (typeof CHECK_IN_POSITIVE_THEME_NAMES)[number];
+
+/** Honest/difficult themes for check-in theme_changes only. */
+export const DIFFICULT_THEME_NAMES = [
+  "Loneliness",
+  "Disappointment",
+  "Grief",
+  "Frustration",
+  "Uncertainty",
+  "Hurt",
+  "Acceptance",
+  "Resilience",
+] as const;
+export type DifficultThemeName = (typeof DIFFICULT_THEME_NAMES)[number];
+
+export const CHECK_IN_THEME_NAMES = [
+  ...CHECK_IN_POSITIVE_THEME_NAMES,
+  ...DIFFICULT_THEME_NAMES,
+] as const;
+export type CheckInThemeName = (typeof CHECK_IN_THEME_NAMES)[number];
+
+export const POSITIVE_THEME_DIRECTIONS = ["strengthened", "emerging", "weakened"] as const;
+export type PositiveThemeDirection = (typeof POSITIVE_THEME_DIRECTIONS)[number];
+
+export const DIFFICULT_THEME_DIRECTIONS = ["present", "processing", "fading"] as const;
+export type DifficultThemeDirection = (typeof DIFFICULT_THEME_DIRECTIONS)[number];
+
+export type ThemeChangeDirection = PositiveThemeDirection | DifficultThemeDirection;
+
 export const FUTURE_SELF_STAGES = ["possible", "emerging", "future_self"] as const;
 export type FutureSelfStage = (typeof FUTURE_SELF_STAGES)[number];
 

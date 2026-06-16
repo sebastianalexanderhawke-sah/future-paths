@@ -46,6 +46,30 @@ Blind spot futures (blind_spots[]):
 - Good: "She Assumes You're Not Interested", "A Job Offer Delays The Launch", "An Early User Wants To Help Build It"
 - Bad: "Inner Growth", "Develop Self-Awareness", "Learn More About Yourself"
 
+Wild card futures (wild_card[]):
+- Question they answer: "What could happen that you'd never expect?"
+- Generate exactly 3 futures that would function as plot twists in this situation — low probability, high impact, completely grounded in the specific people and details the user provided.
+
+These must pass the "I never even considered that" test. If a user would read a wild card future and think "yeah that's possible" without surprise, it belongs in active/hidden/blind_spots instead. Wild cards should produce a moment of "oh wow, that could actually happen and I never thought of it."
+
+Requirements for each wild card:
+- Must reference a SPECIFIC detail from the situation or context (a named person, a specific relationship, a concrete circumstance mentioned by the user) — not generic
+- Must involve a genuine reframe — the situation looks fundamentally different if this happens
+- Must be plausible in the real world — not fantastical
+- Must NOT overlap with active, hidden, or blind spot futures in mechanism or outcome
+
+Strong wild card patterns for relationship/person situations:
+- The OTHER person in the situation takes unexpected action (e.g. "Your Friend Tells Her He Has Feelings For Her First")
+- The user's OWN life shifts in a way that makes the situation irrelevant (e.g. "You Start Developing Feelings For Someone Else Before This Resolves")
+- A structural change removes the context entirely (e.g. "You Get Moved To A Different Team And Lose Daily Proximity", "Her Nursing Program Assigns Her To A Different Location")
+- A hidden truth surfaces that reframes everything (e.g. "She Tells A Mutual Friend She Has Already Noticed Your Interest", "Your Friend Admits He Has Feelings For Her Too")
+
+Bad wild cards (do not generate these):
+- "She Assumes You're Not Interested" — ordinary, belongs in hidden futures
+- "You Never Learn How She Feels" — vague, not a plot twist
+- "A One-on-one Opportunity Appears" — likely outcome, not wild
+- Anything that could reasonably appear in active futures
+
 Each future object needs:
 - title: short scene-level headline (2-6 words)
 - why: one sentence on why this future might happen

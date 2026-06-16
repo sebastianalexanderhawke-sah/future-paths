@@ -75,6 +75,7 @@ describe("ai audit", () => {
       ],
       hidden: [],
       blind_spots: [],
+      wild_card: [],
     });
 
     expect(raw.active[0]?.title).toBe("She Says Yes To Coffee");

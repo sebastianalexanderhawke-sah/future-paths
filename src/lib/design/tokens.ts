@@ -24,7 +24,7 @@ export const DESIGN_TOKENS = {
   },
 } as const;
 
-export type CardShellVariant = "flat" | "elevated" | "hero";
+export type CardShellVariant = "flat" | "elevated" | "hero" | "wildcard";
 
 export type ButtonVariant = "primary" | "secondary" | "tertiary" | "ghost";
 

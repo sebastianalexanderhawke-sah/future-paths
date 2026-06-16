@@ -3,18 +3,15 @@ import { notFound } from "next/navigation";
 
 import { generatePathsAction } from "@/actions/paths";
 import { archiveMomentAction } from "@/actions/moments";
-import { CheckInCard } from "@/components/check-ins/check-in-card";
-import { CheckInForm } from "@/components/check-ins/check-in-form";
-import { CurrentForecastFutureCard } from "@/components/home/forecast-simplification-cards";
-import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
-import { MomentForm } from "@/components/moments/moment-form";
-import { PathCard } from "@/components/paths/path-card";
+import { ChosenPathCard, OtherPathCard } from "@/components/moments/stored-path-card";
+import { SituationForecastSection } from "@/components/moments/situation-forecast-section";
 import { listCheckInsForMoment } from "@/lib/check-ins";
-import { getLatestForecastForMoment, parseForecastSections } from "@/lib/forecasts";
+import { buildCheckInIdentitySummaryMap } from "@/lib/check-in-identity-summary";
+import { getAllForecastsForMoment, parseForecastSections } from "@/lib/forecasts";
+import { computeMovementMap } from "@/lib/forecast-diff";
 import { listIdentityUpdatesForMoment } from "@/lib/identity-updates";
 import { getMoment } from "@/lib/moments";
 import { listPathsForMoment } from "@/lib/paths";
-import { toCurrentFutureRendering } from "@/lib/forecast-simplification-experiment";
 
 type MomentPageProps = {
   params: Promise<{ id: string }>;
@@ -25,40 +22,53 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
   const { id } = await params;
   const { error: queryError } = await searchParams;
 
-  const momentResult = await getMoment(id);
-  if ("error" in momentResult) {
-    notFound();
-  }
+  const [momentResult, pathsResult, checkInsResult, identityUpdatesResult, allForecasts] =
+    await Promise.all([
+      getMoment(id),
+      listPathsForMoment(id),
+      listCheckInsForMoment(id),
+      listIdentityUpdatesForMoment(id),
+      getAllForecastsForMoment(id),
+    ]);
 
-  const pathsResult = await listPathsForMoment(id);
-  if ("error" in pathsResult) {
-    notFound();
-  }
-
-  const checkInsResult = await listCheckInsForMoment(id);
-  if ("error" in checkInsResult) {
-    notFound();
-  }
-
-  const identityUpdatesResult = await listIdentityUpdatesForMoment(id);
-  const identityUpdates =
-    "identityUpdates" in identityUpdatesResult
-      ? identityUpdatesResult.identityUpdates
-      : [];
-
-  const forecastResult = await getLatestForecastForMoment(id);
+  if ("error" in momentResult) notFound();
+  if ("error" in pathsResult) notFound();
+  if ("error" in checkInsResult) notFound();
+  if ("error" in identityUpdatesResult) notFound();
 
   const { moment } = momentResult;
   const { paths } = pathsResult;
   const { checkIns } = checkInsResult;
+  const { identityUpdates } = identityUpdatesResult;
+  const checkInIdentitySummaries = buildCheckInIdentitySummaryMap(checkIns, identityUpdates);
   const chosenPath = paths.find((path) => path.is_chosen);
+  const otherPaths = paths.filter((path) => !path.is_chosen);
   const canChoose = paths.length > 0 && !chosenPath;
+
+  // Forecasts sorted ASC; latest is last
+  const currentForecast = allForecasts[allForecasts.length - 1] ?? null;
+  const previousForecast = allForecasts[allForecasts.length - 2] ?? null;
+  const isRegenerated = allForecasts.length > 1;
+
+  const forecastSections = currentForecast
+    ? parseForecastSections(currentForecast.sections_json)
+    : null;
+  const previousForecastSections = previousForecast
+    ? parseForecastSections(previousForecast.sections_json)
+    : null;
+
+  // Movement map: only meaningful when ≥2 forecast versions exist
+  const movementMap =
+    forecastSections && previousForecastSections
+      ? computeMovementMap(forecastSections, previousForecastSections)
+      : undefined;
+
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
       <header className="border-b border-zinc-200 bg-white px-6 py-4">
         <Link href="/moments" className="text-sm text-zinc-500 hover:text-zinc-700">
-          ← Back to moments
+          ← Back to situations
         </Link>
         <h1 className="mt-1 text-lg font-semibold text-zinc-900">{moment.title}</h1>
         <p className="text-sm text-zinc-500">
@@ -73,11 +83,21 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
           </p>
         ) : null}
 
+        {/* 1. Situation summary */}
+        {moment.current_understanding ? (
+          <section className="rounded-lg border border-zinc-200 bg-white p-6">
+            <h2 className="text-sm font-medium text-zinc-900">Situation summary</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-700">
+              {moment.current_understanding}
+            </p>
+          </section>
+        ) : null}
+
+        {/* 2. Decision paths */}
         <section className="rounded-lg border border-zinc-200 bg-white p-6">
-          <h2 className="text-sm font-medium text-zinc-900">Paths</h2>
+          <h2 className="text-sm font-medium text-zinc-900">Decision paths</h2>
           <p className="mt-2 text-sm text-zinc-600">
-            Explore possible directions. These are possibilities, not
-            recommendations.
+            Possible directions to take. These are possibilities, not recommendations.
           </p>
 
           {paths.length === 0 ? (
@@ -92,146 +112,63 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
             </form>
           ) : (
             <div className="mt-6 flex flex-col gap-4">
-              {moment.current_understanding ? (
-                <div className="rounded-lg bg-zinc-50 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    Current understanding
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-700">
-                    {moment.current_understanding}
-                  </p>
+              {/* Chosen path — fully expanded */}
+              {chosenPath ? (
+                <ChosenPathCard path={chosenPath} />
+              ) : null}
+
+              {/* Can still choose */}
+              {canChoose ? (
+                <div className="flex flex-col gap-3">
+                  {paths.map((path, i) => (
+                    <OtherPathCard key={path.id} path={path} index={i} />
+                  ))}
                 </div>
               ) : null}
 
+              {/* Other paths — collapsed */}
+              {chosenPath && otherPaths.length > 0 ? (
+                <details className="group">
+                  <summary className="cursor-pointer list-none text-sm text-zinc-500 hover:text-zinc-700 [&::-webkit-details-marker]:hidden">
+                    <span className="group-open:hidden">
+                      See other paths considered ({otherPaths.length})
+                    </span>
+                    <span className="hidden group-open:inline">Hide other paths</span>
+                  </summary>
+                  <div className="mt-3 flex flex-col gap-3">
+                    {otherPaths.map((path, i) => (
+                      <OtherPathCard key={path.id} path={path} index={i} />
+                    ))}
+                  </div>
+                </details>
+              ) : null}
+
               {chosenPath?.is_locked ? (
-                <p className="text-sm text-zinc-500">
+                <p className="text-xs text-zinc-400">
                   Your chosen path is locked after your first check-in.
                 </p>
               ) : null}
-
-              {paths.map((path) => (
-                <PathCard
-                  key={path.id}
-                  path={path}
-                  momentId={moment.id}
-                  canChoose={canChoose && !path.is_locked}
-                />
-              ))}
             </div>
           )}
         </section>
 
-        {forecastResult ? (
-          <section className="rounded-lg border border-zinc-200 bg-white p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-medium text-zinc-900">Forecast</h2>
-                {forecastResult.isRegenerated ? (
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Updated based on your check-in on{" "}
-                    {new Date(forecastResult.forecast.generated_at).toLocaleDateString()}
-                  </p>
-                ) : null}
-              </div>
-            </div>
+        {/* 3. Future forecast + 4. Check-ins (client component for transition) */}
+        <SituationForecastSection
+          sections={forecastSections}
+          isRegenerated={isRegenerated}
+          generatedAt={currentForecast?.generated_at ?? null}
+          momentId={moment.id}
+          hasChosenPath={!!chosenPath}
+          checkIns={checkIns}
+          checkInIdentitySummaries={checkInIdentitySummaries}
+          movementMap={movementMap}
+        />
 
-            {(() => {
-              const sections = parseForecastSections(forecastResult.forecast.sections_json);
-              const groups = [
-                {
-                  label: "Active Futures",
-                  question: "What seems most likely to happen next?",
-                  futures: sections.activeFutures,
-                },
-                {
-                  label: "Hidden Futures",
-                  question: "What future are you probably not considering?",
-                  futures: sections.hiddenFutures,
-                },
-                {
-                  label: "Blind Spot Futures",
-                  question: "What futures emerge from details you provided?",
-                  futures: sections.blindSpotFutures,
-                },
-              ];
-              return (
-                <div className="mt-5 flex flex-col gap-6">
-                  {groups.map((group) =>
-                    group.futures.length > 0 ? (
-                      <div key={group.label} className="flex flex-col gap-3">
-                        <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                            {group.label}
-                          </p>
-                          <p className="mt-0.5 text-xs text-zinc-400">{group.question}</p>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          {group.futures.map((future) => (
-                            <CurrentForecastFutureCard
-                              key={future.title}
-                              future={toCurrentFutureRendering(future)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ) : null,
-                  )}
-                </div>
-              );
-            })()}
-          </section>
-        ) : null}
-
-        {chosenPath ? (
-          <section id="check-in" className="rounded-lg border border-zinc-200 bg-white p-6">
-            <h2 className="text-sm font-medium text-zinc-900">Check-ins</h2>
-            <p className="mt-2 text-sm text-zinc-600">
-              Record what actually happened. Reality carries more weight than
-              prediction.
-            </p>
-
-            <div className="mt-6">
-              <CheckInForm momentId={moment.id} />
-            </div>
-
-            {checkIns.length > 0 ? (
-              <div className="mt-8 flex flex-col gap-4">
-                <h3 className="text-sm font-medium text-zinc-900">History</h3>
-                {checkIns.map((checkIn) => (
-                  <CheckInCard key={checkIn.id} checkIn={checkIn} />
-                ))}
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {identityUpdates.length > 0 ? (
-          <section className="rounded-lg border border-zinc-200 bg-white p-6">
-            <h2 className="text-sm font-medium text-zinc-900">Identity updates</h2>
-            <div className="mt-4 flex flex-col gap-3">
-              {identityUpdates.map((update) => (
-                <IdentityUpdateCard key={update.id} update={update} />
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="rounded-lg border border-zinc-200 bg-white p-6">
-          <h2 className="text-sm font-medium text-zinc-900">Edit moment</h2>
-          <div className="mt-4">
-            <MomentForm
-              mode="edit"
-              momentId={moment.id}
-              defaultTitle={moment.title}
-              defaultDescription={moment.description}
-            />
-          </div>
-        </section>
-
+        {/* 5. Archive */}
         <section className="rounded-lg border border-zinc-200 bg-white p-6">
           <h2 className="text-sm font-medium text-zinc-900">Archive</h2>
           <p className="mt-2 text-sm text-zinc-600">
-            Archiving removes this moment from your active list. Your identity
+            Archiving removes this situation from your active list. Your identity
             history is preserved.
           </p>
           <form action={archiveMomentAction} className="mt-4">
@@ -240,7 +177,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
               type="submit"
               className="rounded-lg border border-zinc-200 px-4 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
             >
-              Archive moment
+              Archive situation
             </button>
           </form>
         </section>

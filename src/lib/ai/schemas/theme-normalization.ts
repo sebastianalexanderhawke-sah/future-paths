@@ -1,18 +1,27 @@
 import type { ContradictionSourceRefs, ThemeChange } from "@/types/database";
 import {
+  CHECK_IN_THEME_NAMES,
   CONTRADICTION_TYPES,
+  DIFFICULT_THEME_DIRECTIONS,
   FUTURE_SELF_STAGES,
   IDENTITY_PROMPT_TYPES,
   IDENTITY_UPDATE_TYPES,
+  POSITIVE_THEME_DIRECTIONS,
   THEME_NAMES,
+  type CheckInThemeName,
   type ContradictionType,
+  type DifficultThemeDirection,
   type FutureSelfStage,
   type IdentityPromptType,
   type IdentityUpdateType,
+  type PositiveThemeDirection,
+  type ThemeChangeDirection,
   type ThemeName,
 } from "@/types/enums";
+import { isDifficultCheckInTheme } from "@/lib/check-in-themes";
 
 const THEME_NAME_SET = new Set<string>(THEME_NAMES);
+const CHECK_IN_THEME_NAME_SET = new Set<string>(CHECK_IN_THEME_NAMES);
 
 const THEME_SYNONYMS: Record<string, ThemeName> = {
   boundaries: "Independence",
@@ -42,6 +51,20 @@ const THEME_SYNONYMS: Record<string, ThemeName> = {
   community: "Belonging",
   mentor: "Leadership",
   bravery: "Courage",
+};
+
+const CHECK_IN_THEME_SYNONYMS: Record<string, CheckInThemeName> = {
+  loneliness: "Loneliness",
+  disappointment: "Disappointment",
+  grief: "Grief",
+  frustration: "Frustration",
+  uncertainty: "Uncertainty",
+  hurt: "Hurt",
+  acceptance: "Acceptance",
+  resilience: "Resilience",
+  rejection: "Hurt",
+  loss: "Grief",
+  sadness: "Grief",
 };
 
 function normalizeThemeKey(value: string): string {
@@ -76,6 +99,34 @@ export function normalizeThemeName(value: unknown): ThemeName | null {
   return synonym ?? null;
 }
 
+export function normalizeCheckInThemeName(value: unknown): CheckInThemeName | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (CHECK_IN_THEME_NAME_SET.has(trimmed)) {
+    return trimmed as CheckInThemeName;
+  }
+
+  const caseInsensitiveMatch = CHECK_IN_THEME_NAMES.find(
+    (theme) => theme.toLowerCase() === trimmed.toLowerCase(),
+  );
+
+  if (caseInsensitiveMatch) {
+    return caseInsensitiveMatch;
+  }
+
+  const synonym = CHECK_IN_THEME_SYNONYMS[normalizeThemeKey(trimmed)] ?? THEME_SYNONYMS[normalizeThemeKey(trimmed)];
+
+  return synonym && CHECK_IN_THEME_NAME_SET.has(synonym) ? synonym : null;
+}
+
 export function normalizeThemesArray(themes: unknown): ThemeName[] {
   if (!Array.isArray(themes)) {
     return ["Reflection"];
@@ -93,11 +144,10 @@ export function normalizeThemesArray(themes: unknown): ThemeName[] {
   return normalized.length > 0 ? normalized : ["Reflection"];
 }
 
-type ThemeChangeDirection = ThemeChange["direction"];
+const POSITIVE_DIRECTION_VALUES = new Set<string>(POSITIVE_THEME_DIRECTIONS);
+const DIFFICULT_DIRECTION_VALUES = new Set<string>(DIFFICULT_THEME_DIRECTIONS);
 
-const DIRECTION_VALUES = new Set<string>(["strengthened", "emerging", "weakened"]);
-
-const DIRECTION_SYNONYMS: Record<string, ThemeChangeDirection> = {
+const POSITIVE_DIRECTION_SYNONYMS: Record<string, PositiveThemeDirection> = {
   strengthened: "strengthened",
   strengthening: "strengthened",
   stronger: "strengthened",
@@ -111,12 +161,25 @@ const DIRECTION_SYNONYMS: Record<string, ThemeChangeDirection> = {
   weakening: "weakened",
   weaker: "weakened",
   decreased: "weakened",
-  fading: "weakened",
+};
+
+const DIFFICULT_DIRECTION_SYNONYMS: Record<string, DifficultThemeDirection> = {
+  present: "present",
+  currently: "present",
+  active: "present",
+  processing: "processing",
+  process: "processing",
+  working: "processing",
+  fading: "fading",
+  fade: "fading",
+  lessening: "fading",
+  subsiding: "fading",
 };
 
 function normalizeThemeDirection(
   value: unknown,
-  fallback: ThemeChangeDirection = "emerging",
+  theme: CheckInThemeName,
+  fallback: ThemeChangeDirection,
 ): ThemeChangeDirection {
   if (typeof value !== "string") {
     return fallback;
@@ -124,11 +187,30 @@ function normalizeThemeDirection(
 
   const key = value.trim().toLowerCase();
 
-  if (DIRECTION_VALUES.has(key)) {
+  if (isDifficultCheckInTheme(theme)) {
+    if (DIFFICULT_DIRECTION_VALUES.has(key)) {
+      return key as DifficultThemeDirection;
+    }
+    if (DIFFICULT_DIRECTION_SYNONYMS[key]) {
+      return DIFFICULT_DIRECTION_SYNONYMS[key];
+    }
+    if (POSITIVE_DIRECTION_VALUES.has(key) || POSITIVE_DIRECTION_SYNONYMS[key]) {
+      return key as ThemeChangeDirection;
+    }
+    return fallback as DifficultThemeDirection;
+  }
+
+  if (POSITIVE_DIRECTION_VALUES.has(key)) {
+    return key as PositiveThemeDirection;
+  }
+  if (POSITIVE_DIRECTION_SYNONYMS[key]) {
+    return POSITIVE_DIRECTION_SYNONYMS[key];
+  }
+  if (DIFFICULT_DIRECTION_VALUES.has(key) || DIFFICULT_DIRECTION_SYNONYMS[key]) {
     return key as ThemeChangeDirection;
   }
 
-  return DIRECTION_SYNONYMS[key] ?? fallback;
+  return fallback as PositiveThemeDirection;
 }
 
 export function normalizeThemeChangesArray(changes: unknown): ThemeChange[] {
@@ -145,19 +227,21 @@ export function normalizeThemeChangesArray(changes: unknown): ThemeChange[] {
     }
 
     const record = item as Record<string, unknown>;
-    const theme = normalizeThemeName(record.theme);
+    const theme = normalizeCheckInThemeName(record.theme);
 
     if (!theme || seen.has(theme)) {
       continue;
     }
 
-    const fallbackDirection: ThemeChangeDirection =
-      index === 0 ? "strengthened" : "emerging";
+    const fallbackDirection: ThemeChangeDirection = isDifficultCheckInTheme(theme)
+      ? "present"
+      : index === 0
+        ? "strengthened"
+        : "emerging";
 
-    normalized.push({
-      theme,
-      direction: normalizeThemeDirection(record.direction, fallbackDirection),
-    });
+    const direction = normalizeThemeDirection(record.direction, theme, fallbackDirection);
+
+    normalized.push({ theme, direction });
     seen.add(theme);
 
     if (normalized.length >= 3) {
@@ -167,7 +251,7 @@ export function normalizeThemeChangesArray(changes: unknown): ThemeChange[] {
 
   return normalized.length > 0
     ? normalized
-    : [{ theme: "Reflection", direction: "emerging" }];
+    : [{ theme: "Reflection", direction: "emerging" as const }];
 }
 
 export function normalizeCheckInThemesInOutput(data: unknown): unknown {

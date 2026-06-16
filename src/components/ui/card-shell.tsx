@@ -7,6 +7,8 @@ const VARIANT_CLASSES: Record<CardShellVariant, string> = {
   elevated:
     "bg-[var(--surface)] shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-hero)]",
   hero: "rounded-[var(--radius-hero)] bg-[var(--surface-raised)] shadow-[var(--shadow-hero)]",
+  wildcard:
+    "border border-dashed border-[var(--state-emerging)]/35 bg-[var(--state-emerging)]/5 shadow-[var(--shadow-elevated)] ring-1 ring-[var(--state-emerging)]/15",
 };
 
 type CardShellProps = {

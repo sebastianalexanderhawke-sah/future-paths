@@ -1,12 +1,19 @@
 import { z } from "zod";
 
 import {
+  isDifficultCheckInTheme,
+  isValidDirectionForTheme,
+} from "@/lib/check-in-themes";
+import {
+  CHECK_IN_THEME_NAMES,
   CONTRADICTION_TYPES,
   FUTURE_SELF_STAGES,
   IDENTITY_PROMPT_TYPES,
   IDENTITY_UPDATE_TYPES,
   LIFE_CHAPTER_EVIDENCE_TYPES,
   THEME_NAMES,
+  type CheckInThemeName,
+  type ThemeChangeDirection,
 } from "@/types/enums";
 
 const BANNED_PHRASES = [
@@ -56,10 +63,38 @@ function sanitizeBannedPhrases(value: string): string {
 
 export const themeNameSchema = z.enum(THEME_NAMES);
 
+export const checkInThemeNameSchema = z.enum(CHECK_IN_THEME_NAMES);
+
 export const themeChangeSchema = z.object({
   theme: themeNameSchema,
   direction: z.enum(["strengthened", "emerging", "weakened"]),
 });
+
+/** Check-in theme_changes: positive + difficult themes with category-appropriate statuses. */
+export const checkInThemeChangeSchema = z
+  .object({
+    theme: checkInThemeNameSchema,
+    direction: z.enum([
+      "strengthened",
+      "emerging",
+      "weakened",
+      "present",
+      "processing",
+      "fading",
+    ]),
+  })
+  .superRefine((value, ctx) => {
+    if (!isValidDirectionForTheme(value.theme, value.direction)) {
+      const kind = isDifficultCheckInTheme(value.theme)
+        ? "present, processing, or fading"
+        : "strengthened, emerging, or weakened";
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Theme "${value.theme}" requires direction to be one of: ${kind}`,
+        path: ["direction"],
+      });
+    }
+  }) satisfies z.ZodType<{ theme: CheckInThemeName; direction: ThemeChangeDirection }>;
 
 // .transform() sanitizes banned phrases; .pipe() then enforces min/max on the
 // sanitised result (a string that was fully composed of banned phrases becomes

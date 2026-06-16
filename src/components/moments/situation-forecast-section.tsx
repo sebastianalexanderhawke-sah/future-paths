@@ -1,0 +1,288 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { CheckInCard } from "@/components/check-ins/check-in-card";
+import { CheckInForm } from "@/components/check-ins/check-in-form";
+import { CurrentForecastFutureCard } from "@/components/home/forecast-simplification-cards";
+import type { ForecastSections } from "@/components/home/forecast-utils";
+import type { ScannableFuture } from "@/components/home/output-refinement";
+import { CardShell } from "@/components/ui/card-shell";
+import { computeForecastDiff, flattenFutures, normalizeTitle } from "@/lib/forecast-diff";
+import type { FutureMovement } from "@/lib/forecast-diff";
+import { toCurrentFutureRendering } from "@/lib/forecast-simplification-experiment";
+import type { CheckIn } from "@/types/database";
+
+const STORAGE_KEY = "forecast-before-checkin";
+const TRANSITION_MS = 3000;
+const SNAPSHOT_MAX_AGE_MS = 60_000;
+const TOP_FUTURES_COUNT = 3;
+
+type SnapshotPayload = {
+  sections: ForecastSections;
+  timestamp: number;
+};
+
+function readAndClearSnapshot(): ForecastSections | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    sessionStorage.removeItem(STORAGE_KEY);
+    const payload = JSON.parse(raw) as SnapshotPayload;
+    if (Date.now() - payload.timestamp > SNAPSHOT_MAX_AGE_MS) return null;
+    return payload.sections;
+  } catch {
+    sessionStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
+// ── Disappeared future card (transition state) ───────────────────────────────
+
+function DisappearedFutureCard({ future }: { future: ScannableFuture }) {
+  return (
+    <div className="opacity-40">
+      <CardShell variant="elevated" className="overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
+          <h4 className="flex-1 text-h2 text-ink-primary line-through">{future.title}</h4>
+          <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-0.5 text-label text-zinc-500">
+            No longer likely
+          </span>
+        </div>
+      </CardShell>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+type SituationForecastSectionProps = {
+  sections: ForecastSections | null;
+  isRegenerated: boolean;
+  generatedAt: string | null;
+  momentId: string;
+  hasChosenPath: boolean;
+  checkIns: CheckIn[];
+  checkInIdentitySummaries?: Record<string, string | null>;
+  /** Movement per future title (only present when ≥2 forecast versions exist). */
+  movementMap?: Record<string, FutureMovement>;
+};
+
+export function SituationForecastSection({
+  sections,
+  isRegenerated,
+  generatedAt,
+  momentId,
+  hasChosenPath,
+  checkIns,
+  checkInIdentitySummaries,
+  movementMap,
+}: SituationForecastSectionProps) {
+  const [previousSections, setPreviousSections] = useState<ForecastSections | null>(null);
+  const [transitioning, setTransitioning] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // On mount: check sessionStorage for a pre-submit snapshot
+  useEffect(() => {
+    const snapshot = readAndClearSnapshot();
+    if (snapshot && sections) {
+      setPreviousSections(snapshot);
+      setTransitioning(true);
+      timerRef.current = setTimeout(() => {
+        setTransitioning(false);
+        setPreviousSections(null);
+      }, TRANSITION_MS);
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleBeforeSubmit = useCallback(() => {
+    if (!sections) return;
+    const payload: SnapshotPayload = {
+      sections,
+      timestamp: Date.now(),
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }, [sections]);
+
+  const dismissTransition = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setTransitioning(false);
+    setPreviousSections(null);
+  }, []);
+
+  const diff = useMemo(() => {
+    if (!transitioning || !previousSections || !sections) return null;
+    return computeForecastDiff(previousSections, sections);
+  }, [transitioning, previousSections, sections]);
+
+  // ── Forecast render ────────────────────────────────────────────────────────
+
+  const allFutures = sections ? flattenFutures(sections) : [];
+  const topFutures = allFutures.slice(0, TOP_FUTURES_COUNT);
+  const remainingFutures = allFutures.slice(TOP_FUTURES_COUNT);
+
+  const disappearedFutures = useMemo(() => {
+    if (!transitioning || !diff || !previousSections) return [];
+    const prev = flattenFutures(previousSections);
+    return prev.filter((f) => diff.disappeared.has(normalizeTitle(f.title)));
+  }, [transitioning, diff, previousSections]);
+
+  return (
+    <>
+      {/* ── 3. Future forecast ─────────────────────────────────────────────── */}
+      {sections ? (
+        <section className="rounded-lg border border-zinc-200 bg-white p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-medium text-zinc-900">What might happen next?</h2>
+              {isRegenerated && generatedAt ? (
+                <p className="mt-1 text-xs text-zinc-500">
+                  Updated based on your check-in on{" "}
+                  {new Date(generatedAt).toLocaleDateString()}
+                </p>
+              ) : null}
+            </div>
+            {transitioning ? (
+              <button
+                type="button"
+                onClick={dismissTransition}
+                className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-600 hover:bg-zinc-200"
+              >
+                Done
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3">
+            {/* Disappeared futures (transition only) */}
+            {transitioning && disappearedFutures.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                  No longer likely
+                </p>
+                {disappearedFutures.map((future) => (
+                  <DisappearedFutureCard key={future.title} future={future} />
+                ))}
+              </div>
+            ) : null}
+
+            {/* Top 3 futures */}
+            {topFutures.map((future) => {
+              const rendering = toCurrentFutureRendering(future);
+              const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
+              return (
+                <div key={future.title} className="relative">
+                  {isNew ? (
+                    <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
+                      New
+                    </span>
+                  ) : null}
+                  <CurrentForecastFutureCard
+                    future={rendering}
+                    movement={movementMap?.[future.title]}
+                  />
+                </div>
+              );
+            })}
+
+            {/* Remaining futures (collapsed) */}
+            {remainingFutures.length > 0 ? (
+              <details className="group">
+                <summary className="cursor-pointer list-none rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500 hover:bg-zinc-50 [&::-webkit-details-marker]:hidden">
+                  <span className="group-open:hidden">
+                    See all futures ({remainingFutures.length} more)
+                  </span>
+                  <span className="hidden group-open:inline">Hide</span>
+                </summary>
+                <div className="mt-2 flex flex-col gap-3">
+                  {remainingFutures.map((future) => {
+                    const rendering = toCurrentFutureRendering(future);
+                    const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
+                    return (
+                      <div key={future.title} className="relative">
+                        {isNew ? (
+                          <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
+                            New
+                          </span>
+                        ) : null}
+                        <CurrentForecastFutureCard
+                          future={rendering}
+                          movement={movementMap?.[future.title]}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+            ) : null}
+
+            {/* Wild card futures */}
+            {(sections.wildCardFutures ?? []).length > 0 ? (
+              <div className="mt-6 flex flex-col gap-3 border-t border-zinc-100 pt-5">
+                <div>
+                  <h3 className="text-sm font-medium text-[var(--state-emerging)]">
+                    <span aria-hidden="true" className="mr-1.5">
+                      🃏
+                    </span>
+                    Wild Card Futures
+                  </h3>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    What could happen that you&apos;d never expect?
+                  </p>
+                </div>
+                {(sections.wildCardFutures ?? []).map((future) => {
+                  const rendering = toCurrentFutureRendering(future);
+                  const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
+                  return (
+                    <div key={future.title} className="relative">
+                      {isNew ? (
+                        <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
+                          New
+                        </span>
+                      ) : null}
+                      <CurrentForecastFutureCard
+                        future={rendering}
+                        movement={movementMap?.[future.title]}
+                        cardVariant="wildcard"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── 4. Check-ins ───────────────────────────────────────────────────── */}
+      {hasChosenPath ? (
+        <section id="check-in" className="rounded-lg border border-zinc-200 bg-white p-6">
+          <h2 className="text-sm font-medium text-zinc-900">Check-ins</h2>
+          <p className="mt-2 text-sm text-zinc-600">
+            What actually happened? Reality carries more weight than prediction.
+          </p>
+
+          <div className="mt-6">
+            <CheckInForm momentId={momentId} onBeforeSubmit={handleBeforeSubmit} />
+          </div>
+
+          {checkIns.length > 0 ? (
+            <div className="mt-8 flex flex-col gap-3">
+              <h3 className="text-sm font-medium text-zinc-900">History</h3>
+              {checkIns.map((checkIn) => (
+                <CheckInCard
+                  key={checkIn.id}
+                  checkIn={checkIn}
+                  identityUpdateSummary={checkInIdentitySummaries?.[checkIn.id] ?? null}
+                />
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+    </>
+  );
+}

@@ -1,28 +1,37 @@
 import { CurrentSelfHomeSection } from "@/components/home/current-self-home-section";
 import { ExistingSituationsSection } from "@/components/home/existing-situations-section";
 import { FutureSelfHomeSection } from "@/components/home/future-self-home-section";
+import { ReflectionWaitingHomeSection } from "@/components/home/reflection-waiting-home-section";
 import { SituationHero } from "@/components/home/situation-hero";
 import { TimelineHomeSection } from "@/components/home/timeline-home-section";
 import { OverviewHeader } from "@/components/overview/overview-header";
 import { OverviewPageShell } from "@/components/overview/overview-page-shell";
+import { getLastCheckInsForMoments } from "@/lib/check-ins";
 import { getCurrentSelf } from "@/lib/current-self";
 import { getForecastExistenceForMoments } from "@/lib/forecasts";
 import { listActiveFutureSelves } from "@/lib/future-selves";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listLifeChapters } from "@/lib/life-chapters";
-import { getChosenPathsForMoments } from "@/lib/paths";
-import { getLastCheckInsForMoments } from "@/lib/check-ins";
 import { listMoments } from "@/lib/moments";
+import { getChosenPathsForMoments } from "@/lib/paths";
+import { getUnansweredReflectionSummary } from "@/lib/reflections";
 
 export default async function OverviewPage() {
-  const [momentsResult, updatesResult, chaptersResult, futuresResult, currentSelfResult] =
-    await Promise.all([
-      listMoments(),
-      listIdentityUpdates(5),
-      listLifeChapters(3),
-      listActiveFutureSelves(1),
-      getCurrentSelf(),
-    ]);
+  const [
+    momentsResult,
+    updatesResult,
+    chaptersResult,
+    futuresResult,
+    currentSelfResult,
+    reflectionSummaryResult,
+  ] = await Promise.all([
+    listMoments(),
+    listIdentityUpdates(5),
+    listLifeChapters(3),
+    listActiveFutureSelves(1),
+    getCurrentSelf(),
+    getUnansweredReflectionSummary(),
+  ]);
 
   const recentSituations =
     "moments" in momentsResult ? momentsResult.moments.slice(0, 5) : [];
@@ -35,6 +44,12 @@ export default async function OverviewPage() {
       : null;
   const currentSelf =
     "currentSelf" in currentSelfResult ? currentSelfResult.currentSelf : null;
+  const unansweredReflectionCount =
+    "unansweredCount" in reflectionSummaryResult
+      ? reflectionSummaryResult.unansweredCount
+      : 0;
+  const pendingReflection =
+    "pending" in reflectionSummaryResult ? reflectionSummaryResult.pending : null;
 
   const momentIds = recentSituations.map((m) => m.id);
 
@@ -63,6 +78,12 @@ export default async function OverviewPage() {
         enrichments={enrichments}
       />
       <CurrentSelfHomeSection currentSelf={currentSelf} recentChanges={recentChanges} />
+      {unansweredReflectionCount > 0 && pendingReflection ? (
+        <ReflectionWaitingHomeSection
+          unansweredCount={unansweredReflectionCount}
+          pending={pendingReflection}
+        />
+      ) : null}
       <FutureSelfHomeSection futureSelf={emphasizedFutureSelf} />
       <TimelineHomeSection lifeChapters={lifeChapters} />
     </OverviewPageShell>
