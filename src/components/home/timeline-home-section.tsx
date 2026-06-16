@@ -16,6 +16,7 @@ export function TimelineHomeSection({ lifeChapters }: TimelineHomeSectionProps) 
       title="How did I get here?"
       description="Past → Current Self → Future Self"
       viewAllHref="/timeline"
+      viewAllLabel="View full timeline"
       className="gap-[var(--space-zone)]"
     >
       <div className="flex flex-wrap items-center justify-center gap-3 py-2 text-body-small text-ink-secondary">

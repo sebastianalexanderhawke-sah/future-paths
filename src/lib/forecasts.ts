@@ -75,6 +75,29 @@ export async function getLatestForecastForMoment(momentId: string): Promise<{
   };
 }
 
+/**
+ * Returns the set of momentIds (from the given list) that have at least one
+ * saved forecast. Safe to call with an empty array.
+ */
+export async function getForecastExistenceForMoments(
+  momentIds: string[],
+): Promise<Set<string>> {
+  if (momentIds.length === 0) return new Set();
+
+  const auth = await requireUser();
+  if ("error" in auth) return new Set();
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("forecasts")
+    .select("moment_id")
+    .in("moment_id", momentIds)
+    .eq("user_id", auth.userId);
+
+  if (!data) return new Set();
+  return new Set(data.map((row) => row.moment_id));
+}
+
 export async function hasForecastForMomentAndPath(
   momentId: string,
   pathId: string,

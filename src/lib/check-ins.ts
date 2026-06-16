@@ -12,6 +12,37 @@ import type { CheckIn } from "@/types/database";
 
 const REFLECTION_MAX_LENGTH = 5000;
 
+/**
+ * Returns a map of momentId → most-recent check-in created_at for the given
+ * set of moments. Safe to call with an empty array.
+ */
+export async function getLastCheckInsForMoments(
+  momentIds: string[],
+): Promise<Record<string, string>> {
+  if (momentIds.length === 0) return {};
+
+  const auth = await requireUser();
+  if ("error" in auth) return {};
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("check_ins")
+    .select("moment_id, created_at")
+    .in("moment_id", momentIds)
+    .eq("user_id", auth.userId)
+    .order("created_at", { ascending: false });
+
+  if (!data) return {};
+
+  const result: Record<string, string> = {};
+  for (const row of data) {
+    if (!(row.moment_id in result)) {
+      result[row.moment_id] = row.created_at;
+    }
+  }
+  return result;
+}
+
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
 

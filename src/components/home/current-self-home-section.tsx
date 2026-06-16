@@ -21,6 +21,7 @@ export function CurrentSelfHomeSection({
       title="Who am I today?"
       description="Current self"
       viewAllHref={currentSelf ? "/current-self" : undefined}
+      viewAllLabel="View full profile"
       className="gap-[var(--space-zone)]"
     >
       {currentSelf ? (

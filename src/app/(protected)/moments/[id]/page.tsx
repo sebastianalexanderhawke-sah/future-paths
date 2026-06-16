@@ -183,7 +183,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
         ) : null}
 
         {chosenPath ? (
-          <section className="rounded-lg border border-zinc-200 bg-white p-6">
+          <section id="check-in" className="rounded-lg border border-zinc-200 bg-white p-6">
             <h2 className="text-sm font-medium text-zinc-900">Check-ins</h2>
             <p className="mt-2 text-sm text-zinc-600">
               Record what actually happened. Reality carries more weight than

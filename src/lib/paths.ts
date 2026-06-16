@@ -32,6 +32,36 @@ function collectThemes(paths: { themes: ThemeName[] }[]): ThemeName[] {
   return [...seen];
 }
 
+/**
+ * Returns a map of momentId → display path title for all chosen paths
+ * across the given set of moments. Safe to call with an empty array.
+ */
+export async function getChosenPathsForMoments(
+  momentIds: string[],
+): Promise<Record<string, string>> {
+  if (momentIds.length === 0) return {};
+
+  const auth = await requireUser();
+  if ("error" in auth) return {};
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("paths")
+    .select("moment_id, description")
+    .in("moment_id", momentIds)
+    .eq("user_id", auth.userId)
+    .eq("is_chosen", true);
+
+  if (!data) return {};
+
+  const result: Record<string, string> = {};
+  for (const row of data) {
+    const { nativeTitle, description } = decodeNativePathFields(row.description);
+    result[row.moment_id] = nativeTitle ?? description.slice(0, 60);
+  }
+  return result;
+}
+
 export async function listPathsForMoment(
   momentId: string,
 ): Promise<{ paths: Path[] } | { error: string }> {

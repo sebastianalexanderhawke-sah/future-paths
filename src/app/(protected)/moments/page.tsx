@@ -24,14 +24,14 @@ export default async function MomentsPage() {
           <Link href="/overview" className="text-sm text-zinc-500 hover:text-zinc-700">
             Future Paths
           </Link>
-          <h1 className="text-lg font-semibold text-zinc-900">Moments</h1>
+          <h1 className="text-lg font-semibold text-zinc-900">Your Situations</h1>
         </div>
         <div className="flex items-center gap-3">
-          <Link
+            <Link
             href="/moments/new"
             className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
           >
-            New moment
+            New situation
           </Link>
           <form action={signOut}>
             <button
@@ -47,15 +47,15 @@ export default async function MomentsPage() {
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-6 py-12">
         {moments.length === 0 ? (
           <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-12 text-center">
-            <p className="text-zinc-600">No moments yet.</p>
+            <p className="text-zinc-600">No situations yet.</p>
             <p className="mt-2 text-sm text-zinc-500">
               Capture a meaningful decision or crossroads to begin.
             </p>
             <Link
-              href="/moments/new"
+              href="/situations/new"
               className="mt-6 inline-block rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
             >
-              Create your first moment
+              Create your first situation
             </Link>
           </div>
         ) : (
