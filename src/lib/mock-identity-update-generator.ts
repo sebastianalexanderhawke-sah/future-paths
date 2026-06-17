@@ -20,7 +20,7 @@ export function generateMockIdentityUpdate(input: {
       update_type: "reality_shift",
       title: "Intention meets reality",
       summary: `Your first check-in on "${moment.title}" may mark where prediction begins meeting outcome. ${checkIn.identity_impact}`,
-      themes: checkIn.theme_changes.map((change) => change.theme).slice(0, 2),
+      themes: checkIn.theme_changes.map((change) => change.theme as ThemeName).slice(0, 2),
     };
   }
 
@@ -40,7 +40,7 @@ export function generateMockIdentityUpdate(input: {
         update_type: "pattern_strengthened",
         title: `${change.theme} may be strengthening`,
         summary: `Across your check-ins on "${moment.title}", the theme of ${change.theme} may be recurring with greater weight.`,
-        themes: [change.theme],
+        themes: [change.theme as ThemeName],
       };
     }
   }
@@ -55,7 +55,7 @@ export function generateMockIdentityUpdate(input: {
         update_type: "theme_emerging",
         title: `${change.theme} may be emerging`,
         summary: `Your latest check-in on "${moment.title}" may suggest ${change.theme} is becoming more present in how this path unfolds.`,
-        themes: [change.theme],
+        themes: [change.theme as ThemeName],
       };
     }
   }

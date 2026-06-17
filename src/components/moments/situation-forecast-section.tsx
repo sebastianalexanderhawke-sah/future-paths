@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CheckInCard } from "@/components/check-ins/check-in-card";
 import { CheckInForm } from "@/components/check-ins/check-in-form";
+import { ReflectionAnswerForm } from "@/components/reflections/reflection-answer-form";
 import { CurrentForecastFutureCard } from "@/components/home/forecast-simplification-cards";
 import type { ForecastSections } from "@/components/home/forecast-utils";
 import type { ScannableFuture } from "@/components/home/output-refinement";
@@ -37,8 +38,6 @@ function readAndClearSnapshot(): ForecastSections | null {
   }
 }
 
-// ── Disappeared future card (transition state) ───────────────────────────────
-
 function DisappearedFutureCard({ future }: { future: ScannableFuture }) {
   return (
     <div className="opacity-40">
@@ -54,8 +53,6 @@ function DisappearedFutureCard({ future }: { future: ScannableFuture }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-
 type SituationForecastSectionProps = {
   sections: ForecastSections | null;
   isRegenerated: boolean;
@@ -64,8 +61,11 @@ type SituationForecastSectionProps = {
   hasChosenPath: boolean;
   checkIns: CheckIn[];
   checkInIdentitySummaries?: Record<string, string | null>;
-  /** Movement per future title (only present when ≥2 forecast versions exist). */
   movementMap?: Record<string, FutureMovement>;
+  /** When true, check-in form renders above the forecast (Phase 4). */
+  checkInFirst?: boolean;
+  /** The most recent check-in with an unanswered reflection question. */
+  pendingReflection?: CheckIn | null;
 };
 
 export function SituationForecastSection({
@@ -77,12 +77,13 @@ export function SituationForecastSection({
   checkIns,
   checkInIdentitySummaries,
   movementMap,
+  checkInFirst = false,
+  pendingReflection = null,
 }: SituationForecastSectionProps) {
   const [previousSections, setPreviousSections] = useState<ForecastSections | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // On mount: check sessionStorage for a pre-submit snapshot
   useEffect(() => {
     const snapshot = readAndClearSnapshot();
     if (snapshot && sections) {
@@ -100,10 +101,7 @@ export function SituationForecastSection({
 
   const handleBeforeSubmit = useCallback(() => {
     if (!sections) return;
-    const payload: SnapshotPayload = {
-      sections,
-      timestamp: Date.now(),
-    };
+    const payload: SnapshotPayload = { sections, timestamp: Date.now() };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, [sections]);
 
@@ -118,8 +116,6 @@ export function SituationForecastSection({
     return computeForecastDiff(previousSections, sections);
   }, [transitioning, previousSections, sections]);
 
-  // ── Forecast render ────────────────────────────────────────────────────────
-
   const allFutures = sections ? flattenFutures(sections) : [];
   const topFutures = allFutures.slice(0, TOP_FUTURES_COUNT);
   const remainingFutures = allFutures.slice(TOP_FUTURES_COUNT);
@@ -130,47 +126,171 @@ export function SituationForecastSection({
     return prev.filter((f) => diff.disappeared.has(normalizeTitle(f.title)));
   }, [transitioning, diff, previousSections]);
 
-  return (
-    <>
-      {/* ── 3. Future forecast ─────────────────────────────────────────────── */}
-      {sections ? (
-        <section className="rounded-lg border border-zinc-200 bg-white p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-medium text-zinc-900">What might happen next?</h2>
-              {isRegenerated && generatedAt ? (
+  // In Phase 4, the most recent check-in is shown prominently by the page.
+  // Here we only show history (everything after the first).
+  const historyCheckIns = checkInFirst ? checkIns.slice(1) : checkIns;
+
+  const checkInSection = hasChosenPath ? (
+    <section id="check-in" className="rounded-xl border border-zinc-200 bg-white p-6">
+      {checkInFirst ? (
+        <>
+          <h2 className="text-sm font-semibold text-zinc-900">What has actually happened?</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Describe what you&apos;ve lived since you last checked in.
+          </p>
+        </>
+      ) : (
+        <>
+          <h2 className="text-sm font-semibold text-zinc-900">Check in</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            What actually happened? Reality carries more weight than prediction.
+          </p>
+        </>
+      )}
+
+      <div className="mt-5">
+        <CheckInForm momentId={momentId} onBeforeSubmit={handleBeforeSubmit} />
+      </div>
+
+      {/* Pending reflection question — inline, directly after the form */}
+      {pendingReflection?.reflection_question ? (
+        <div className="mt-6 rounded-lg border border-zinc-100 bg-zinc-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+            A question worth sitting with
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-900">
+            {pendingReflection.reflection_question}
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            This question is about how you operate, not just this situation.
+          </p>
+          <div className="mt-4">
+            <ReflectionAnswerForm
+              checkInId={pendingReflection.id}
+              submitLabel="Answer this question"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {historyCheckIns.length > 0 ? (
+        <div className="mt-8 flex flex-col gap-3">
+          <h3 className="text-sm font-medium text-zinc-500">Earlier check-ins</h3>
+          {historyCheckIns.map((checkIn) => (
+            <CheckInCard
+              key={checkIn.id}
+              checkIn={checkIn}
+              identityUpdateSummary={checkInIdentitySummaries?.[checkIn.id] ?? null}
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  ) : null;
+
+  const forecastSection = sections ? (
+    <section className="rounded-xl border border-zinc-200 bg-white p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          {checkInFirst && isRegenerated ? (
+            <>
+              <h2 className="text-sm font-semibold text-zinc-900">How the picture has changed</h2>
+              {generatedAt ? (
                 <p className="mt-1 text-xs text-zinc-500">
-                  Updated based on your check-in on{" "}
+                  Updated after your check-in on{" "}
                   {new Date(generatedAt).toLocaleDateString()}
                 </p>
               ) : null}
-            </div>
-            {transitioning ? (
-              <button
-                type="button"
-                onClick={dismissTransition}
-                className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-600 hover:bg-zinc-200"
-              >
-                Done
-              </button>
-            ) : null}
+            </>
+          ) : (
+            <>
+              <h2 className="text-sm font-semibold text-zinc-900">What might unfold</h2>
+              <p className="mt-1 text-xs text-zinc-500">
+                A forecast based on your chosen path. This will update as you check in.
+              </p>
+            </>
+          )}
+        </div>
+        {transitioning ? (
+          <button
+            type="button"
+            onClick={dismissTransition}
+            className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-600 hover:bg-zinc-200"
+          >
+            Done
+          </button>
+        ) : null}
+      </div>
+
+      <div className="mt-5 flex flex-col gap-3">
+        {transitioning && disappearedFutures.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+              No longer likely
+            </p>
+            {disappearedFutures.map((future) => (
+              <DisappearedFutureCard key={future.title} future={future} />
+            ))}
           </div>
+        ) : null}
 
-          <div className="mt-5 flex flex-col gap-3">
-            {/* Disappeared futures (transition only) */}
-            {transitioning && disappearedFutures.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                  No longer likely
-                </p>
-                {disappearedFutures.map((future) => (
-                  <DisappearedFutureCard key={future.title} future={future} />
-                ))}
-              </div>
-            ) : null}
+        {topFutures.map((future) => {
+          const rendering = toCurrentFutureRendering(future);
+          const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
+          return (
+            <div key={future.title} className="relative">
+              {isNew ? (
+                <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
+                  New
+                </span>
+              ) : null}
+              <CurrentForecastFutureCard
+                future={rendering}
+                movement={movementMap?.[future.title]}
+              />
+            </div>
+          );
+        })}
 
-            {/* Top 3 futures */}
-            {topFutures.map((future) => {
+        {remainingFutures.length > 0 ? (
+          <details className="group">
+            <summary className="cursor-pointer list-none rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500 hover:bg-zinc-50 [&::-webkit-details-marker]:hidden">
+              <span className="group-open:hidden">
+                See all futures ({remainingFutures.length} more)
+              </span>
+              <span className="hidden group-open:inline">Hide</span>
+            </summary>
+            <div className="mt-2 flex flex-col gap-3">
+              {remainingFutures.map((future) => {
+                const rendering = toCurrentFutureRendering(future);
+                const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
+                return (
+                  <div key={future.title} className="relative">
+                    {isNew ? (
+                      <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
+                        New
+                      </span>
+                    ) : null}
+                    <CurrentForecastFutureCard
+                      future={rendering}
+                      movement={movementMap?.[future.title]}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </details>
+        ) : null}
+
+        {(sections.wildCardFutures ?? []).length > 0 ? (
+          <div className="mt-6 flex flex-col gap-3 border-t border-zinc-100 pt-5">
+            <div>
+              <h3 className="text-sm font-medium text-zinc-700">Wild card futures</h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                What could happen that you&apos;d never expect?
+              </p>
+            </div>
+            {(sections.wildCardFutures ?? []).map((future) => {
               const rendering = toCurrentFutureRendering(future);
               const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
               return (
@@ -183,106 +303,30 @@ export function SituationForecastSection({
                   <CurrentForecastFutureCard
                     future={rendering}
                     movement={movementMap?.[future.title]}
+                    cardVariant="wildcard"
                   />
                 </div>
               );
             })}
-
-            {/* Remaining futures (collapsed) */}
-            {remainingFutures.length > 0 ? (
-              <details className="group">
-                <summary className="cursor-pointer list-none rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500 hover:bg-zinc-50 [&::-webkit-details-marker]:hidden">
-                  <span className="group-open:hidden">
-                    See all futures ({remainingFutures.length} more)
-                  </span>
-                  <span className="hidden group-open:inline">Hide</span>
-                </summary>
-                <div className="mt-2 flex flex-col gap-3">
-                  {remainingFutures.map((future) => {
-                    const rendering = toCurrentFutureRendering(future);
-                    const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
-                    return (
-                      <div key={future.title} className="relative">
-                        {isNew ? (
-                          <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
-                            New
-                          </span>
-                        ) : null}
-                        <CurrentForecastFutureCard
-                          future={rendering}
-                          movement={movementMap?.[future.title]}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </details>
-            ) : null}
-
-            {/* Wild card futures */}
-            {(sections.wildCardFutures ?? []).length > 0 ? (
-              <div className="mt-6 flex flex-col gap-3 border-t border-zinc-100 pt-5">
-                <div>
-                  <h3 className="text-sm font-medium text-[var(--state-emerging)]">
-                    <span aria-hidden="true" className="mr-1.5">
-                      🃏
-                    </span>
-                    Wild Card Futures
-                  </h3>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    What could happen that you&apos;d never expect?
-                  </p>
-                </div>
-                {(sections.wildCardFutures ?? []).map((future) => {
-                  const rendering = toCurrentFutureRendering(future);
-                  const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
-                  return (
-                    <div key={future.title} className="relative">
-                      {isNew ? (
-                        <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
-                          New
-                        </span>
-                      ) : null}
-                      <CurrentForecastFutureCard
-                        future={rendering}
-                        movement={movementMap?.[future.title]}
-                        cardVariant="wildcard"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
           </div>
-        </section>
-      ) : null}
+        ) : null}
+      </div>
+    </section>
+  ) : null;
 
-      {/* ── 4. Check-ins ───────────────────────────────────────────────────── */}
-      {hasChosenPath ? (
-        <section id="check-in" className="rounded-lg border border-zinc-200 bg-white p-6">
-          <h2 className="text-sm font-medium text-zinc-900">Check-ins</h2>
-          <p className="mt-2 text-sm text-zinc-600">
-            What actually happened? Reality carries more weight than prediction.
-          </p>
+  if (checkInFirst) {
+    return (
+      <>
+        {checkInSection}
+        {forecastSection}
+      </>
+    );
+  }
 
-          <div className="mt-6">
-            <CheckInForm momentId={momentId} onBeforeSubmit={handleBeforeSubmit} />
-          </div>
-
-          {checkIns.length > 0 ? (
-            <div className="mt-8 flex flex-col gap-3">
-              <h3 className="text-sm font-medium text-zinc-900">History</h3>
-              {checkIns.map((checkIn) => (
-                <CheckInCard
-                  key={checkIn.id}
-                  checkIn={checkIn}
-                  identityUpdateSummary={checkInIdentitySummaries?.[checkIn.id] ?? null}
-                />
-              ))}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
+  return (
+    <>
+      {forecastSection}
+      {checkInSection}
     </>
   );
 }

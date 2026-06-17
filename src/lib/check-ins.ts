@@ -294,8 +294,7 @@ export async function createCheckIn(
       .from("check_ins")
       .update({ reflection_question: reflectionEvaluation.question })
       .eq("id", checkIn.id)
-      .eq("user_id", auth.userId)
-      .catch(() => {});
+      .eq("user_id", auth.userId);
 
     checkIn.reflection_question = reflectionEvaluation.question;
   }

@@ -208,6 +208,71 @@ export async function generatePaths(
   return { paths: insertedPaths };
 }
 
+/**
+ * Creates a single path record that is immediately chosen, for situations that
+ * have already happened (Forecast Mode). No AI is involved — the path represents
+ * the reality the user is already navigating.
+ */
+export async function createForecastModePath(
+  momentId: string,
+): Promise<{ path: Path } | { error: string }> {
+  const auth = await requireUser();
+  if ("error" in auth) return auth;
+
+  const supabase = await createClient();
+
+  const { data: moment, error: momentError } = await supabase
+    .from("moments")
+    .select("id, title")
+    .eq("id", momentId)
+    .eq("user_id", auth.userId)
+    .maybeSingle();
+
+  if (momentError || !moment) {
+    return { error: momentError?.message ?? "Moment not found." };
+  }
+
+  const chosenAt = new Date().toISOString();
+
+  const { data: path, error: pathError } = await supabase
+    .from("paths")
+    .insert({
+      moment_id: momentId,
+      user_id: auth.userId,
+      description: moment.title,
+      future_shift: "",
+      sort_order: 0,
+      benefits: [],
+      consequences: [],
+      themes: [],
+      is_chosen: true,
+      chosen_at: chosenAt,
+    })
+    .select("*")
+    .single();
+
+  if (pathError || !path) {
+    return { error: pathError?.message ?? "Failed to create path." };
+  }
+
+  await supabase.from("timeline_events").insert({
+    user_id: auth.userId,
+    event_type: "path_chosen",
+    reference_type: "path",
+    reference_id: path.id,
+    title: "Path chosen",
+    summary: moment.title,
+    metadata: {
+      moment_id: momentId,
+      path_id: path.id,
+      path_description: moment.title,
+      themes: [],
+    },
+  });
+
+  return { path };
+}
+
 export async function choosePath(
   momentId: string,
   pathId: string,

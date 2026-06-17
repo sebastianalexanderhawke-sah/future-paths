@@ -16,8 +16,8 @@ import type {
   ThemeName,
   TimelineEventType,
   TimelineReferenceType,
-  type CheckInThemeName,
-  type ThemeChangeDirection,
+  CheckInThemeName,
+  ThemeChangeDirection,
 } from "@/types/enums";
 
 export type Profile = {
@@ -342,6 +342,11 @@ export type CheckInInsert = Pick<
   theme_changes?: ThemeChange[];
 };
 
+export type CheckInUpdate = {
+  reflection_question?: string | null;
+  reflection_answer?: string | null;
+};
+
 export type IdentityUpdateInsert = Pick<
   IdentityUpdate,
   | "user_id"
@@ -641,7 +646,7 @@ export type Database = {
       check_ins: {
         Row: CheckIn;
         Insert: CheckInInsert;
-        Update: never;
+        Update: CheckInUpdate;
         Relationships: [
           {
             foreignKeyName: "check_ins_user_id_fkey";

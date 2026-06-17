@@ -1,6 +1,8 @@
 "use server";
 
+import { redirect } from "next/navigation";
 
+import { createForecastModePath } from "@/lib/paths";
 
 import { forecastOutputSchema } from "@/lib/ai/schemas/forecast";
 
@@ -374,5 +376,68 @@ export async function runFutureForecastAction(input: {
 
   };
 
+}
+
+export type ForecastModeResponse =
+  | { error: string; momentId: null }
+  | { error: null; momentId: string };
+
+/**
+ * Forecast Mode entry action: generates a forecast for a new situation,
+ * then auto-creates and auto-chooses a single path so the situation enters
+ * the standard check-in/reflection pipeline.
+ */
+export async function runForecastModeAction(input: {
+  situationText: string;
+  contextSummary: string | null;
+}): Promise<ForecastModeResponse> {
+  const forecastResponse = await runFutureForecastAction(input);
+
+  if (forecastResponse.error) {
+    return { error: forecastResponse.error, momentId: null };
+  }
+
+  if (!forecastResponse.result) {
+    return { error: "Forecast generation returned no result.", momentId: null };
+  }
+
+  const momentId = forecastResponse.result.momentId;
+
+  const pathResult = await createForecastModePath(momentId);
+  if ("error" in pathResult) {
+    return { error: pathResult.error, momentId: null };
+  }
+
+  return { error: null, momentId };
+}
+
+/**
+ * Server action for the Phase 1 fallback on the situation detail page.
+ * Used for legacy moments that were created without a mode. Generates a
+ * forecast for the existing moment, then auto-creates and auto-chooses a path.
+ */
+export async function generateForecastForMomentAction(
+  formData: FormData,
+): Promise<void> {
+  const momentId = formData.get("momentId");
+  if (typeof momentId !== "string" || !momentId.trim()) return;
+
+  const momentResult = await getMoment(momentId);
+  if ("error" in momentResult) return;
+
+  const { moment } = momentResult;
+
+  const forecastResponse = await runFutureForecastAction({
+    situationText: moment.title,
+    contextSummary: moment.description,
+    momentId,
+  });
+
+  if (forecastResponse.error || !forecastResponse.result) return;
+
+  const pathResult = await createForecastModePath(momentId);
+  if ("error" in pathResult) return;
+
+  redirect(`/moments/${momentId}`);
 }
 

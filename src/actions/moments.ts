@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 
 import { createMoment, updateMoment } from "@/lib/moments";
 
+export type ResolveTransformFormState = {
+  error: string | null;
+};
+
 export type MomentFormState = {
   error: string | null;
 };
@@ -69,4 +73,32 @@ export async function archiveMomentAction(formData: FormData) {
   }
 
   redirect("/moments");
+}
+
+export async function resolveAndTransformAction(
+  _prevState: ResolveTransformFormState,
+  formData: FormData,
+): Promise<ResolveTransformFormState> {
+  const momentId = formData.get("momentId");
+  const newTitle = formData.get("newTitle");
+
+  if (typeof momentId !== "string") {
+    return { error: "Invalid submission." };
+  }
+
+  if (typeof newTitle !== "string" || !newTitle.trim()) {
+    return { error: "Please name the new situation before continuing." };
+  }
+
+  const archiveResult = await updateMoment(momentId, { status: "archived" });
+  if ("error" in archiveResult) {
+    return { error: archiveResult.error };
+  }
+
+  const createResult = await createMoment({ title: newTitle.trim() });
+  if ("error" in createResult) {
+    return { error: createResult.error };
+  }
+
+  redirect(`/moments/${createResult.moment.id}`);
 }

@@ -84,10 +84,8 @@ export function generateMockFutureSelves(input: {
   }
 
   for (const change of input.checkInThemeChanges) {
-    themeScores.set(
-      change.theme,
-      (themeScores.get(change.theme) ?? 0) + themeChangeWeight(change) * 3,
-    );
+    const t = change.theme as ThemeName;
+    themeScores.set(t, (themeScores.get(t) ?? 0) + themeChangeWeight(change) * 3);
   }
 
   for (const theme of input.identityUpdateThemes) {

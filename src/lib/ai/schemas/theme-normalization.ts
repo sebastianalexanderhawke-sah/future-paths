@@ -218,7 +218,7 @@ export function normalizeThemeChangesArray(changes: unknown): ThemeChange[] {
     return [{ theme: "Reflection", direction: "emerging" }];
   }
 
-  const seen = new Set<ThemeName>();
+  const seen = new Set<CheckInThemeName>();
   const normalized: ThemeChange[] = [];
 
   for (const [index, item] of changes.entries()) {

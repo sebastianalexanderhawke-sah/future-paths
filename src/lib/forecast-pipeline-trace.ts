@@ -98,6 +98,7 @@ export class ForecastPipelineTraceCollector {
       active: this.sections.active.map((entry) => ({ ...entry })),
       hidden: this.sections.hidden.map((entry) => ({ ...entry })),
       blind_spots: this.sections.blind_spots.map((entry) => ({ ...entry })),
+      wild_card: this.sections.wild_card.map((entry) => ({ ...entry })),
     };
   }
 }

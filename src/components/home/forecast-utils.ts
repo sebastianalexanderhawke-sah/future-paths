@@ -75,21 +75,27 @@ export function buildForecastSections(
   selectedPathTitle?: string,
   contextSummary?: string | null,
 ): ForecastSections {
-  return buildScannableForecastSections(
-    crossroad,
-    futureSelves,
-    situationTitle,
-    selectedPath,
-    selectedPathTitle,
-    contextSummary,
-  );
+  return {
+    ...buildScannableForecastSections(
+      crossroad,
+      futureSelves,
+      situationTitle,
+      selectedPath,
+      selectedPathTitle,
+      contextSummary,
+    ),
+    wildCardFutures: [],
+  };
 }
 
 export function withForecastFallbacks(
   sections: ForecastSections,
   situationTitle: string,
 ): ForecastSections {
-  return withScannableForecastFallbacks(sections, situationTitle);
+  return {
+    ...withScannableForecastFallbacks(sections, situationTitle),
+    wildCardFutures: sections.wildCardFutures,
+  };
 }
 
 export function formatForecastSituationSummary(summary: string): string {

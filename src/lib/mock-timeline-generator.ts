@@ -61,7 +61,7 @@ export type TimelineGenerationInput = {
 };
 
 type InternalEvidence = ChapterEvidenceDraft & {
-  themeScores: Map<ThemeName, number>;
+  themeScores: Map<string, number>;
   isMoment: boolean;
   isCheckInOrUpdate: boolean;
 };
@@ -224,8 +224,8 @@ function buildNarrativeTitle(topThemes: ThemeName[]): string {
   return "A Period of Becoming";
 }
 
-function aggregateThemeScores(items: InternalEvidence[]): Map<ThemeName, number> {
-  const scores = new Map<ThemeName, number>();
+function aggregateThemeScores(items: InternalEvidence[]): Map<string, number> {
+  const scores = new Map<string, number>();
 
   for (const item of items) {
     for (const [theme, score] of item.themeScores) {
@@ -236,12 +236,12 @@ function aggregateThemeScores(items: InternalEvidence[]): Map<ThemeName, number>
   return scores;
 }
 
-function topThemes(scores: Map<ThemeName, number>, limit = 3): ThemeName[] {
+function topThemes(scores: Map<string, number>, limit = 3): ThemeName[] {
   return [...scores.entries()]
     .filter(([, score]) => score > 0)
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
-    .map(([theme]) => theme);
+    .map(([theme]) => theme as ThemeName);
 }
 
 function meetsQualityGate(items: InternalEvidence[]): boolean {
@@ -303,7 +303,7 @@ function buildEvidenceItems(input: TimelineGenerationInput): InternalEvidence[] 
 
   for (const path of input.chosenPaths) {
     const occurredAt = path.chosen_at ?? path.created_at;
-    const themeScores = new Map<ThemeName, number>();
+    const themeScores = new Map<string, number>();
 
     for (const theme of path.themes) {
       themeScores.set(theme, 1);
@@ -322,7 +322,7 @@ function buildEvidenceItems(input: TimelineGenerationInput): InternalEvidence[] 
   }
 
   for (const checkIn of input.checkIns) {
-    const themeScores = new Map<ThemeName, number>();
+    const themeScores = new Map<string, number>();
 
     for (const change of checkIn.theme_changes) {
       themeScores.set(
@@ -344,7 +344,7 @@ function buildEvidenceItems(input: TimelineGenerationInput): InternalEvidence[] 
   }
 
   for (const update of input.identityUpdates) {
-    const themeScores = new Map<ThemeName, number>();
+    const themeScores = new Map<string, number>();
 
     for (const theme of update.themes) {
       themeScores.set(theme, (themeScores.get(theme) ?? 0) + 2);
@@ -368,7 +368,7 @@ function buildEvidenceItems(input: TimelineGenerationInput): InternalEvidence[] 
     }
 
     const weight = 1 + futureSelf.momentum / 50;
-    const themeScores = new Map<ThemeName, number>();
+    const themeScores = new Map<string, number>();
 
     for (const theme of futureSelf.themes) {
       themeScores.set(theme, (themeScores.get(theme) ?? 0) + weight);
@@ -392,7 +392,7 @@ function buildEvidenceItems(input: TimelineGenerationInput): InternalEvidence[] 
     }
 
     const weight = 1 + contradiction.intensity / 100;
-    const themeScores = new Map<ThemeName, number>();
+    const themeScores = new Map<string, number>();
 
     for (const theme of contradiction.themes) {
       themeScores.set(theme, (themeScores.get(theme) ?? 0) + weight);
@@ -415,7 +415,7 @@ function buildEvidenceItems(input: TimelineGenerationInput): InternalEvidence[] 
       continue;
     }
 
-    const themeScores = new Map<ThemeName, number>();
+    const themeScores = new Map<string, number>();
 
     for (const theme of alternateSelf.themes) {
       themeScores.set(theme, (themeScores.get(theme) ?? 0) + 2.5);

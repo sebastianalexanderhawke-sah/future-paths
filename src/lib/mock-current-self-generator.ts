@@ -30,7 +30,7 @@ function aggregateThemes(input: {
   identityUpdates: Pick<IdentityUpdate, "themes">[];
   futureSelves: Pick<FutureSelf, "themes" | "momentum">[];
 }): ThemeName[] {
-  const scores = new Map<ThemeName, number>();
+  const scores = new Map<string, number>();
 
   for (const theme of input.pathThemes) {
     scores.set(theme, (scores.get(theme) ?? 0) + 1);
@@ -64,7 +64,7 @@ function aggregateThemes(input: {
     .filter(([, score]) => score > 0)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
-    .map(([theme]) => theme);
+    .map(([theme]) => theme as ThemeName);
 }
 
 function formatThemeList(themes: ThemeName[]): string {
