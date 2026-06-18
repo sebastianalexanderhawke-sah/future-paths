@@ -15,6 +15,10 @@ export type ForecastFutureDraft = {
 };
 
 export type ForecastOutput = {
+  /** Concise plain-language summary of what the system understands about the
+   *  situation. Optional so cached data and test fixtures predating this
+   *  field remain valid. */
+  current_understanding?: string;
   active: ForecastFutureDraft[];
   hidden: ForecastFutureDraft[];
   blind_spots: ForecastFutureDraft[];
@@ -33,6 +37,7 @@ export const forecastFutureSchema = z.object({
 // validation) is still a valid parse result. fillSection's curated fallback
 // append handles padding sparse or empty arrays to display minimums.
 export const forecastOutputSchema = z.object({
+  current_understanding: tentativeTextSchema.optional(),
   active: z.array(forecastFutureSchema).min(0).max(6),
   hidden: z.array(forecastFutureSchema).min(0).max(5),
   blind_spots: z.array(forecastFutureSchema).min(0).max(5),
@@ -40,6 +45,7 @@ export const forecastOutputSchema = z.object({
 }) satisfies z.ZodType<ForecastOutput>;
 
 const looseForecastShape = z.object({
+  current_understanding: z.unknown().optional(),
   active: z.array(z.unknown()),
   hidden: z.array(z.unknown()),
   blind_spots: z.array(z.unknown()),
@@ -71,7 +77,13 @@ export function parseForecastOutput(data: unknown): ForecastOutput {
   // Throw on malformed top-level structure (not an object with the three arrays).
   const shape = looseForecastShape.parse(data);
 
+  const understandingResult =
+    typeof shape.current_understanding === "string"
+      ? tentativeTextSchema.safeParse(shape.current_understanding)
+      : null;
+
   return {
+    ...(understandingResult?.success ? { current_understanding: understandingResult.data } : {}),
     active: filterItems(shape.active),
     hidden: filterItems(shape.hidden),
     blind_spots: filterItems(shape.blind_spots),

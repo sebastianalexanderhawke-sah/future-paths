@@ -287,6 +287,12 @@ export async function runFutureForecastAction(input: {
 
 
 
+  if (forecastGeneration.data.current_understanding) {
+    await updateMoment(momentId, {
+      current_understanding: forecastGeneration.data.current_understanding,
+    }).catch(() => {});
+  }
+
   const refreshedMoment = await getMoment(momentId);
 
   if ("error" in refreshedMoment) {

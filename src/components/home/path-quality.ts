@@ -286,17 +286,27 @@ function preservePathSentence(text: string, stages?: PathTextStageCapture): stri
   return preserved;
 }
 
+// Generic personality-trait dumps ("...who is more confident, adaptable, and
+// comfortable...") describe no concrete behavior — just adjectives — and are
+// exactly the self-help phrasing the prompt rules ban. Substantive behavioral
+// clauses ("...who acts on interest early...", "...who builds relational
+// groundwork...") name an actual action and are allowed through even though
+// they share the same "you may become someone who" opener.
+const TRAIT_DUMP_PATTERN = /\b(is|are)\s+more\s+\w+/i;
+
 function isReflectiveFutureShiftViolation(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) {
     return true;
   }
 
-  if (/^you may become someone who .+/i.test(trimmed) && trimmed.length >= 30) {
+  const isTraitDump = TRAIT_DUMP_PATTERN.test(trimmed);
+
+  if (/^you may become someone who .+/i.test(trimmed) && trimmed.length >= 30 && !isTraitDump) {
     return false;
   }
 
-  if (/^you may become .+/i.test(trimmed) && trimmed.length >= 30) {
+  if (/^you may become .+/i.test(trimmed) && trimmed.length >= 30 && !isTraitDump) {
     return false;
   }
 
@@ -797,10 +807,9 @@ export function formatPathSummary(
     return preservePathSentence(trimmedDescription);
   }
 
-  if (SUMMARY_BY_TITLE[title]) {
-    return SUMMARY_BY_TITLE[title]!;
-  }
-
+  // Try to derive a summary from Claude's own description/benefits before
+  // reaching for the canned per-title table — that table is a safety net for
+  // when nothing usable can be extracted, not the default.
   const sentences = splitSentences(description);
   if (sentences.length > 1) {
     const summary = summarizeToCompleteSentence(sentences.slice(1).join(" "));
@@ -981,14 +990,9 @@ export function formatPathSummaryWithTrace(
     };
   }
 
-  if (SUMMARY_BY_TITLE[title]) {
-    const final = SUMMARY_BY_TITLE[title]!;
-    return {
-      summary: final,
-      trace: buildPathTextTransformationTrace(original, title, final, final),
-    };
-  }
-
+  // Try to derive a summary from Claude's own description/benefits before
+  // reaching for the canned per-title table — that table is a safety net for
+  // when nothing usable can be extracted, not the default.
   const sentences = splitSentences(description);
   if (sentences.length > 1) {
     const candidate = sentences.slice(1).join(" ");

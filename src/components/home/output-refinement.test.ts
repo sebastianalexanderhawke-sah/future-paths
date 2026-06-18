@@ -31,9 +31,9 @@ describe("output refinement", () => {
     expect(formatted.explanation.split(/[.!?]/).filter(Boolean).length).toBeLessThanOrEqual(2);
     expect(formatted.benefits.length).toBeGreaterThanOrEqual(3);
     expect(formatted.consequences.length).toBeGreaterThanOrEqual(3);
-    expect(formatted.futureYou).toBe(
-      "You may become someone who is more adaptable, confident, and comfortable taking risks over time.",
-    );
+    // The generic "you may become someone who..." template is banned even
+    // when grammatically complete — it falls back to the per-title default.
+    expect(formatted.futureYou).toBe("More willing to move before every detail feels settled.");
   });
 
   it("normalizes long bullets into short scan-friendly phrases", () => {

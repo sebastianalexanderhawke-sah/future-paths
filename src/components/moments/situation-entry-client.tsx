@@ -22,10 +22,11 @@ type Step = "situation" | "mode" | "questions" | "action";
 
 function currentStep(
   situationText: string,
+  additionalContext: string,
   goal: SituationGoal | null,
   questionsComplete: boolean,
 ): Step {
-  if (!situationText.trim()) return "situation";
+  if (!situationText.trim() || !additionalContext.trim()) return "situation";
   if (!goal) return "mode";
   if (!questionsComplete) return "questions";
   return "action";
@@ -44,7 +45,7 @@ export function SituationEntryClient() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const step = currentStep(situationText, goal, questionsComplete);
+  const step = currentStep(situationText, additionalContext, goal, questionsComplete);
 
   // Reset questions and answers whenever situation text or goal changes
   const prevGoalRef = useRef<SituationGoal | null>(null);
@@ -143,10 +144,11 @@ export function SituationEntryClient() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <label htmlFor="situation-text" className="text-lg font-semibold text-zinc-900">
-            What situation is weighing on you?
+            Give this situation a short title
           </label>
-          <textarea
+          <input
             id="situation-text"
+            type="text"
             value={situationText}
             onChange={(e) => {
               setSituationText(e.target.value);
@@ -155,30 +157,30 @@ export function SituationEntryClient() {
               }
             }}
             autoFocus
-            rows={3}
-            maxLength={500}
-            placeholder="Describe it in a sentence or two…"
-            className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base text-zinc-900 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 resize-none"
+            maxLength={120}
+            placeholder="e.g. A friendship feels different lately"
+            className="rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base text-zinc-900 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200"
           />
         </div>
 
-        <details className="group">
-          <summary className="cursor-pointer list-none text-sm text-zinc-400 hover:text-zinc-600 [&::-webkit-details-marker]:hidden">
-            <span className="group-open:hidden">+ Add context (optional)</span>
-            <span className="hidden group-open:inline">− Hide context</span>
-          </summary>
-          <div className="mt-3">
-            <textarea
-              id="additional-context"
-              value={additionalContext}
-              onChange={(e) => setAdditionalContext(e.target.value)}
-              rows={3}
-              maxLength={2000}
-              placeholder="Background, constraints, people involved — anything relevant…"
-              className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-400 resize-none"
-            />
-          </div>
-        </details>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="additional-context" className="text-sm font-semibold text-zinc-900">
+            What's the context?
+          </label>
+          <p className="text-sm text-zinc-500">
+            This is what the forecast and paths are actually built from — be specific.
+          </p>
+          <textarea
+            id="additional-context"
+            required
+            value={additionalContext}
+            onChange={(e) => setAdditionalContext(e.target.value)}
+            rows={4}
+            maxLength={2000}
+            placeholder="What happened, who's involved, what you've tried, any constraints…"
+            className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none focus:border-zinc-400 resize-none"
+          />
+        </div>
       </div>
 
       {/* ── Mode selector ────────────────────────────────────────────── */}

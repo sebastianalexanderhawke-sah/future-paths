@@ -1,41 +1,41 @@
-import Link from "next/link";
-
-import { FutureSelfPortraitCard } from "@/components/overview/future-self-portrait-card";
 import { OverviewEmptyPanel } from "@/components/overview/overview-empty-panel";
 import { OverviewSection } from "@/components/overview/overview-section";
+import { CardShell } from "@/components/ui/card-shell";
 import type { FutureSelf } from "@/types/database";
+import type { FutureSelfStage } from "@/types/enums";
 
-type FutureSelfHomeSectionProps = {
-  futureSelf: FutureSelf | null;
+const STAGE_LABELS: Record<FutureSelfStage, string> = {
+  possible: "Possible",
+  emerging: "Emerging",
+  future_self: "Future self",
 };
 
-export function FutureSelfHomeSection({ futureSelf }: FutureSelfHomeSectionProps) {
+type FutureSelfHomeSectionProps = {
+  futureSelves: FutureSelf[];
+};
+
+export function FutureSelfHomeSection({ futureSelves }: FutureSelfHomeSectionProps) {
   return (
     <OverviewSection
       label="Becoming"
-      title="Who am I becoming?"
-      description="Long-term identity trajectory"
-      viewAllHref={futureSelf ? "/future-selves" : undefined}
-      className="gap-[var(--space-zone)]"
+      title="Who might I be becoming?"
+      viewAllHref={futureSelves.length > 0 ? "/future-selves" : undefined}
     >
-      {futureSelf ? (
-        <div className="flex justify-center">
-          <FutureSelfPortraitCard
-            futureSelf={futureSelf}
-            featured
-            className="w-full max-w-[22rem] min-w-0 sm:max-w-[24rem]"
-          />
+      {futureSelves.length > 0 ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {futureSelves.map((futureSelf) => (
+            <CardShell key={futureSelf.id} variant="elevated" className="p-4">
+              <h3 className="text-body font-medium text-ink-primary">{futureSelf.name}</h3>
+              <p className="mt-1.5 text-label text-ink-tertiary">
+                Momentum {futureSelf.momentum} · {STAGE_LABELS[futureSelf.stage]}
+              </p>
+            </CardShell>
+          ))}
         </div>
       ) : (
         <OverviewEmptyPanel>
-          A long-term future self will appear here as patterns emerge across your
-          situations and check-ins.{" "}
-          <Link
-            href="/future-selves"
-            className="mt-4 inline-block text-ink-primary underline-offset-4 hover:underline"
-          >
-            Discover futures
-          </Link>
+          Future Selves will appear here as patterns emerge across your situations
+          and check-ins.
         </OverviewEmptyPanel>
       )}
     </OverviewSection>

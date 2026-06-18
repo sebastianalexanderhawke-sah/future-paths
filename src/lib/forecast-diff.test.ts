@@ -600,7 +600,9 @@ describe("Wild card futures — visual distinction", () => {
     expect(CARD_SHELL_SOURCE).toContain("wildcard");
     expect(FORECAST_CARDS_SOURCE).toContain('cardVariant = "elevated"');
     expect(FORECAST_RESULT_SOURCE).toContain('cardVariant="wildcard"');
-    expect(SITUATION_FORECAST_SOURCE).toContain('cardVariant="wildcard"');
+    // Wild cards are merged into the unified future list (not a separate
+    // section), so the variant is applied conditionally by title lookup.
+    expect(SITUATION_FORECAST_SOURCE).toContain('wildCardTitles.has(future.title) ? "wildcard"');
   });
 });
 

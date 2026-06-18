@@ -17,13 +17,19 @@ import {
   formatPathFutureYouWithTrace,
   formatPathSummaryWithTrace,
 } from "@/components/home/path-quality";
-import { formatPathTitle, toPathTitleInput } from "@/components/home/path-titles";
+import {
+  formatPathTitle,
+  normalizeNativeTitle,
+  toPathTitleInput,
+  validateNativePathTitle,
+} from "@/components/home/path-titles";
 import type { ForecastFutureSource } from "@/lib/forecast-source-attribution";
 import type {
   PathTextFieldTrace,
   PathTextTransformationPathAudit,
 } from "@/lib/path-text-transformation-trace";
 import type { FutureShiftAuditItem } from "@/lib/future-shift-preservation";
+import type { ThemeName } from "@/types/enums";
 
 export type ScannablePath = {
   title: string;
@@ -178,6 +184,27 @@ function hasExpansionText(
   );
 }
 
+// Prefers Claude's own native title (stored alongside the path description)
+// whenever it is present and well-formed. The archetype/regex classifier in
+// formatPathTitle is a safety net for when generation is missing or invalid
+// (e.g. a fragment, wrong word count, or banned phrase) — not the default
+// source of truth for display titles.
+function resolveScannablePathTitle(
+  nativeTitle: string | null | undefined,
+  description: string,
+  themes: ThemeName[],
+  index: number,
+): string {
+  if (nativeTitle?.trim()) {
+    const normalized = normalizeNativeTitle(nativeTitle);
+    if (validateNativePathTitle(normalized).valid) {
+      return normalized;
+    }
+  }
+
+  return formatPathTitle(description, themes, index);
+}
+
 export function formatScannablePath(
   path: PathLike,
   index = 0,
@@ -195,8 +222,9 @@ export function formatScannablePathWithTrace(
   textTraces: PathTextFieldTrace[];
   futureShiftAudit: FutureShiftAuditItem;
 } {
-  const { description } = toPathTitleInput(path);
-  const title = titleOverride ?? formatPathTitle(description, path.themes ?? [], index);
+  const { title: nativeTitle, description } = toPathTitleInput(path);
+  const title =
+    titleOverride ?? resolveScannablePathTitle(nativeTitle, description, path.themes ?? [], index);
   const explanationResult = formatPathSummaryWithTrace(description, path.benefits, title);
   const benefitsResult = formatPathBenefitsWithTrace(path.benefits, title);
   const consequencesResult = formatPathConsequencesWithTrace(path.consequences, title);

@@ -365,6 +365,14 @@ function normalizePreservableForecastTitle(title: string): string {
   return toTitleCase(title.trim().replace(/[.!?]+$/, ""));
 }
 
+// Preservation no longer requires literal word-overlap with the user's own
+// text (isGroundedFutureText) as a hard gate. A title that is concrete and
+// event-oriented (isPhotographableFuture) and doesn't invent a specific
+// unsupported topic (mentionsInventedTopic) is preserved even when it
+// introduces a novel-but-plausible detail the user never typed themselves —
+// that's the point of forecasting. Word-overlap grounding is still used
+// elsewhere (resolveForecastTitle, isValidRealityFuture) as one acceptable
+// path, just no longer the only one.
 function shouldPreserveForecastTitle(title: string, bundle: GroundingBundle): boolean {
   const normalized = normalizePreservableForecastTitle(title);
   if (!normalized) {
@@ -380,10 +388,6 @@ function shouldPreserveForecastTitle(title: string, bundle: GroundingBundle): bo
   }
 
   if (!isPhotographableFuture(normalized)) {
-    return false;
-  }
-
-  if (!isGroundedFutureText(normalized, bundle)) {
     return false;
   }
 
@@ -587,17 +591,31 @@ function formatForecastWhy(
   return buildGroundedWhy(title, bundle, best ? toFirstSentence(best, 120) : null);
 }
 
+// A piece of forecast text is acceptable if EITHER it overlaps with the
+// user's own words (the original grounding signal — still useful for
+// restatement-style content) OR it's concrete/event-oriented and doesn't
+// invent a specific unsupported topic. Requiring word-overlap as the only
+// path rejected novel-but-plausible details by design, since introducing
+// new specifics is the entire point of forecasting; it isn't evidence the
+// future is unrelated or made up.
+function isRealityTextAcceptable(text: string, bundle: GroundingBundle): boolean {
+  return (
+    isGroundedFutureText(text, bundle) ||
+    (isPhotographableFuture(text) && !mentionsInventedTopic(text, bundle))
+  );
+}
+
 function isValidRealityFuture(future: ScannableFuture, bundle?: GroundingBundle): boolean {
   if (!future.title || isReflectiveForecast(future.title)) {
     return false;
   }
 
   if (bundle) {
-    if (!isGroundedFutureText(future.title, bundle)) {
+    if (!isRealityTextAcceptable(future.title, bundle)) {
       return false;
     }
 
-    if (!isGroundedFutureText(future.futureImpact, bundle)) {
+    if (!isRealityTextAcceptable(future.futureImpact, bundle)) {
       return false;
     }
   } else {
@@ -824,6 +842,56 @@ function uniqueRealityFutures(futures: ScannableFuture[], maxItems: number): Sca
   }
 
   return result;
+}
+
+/**
+ * Each category (active/hidden/blind_spots/wild_card) is filled independently
+ * by fillSection, including padding vacant slots from per-category static
+ * fallback pools. Those pools can overlap (e.g. "She Assumes You're Not
+ * Interested" exists in both the relationship hidden-futures fallback and the
+ * context blind-spot fallback), and title canonicalization (upgradeToSceneTitle
+ * / TITLE_REWRITES) can independently rewrite two different categories' raw
+ * text to the same final title. fillSection only dedupes within its own
+ * category, so the same title can still survive in two different sections.
+ * This is the last-mile guard: keep a title only in the highest-priority
+ * category it appears in (active > hidden > blind_spots > wild_card), so the
+ * same future never renders twice across the assembled sections.
+ *
+ * Only applied in processGeneratedForecastSections (the live AI forecast
+ * pipeline). The deterministic reality-grounding builders below
+ * (buildSelectedPathForecastSections, buildRealityForecastSections,
+ * withRealityForecastFallbacks) sometimes place the same real-world future in
+ * two categories on purpose (e.g. a path consequence surfaces as both the
+ * direct hidden outcome and a contextual blind spot) — existing tests pin
+ * that behavior, so cross-category dedup is intentionally not applied there.
+ */
+function dedupeFuturesAcrossSections<
+  T extends {
+    activeFutures: ScannableFuture[];
+    hiddenFutures: ScannableFuture[];
+    blindSpotFutures: ScannableFuture[];
+    wildCardFutures: ScannableFuture[];
+  },
+>(sections: T): T {
+  const seen = new Set<string>();
+
+  const dedupeList = (futures: ScannableFuture[]): ScannableFuture[] =>
+    futures.filter((future) => {
+      const key = normalizeComparable(future.title);
+      if (!key || seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+
+  return {
+    ...sections,
+    activeFutures: dedupeList(sections.activeFutures),
+    hiddenFutures: dedupeList(sections.hiddenFutures),
+    blindSpotFutures: dedupeList(sections.blindSpotFutures),
+    wildCardFutures: dedupeList(sections.wildCardFutures),
+  };
 }
 
 function prioritizeSurvivorFutures(
@@ -1279,7 +1347,7 @@ export function buildSituationFallbackFutures(
     blindSpotFutures: ScannableFuture[];
   };
 
-  if (/\b(girl|guy|boy|crush|like|dating|relationship|work crush)\b/.test(lower) || domain === "work-crush") {
+  if (/\b(girl|guy|boy|crush|dating|work crush)\b/.test(lower) || domain === "work-crush") {
     base = buildRelationshipFallbacks(groundingBundle);
   } else if (
     /\b(dallas|move|relocat|new city|new job|moved to|moving to|job offer|might get a job)\b/.test(lower) ||
@@ -1441,6 +1509,27 @@ function fillSection(
     });
   }
 
+  // Two different raw titles can canonicalize to the same final title (e.g.
+  // via upgradeToSceneTitle/TITLE_REWRITES). Drop later duplicates so a slot
+  // re-opens for the fallback fill instead of showing the same future twice.
+  const seenSurvivorTitles = new Set<string>();
+  for (let index = 0; index < slots.length; index += 1) {
+    const slot = slots[index];
+    if (!slot) continue;
+    const key = normalizeComparable(slot.title);
+    if (seenSurvivorTitles.has(key)) {
+      slots[index] = null;
+      slotAudit[index] = {
+        raw: slotAudit[index]!.raw,
+        survived: false,
+        displayedTitle: null,
+        source: "none",
+      };
+      continue;
+    }
+    seenSurvivorTitles.add(key);
+  }
+
   const lockedKeys = new Set(
     slots
       .filter((future): future is ScannableFuture => future !== null)
@@ -1454,10 +1543,16 @@ function fillSection(
   const fillVacantSlots = (
     candidates: ScannableFuture[],
     source: "recovery" | "fallback",
+    maxFills: number = Infinity,
   ): void => {
     let candidateIndex = 0;
+    let fillsApplied = 0;
 
     for (let slotIndex = 0; slotIndex < slots.length; slotIndex += 1) {
+      if (fillsApplied >= maxFills) {
+        break;
+      }
+
       if (slots[slotIndex] !== null) {
         continue;
       }
@@ -1472,6 +1567,7 @@ function fillSection(
 
         slots[slotIndex] = tagForecastFuture(candidate, source, source, null);
         lockedKeys.add(key);
+        fillsApplied += 1;
         if (source === "recovery") {
           recoveryAdds += 1;
         } else {
@@ -1510,9 +1606,12 @@ function fillSection(
     );
   }
 
-  // Curated fallback: always fill remaining vacant slots from static content.
-  // No AI calls — groundedFallback is pre-filtered static ScannableFuture[].
-  fillVacantSlots(groundedFallback, "fallback");
+  // Curated fallback: only fill enough vacant slots to reach the section
+  // minimum. Fallback futures are a safety net for when there aren't enough
+  // valid generated futures — not padding added merely to fill every slot
+  // when enough situation-specific futures already survived. No AI calls —
+  // groundedFallback is pre-filtered static ScannableFuture[].
+  fillVacantSlots(groundedFallback, "fallback", Math.max(0, limits.min - survivorCount));
 
   let final: ScannableFuture[] = slots.filter(
     (future): future is ScannableFuture => future !== null,
@@ -1846,11 +1945,15 @@ export function processGeneratedForecastSections(
       : undefined,
   );
 
-  return {
+  const deduped = dedupeFuturesAcrossSections({
     activeFutures: activeFill.futures,
     hiddenFutures: hiddenFill.futures,
     blindSpotFutures: blindSpotFill.futures,
     wildCardFutures: wildCardFill.futures,
+  });
+
+  return {
+    ...deduped,
     ...(collector
       ? {
           pipelineTrace: collector.build(),
@@ -1894,7 +1997,7 @@ function buildContextBlindSpotFutures(
   const path = selectedPathTitle?.toLowerCase() ?? "";
 
   if (
-    /\b(girl|guy|crush|work|colleague)\b/.test(bundle) &&
+    /\b(girl|guy|crush|dating)\b/.test(bundle) &&
     /friendship first|build closer|stay connected/.test(path)
   ) {
     return [
@@ -1930,7 +2033,7 @@ function buildContextBlindSpotFutures(
   }
 
   if (
-    /\b(girl|guy|crush|work|colleague)\b/.test(bundle) &&
+    /\b(girl|guy|crush|dating)\b/.test(bundle) &&
     /ask her out|direct approach|change the context/.test(path)
   ) {
     return [

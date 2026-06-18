@@ -24,6 +24,21 @@ type SnapshotPayload = {
   timestamp: number;
 };
 
+// Render-time safety net: generation already dedupes futures within and
+// across categories, but stored forecasts saved before that fix (or any
+// future code path that builds sections another way) could still contain a
+// repeated title. Since `key={future.title}` requires uniqueness, dedupe by
+// normalized title right before building the rendered list.
+function dedupeByNormalizedTitle(futures: ScannableFuture[]): ScannableFuture[] {
+  const seen = new Set<string>();
+  return futures.filter((future) => {
+    const key = normalizeTitle(future.title);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function readAndClearSnapshot(): ForecastSections | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -116,24 +131,46 @@ export function SituationForecastSection({
     return computeForecastDiff(previousSections, sections);
   }, [transitioning, previousSections, sections]);
 
-  const allFutures = sections ? flattenFutures(sections) : [];
+  const allFutures = sections
+    ? dedupeByNormalizedTitle([...flattenFutures(sections), ...(sections.wildCardFutures ?? [])])
+    : [];
   const topFutures = allFutures.slice(0, TOP_FUTURES_COUNT);
   const remainingFutures = allFutures.slice(TOP_FUTURES_COUNT);
+  const wildCardTitles = useMemo(
+    () => new Set((sections?.wildCardFutures ?? []).map((future) => future.title)),
+    [sections],
+  );
 
   const disappearedFutures = useMemo(() => {
     if (!transitioning || !diff || !previousSections) return [];
     const prev = flattenFutures(previousSections);
-    return prev.filter((f) => diff.disappeared.has(normalizeTitle(f.title)));
+    return dedupeByNormalizedTitle(prev.filter((f) => diff.disappeared.has(normalizeTitle(f.title))));
   }, [transitioning, diff, previousSections]);
 
-  // In Phase 4, the most recent check-in is shown prominently by the page.
+  // In Phase 4, the most recent check-in is shown prominently above the form.
   // Here we only show history (everything after the first).
   const historyCheckIns = checkInFirst ? checkIns.slice(1) : checkIns;
+
+  const mostRecentCheckIn = checkInFirst ? (checkIns[0] ?? null) : null;
 
   const checkInSection = hasChosenPath ? (
     <section id="check-in" className="rounded-xl border border-zinc-200 bg-white p-6">
       {checkInFirst ? (
         <>
+          {mostRecentCheckIn ? (
+            <div className="mb-6">
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                Most recent check-in
+              </p>
+              <div className="mt-3">
+                <CheckInCard
+                  checkIn={mostRecentCheckIn}
+                  identityUpdateSummary={checkInIdentitySummaries?.[mostRecentCheckIn.id] ?? null}
+                  variant="prominent"
+                />
+              </div>
+            </div>
+          ) : null}
           <h2 className="text-sm font-semibold text-zinc-900">What has actually happened?</h2>
           <p className="mt-1 text-sm text-zinc-500">
             Describe what you&apos;ve lived since you last checked in.
@@ -247,6 +284,7 @@ export function SituationForecastSection({
               <CurrentForecastFutureCard
                 future={rendering}
                 movement={movementMap?.[future.title]}
+                cardVariant={wildCardTitles.has(future.title) ? "wildcard" : undefined}
               />
             </div>
           );
@@ -274,41 +312,13 @@ export function SituationForecastSection({
                     <CurrentForecastFutureCard
                       future={rendering}
                       movement={movementMap?.[future.title]}
+                      cardVariant={wildCardTitles.has(future.title) ? "wildcard" : undefined}
                     />
                   </div>
                 );
               })}
             </div>
           </details>
-        ) : null}
-
-        {(sections.wildCardFutures ?? []).length > 0 ? (
-          <div className="mt-6 flex flex-col gap-3 border-t border-zinc-100 pt-5">
-            <div>
-              <h3 className="text-sm font-medium text-zinc-700">Wild card futures</h3>
-              <p className="mt-1 text-xs text-zinc-500">
-                What could happen that you&apos;d never expect?
-              </p>
-            </div>
-            {(sections.wildCardFutures ?? []).map((future) => {
-              const rendering = toCurrentFutureRendering(future);
-              const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
-              return (
-                <div key={future.title} className="relative">
-                  {isNew ? (
-                    <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
-                      New
-                    </span>
-                  ) : null}
-                  <CurrentForecastFutureCard
-                    future={rendering}
-                    movement={movementMap?.[future.title]}
-                    cardVariant="wildcard"
-                  />
-                </div>
-              );
-            })}
-          </div>
         ) : null}
       </div>
     </section>

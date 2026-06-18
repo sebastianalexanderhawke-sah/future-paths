@@ -39,6 +39,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
   if ("error" in identityUpdatesResult) notFound();
 
   const { moment } = momentResult;
+  const situationUnderstanding = moment.current_understanding ?? moment.description;
   const { paths } = pathsResult;
   const { checkIns } = checkInsResult;
   const { identityUpdates } = identityUpdatesResult;
@@ -69,8 +70,6 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
     hasCheckIns
       ? (checkIns.find((ci) => ci.reflection_question && !ci.reflection_answer) ?? null)
       : null;
-
-  const mostRecentCheckIn = hasCheckIns ? checkIns[0] : null;
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -105,13 +104,13 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
         ════════════════════════════════════════════════════════════════════ */}
         {isArchived ? (
           <>
-            {moment.description ? (
+            {situationUnderstanding ? (
               <section className="rounded-xl border border-zinc-200 bg-white p-6">
                 <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                  The situation
+                  What Future Paths Understands
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-700">
-                  {moment.description}
+                  {situationUnderstanding}
                 </p>
               </section>
             ) : null}
@@ -166,13 +165,13 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
         ════════════════════════════════════════════════════════════════════ */}
         {!isArchived && !hasPaths ? (
           <>
-            {moment.description ? (
+            {situationUnderstanding ? (
               <section className="rounded-xl border border-zinc-200 bg-white p-6">
                 <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                  The situation
+                  What Future Paths Understands
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-700">
-                  {moment.description}
+                  {situationUnderstanding}
                 </p>
               </section>
             ) : null}
@@ -226,14 +225,14 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
         ════════════════════════════════════════════════════════════════════ */}
         {!isArchived && hasPaths && !hasChosenPath ? (
           <>
-            {moment.description ? (
+            {situationUnderstanding ? (
               <details className="group rounded-xl border border-zinc-200 bg-white">
                 <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3 text-sm text-zinc-500 hover:bg-zinc-50 [&::-webkit-details-marker]:hidden">
                   <span className="font-medium text-zinc-700 group-open:hidden line-clamp-1">
-                    {moment.description}
+                    {situationUnderstanding}
                   </span>
                   <span className="hidden font-medium text-zinc-700 group-open:block">
-                    The situation
+                    What Future Paths Understands
                   </span>
                   <span aria-hidden="true" className="ml-3 shrink-0 text-zinc-400">
                     <span className="group-open:hidden">↓</span>
@@ -241,7 +240,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                   </span>
                 </summary>
                 <div className="border-t border-zinc-100 px-5 pb-4 pt-3">
-                  <p className="text-sm leading-relaxed text-zinc-700">{moment.description}</p>
+                  <p className="text-sm leading-relaxed text-zinc-700">{situationUnderstanding}</p>
                 </div>
               </details>
             ) : null}
@@ -314,19 +313,6 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
               checkInFirst={false}
             />
 
-            <div className="rounded-xl border border-dashed border-zinc-200 bg-white px-6 py-5 text-center">
-              <p className="text-sm text-zinc-500">
-                Check in when something has happened. There&apos;s no required schedule — come when
-                reality has something to say.
-              </p>
-              <a
-                href="#check-in"
-                className="mt-3 inline-block text-sm font-medium text-zinc-900 underline underline-offset-4"
-              >
-                Check in now
-              </a>
-            </div>
-
             <div className="pt-2 text-center">
               <Link
                 href={`/moments/${moment.id}/resolve`}
@@ -344,25 +330,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
         ════════════════════════════════════════════════════════════════════ */}
         {!isArchived && hasChosenPath && hasCheckIns ? (
           <>
-            {/* Most recent check-in — prominent */}
-            {mostRecentCheckIn ? (
-              <section className="rounded-xl border border-zinc-200 bg-white p-6">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                  Most recent check-in
-                </p>
-                <div className="mt-3">
-                  <CheckInCard
-                    checkIn={mostRecentCheckIn}
-                    identityUpdateSummary={
-                      checkInIdentitySummaries?.[mostRecentCheckIn.id] ?? null
-                    }
-                    variant="prominent"
-                  />
-                </div>
-              </section>
-            ) : null}
-
-            {/* Check-in form + pending reflection + evolved forecast + history */}
+            {/* Most recent check-in (shown prominently) + check-in form + pending reflection + evolved forecast + history */}
             <SituationForecastSection
               sections={forecastSections}
               isRegenerated={isRegenerated}

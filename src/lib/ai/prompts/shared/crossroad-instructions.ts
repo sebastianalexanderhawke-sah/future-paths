@@ -25,6 +25,13 @@ export const CROSSROAD_PATH_RULES = `Path rules (Decision Simulator):
 
 - Anti-fabrication rule: The situation summary and paths must not invent specific facts the user did not provide — no fabricated timeframes ("a year ago"), no fabricated prior actions ("you already told him..."). Stick to what was actually said. For anything unspecified, use open or hedged language ("at some point," "after a falling out") rather than inventing specifics. Before finalising, check: does any path assume or contradict a detail that was invented rather than stated by the user? If so, remove the invented detail from the summary and adjust the path.
 
+- Respect-the-answer rule: Any explicit judgment, belief, or fact the user stated in their context answers is a hard constraint, not a suggestion to weigh against other options. A path's title, description, benefits, consequences, and future_shift must never assert or rely on something the user already explicitly ruled out. Paths may still explore an action the user dismissed (e.g. apologizing) as long as the path's own text does not contradict the user's stated belief about it.
+  Bad: user answer "An apology would not change anything" → a path titled or described around "an apology is the only thing that could change things."
+  Good: user answer "An apology would not change anything" → a path about apologizing anyway frames it as "closure for yourself, not because it changes her mind" — consistent with what the user said.
+  Before finalising, check each path against every context answer: does this path state or imply the opposite of something the user explicitly said? If so, rewrite the path to fit what the user actually said.
+
+- Distinct-strategy rule: Paths must represent genuinely different approaches, not the same underlying strategy said two different ways. Before finalising, check each pair of paths: if both paths would lead the user to do essentially the same thing (e.g. two variations of "reach out and explain yourself"), merge them and replace one with a path built on a different underlying posture — for example, when the situation involves another person, draw from a mix of postures like: re-engage/reconnect, confront/address directly, create distance, accept and let go, or seek closure without re-engaging. Not every situation supports all of these, but no two paths should land on the same posture.
+
 - Move-on rule: When the situation centres on whether to reconnect, re-engage, or pursue something involving another person, at least one path must represent deliberately choosing NOT to pursue it — accepting the situation as it stands and moving forward without re-engaging. This is a distinct, dignified choice, not the same as "wait and see" (which is passive and temporary). Only include this if genuinely relevant to the situation; not all situations involve a relationship to disengage from.`;
 
 export const CROSSROAD_BENEFIT_RULES = `Benefit rules (2-4 per path):
@@ -40,10 +47,11 @@ export const CROSSROAD_CONSEQUENCE_RULES = `Consequence rules (2-4 per path):
 - Each consequence should describe a realistic risk or tradeoff — not emotional homework.`;
 
 export const CROSSROAD_FUTURE_SHIFT_RULES = `Future shift rules (future_shift field):
-- Describe a trait or habit created by repeated action — not an inner state or therapy outcome.
-- Good: "More willing to initiate difficult conversations.", "More comfortable accepting uncertainty when reaching out.", "More decisive when opportunities appear."
-- Bad: "More self-aware.", "More reflective.", "More connected to your inner world.", "Someone who leads with reflection before motion."
-- Use "You may become someone who..." only when the trait is behavioral and observable in daily life.`;
+- Describe a concrete, situation-specific behavior change grounded in the exact people and circumstances of this situation — not a generic trait, inner state, or therapy outcome.
+- Name the specific person, relationship, or circumstance from the situation rather than describing a general life skill that could apply to any situation.
+- Good: "Brings up scheduling conflicts with her directly instead of letting them build up.", "Texts him back the same day instead of waiting to seem casual."
+- Bad: "More self-aware.", "More reflective.", "More willing to initiate difficult conversations." (true of almost any situation — tie it to this one instead)
+- Avoid the generic template "You may become someone who..." unless the rest of the sentence names this situation's specific people or circumstances rather than a universal trait.`;
 
 export const CROSSROAD_FORECAST_OUTPUT_RULES = `Forecast output rules (benefits and consequences also feed Future Forecast):
 - Treat every benefit as a likely future event: answer "What happens?"

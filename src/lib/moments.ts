@@ -71,6 +71,29 @@ export async function listMoments(): Promise<
   return { moments: data };
 }
 
+export async function listArchivedMoments(): Promise<
+  { moments: Moment[] } | { error: string }
+> {
+  const auth = await requireUser();
+  if ("error" in auth) {
+    return auth;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("moments")
+    .select("*")
+    .eq("user_id", auth.userId)
+    .eq("status", "archived")
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { moments: data };
+}
+
 export async function getMoment(
   id: string,
 ): Promise<{ moment: Moment } | { error: string }> {
@@ -163,6 +186,7 @@ export async function updateMoment(
   input: {
     title?: string;
     description?: string | null;
+    current_understanding?: string | null;
     status?: MomentStatus;
   },
 ): Promise<{ moment: Moment } | { error: string }> {
@@ -174,6 +198,7 @@ export async function updateMoment(
   const updates: {
     title?: string;
     description?: string | null;
+    current_understanding?: string | null;
     status?: MomentStatus;
   } = {};
 
@@ -193,6 +218,10 @@ export async function updateMoment(
       return { error: descriptionError };
     }
     updates.description = description;
+  }
+
+  if (input.current_understanding !== undefined) {
+    updates.current_understanding = input.current_understanding;
   }
 
   if (input.status !== undefined) {

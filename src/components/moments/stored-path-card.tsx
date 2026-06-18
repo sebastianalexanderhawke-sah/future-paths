@@ -22,15 +22,21 @@ function BulletList({ items }: BulletListProps) {
 function PathDetails({
   path,
   index,
+  showThemes = true,
 }: {
   path: Path;
   index: number;
+  showThemes?: boolean;
 }) {
   const scannable = formatScannablePath(path, index);
 
   return (
     <>
-      {path.themes.length > 0 ? (
+      {scannable.explanation ? (
+        <p className="mt-1.5 text-body-small text-ink-secondary">{scannable.explanation}</p>
+      ) : null}
+
+      {showThemes && path.themes.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {path.themes.map((theme) => (
             <ThemeChip key={theme} theme={theme} />
@@ -116,7 +122,7 @@ export function OtherPathCard({ path, index }: OtherPathCardProps) {
         </summary>
 
         <div className="border-t border-[var(--ink-tertiary)]/10 px-4 pb-4 pt-3 sm:px-5">
-          <PathDetails path={path} index={index} />
+          <PathDetails path={path} index={index} showThemes={false} />
         </div>
       </details>
     </CardShell>

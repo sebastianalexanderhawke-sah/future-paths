@@ -16,6 +16,13 @@ export const checkInGenerateV1 = createPromptModule({
   promptVersion: "1",
   taskInstructions: `Summarize lived reality for this check-in. Return reality_summary, theme_changes (1-3), and identity_impact using tentative language.
 
+Reality summary rules (strict):
+- Keep reality_summary short and direct — 2-3 short sentences total, never a multi-paragraph essay. The user already knows what happened; do not re-explain or elaborate on it.
+- Format as: "Reality: <one short sentence stating what happened>. What changed: <one short sentence on what's different now>."
+- State the bare fact plainly. Do not add interpretation, advice, or emotional commentary — theme_changes already carries the emotional read.
+  Good: "Reality: She chose him. What changed: The uncertainty is gone — the outcome is now known."
+  Bad: a multi-paragraph reflection exploring feelings, possible reasons, or what the user might do next.
+
 ${CHECK_IN_HONEST_THEME_RULES}
 
 ${STRICT_THEME_CHANGE_RULES}`,

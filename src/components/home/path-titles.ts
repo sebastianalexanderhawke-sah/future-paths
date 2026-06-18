@@ -110,7 +110,7 @@ export function detectSituationDomain(...texts: string[]): SituationDomain {
   const combined = texts.join("\n").toLowerCase();
 
   if (
-    /\b(girl|guy|crush|dating|her|him)\b/.test(combined) &&
+    /\b(girl|guy|crush|dating)\b/.test(combined) &&
     /\b(work|office|colleague|coworker)\b/.test(combined)
   ) {
     return "work-crush";
@@ -266,7 +266,7 @@ function salvageInvalidNativeTitle(title: string): string | null {
   return null;
 }
 
-function normalizeNativeTitle(title: string): string {
+export function normalizeNativeTitle(title: string): string {
   return toTitleCase(title.trim().replace(/[.!?]+$/, ""));
 }
 

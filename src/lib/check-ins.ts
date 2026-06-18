@@ -44,6 +44,41 @@ export async function getLastCheckInsForMoments(
   return result;
 }
 
+/**
+ * Returns a map of momentId → most-recent check-in (date + reality_summary)
+ * for the given moments. Used by the homepage "Recent reality" section.
+ * Safe to call with an empty array.
+ */
+export async function getLastCheckInRealityForMoments(
+  momentIds: string[],
+): Promise<Record<string, { created_at: string; reality_summary: string }>> {
+  if (momentIds.length === 0) return {};
+
+  const auth = await requireUser();
+  if ("error" in auth) return {};
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("check_ins")
+    .select("moment_id, created_at, reality_summary")
+    .in("moment_id", momentIds)
+    .eq("user_id", auth.userId)
+    .order("created_at", { ascending: false });
+
+  if (!data) return {};
+
+  const result: Record<string, { created_at: string; reality_summary: string }> = {};
+  for (const row of data) {
+    if (!(row.moment_id in result)) {
+      result[row.moment_id] = {
+        created_at: row.created_at,
+        reality_summary: row.reality_summary,
+      };
+    }
+  }
+  return result;
+}
+
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
 
