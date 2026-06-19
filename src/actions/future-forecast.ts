@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 
 import { createForecastModePath } from "@/lib/paths";
 
+import { markForecastJustGenerated } from "@/lib/forecast-visit-flag";
+
 import { forecastOutputSchema } from "@/lib/ai/schemas/forecast";
 
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
@@ -414,6 +416,8 @@ export async function runForecastModeAction(input: {
     return { error: pathResult.error, momentId: null };
   }
 
+  await markForecastJustGenerated(momentId);
+
   return { error: null, momentId };
 }
 
@@ -443,6 +447,8 @@ export async function generateForecastForMomentAction(
 
   const pathResult = await createForecastModePath(momentId);
   if ("error" in pathResult) return;
+
+  await markForecastJustGenerated(momentId);
 
   redirect(`/moments/${momentId}`);
 }

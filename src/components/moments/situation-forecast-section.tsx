@@ -81,6 +81,12 @@ type SituationForecastSectionProps = {
   checkInFirst?: boolean;
   /** The most recent check-in with an unanswered reflection question. */
   pendingReflection?: CheckIn | null;
+  /**
+   * When false, the check-in section is omitted entirely. Used to keep a
+   * freshly-generated forecast from immediately asking for a check-in —
+   * that should only appear once the user has returned to the situation.
+   */
+  showCheckIn?: boolean;
 };
 
 export function SituationForecastSection({
@@ -94,6 +100,7 @@ export function SituationForecastSection({
   movementMap,
   checkInFirst = false,
   pendingReflection = null,
+  showCheckIn = true,
 }: SituationForecastSectionProps) {
   const [previousSections, setPreviousSections] = useState<ForecastSections | null>(null);
   const [transitioning, setTransitioning] = useState(false);
@@ -153,7 +160,7 @@ export function SituationForecastSection({
 
   const mostRecentCheckIn = checkInFirst ? (checkIns[0] ?? null) : null;
 
-  const checkInSection = hasChosenPath ? (
+  const checkInSection = hasChosenPath && showCheckIn ? (
     <section id="check-in" className="rounded-xl border border-zinc-200 bg-white p-6">
       {checkInFirst ? (
         <>

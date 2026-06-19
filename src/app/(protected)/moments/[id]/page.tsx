@@ -6,9 +6,11 @@ import { generateForecastForMomentAction } from "@/actions/future-forecast";
 import { CheckInCard } from "@/components/check-ins/check-in-card";
 import { ChosenPathCard, OtherPathCard } from "@/components/moments/stored-path-card";
 import { SituationForecastSection } from "@/components/moments/situation-forecast-section";
+import { SituationSummaryCard } from "@/components/moments/situation-summary-card";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { buildCheckInIdentitySummaryMap } from "@/lib/check-in-identity-summary";
 import { listCheckInsForMoment } from "@/lib/check-ins";
+import { wasForecastJustGenerated } from "@/lib/forecast-visit-flag";
 import { getAllForecastsForMoment, parseForecastSections } from "@/lib/forecasts";
 import { computeMovementMap } from "@/lib/forecast-diff";
 import { listIdentityUpdatesForMoment } from "@/lib/identity-updates";
@@ -23,6 +25,11 @@ type MomentPageProps = {
 export default async function MomentPage({ params, searchParams }: MomentPageProps) {
   const { id } = await params;
   const { error: queryError } = await searchParams;
+  // True only while this is still the same visit that produced the
+  // forecast (a short-lived, path-scoped cookie set by the action that
+  // generated it — see markForecastJustGenerated). The check-in form stays
+  // hidden until the user returns on a later visit.
+  const isFreshlyGenerated = await wasForecastJustGenerated(id);
 
   const [momentResult, pathsResult, checkInsResult, identityUpdatesResult, allForecasts] =
     await Promise.all([
@@ -273,10 +280,16 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
 
         {/* ════════════════════════════════════════════════════════════════════
             PHASE 3 — Path chosen, no check-ins yet
-            Chosen path + initial forecast + check-in available.
+            Situation summary anchors the page, then chosen path, then
+            forecast. The check-in form stays hidden while this is still the
+            same visit that generated the forecast — see isFreshlyGenerated.
         ════════════════════════════════════════════════════════════════════ */}
         {!isArchived && hasChosenPath && !hasCheckIns ? (
           <>
+            {situationUnderstanding ? (
+              <SituationSummaryCard text={situationUnderstanding} />
+            ) : null}
+
             <section className="rounded-xl border border-zinc-200 bg-white p-6">
               <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
                 Your chosen path
@@ -311,6 +324,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
               checkInIdentitySummaries={{}}
               movementMap={movementMap}
               checkInFirst={false}
+              showCheckIn={!isFreshlyGenerated}
             />
 
             <div className="pt-2 text-center">
@@ -330,6 +344,10 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
         ════════════════════════════════════════════════════════════════════ */}
         {!isArchived && hasChosenPath && hasCheckIns ? (
           <>
+            {situationUnderstanding ? (
+              <SituationSummaryCard text={situationUnderstanding} />
+            ) : null}
+
             {/* Most recent check-in (shown prominently) + check-in form + pending reflection + evolved forecast + history */}
             <SituationForecastSection
               sections={forecastSections}
