@@ -44,15 +44,22 @@ import {
 const MIN_SIGNALS = 3;
 const MAX_SIGNALS = 5;
 const MIN_ACTIVE_FUTURES = 4;
-const MAX_ACTIVE_FUTURES = 6;
-const MIN_HIDDEN_FUTURES = 3;
-const MAX_HIDDEN_FUTURES = 5;
-const MIN_BLIND_SPOT_FUTURES = 3;
-const MAX_BLIND_SPOT_FUTURES = 5;
-const MIN_WILD_CARD_FUTURES = 3;
-const MAX_WILD_CARD_FUTURES = 3;
+const MAX_ACTIVE_FUTURES = 5;
+const MIN_HIDDEN_FUTURES = 2;
+const MAX_HIDDEN_FUTURES = 3;
+const MIN_BLIND_SPOT_FUTURES = 2;
+const MAX_BLIND_SPOT_FUTURES = 3;
+const MIN_WILD_CARD_FUTURES = 1;
+const MAX_WILD_CARD_FUTURES = 2;
 const MAX_TITLE_LENGTH = 52;
 const MAX_SUMMARY_LENGTH = 160;
+
+// Global floor for the unified, undivided list shown to the user: fallback
+// futures only pad the result up to this many total futures across all four
+// arrays combined. Above this floor, sections are allowed to come in under
+// their own min/max — a thin section is preferable to generic fallback
+// content once there's already a reasonable list to show.
+const GLOBAL_FALLBACK_FLOOR = 4;
 
 function toFirstSentence(text: string, maxLength = MAX_SUMMARY_LENGTH): string {
   const trimmed = text.trim();
@@ -1464,6 +1471,26 @@ type FillSectionResult = {
   fallbackAdds: number;
 };
 
+// Lightweight survivor count (no slots/trace/dedup bookkeeping) used to size
+// the shared global fallback budget before any section is actually filled.
+function countSurvivors(generated: ScannableFuture[], bundle: GroundingBundle): number {
+  const seen = new Set<string>();
+  let count = 0;
+
+  for (const future of generated) {
+    const survivor = filterGroundedFutureAtSlot(future, bundle);
+    if (!survivor) continue;
+
+    const key = normalizeComparable(survivor.title);
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    count += 1;
+  }
+
+  return count;
+}
+
 function attributeSurvivorFuture(
   survivor: ScannableFuture,
   rawTitle: string,
@@ -1491,6 +1518,16 @@ function fillSection(
     section: ForecastPipelineSectionKey;
     traceItems: ForecastPipelineTraceItem[];
   },
+  /**
+   * Max fallback futures this call may insert. When omitted, defaults to
+   * the old per-section behavior (pad up to this section's own min). When
+   * provided (processGeneratedForecastSections threads a shared,
+   * depleting budget derived from GLOBAL_FALLBACK_FLOOR across all four
+   * sections), it overrides limits.min as the fallback target — a section
+   * can legitimately come in under its own min if the overall list is
+   * already long enough without generic padding.
+   */
+  fallbackBudget?: number,
 ): FillSectionResult {
   const slots: (ScannableFuture | null)[] = [];
   const slotAudit: SlotFillAuditEntry[] = [];
@@ -1539,6 +1576,7 @@ function fillSection(
   let recoveryAdds = 0;
   let fallbackAdds = 0;
   const groundedFallback = filterGroundedFutures(fallback, bundle);
+  let fallbackBudgetRemaining = fallbackBudget ?? Math.max(0, limits.min - survivorCount);
 
   const fillVacantSlots = (
     candidates: ScannableFuture[],
@@ -1606,12 +1644,15 @@ function fillSection(
     );
   }
 
-  // Curated fallback: only fill enough vacant slots to reach the section
-  // minimum. Fallback futures are a safety net for when there aren't enough
-  // valid generated futures — not padding added merely to fill every slot
-  // when enough situation-specific futures already survived. No AI calls —
-  // groundedFallback is pre-filtered static ScannableFuture[].
-  fillVacantSlots(groundedFallback, "fallback", Math.max(0, limits.min - survivorCount));
+  // Curated fallback: only fill enough vacant slots to reach the fallback
+  // budget (the section minimum by default, or the shared global budget
+  // when one is threaded in). Fallback futures are a safety net for when
+  // there aren't enough valid generated futures — not padding added merely
+  // to fill every slot when enough situation-specific futures already
+  // survived. No AI calls — groundedFallback is pre-filtered static
+  // ScannableFuture[].
+  fillVacantSlots(groundedFallback, "fallback", fallbackBudgetRemaining);
+  fallbackBudgetRemaining -= fallbackAdds;
 
   let final: ScannableFuture[] = slots.filter(
     (future): future is ScannableFuture => future !== null,
@@ -1643,11 +1684,13 @@ function fillSection(
     }
   }
 
-  // (b) Curated fallback append — always runs to reach the section minimum.
-  // Uses static groundedFallback only; no AI calls.
-  if (final.length < limits.min) {
+  // (b) Curated fallback append — fills any remaining fallback budget not
+  // used by the vacant-slot pass above (e.g. because there weren't enough
+  // open slots, as when generated.length is 0). Uses static groundedFallback
+  // only; no AI calls.
+  if (fallbackBudgetRemaining > 0) {
     for (const candidate of groundedFallback) {
-      if (final.length >= limits.min) {
+      if (fallbackBudgetRemaining <= 0) {
         break;
       }
 
@@ -1659,6 +1702,7 @@ function fillSection(
       final.push(tagForecastFuture(candidate, "fallback", "fallback", null));
       lockedKeys.add(key);
       fallbackAdds += 1;
+      fallbackBudgetRemaining -= 1;
     }
   }
 
@@ -1876,6 +1920,19 @@ export function processGeneratedForecastSections(
     mapGeneratedFutureToScannableFuture(draft, bundle, wildCardTraceItems[index]),
   );
 
+  // Shared fallback budget for the unified list: only pad with generic
+  // fallback futures if the real (generated) survivor count across ALL
+  // sections combined would otherwise leave the list below
+  // GLOBAL_FALLBACK_FLOOR. A section is allowed to land under its own
+  // min if there's already enough real content overall — see fillSection's
+  // fallbackBudget parameter.
+  const totalSurvivorCount =
+    countSurvivors(activeGenerated, bundle) +
+    countSurvivors(hiddenGenerated, bundle) +
+    countSurvivors(blindSpotGenerated, bundle) +
+    countSurvivors(wildCardGenerated, bundle);
+  let sharedFallbackBudget = Math.max(0, GLOBAL_FALLBACK_FLOOR - totalSurvivorCount);
+
   const activeFill = fillSection(
     activeGenerated,
     fallbacks.activeFutures,
@@ -1892,7 +1949,10 @@ export function processGeneratedForecastSections(
           traceItems: activeTraceItems.filter(Boolean) as ForecastPipelineTraceItem[],
         }
       : undefined,
+    sharedFallbackBudget,
   );
+  sharedFallbackBudget -= activeFill.fallbackAdds;
+
   const hiddenFill = fillSection(
     hiddenGenerated,
     fallbacks.hiddenFutures,
@@ -1909,7 +1969,10 @@ export function processGeneratedForecastSections(
           traceItems: hiddenTraceItems.filter(Boolean) as ForecastPipelineTraceItem[],
         }
       : undefined,
+    sharedFallbackBudget,
   );
+  sharedFallbackBudget -= hiddenFill.fallbackAdds;
+
   const blindSpotFill = fillSection(
     blindSpotGenerated,
     fallbacks.blindSpotFutures,
@@ -1926,7 +1989,10 @@ export function processGeneratedForecastSections(
           traceItems: blindSpotTraceItems.filter(Boolean) as ForecastPipelineTraceItem[],
         }
       : undefined,
+    sharedFallbackBudget,
   );
+  sharedFallbackBudget -= blindSpotFill.fallbackAdds;
+
   const wildCardFill = fillSection(
     wildCardGenerated,
     fallbacks.wildCardFutures,
@@ -1943,6 +2009,7 @@ export function processGeneratedForecastSections(
           traceItems: wildCardTraceItems.filter(Boolean) as ForecastPipelineTraceItem[],
         }
       : undefined,
+    sharedFallbackBudget,
   );
 
   const deduped = dedupeFuturesAcrossSections({

@@ -21,12 +21,12 @@ ${FORECAST_GENERATE_RULES}`,
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
-      `Produce JSON with current_understanding, active, hidden, and blind_spots arrays.
+      `Produce JSON with current_understanding, active, hidden, blind_spots, and wild_card arrays.
 
 current_understanding: 3-5 plain-language sentences summarizing what you understand about the situation from moment.title, moment.description, and the selected path (if present) — what's happening, who's involved, and what's actually at stake. This is shown to the user as "What Future Paths Understands," so it must read as a synthesis, not a restatement of raw question-and-answer pairs. Do not invent details beyond what was provided.
 
-Each future array contains future objects with title, why, and impact.
+Each future array contains future objects with title, why, impact, signals (exactly 3), and timeframe. See the rules above for exactly what each field requires.
 
-Use the situation, selected path (if present), and context answers to generate grounded, photographable futures.`,
+Use the situation, selected path (if present), and context answers to generate grounded, specific, event-based futures.`,
     ),
 });

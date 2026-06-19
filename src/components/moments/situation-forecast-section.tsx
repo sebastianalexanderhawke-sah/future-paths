@@ -236,23 +236,18 @@ export function SituationForecastSection({
     <section className="rounded-xl border border-zinc-200 bg-white p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
+          <h2 className="text-sm font-semibold text-zinc-900">What might happen next?</h2>
           {checkInFirst && isRegenerated ? (
-            <>
-              <h2 className="text-sm font-semibold text-zinc-900">How the picture has changed</h2>
-              {generatedAt ? (
-                <p className="mt-1 text-xs text-zinc-500">
-                  Updated after your check-in on{" "}
-                  {new Date(generatedAt).toLocaleDateString()}
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <h2 className="text-sm font-semibold text-zinc-900">What might unfold</h2>
+            generatedAt ? (
               <p className="mt-1 text-xs text-zinc-500">
-                A forecast based on your chosen path. This will update as you check in.
+                Updated after your check-in on{" "}
+                {new Date(generatedAt).toLocaleDateString()}
               </p>
-            </>
+            ) : null
+          ) : (
+            <p className="mt-1 text-xs text-zinc-500">
+              A forecast based on your chosen path. This will update as you check in.
+            </p>
           )}
         </div>
         {transitioning ? (

@@ -45,7 +45,7 @@ export async function choosePathAction(formData: FormData) {
   const momentResult = await getMoment(momentId);
   if (!("error" in momentResult)) {
     const { nativeTitle, description } = decodeNativePathFields(result.path.description);
-    await runFutureForecastAction({
+    const forecastResponse = await runFutureForecastAction({
       situationText: momentResult.moment.title,
       contextSummary: momentResult.moment.description ?? null,
       momentId,
@@ -59,6 +59,14 @@ export async function choosePathAction(formData: FormData) {
         themes: result.path.themes,
       },
     });
+
+    if (forecastResponse.error) {
+      redirectWithError(
+        momentId,
+        "Your path was chosen, but we couldn't generate a forecast for it. Please try again.",
+      );
+    }
+
     await markForecastJustGenerated(momentId);
   }
 

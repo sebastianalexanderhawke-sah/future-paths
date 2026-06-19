@@ -283,6 +283,12 @@ export async function runFutureForecastAction(input: {
 
   if (!forecastGeneration.ok) {
 
+    console.error("[runFutureForecastAction] AI generation failed", {
+      momentId,
+      pathId: input.selectedPath?.id ?? null,
+      error: forecastGeneration.error,
+    });
+
     return { error: forecastGeneration.error, result: null };
 
   }
@@ -353,14 +359,23 @@ export async function runFutureForecastAction(input: {
     refreshedMoment.moment.description ?? title,
   );
 
-  // Persist forecast — non-blocking: failure does not affect the return value.
-  await saveForecast({
+  const saveResult = await saveForecast({
     userId: auth.userId,
     momentId,
     pathId: input.selectedPath?.id ?? null,
     sections,
     situationSummary,
-  }).catch(() => {});
+  });
+
+  if ("error" in saveResult) {
+    console.error("[runFutureForecastAction] Failed to save forecast", {
+      momentId,
+      pathId: input.selectedPath?.id ?? null,
+      error: saveResult.error,
+    });
+
+    return { error: `Failed to save forecast: ${saveResult.error}`, result: null };
+  }
 
   return {
 

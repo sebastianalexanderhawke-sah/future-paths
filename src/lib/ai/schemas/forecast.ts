@@ -29,19 +29,25 @@ export const forecastFutureSchema = z.object({
   title: tentativeTextSchema,
   why: tentativeTextSchema,
   impact: tentativeTextSchema,
-  signals: z.array(tentativeTextSchema).length(3),
-  timeframe: z.enum(["days", "weeks", "months", "longer_term"]),
+  // Optional to match ForecastFutureDraft: the prompt only guarantees
+  // title/why/impact, so Claude doesn't reliably include these. When
+  // signals is absent, buildSignalsFromGeneratedFuture derives it from
+  // title/why/impact instead of the item being dropped entirely.
+  signals: z.array(tentativeTextSchema).length(3).optional(),
+  timeframe: z.enum(["days", "weeks", "months", "longer_term"]).optional(),
 }) satisfies z.ZodType<ForecastFutureDraft>;
 
-// Arrays use .min(0) so an empty section (all items dropped by per-item
-// validation) is still a valid parse result. fillSection's curated fallback
-// append handles padding sparse or empty arrays to display minimums.
+// Target distribution for the unified 9-11 future list: active 4-5,
+// hidden 2-3, blind_spots 2-3, wild_card 1-2 (total 9-13 before any
+// fallback/cap trimming). A section falling short of its min fails the
+// whole generation (surfaced as an error by runFutureForecastAction)
+// rather than silently shipping a thin or fallback-padded forecast.
 export const forecastOutputSchema = z.object({
   current_understanding: tentativeTextSchema.optional(),
-  active: z.array(forecastFutureSchema).min(0).max(6),
-  hidden: z.array(forecastFutureSchema).min(0).max(5),
-  blind_spots: z.array(forecastFutureSchema).min(0).max(5),
-  wild_card: z.array(forecastFutureSchema).min(0).max(4),
+  active: z.array(forecastFutureSchema).min(4).max(5),
+  hidden: z.array(forecastFutureSchema).min(2).max(3),
+  blind_spots: z.array(forecastFutureSchema).min(2).max(3),
+  wild_card: z.array(forecastFutureSchema).min(1).max(2),
 }) satisfies z.ZodType<ForecastOutput>;
 
 const looseForecastShape = z.object({

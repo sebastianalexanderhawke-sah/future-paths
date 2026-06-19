@@ -26,12 +26,53 @@ const VALID_ITEM_C = {
   timeframe: "months",
 };
 
+const VALID_ITEM_D = {
+  title: "A Mutual Friend Mentions It",
+  why: "Shared social circles often surface information indirectly.",
+  impact: "The topic comes up without you bringing it up.",
+  signals: ["Mutual friend brings it up", "Conversation shifts unexpectedly", "New context becomes available"],
+  timeframe: "weeks",
+};
+
+const VALID_ITEM_E = {
+  title: "Plans Get Rescheduled Twice",
+  why: "Conflicting schedules can delay even agreed plans.",
+  impact: "The meetup happens later than first planned.",
+  signals: ["First date gets pushed back", "Second reschedule happens", "New date finally holds"],
+  timeframe: "weeks",
+};
+
+const VALID_ITEM_F = {
+  title: "A Schedule Conflict Appears",
+  why: "Overlapping commitments can surface once plans firm up.",
+  impact: "One of you has to adjust existing plans.",
+  signals: ["Existing commitment surfaces", "Calendars get compared", "One plan gets moved"],
+  timeframe: "days",
+};
+
+const VALID_ITEM_G = {
+  title: "A Third Person Gets Involved",
+  why: "Group dynamics often pull in people beyond the original two.",
+  impact: "The interaction is no longer just between the two of you.",
+  signals: ["Third person joins the thread", "Group dynamic shifts", "Original plan adjusts"],
+  timeframe: "weeks",
+};
+
+const VALID_WILD_CARD = {
+  title: "An Old Connection Resurfaces Unexpectedly",
+  why: "Past social ties can re-enter the picture without warning.",
+  impact: "A past relationship becomes newly relevant to the current situation.",
+  signals: ["Unexpected message arrives", "Old context resurfaces", "New decision point appears"],
+  timeframe: "months",
+};
+
 describe("forecast schema", () => {
   it("parses dedicated forecast generation output", () => {
     const parsed = parseForecastOutput({
-      active: [VALID_ITEM_A],
-      hidden: [VALID_ITEM_B],
-      blind_spots: [VALID_ITEM_C],
+      active: [VALID_ITEM_A, VALID_ITEM_D, VALID_ITEM_E, VALID_ITEM_F],
+      hidden: [VALID_ITEM_B, VALID_ITEM_G],
+      blind_spots: [VALID_ITEM_C, VALID_ITEM_D],
+      wild_card: [VALID_WILD_CARD],
     });
 
     expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
@@ -62,7 +103,11 @@ describe("forecast schema", () => {
     expect(parsed.blind_spots[0]?.timeframe).toBe("months");
   });
 
-  it("drops items with missing signals", () => {
+  it("keeps items with missing signals (derived later from title/why/impact)", () => {
+    // signals is optional on forecastFutureSchema: the prompt only
+    // guarantees title/why/impact, so an item missing signals must survive
+    // here — buildSignalsFromGeneratedFuture derives them downstream
+    // instead of the item being dropped.
     const noSignals = {
       title: "She Leaves The Team",
       why: "Job changes happen without warning.",
@@ -76,8 +121,9 @@ describe("forecast schema", () => {
       blind_spots: [VALID_ITEM_C],
     });
 
-    expect(parsed.active).toHaveLength(1);
-    expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
+    expect(parsed.active).toHaveLength(2);
+    expect(parsed.active[1]?.title).toBe("She Leaves The Team");
+    expect(parsed.active[1]?.signals).toBeUndefined();
   });
 
   it("drops items with wrong-length signals (not exactly 3)", () => {
@@ -106,7 +152,7 @@ describe("forecast schema", () => {
     expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
   });
 
-  it("drops items with missing timeframe", () => {
+  it("keeps items with missing timeframe (optional field)", () => {
     const noTimeframe = {
       title: "She Leaves The Team",
       why: "Job changes happen without warning.",
@@ -120,8 +166,9 @@ describe("forecast schema", () => {
       blind_spots: [VALID_ITEM_C],
     });
 
-    expect(parsed.active).toHaveLength(1);
-    expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
+    expect(parsed.active).toHaveLength(2);
+    expect(parsed.active[1]?.title).toBe("She Leaves The Team");
+    expect(parsed.active[1]?.timeframe).toBeUndefined();
   });
 
   it("drops items with invalid timeframe value", () => {
@@ -178,8 +225,9 @@ describe("forecast schema", () => {
         },
         withBannedWhy,
       ],
-      hidden: [VALID_ITEM_B],
-      blind_spots: [VALID_ITEM_C],
+      hidden: [VALID_ITEM_B, VALID_ITEM_G],
+      blind_spots: [VALID_ITEM_C, VALID_ITEM_F],
+      wild_card: [VALID_WILD_CARD],
     });
 
     // Item is sanitized and kept — all 5 survive.
@@ -192,7 +240,7 @@ describe("forecast schema", () => {
 
   it("sanitizes directive language across all items in a section", () => {
     const parsed = parseForecastOutput({
-      active: [VALID_ITEM_A],
+      active: [VALID_ITEM_A, VALID_ITEM_D, VALID_ITEM_E, VALID_ITEM_F],
       hidden: [
         {
           title: "First Hidden",
@@ -216,7 +264,8 @@ describe("forecast schema", () => {
           timeframe: "weeks",
         },
       ],
-      blind_spots: [VALID_ITEM_C],
+      blind_spots: [VALID_ITEM_C, VALID_ITEM_G],
+      wild_card: [VALID_WILD_CARD],
     });
 
     // All three items are sanitized and preserved — the section is no longer empty.
@@ -238,16 +287,19 @@ describe("forecast schema", () => {
           signals: ["Job posting noticed online", "Resignation handed in", "Last day approaches"],
           timeframe: "months",
         },
+        VALID_ITEM_D,
+        VALID_ITEM_E,
       ],
-      hidden: [VALID_ITEM_B],
-      blind_spots: [VALID_ITEM_C],
+      hidden: [VALID_ITEM_B, VALID_ITEM_G],
+      blind_spots: [VALID_ITEM_C, VALID_ITEM_F],
+      wild_card: [VALID_WILD_CARD],
     };
 
     const parsed = parseForecastOutput(input);
 
-    expect(parsed.active).toHaveLength(2);
-    expect(parsed.hidden).toHaveLength(1);
-    expect(parsed.blind_spots).toHaveLength(1);
+    expect(parsed.active).toHaveLength(4);
+    expect(parsed.hidden).toHaveLength(2);
+    expect(parsed.blind_spots).toHaveLength(2);
     expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
     expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
   });

@@ -585,23 +585,25 @@ describe("Wild card futures — visual distinction", () => {
     "utf-8",
   );
 
-  it("wild card section header has visual marker on main forecast view", () => {
-    expect(FORECAST_RESULT_SOURCE).toContain("Wild Card Futures");
-    expect(FORECAST_RESULT_SOURCE).toContain("titlePrefix");
-    expect(FORECAST_RESULT_SOURCE).toContain("🃏");
+  it("does not render a separate 'Wild Card Futures' section header on the main forecast view", () => {
+    // Forecasts render as one unified list now ("What might happen next?"),
+    // not divided into per-array sections with their own headers.
+    expect(FORECAST_RESULT_SOURCE).not.toContain("Wild Card Futures");
+    expect(FORECAST_RESULT_SOURCE).toContain("What might happen next?");
   });
 
-  it("wild card section header has visual marker on situation detail page", () => {
-    expect(SITUATION_FORECAST_SOURCE).toContain("Wild Card Futures");
-    expect(SITUATION_FORECAST_SOURCE).toContain("🃏");
+  it("does not render a separate 'Wild Card Futures' section header on the situation detail page", () => {
+    expect(SITUATION_FORECAST_SOURCE).not.toContain("Wild Card Futures");
+    expect(SITUATION_FORECAST_SOURCE).toContain("What might happen next?");
   });
 
   it("wild card cards use wildcard CardShell variant", () => {
     expect(CARD_SHELL_SOURCE).toContain("wildcard");
     expect(FORECAST_CARDS_SOURCE).toContain('cardVariant = "elevated"');
-    expect(FORECAST_RESULT_SOURCE).toContain('cardVariant="wildcard"');
     // Wild cards are merged into the unified future list (not a separate
-    // section), so the variant is applied conditionally by title lookup.
+    // section), so the variant is applied conditionally by title lookup on
+    // both the main forecast view and the situation detail page.
+    expect(FORECAST_RESULT_SOURCE).toContain('wildCardTitles.has(future.title) ? "wildcard"');
     expect(SITUATION_FORECAST_SOURCE).toContain('wildCardTitles.has(future.title) ? "wildcard"');
   });
 });

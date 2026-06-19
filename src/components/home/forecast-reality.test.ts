@@ -73,8 +73,8 @@ describe("forecast reality", () => {
       ),
     ).toBe(true);
     expect(sections.activeFutures.length).toBeGreaterThanOrEqual(4);
-    expect(sections.hiddenFutures.length).toBeGreaterThanOrEqual(3);
-    expect(sections.blindSpotFutures.length).toBeGreaterThanOrEqual(3);
+    expect(sections.hiddenFutures.length).toBeGreaterThanOrEqual(2);
+    expect(sections.blindSpotFutures.length).toBeGreaterThanOrEqual(2);
   });
 
   it("builds specific blind spot futures from selected path context", () => {

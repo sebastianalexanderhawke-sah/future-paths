@@ -85,8 +85,8 @@ describe("prompt registry", () => {
       profile: "forecast",
     });
 
-    expect(systemPrompt).toContain("What could actually happen next?");
-    expect(systemPrompt).toContain("photograph");
+    expect(systemPrompt).toContain("observable event");
+    expect(systemPrompt).toContain("RULE 1");
     expect(systemPrompt).toContain("blind_spots");
     expect(userPrompt).toContain("active");
     expect(userPrompt).toContain("hidden");

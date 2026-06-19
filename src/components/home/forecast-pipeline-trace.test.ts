@@ -52,6 +52,13 @@ describe("forecast pipeline trace", () => {
     expect(result.activeFutures.some((future) => future.title === "She Says Yes To Coffee")).toBe(
       true,
     );
-    expect(result.activeFutures.length).toBeGreaterThanOrEqual(4);
+    // Sections are no longer padded to their own minimum individually —
+    // fallback only tops up the unified, combined list to the global floor.
+    const totalFutures =
+      result.activeFutures.length +
+      result.hiddenFutures.length +
+      result.blindSpotFutures.length +
+      result.wildCardFutures.length;
+    expect(totalFutures).toBeGreaterThanOrEqual(4);
   });
 });

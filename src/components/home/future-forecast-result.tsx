@@ -29,39 +29,22 @@ function ForecastFutureCard({ future, cardVariant = "elevated" }: ForecastFuture
   );
 }
 
-type ForecastSectionProps = {
-  title: string;
-  question: string;
+type UnifiedForecastListProps = {
   futures: ScannableFuture[];
-  accentClass: string;
-  titlePrefix?: string;
-  cardVariant?: "elevated" | "wildcard";
+  wildCardTitles: Set<string>;
 };
 
-function ForecastSection({
-  title,
-  question,
-  futures,
-  accentClass,
-  titlePrefix,
-  cardVariant = "elevated",
-}: ForecastSectionProps) {
+function UnifiedForecastList({ futures, wildCardTitles }: UnifiedForecastListProps) {
   return (
     <section className="flex flex-col gap-3">
-      <div>
-        <p className={`text-label ${accentClass}`}>
-          {titlePrefix ? (
-            <span aria-hidden="true" className="mr-1.5">
-              {titlePrefix}
-            </span>
-          ) : null}
-          {title}
-        </p>
-        <p className="mt-1 text-body-small text-ink-secondary">{question}</p>
-      </div>
+      <p className="text-label text-ink-primary">What might happen next?</p>
       <div className="flex flex-col gap-3">
         {futures.map((future) => (
-          <ForecastFutureCard key={future.title} future={future} cardVariant={cardVariant} />
+          <ForecastFutureCard
+            key={future.title}
+            future={future}
+            cardVariant={wildCardTitles.has(future.title) ? "wildcard" : "elevated"}
+          />
         ))}
       </div>
     </section>
@@ -69,6 +52,15 @@ function ForecastSection({
 }
 
 export function FutureForecastResultView({ forecast }: FutureForecastResultProps) {
+  const wildCardFutures = forecast.sections.wildCardFutures ?? [];
+  const wildCardTitles = new Set(wildCardFutures.map((future) => future.title));
+  const allFutures = [
+    ...forecast.sections.activeFutures,
+    ...forecast.sections.hiddenFutures,
+    ...forecast.sections.blindSpotFutures,
+    ...wildCardFutures,
+  ];
+
   return (
     <CardShell
       variant="hero"
@@ -91,32 +83,7 @@ export function FutureForecastResultView({ forecast }: FutureForecastResultProps
       </div>
 
       <div className="flex flex-col gap-6 p-4 sm:p-6">
-        <ForecastSection
-          title="Active Futures"
-          question="What seems most likely to happen next?"
-          futures={forecast.sections.activeFutures}
-          accentClass="text-[var(--state-strengthened)]"
-        />
-        <ForecastSection
-          title="Hidden Futures"
-          question="What future are you probably not considering?"
-          futures={forecast.sections.hiddenFutures}
-          accentClass="text-[var(--state-emerging)]"
-        />
-        <ForecastSection
-          title="Blind Spot Futures"
-          question="What futures emerge from details you provided?"
-          futures={forecast.sections.blindSpotFutures}
-          accentClass="text-[var(--state-contradiction-detected)]"
-        />
-        <ForecastSection
-          title="Wild Card Futures"
-          question="What could happen that you'd never expect?"
-          futures={forecast.sections.wildCardFutures ?? []}
-          accentClass="text-[var(--state-emerging)]"
-          titlePrefix="🃏"
-          cardVariant="wildcard"
-        />
+        <UnifiedForecastList futures={allFutures} wildCardTitles={wildCardTitles} />
 
         <Link
           href={`/moments/${forecast.momentId}`}
