@@ -307,17 +307,29 @@ async function loadCurrentSelfContext(
     .eq("status", "active")
     .order("momentum", { ascending: false });
 
+  const { data: recentMoments } = await supabase
+    .from("moments")
+    .select("id, title, description, status, created_at")
+    .eq("user_id", base.userId)
+    .order("created_at", { ascending: false })
+    .limit(CONTEXT_LIMITS.COUNTS.moments);
+
   const { data: chosenPaths } = await supabase
     .from("paths")
-    .select("themes")
+    .select("id, moment_id, description, themes, future_shift")
     .eq("user_id", base.userId)
-    .eq("is_chosen", true);
+    .eq("is_chosen", true)
+    .order("chosen_at", { ascending: false })
+    .limit(CONTEXT_LIMITS.COUNTS.chosenPaths);
 
   const { data: checkIns } = await supabase
     .from("check_ins")
-    .select("theme_changes, identity_impact")
+    .select(
+      "id, moment_id, reflection, reality_summary, theme_changes, identity_impact, reflection_question, reflection_answer, created_at",
+    )
     .eq("user_id", base.userId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(CONTEXT_LIMITS.COUNTS.checkIns);
 
   const { data: identityUpdates } = await supabase
     .from("identity_updates")
@@ -333,8 +345,14 @@ async function loadCurrentSelfContext(
     },
     futureSelves: activeFutureSelves ?? [],
     pathThemes: (chosenPaths ?? []).flatMap((path) => path.themes as ThemeName[]),
-    checkIns: checkIns ?? [],
+    checkIns: (checkIns ?? []).map((checkIn) => ({
+      theme_changes: checkIn.theme_changes,
+      identity_impact: checkIn.identity_impact,
+    })),
     identityUpdates: identityUpdates ?? [],
+    recentMoments: recentMoments ?? [],
+    currentSelfChosenPaths: chosenPaths ?? [],
+    currentSelfCheckIns: checkIns ?? [],
     ...(options?.overrides?.reflectionQA
       ? { reflectionQA: options.overrides.reflectionQA }
       : {}),
@@ -350,7 +368,7 @@ async function loadIdentityPromptContext(
   const [{ data: currentSelf }, { data: identityUpdates }] = await Promise.all([
     supabase
       .from("current_self")
-      .select("headline, summary, themes")
+      .select("title, summary, themes, observations")
       .eq("user_id", base.userId)
       .maybeSingle(),
     supabase
@@ -514,7 +532,7 @@ async function loadTimelineContext(
       .eq("status", "active"),
     supabase
       .from("current_self")
-      .select("headline, summary, themes")
+      .select("title, summary, themes, observations")
       .eq("user_id", base.userId)
       .maybeSingle(),
   ]);

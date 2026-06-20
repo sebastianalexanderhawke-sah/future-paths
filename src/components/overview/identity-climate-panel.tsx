@@ -1,5 +1,5 @@
 import type { CurrentSelf } from "@/types/database";
-import type { ThemeName } from "@/types/enums";
+import type { CheckInThemeName } from "@/types/enums";
 
 import { CardShell } from "@/components/ui/card-shell";
 import { ClimateBand } from "@/components/ui/climate-band";
@@ -20,9 +20,9 @@ function formatUpdatedAt(updatedAt: string): string {
   });
 }
 
-function splitThemes(themes: ThemeName[]): {
-  primaryTheme: ThemeName | null;
-  supportingThemes: ThemeName[];
+function splitThemes(themes: CheckInThemeName[]): {
+  primaryTheme: CheckInThemeName | null;
+  supportingThemes: CheckInThemeName[];
 } {
   if (themes.length === 0) {
     return { primaryTheme: null, supportingThemes: [] };
@@ -94,10 +94,25 @@ export function IdentityClimatePanel({ currentSelf }: IdentityClimatePanelProps)
             Current narrative
           </h3>
           <blockquote className="mt-4 text-quote text-ink-primary">
-            {currentSelf.headline}
+            {currentSelf.title}
           </blockquote>
           <p className="mt-4 text-body text-ink-secondary">{currentSelf.summary}</p>
         </section>
+
+        {currentSelf.observations.length > 0 ? (
+          <section aria-labelledby="current-observations">
+            <h3 id="current-observations" className="text-label text-ink-tertiary">
+              What appears true right now
+            </h3>
+            <ul className="mt-4 flex flex-col gap-2">
+              {currentSelf.observations.map((observation) => (
+                <li key={observation} className="text-body-small text-ink-secondary">
+                  {observation}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </div>
     </CardShell>
   );

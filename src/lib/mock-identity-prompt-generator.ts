@@ -5,6 +5,7 @@ import type {
   IdentityUpdate,
 } from "@/types/database";
 import type { IdentityPromptType, ThemeName } from "@/types/enums";
+import { toPositiveThemes } from "@/lib/check-in-themes";
 
 export type MockIdentityPromptDraft = {
   prompt_type: IdentityPromptType;
@@ -81,9 +82,12 @@ export function generateMockIdentityPrompts(input: {
   }
 
   const drafts: MockIdentityPromptDraft[] = [];
+  const currentSelfPositiveThemes = input.currentSelf
+    ? toPositiveThemes(input.currentSelf.themes)
+    : [];
   const themeSignals =
-    input.currentSelf && input.currentSelf.themes.length > 0
-      ? input.currentSelf.themes
+    currentSelfPositiveThemes.length > 0
+      ? currentSelfPositiveThemes
       : aggregateExistingThemeSignals({
           pathThemes: input.pathThemes,
           checkIns: input.checkIns,
@@ -92,7 +96,7 @@ export function generateMockIdentityPrompts(input: {
 
   if (themeSignals.length > 0) {
     const context = input.currentSelf
-      ? `This may connect to your current self summary: "${input.currentSelf.headline}".`
+      ? `This may connect to your current self summary: "${input.currentSelf.title}".`
       : `This may connect to themes appearing across your chosen paths and check-ins.`;
 
     drafts.push({
@@ -110,7 +114,7 @@ export function generateMockIdentityPrompts(input: {
 
   if (leadingFuture) {
     const currentSelfPhrase = input.currentSelf
-      ? ` Your current self may already reflect this tension: "${input.currentSelf.headline.toLowerCase()}".`
+      ? ` Your current self may already reflect this tension: "${input.currentSelf.title.toLowerCase()}".`
       : "";
 
     drafts.push({

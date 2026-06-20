@@ -1,3 +1,5 @@
+import { revalidatePath } from "next/cache";
+
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { checkInOutputSchema } from "@/lib/ai/schemas/check-in";
 import { forecastOutputSchema } from "@/lib/ai/schemas/forecast";
@@ -338,6 +340,8 @@ export async function createCheckIn(
   // Check-in recorded: identity-relevant evidence, but routine enough that
   // it shouldn't force a regeneration on every single one.
   await requestCurrentSelfRegeneration(auth.userId);
+
+  revalidatePath(`/moments/${momentId}`);
 
   return { checkIn };
 }

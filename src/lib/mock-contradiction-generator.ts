@@ -6,6 +6,11 @@ import type {
   IdentityPromptResponse,
 } from "@/types/database";
 import type { ContradictionType, ThemeName } from "@/types/enums";
+// Contradiction themes are positive-vocabulary only (see contradiction.ts
+// schema). Current Self can now also carry difficult themes (Disappointment,
+// Hurt, ...) — drop those before reusing currentSelf.themes here rather than
+// widening contradiction's own theme vocabulary.
+import { toPositiveThemes } from "@/lib/check-in-themes";
 
 export type AnsweredPromptResponse = {
   prompt: Pick<IdentityPrompt, "id" | "prompt_type" | "question" | "themes">;
@@ -68,16 +73,17 @@ function buildCurrentVsFutureDraft(input: {
   currentSelf: CurrentSelf;
   leadingFuture: FutureSelf;
 }): MockContradictionDraft | null {
-  const overlap = themeOverlap(input.currentSelf.themes, input.leadingFuture.themes);
+  const currentPositiveThemes = toPositiveThemes(input.currentSelf.themes);
+  const overlap = themeOverlap(currentPositiveThemes, input.leadingFuture.themes);
 
   if (overlap > 0 || input.leadingFuture.themes.length === 0) {
     return null;
   }
 
-  const currentThemes = formatThemeList(input.currentSelf.themes);
+  const currentThemes = formatThemeList(currentPositiveThemes);
   const futureThemes = formatThemeList(input.leadingFuture.themes);
   const disjointCount = Math.max(
-    input.currentSelf.themes.length,
+    currentPositiveThemes.length,
     input.leadingFuture.themes.length,
   );
 
@@ -85,9 +91,9 @@ function buildCurrentVsFutureDraft(input: {
     contradiction_type: "current_vs_future",
     title: "Today and tomorrow may be pulling in different directions",
     summary: `You currently tend toward ${currentThemes.toLowerCase()}, while ${input.leadingFuture.name} may be drawing you toward ${futureThemes.toLowerCase()}. This tension may show up when your present patterns and your emerging future both feel plausible.`,
-    pole_a: input.currentSelf.headline,
+    pole_a: input.currentSelf.title,
     pole_b: `${input.leadingFuture.name} — ${input.leadingFuture.description}`,
-    themes: mergeThemes(input.currentSelf.themes, input.leadingFuture.themes),
+    themes: mergeThemes(currentPositiveThemes, input.leadingFuture.themes),
     intensity: computeIntensity(disjointCount, input.leadingFuture.momentum),
     source_refs: {
       current_self_id: input.currentSelf.id,
@@ -134,15 +140,16 @@ function buildStatedVsLivedDraft(input: {
   currentSelf: CurrentSelf;
   answeredResponse: AnsweredPromptResponse;
 }): MockContradictionDraft | null {
+  const currentPositiveThemes = toPositiveThemes(input.currentSelf.themes);
   const responseThemes = input.answeredResponse.response.themes;
-  const overlap = themeOverlap(input.currentSelf.themes, responseThemes);
+  const overlap = themeOverlap(currentPositiveThemes, responseThemes);
   const uncertain = hasUncertaintyLanguage(input.answeredResponse.response.response);
 
   if (overlap > 0 && !uncertain) {
     return null;
   }
 
-  const livedThemes = formatThemeList(input.currentSelf.themes);
+  const livedThemes = formatThemeList(currentPositiveThemes);
   const statedThemes =
     responseThemes.length > 0
       ? formatThemeList(responseThemes)
@@ -152,11 +159,11 @@ function buildStatedVsLivedDraft(input: {
     contradiction_type: "stated_vs_lived",
     title: "What you said and what patterns suggest may diverge",
     summary: `Your current self may emphasize ${livedThemes.toLowerCase()}, while your recent reflection may point toward ${statedThemes.toLowerCase()}. This may be a useful tension to sit with rather than resolve quickly.`,
-    pole_a: input.currentSelf.headline,
+    pole_a: input.currentSelf.title,
     pole_b: input.answeredResponse.response.response.slice(0, 180),
-    themes: mergeThemes(input.currentSelf.themes, responseThemes),
+    themes: mergeThemes(currentPositiveThemes, responseThemes),
     intensity: computeIntensity(
-      Math.max(1, input.currentSelf.themes.length - overlap),
+      Math.max(1, currentPositiveThemes.length - overlap),
       uncertain ? 20 : 0,
     ),
     source_refs: {

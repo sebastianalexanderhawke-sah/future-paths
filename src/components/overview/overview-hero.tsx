@@ -1,5 +1,5 @@
 import type { CurrentSelf } from "@/types/database";
-import type { ThemeName } from "@/types/enums";
+import type { CheckInThemeName } from "@/types/enums";
 
 import { CardShell } from "@/components/ui/card-shell";
 import { Button } from "@/components/ui/button";
@@ -25,8 +25,8 @@ function formatUpdatedAt(updatedAt: string): string {
 }
 
 export function OverviewHero({ currentSelf, primaryCta, secondaryCta }: OverviewHeroProps) {
-  const title = currentSelf?.headline ?? "Your current self is waiting to emerge";
-  const themes: ThemeName[] = currentSelf?.themes ?? [];
+  const title = currentSelf?.title ?? "Your current self is waiting to emerge";
+  const themes: CheckInThemeName[] = currentSelf?.themes ?? [];
 
   return (
     <CardShell variant="hero" className="flex flex-col gap-6 p-8">

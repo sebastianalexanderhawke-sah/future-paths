@@ -1,9 +1,9 @@
-import type { ThemeName } from "@/types/enums";
+import type { CheckInThemeName } from "@/types/enums";
 
 import { getThemeCssVar } from "@/lib/design/theme-colors";
 
 type ThemeChipProps = {
-  theme: ThemeName;
+  theme: CheckInThemeName;
   showDot?: boolean;
   className?: string;
 };

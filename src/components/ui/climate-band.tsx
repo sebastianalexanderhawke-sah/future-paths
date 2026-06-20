@@ -1,9 +1,9 @@
-import type { ThemeName } from "@/types/enums";
+import type { CheckInThemeName } from "@/types/enums";
 
 import { getThemeCssVar } from "@/lib/design/theme-colors";
 
 type ClimateBandProps = {
-  theme: ThemeName;
+  theme: CheckInThemeName;
   children: React.ReactNode;
   className?: string;
 };

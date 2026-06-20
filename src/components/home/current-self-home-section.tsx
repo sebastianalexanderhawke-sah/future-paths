@@ -11,8 +11,8 @@ type CurrentSelfHomeSectionProps = {
   currentSelf: CurrentSelf | null;
 };
 
-// Homepage shows only the headline, top themes, and last-updated time — a
-// preview, not the profile. The full summary paragraph lives on /current-self.
+// Homepage shows only the title, top themes, and last-updated time — a
+// preview, not the profile. The full summary and observations live on /current-self.
 export function CurrentSelfHomeSection({ currentSelf }: CurrentSelfHomeSectionProps) {
   return (
     <OverviewSection
@@ -23,7 +23,7 @@ export function CurrentSelfHomeSection({ currentSelf }: CurrentSelfHomeSectionPr
     >
       {currentSelf ? (
         <CardShell variant="elevated" className="p-4 sm:p-5">
-          <h3 className="text-h2 text-ink-primary">{currentSelf.headline}</h3>
+          <h3 className="text-h2 text-ink-primary">{currentSelf.title}</h3>
           {currentSelf.themes.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {currentSelf.themes.slice(0, 3).map((theme) => (

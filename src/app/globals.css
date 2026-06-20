@@ -135,6 +135,15 @@
   --theme-courage-soft-dark: rgb(40 26 22 / 0.85);
   --theme-courage-glow: #b84e32;
 
+  /* Theme colors — Tension (shared identity for all difficult themes:
+     Loneliness, Disappointment, Grief, Frustration, Uncertainty, Hurt,
+     Acceptance, Resilience) — reuses the contradiction-detected amber tone. */
+  --theme-tension-primary: #b45309;
+  --theme-tension-secondary: #d8954f;
+  --theme-tension-soft: #f5e6d3;
+  --theme-tension-soft-dark: rgb(42 32 20 / 0.85);
+  --theme-tension-glow: #b45309;
+
   /* Identity state colors */
   --state-strengthened: #4a8f6a;
   --state-emerging: #7b5ea7;

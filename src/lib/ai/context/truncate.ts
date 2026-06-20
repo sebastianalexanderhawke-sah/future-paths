@@ -96,10 +96,42 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
   if (bundle.currentSelf) {
     next.currentSelf = {
       ...bundle.currentSelf,
-      headline: truncateText(bundle.currentSelf.headline, limits.headline),
+      title: truncateText(bundle.currentSelf.title, limits.title),
       summary: truncateText(bundle.currentSelf.summary, limits.summary),
+      observations: bundle.currentSelf.observations.map((observation) =>
+        truncateText(observation, limits.observation),
+      ),
     };
   }
+
+  next.recentMoments = truncateArray(
+    bundle.recentMoments,
+    CONTEXT_LIMITS.COUNTS.moments,
+  )?.map((moment) => ({
+    ...moment,
+    title: truncateText(moment.title, limits.momentTitle),
+    description: truncateNullableText(moment.description, limits.momentDescription),
+  }));
+
+  next.currentSelfChosenPaths = truncateArray(
+    bundle.currentSelfChosenPaths,
+    CONTEXT_LIMITS.COUNTS.chosenPaths,
+  )?.map((path) => ({
+    ...path,
+    description: truncateText(path.description, limits.pathDescription),
+  }));
+
+  next.currentSelfCheckIns = truncateArray(
+    bundle.currentSelfCheckIns,
+    CONTEXT_LIMITS.COUNTS.checkIns,
+  )?.map((checkIn) => ({
+    ...checkIn,
+    reflection: truncateText(checkIn.reflection, limits.reflection),
+    reality_summary: truncateText(checkIn.reality_summary, limits.realitySummary),
+    identity_impact: truncateText(checkIn.identity_impact, limits.identityImpact),
+    reflection_question: truncateNullableText(checkIn.reflection_question, limits.question),
+    reflection_answer: truncateNullableText(checkIn.reflection_answer, limits.response),
+  }));
 
   next.answeredPrompts = truncateArray(
     bundle.answeredPrompts,
@@ -226,6 +258,9 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     pastCrossroad: bundle.pastCrossroad,
     selectedPastPath: bundle.selectedPastPath,
     chapterCandidates: bundle.chapterCandidates,
+    recentMoments: bundle.recentMoments,
+    currentSelfChosenPaths: bundle.currentSelfChosenPaths,
+    currentSelfCheckIns: bundle.currentSelfCheckIns,
   };
 
   serialized = JSON.stringify(reduced);

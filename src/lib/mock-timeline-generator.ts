@@ -57,7 +57,7 @@ export type TimelineGenerationInput = {
     "id" | "name" | "themes" | "status" | "updated_at" | "past_crossroad_id"
   >[];
   crossroadSnippets: Map<string, string>;
-  currentSelf: Pick<CurrentSelf, "headline" | "summary" | "themes"> | null;
+  currentSelf: Pick<CurrentSelf, "title" | "summary" | "themes"> | null;
 };
 
 type InternalEvidence = ChapterEvidenceDraft & {
@@ -278,7 +278,7 @@ function buildSummary(input: {
     return base;
   }
 
-  return `${base} Today you tend toward ${input.currentSelf.headline.toLowerCase()} — a present snapshot that may sit alongside, not replace, what this chapter describes.`;
+  return `${base} Today you tend toward ${input.currentSelf.title.toLowerCase()} — a present snapshot that may sit alongside, not replace, what this chapter describes.`;
 }
 
 function buildEvidenceItems(input: TimelineGenerationInput): InternalEvidence[] {

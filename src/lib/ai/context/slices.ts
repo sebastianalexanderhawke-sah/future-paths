@@ -44,7 +44,24 @@ export type IdentityContextBundle = {
   checkIns?: Pick<CheckIn, "theme_changes" | "identity_impact">[];
   identityUpdates?: Pick<IdentityUpdate, "title" | "summary" | "themes">[];
   futureSelves?: Pick<FutureSelf, "name" | "description" | "momentum" | "themes">[];
-  currentSelf?: Pick<CurrentSelf, "headline" | "summary" | "themes">;
+  currentSelf?: Pick<CurrentSelf, "title" | "summary" | "themes" | "observations">;
+  // Richer Current Self evidence — recent situations, chosen path details,
+  // and full check-in narratives (reflection/reality/reflection Q&A), so the
+  // generated snapshot can cite specific evidence rather than just themes.
+  recentMoments?: Pick<Moment, "id" | "title" | "description" | "status" | "created_at">[];
+  currentSelfChosenPaths?: Pick<Path, "id" | "moment_id" | "description" | "themes" | "future_shift">[];
+  currentSelfCheckIns?: Pick<
+    CheckIn,
+    | "id"
+    | "moment_id"
+    | "reflection"
+    | "reality_summary"
+    | "theme_changes"
+    | "identity_impact"
+    | "reflection_question"
+    | "reflection_answer"
+    | "created_at"
+  >[];
   answeredPrompts?: AnsweredPromptResponse[];
   checkInCount?: number;
   pastCrossroad?: Pick<

@@ -1,11 +1,11 @@
-import type { ThemeName } from "@/types/enums";
+import type { CheckInThemeName } from "@/types/enums";
 
 import { getThemeCssVar } from "@/lib/design/theme-colors";
 
 const PROMINENCE_SIZES = ["size-4", "size-3", "size-2.5"] as const;
 
 type ThemeProminenceStripProps = {
-  themes: ThemeName[];
+  themes: CheckInThemeName[];
   className?: string;
 };
 

@@ -132,9 +132,10 @@ export type FutureSelfEvent = {
 export type CurrentSelf = {
   id: string;
   user_id: string;
-  headline: string;
+  title: string;
   summary: string;
-  themes: ThemeName[];
+  themes: CheckInThemeName[];
+  observations: string[];
   created_at: string;
   updated_at: string;
 };
@@ -384,13 +385,14 @@ export type FutureSelfEventInsert = Pick<
 
 export type CurrentSelfInsert = Pick<
   CurrentSelf,
-  "user_id" | "headline" | "summary"
+  "user_id" | "title" | "summary"
 > & {
-  themes?: ThemeName[];
+  themes?: CheckInThemeName[];
+  observations?: string[];
 };
 
 export type CurrentSelfUpdate = Partial<
-  Pick<CurrentSelf, "headline" | "summary" | "themes" | "updated_at">
+  Pick<CurrentSelf, "title" | "summary" | "themes" | "observations" | "updated_at">
 >;
 
 export type IdentityPromptInsert = Pick<

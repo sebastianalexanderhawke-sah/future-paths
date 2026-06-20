@@ -9,7 +9,7 @@ export const CONTEXT_LIMITS = {
     crossroadWhatHappened: 400,
     crossroadWhyChosen: 300,
     crossroadLifeStage: 120,
-    headline: 200,
+    title: 200,
     summary: 800,
     question: 400,
     promptContext: 400,
@@ -20,6 +20,7 @@ export const CONTEXT_LIMITS = {
     alternateSelfSection: 600,
     evidenceLabel: 200,
     genericLabel: 200,
+    observation: 300,
   },
   COUNTS: {
     moments: 10,

@@ -189,9 +189,10 @@ export async function generateCurrentSelf(
     const { data: updated, error: updateError } = await supabase
       .from("current_self")
       .update({
-        headline: draft.headline,
+        title: draft.title,
         summary: draft.summary,
         themes: draft.themes,
+        observations: draft.observations,
         updated_at: now,
       })
       .eq("id", existing.id)
@@ -210,9 +211,10 @@ export async function generateCurrentSelf(
     .from("current_self")
     .insert({
       user_id: auth.userId,
-      headline: draft.headline,
+      title: draft.title,
       summary: draft.summary,
       themes: draft.themes,
+      observations: draft.observations,
     })
     .select("*")
     .single();

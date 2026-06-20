@@ -10,7 +10,7 @@ export function CurrentSelfCard({ currentSelf }: CurrentSelfCardProps) {
       <p className="text-xs text-zinc-400">
         Updated {new Date(currentSelf.updated_at).toLocaleDateString()}
       </p>
-      <h3 className="mt-2 text-sm font-medium text-zinc-900">{currentSelf.headline}</h3>
+      <h3 className="mt-2 text-sm font-medium text-zinc-900">{currentSelf.title}</h3>
       <p className="mt-3 text-sm leading-relaxed text-zinc-600">{currentSelf.summary}</p>
 
       {currentSelf.themes.length > 0 ? (
@@ -23,6 +23,21 @@ export function CurrentSelfCard({ currentSelf }: CurrentSelfCardProps) {
               {theme}
             </span>
           ))}
+        </div>
+      ) : null}
+
+      {currentSelf.observations.length > 0 ? (
+        <div className="mt-4 flex flex-col gap-1.5">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+            What appears true right now
+          </p>
+          <ul className="flex flex-col gap-1">
+            {currentSelf.observations.map((observation) => (
+              <li key={observation} className="text-sm text-zinc-600">
+                {observation}
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
     </article>

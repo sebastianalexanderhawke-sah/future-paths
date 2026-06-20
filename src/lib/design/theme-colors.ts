@@ -1,4 +1,10 @@
-import { THEME_NAMES, type ThemeName } from "@/types/enums";
+import { isDifficultCheckInTheme } from "@/lib/check-in-themes";
+import {
+  DIFFICULT_THEME_NAMES,
+  THEME_NAMES,
+  type CheckInThemeName,
+  type ThemeName,
+} from "@/types/enums";
 
 export type ThemeColorSet = {
   primary: string;
@@ -20,6 +26,14 @@ export const THEME_CSS_KEYS: Record<ThemeName, string> = {
   Reflection: "reflection",
   Courage: "courage",
 };
+
+// Difficult themes (Disappointment, Hurt, Uncertainty, ...) share one muted
+// "tension" identity rather than each getting a distinct color — they're
+// evidence of friction, not a growth-oriented trait to brand individually.
+const DIFFICULT_THEME_CSS_KEY = "tension";
+export const DIFFICULT_THEME_CSS_KEYS: Record<string, string> = Object.fromEntries(
+  DIFFICULT_THEME_NAMES.map((theme) => [theme, DIFFICULT_THEME_CSS_KEY]),
+);
 
 export const THEME_COLORS: Record<ThemeName, ThemeColorSet> = {
   Connection: {
@@ -135,8 +149,11 @@ export const IDENTITY_STATE_COLORS = {
 
 export type IdentityStateColorKey = keyof typeof IDENTITY_STATE_COLORS;
 
-export function getThemeCssVar(theme: ThemeName, token: "primary" | "soft" | "secondary" | "glow") {
-  const key = THEME_CSS_KEYS[theme];
+export function getThemeCssVar(
+  theme: CheckInThemeName,
+  token: "primary" | "soft" | "secondary" | "glow",
+) {
+  const key = isDifficultCheckInTheme(theme) ? DIFFICULT_THEME_CSS_KEYS[theme] : THEME_CSS_KEYS[theme];
   return `var(--theme-${key}-${token})`;
 }
 
