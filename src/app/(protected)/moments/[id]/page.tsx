@@ -341,27 +341,14 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
 
         {/* ════════════════════════════════════════════════════════════════════
             PHASE 4 — Path chosen, check-ins exist
-            Check-in at top. Reflection inline. Forecast evolved. History below.
+            Chosen path first (the decision), then forecast (the prediction),
+            then check-in form + most recent check-in (the reality).
         ════════════════════════════════════════════════════════════════════ */}
         {!isArchived && hasChosenPath && hasCheckIns ? (
           <>
             {situationUnderstanding ? (
               <SituationSummaryCard text={situationUnderstanding} />
             ) : null}
-
-            {/* Most recent check-in (shown prominently) + check-in form + pending reflection + evolved forecast + history */}
-            <SituationForecastSection
-              sections={forecastSections}
-              isRegenerated={isRegenerated}
-              generatedAt={currentForecast?.generated_at ?? null}
-              momentId={moment.id}
-              hasChosenPath={true}
-              checkIns={checkIns}
-              checkInIdentitySummaries={checkInIdentitySummaries}
-              movementMap={movementMap}
-              checkInFirst={true}
-              pendingReflection={pendingReflection}
-            />
 
             {/* Chosen path — collapsed, accessible */}
             <details className="group rounded-xl border border-zinc-200 bg-white">
@@ -376,6 +363,20 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                 <ChosenPathCard path={chosenPath} />
               </div>
             </details>
+
+            {/* Evolved forecast + check-in form + pending reflection + most recent check-in + history */}
+            <SituationForecastSection
+              sections={forecastSections}
+              isRegenerated={isRegenerated}
+              generatedAt={currentForecast?.generated_at ?? null}
+              momentId={moment.id}
+              hasChosenPath={true}
+              checkIns={checkIns}
+              checkInIdentitySummaries={checkInIdentitySummaries}
+              movementMap={movementMap}
+              checkInFirst={true}
+              pendingReflection={pendingReflection}
+            />
 
             <div className="pt-2 text-center">
               <Link

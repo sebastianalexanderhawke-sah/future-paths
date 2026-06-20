@@ -4,7 +4,6 @@ import {
   encodePathDescriptionWithNativeTitle,
 } from "@/components/home/path-native-title";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
-import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { createClient } from "@/lib/supabase/server";
 import type { Path } from "@/types/database";
 import type { ThemeName } from "@/types/enums";
@@ -271,9 +270,6 @@ export async function createForecastModePath(
     },
   });
 
-  // Path chosen: low-weight identity signal, debounced like any other.
-  await requestCurrentSelfRegeneration(auth.userId);
-
   return { path };
 }
 
@@ -385,9 +381,6 @@ export async function choosePath(
       .eq("id", pathId);
     return { error: timelineError.message };
   }
-
-  // Path chosen: low-weight identity signal, debounced like any other.
-  await requestCurrentSelfRegeneration(auth.userId);
 
   return { path: updatedPath };
 }

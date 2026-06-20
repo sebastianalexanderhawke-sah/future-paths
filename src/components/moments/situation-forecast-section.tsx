@@ -154,7 +154,7 @@ export function SituationForecastSection({
     return dedupeByNormalizedTitle(prev.filter((f) => diff.disappeared.has(normalizeTitle(f.title))));
   }, [transitioning, diff, previousSections]);
 
-  // In Phase 4, the most recent check-in is shown prominently above the form.
+  // In Phase 4, the most recent check-in is shown prominently below the form.
   // Here we only show history (everything after the first).
   const historyCheckIns = checkInFirst ? checkIns.slice(1) : checkIns;
 
@@ -164,20 +164,6 @@ export function SituationForecastSection({
     <section id="check-in" className="rounded-xl border border-zinc-200 bg-white p-6">
       {checkInFirst ? (
         <>
-          {mostRecentCheckIn ? (
-            <div className="mb-6">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                Most recent check-in
-              </p>
-              <div className="mt-3">
-                <CheckInCard
-                  checkIn={mostRecentCheckIn}
-                  identityUpdateSummary={checkInIdentitySummaries?.[mostRecentCheckIn.id] ?? null}
-                  variant="prominent"
-                />
-              </div>
-            </div>
-          ) : null}
           <h2 className="text-sm font-semibold text-zinc-900">What has actually happened?</h2>
           <p className="mt-1 text-sm text-zinc-500">
             Describe what you&apos;ve lived since you last checked in.
@@ -212,6 +198,21 @@ export function SituationForecastSection({
             <ReflectionAnswerForm
               checkInId={pendingReflection.id}
               submitLabel="Answer this question"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {mostRecentCheckIn ? (
+        <div className="mt-6">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+            Most recent check-in
+          </p>
+          <div className="mt-3">
+            <CheckInCard
+              checkIn={mostRecentCheckIn}
+              identityUpdateSummary={checkInIdentitySummaries?.[mostRecentCheckIn.id] ?? null}
+              variant="prominent"
             />
           </div>
         </div>
@@ -325,15 +326,6 @@ export function SituationForecastSection({
       </div>
     </section>
   ) : null;
-
-  if (checkInFirst) {
-    return (
-      <>
-        {checkInSection}
-        {forecastSection}
-      </>
-    );
-  }
 
   return (
     <>
