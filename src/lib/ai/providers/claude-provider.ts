@@ -108,6 +108,12 @@ export const claudeProvider: IdentityAIProvider = {
       }
 
       const raw = extractJson(text);
+
+      console.log(
+        "CURRENT_SELF RAW OUTPUT:",
+        JSON.stringify(raw, null, 2),
+      );
+      
       const parsed = prompt.parseOutput(raw);
       const data = validateStructuredOutput(request.schema, parsed);
 

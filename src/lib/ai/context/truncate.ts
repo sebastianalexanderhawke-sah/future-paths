@@ -269,6 +269,40 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     return reduced;
   }
 
+  if (bundle.profile === "current_self") {
+    return {
+      userId: bundle.userId,
+      profile: bundle.profile,
+      counts: bundle.counts,
+      pathThemes: bundle.pathThemes,
+      recentMoments: truncateArray(bundle.recentMoments, 3)?.map((moment) => ({
+        ...moment,
+        description: truncateNullableText(moment.description, 150),
+      })),
+      currentSelfChosenPaths: truncateArray(bundle.currentSelfChosenPaths, 3)?.map(
+        (path) => ({
+          ...path,
+          description: truncateText(path.description, 150),
+        }),
+      ),
+      currentSelfCheckIns: truncateArray(bundle.currentSelfCheckIns, 3)?.map(
+        (checkIn) => ({
+          ...checkIn,
+          reflection: truncateText(checkIn.reflection, 150),
+          reality_summary: truncateText(checkIn.reality_summary, 150),
+          identity_impact: truncateText(checkIn.identity_impact, 150),
+          reflection_question: truncateNullableText(checkIn.reflection_question, 100),
+          reflection_answer: truncateNullableText(checkIn.reflection_answer, 150),
+        }),
+      ),
+      futureSelves: truncateArray(bundle.futureSelves, 3),
+      identityUpdates: truncateArray(bundle.identityUpdates, 3)?.map((update) => ({
+        ...update,
+        summary: truncateText(update.summary, 150),
+      })),
+    };
+  }
+
   return {
     userId: bundle.userId,
     profile: bundle.profile,
