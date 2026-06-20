@@ -10,7 +10,7 @@ import { SituationSummaryCard } from "@/components/moments/situation-summary-car
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { buildCheckInIdentitySummaryMap } from "@/lib/check-in-identity-summary";
 import { listCheckInsForMoment } from "@/lib/check-ins";
-import { wasForecastJustGenerated } from "@/lib/forecast-visit-flag";
+import { JUST_CHOSEN_PATH_PARAM } from "@/lib/forecast-visit-flag";
 import { getAllForecastsForMoment, parseForecastSections } from "@/lib/forecasts";
 import { computeMovementMap } from "@/lib/forecast-diff";
 import { listIdentityUpdatesForMoment } from "@/lib/identity-updates";
@@ -19,17 +19,18 @@ import { listPathsForMoment } from "@/lib/paths";
 
 type MomentPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 };
 
 export default async function MomentPage({ params, searchParams }: MomentPageProps) {
   const { id } = await params;
-  const { error: queryError } = await searchParams;
-  // True only while this is still the same visit that produced the
-  // forecast (a short-lived, path-scoped cookie set by the action that
-  // generated it — see markForecastJustGenerated). The check-in form stays
-  // hidden until the user returns on a later visit.
-  const isFreshlyGenerated = await wasForecastJustGenerated(id);
+  const resolvedSearchParams = await searchParams;
+  const queryError = resolvedSearchParams.error;
+  // True only for the exact response that follows path selection — the
+  // redirect/navigation that creates the forecast appends this query
+  // parameter once (see withJustChosenPathFlag). Any other visit to this
+  // URL omits it, so the check-in form is never hidden by a timer.
+  const isFreshlyGenerated = resolvedSearchParams[JUST_CHOSEN_PATH_PARAM] === "1";
 
   const [momentResult, pathsResult, checkInsResult, identityUpdatesResult, allForecasts] =
     await Promise.all([
@@ -361,20 +362,6 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
               checkInFirst={true}
               pendingReflection={pendingReflection}
             />
-
-            {/* Identity signals from this situation */}
-            {identityUpdates.length > 0 ? (
-              <section className="rounded-xl border border-zinc-200 bg-white p-6">
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                  What this situation is surfacing in you
-                </p>
-                <div className="mt-3 flex flex-col gap-3">
-                  {identityUpdates.map((update) => (
-                    <IdentityUpdateCard key={update.id} update={update} />
-                  ))}
-                </div>
-              </section>
-            ) : null}
 
             {/* Chosen path — collapsed, accessible */}
             <details className="group rounded-xl border border-zinc-200 bg-white">

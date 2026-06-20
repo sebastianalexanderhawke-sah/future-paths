@@ -8,6 +8,7 @@ import {
 } from "@/actions/discovery-questions";
 import { runDecisionSimulatorAction } from "@/actions/decision-simulator";
 import { runForecastModeAction } from "@/actions/future-forecast";
+import { withJustChosenPathFlag } from "@/lib/forecast-visit-flag";
 import {
   areAllQuestionsAnswered,
   buildContextSummary,
@@ -124,7 +125,7 @@ export function SituationEntryClient() {
         setError(result.error);
         return;
       }
-      router.push(`/moments/${result.momentId}`);
+      router.push(withJustChosenPathFlag(`/moments/${result.momentId}`));
     });
   }
 

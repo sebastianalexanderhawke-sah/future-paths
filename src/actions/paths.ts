@@ -6,7 +6,7 @@ import { choosePath, generatePaths } from "@/lib/paths";
 import { getMoment } from "@/lib/moments";
 import { runFutureForecastAction } from "@/actions/future-forecast";
 import { decodeNativePathFields } from "@/components/home/path-native-title";
-import { markForecastJustGenerated } from "@/lib/forecast-visit-flag";
+import { withJustChosenPathFlag } from "@/lib/forecast-visit-flag";
 
 function redirectWithError(momentId: string, error: string): never {
   redirect(`/moments/${momentId}?error=${encodeURIComponent(error)}`);
@@ -67,7 +67,7 @@ export async function choosePathAction(formData: FormData) {
       );
     }
 
-    await markForecastJustGenerated(momentId);
+    redirect(withJustChosenPathFlag(`/moments/${momentId}`));
   }
 
   redirect(`/moments/${momentId}`);

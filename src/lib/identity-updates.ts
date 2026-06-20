@@ -1,5 +1,6 @@
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { identityUpdateNullableOutputSchema } from "@/lib/ai/schemas/identity-update";
+import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn, IdentityUpdate, Moment } from "@/types/database";
 
@@ -132,4 +133,8 @@ export async function createIdentityUpdateIfMeaningful(input: {
       themes: draft.themes,
     },
   });
+
+  // A curated identity update is meaningful evidence on its own, independent
+  // of the check-in that produced it.
+  await requestCurrentSelfRegeneration(input.userId);
 }

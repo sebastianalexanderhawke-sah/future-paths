@@ -1,4 +1,4 @@
-import { generateCurrentSelf } from "@/lib/current-self";
+import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { validateReflectionAnswerLength } from "@/lib/reflections-validation";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn, Moment } from "@/types/database";
@@ -170,14 +170,20 @@ export async function submitReflectionAnswer(
     .eq("user_id", auth.userId)
     .maybeSingle();
 
-  await generateCurrentSelf({
-    reflection: {
-      question: checkIn.reflection_question,
-      answer: trimmedAnswer,
-      checkInReflection: checkIn.reflection,
-      momentTitle: moment?.title ?? "Untitled situation",
+  // Reflection answered: the user has already done the interpretive work,
+  // so this is eligible to update Current Self immediately, bypassing the
+  // debounce that applies to routine events.
+  await requestCurrentSelfRegeneration(auth.userId, {
+    immediate: true,
+    reflectionInput: {
+      reflection: {
+        question: checkIn.reflection_question,
+        answer: trimmedAnswer,
+        checkInReflection: checkIn.reflection,
+        momentTitle: moment?.title ?? "Untitled situation",
+      },
     },
-  }).catch(() => {});
+  });
 
   return { ok: true };
 }

@@ -1,5 +1,6 @@
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { futureSelfDiscoverOutputSchema } from "@/lib/ai/schemas/future-self";
+import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
 import { createClient } from "@/lib/supabase/server";
 import type { FutureSelf } from "@/types/database";
@@ -176,6 +177,10 @@ export async function generateFutureSelves(): Promise<
   );
   const draftNames = new Set(drafts.map((draft) => draft.name));
 
+  // Only a stage/status transition marks Current Self stale — a momentum
+  // tick alone (no stage change) is too noisy a signal on its own.
+  let hasStageTransition = false;
+
   for (const draft of drafts) {
     const existing = existingByName.get(draft.name);
 
@@ -207,6 +212,7 @@ export async function generateFutureSelves(): Promise<
         summary: `${draft.name} may be emerging from your patterns.`,
       });
 
+      hasStageTransition = true;
       continue;
     }
 
@@ -237,13 +243,15 @@ export async function generateFutureSelves(): Promise<
         summary: `${draft.name} may be returning as your patterns shift.`,
       });
 
+      hasStageTransition = true;
       continue;
     }
 
     const momentumIncreased = draft.momentum > existing.momentum;
+    const stageChanged = draft.stage !== existing.stage;
     const hasChanges =
       momentumIncreased ||
-      draft.stage !== existing.stage ||
+      stageChanged ||
       draft.description !== existing.description ||
       JSON.stringify(draft.themes) !== JSON.stringify(existing.themes);
 
@@ -277,6 +285,10 @@ export async function generateFutureSelves(): Promise<
         summary: `${draft.name} may be gaining momentum.`,
       });
     }
+
+    if (stageChanged) {
+      hasStageTransition = true;
+    }
   }
 
   for (const existing of existingRows ?? []) {
@@ -306,6 +318,12 @@ export async function generateFutureSelves(): Promise<
       momentumAfter: 0,
       summary: `${existing.name} may be fading for now.`,
     });
+
+    hasStageTransition = true;
+  }
+
+  if (hasStageTransition) {
+    await requestCurrentSelfRegeneration(auth.userId);
   }
 
   return listFutureSelves({ status: "active" });

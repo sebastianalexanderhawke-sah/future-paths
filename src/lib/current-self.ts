@@ -223,3 +223,41 @@ export async function generateCurrentSelf(
 
   return { currentSelf: created };
 }
+
+// How long a regeneration "covers" subsequent low-weight events. Events
+// inside this window are treated as already reflected in the last
+// regeneration and are skipped, so routine activity doesn't spam the
+// generator. Pass `immediate: true` to bypass this for events (an answered
+// reflection) that should update Current Self right away.
+const REGENERATION_DEBOUNCE_MS = 15 * 60 * 1000;
+
+async function getCurrentSelfUpdatedAt(userId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("current_self")
+    .select("updated_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return data?.updated_at ?? null;
+}
+
+/**
+ * Single entry point for identity-relevant events to request that Current
+ * Self be brought up to date. Debounced by default; callers for
+ * high-significance events (e.g. an answered reflection) pass
+ * `immediate: true` to skip the debounce window.
+ */
+export async function requestCurrentSelfRegeneration(
+  userId: string,
+  options?: { immediate?: boolean; reflectionInput?: GenerateCurrentSelfInput },
+): Promise<void> {
+  if (!options?.immediate) {
+    const updatedAt = await getCurrentSelfUpdatedAt(userId);
+    if (updatedAt && Date.now() - new Date(updatedAt).getTime() < REGENERATION_DEBOUNCE_MS) {
+      return;
+    }
+  }
+
+  await generateCurrentSelf(options?.reflectionInput).catch(() => {});
+}
