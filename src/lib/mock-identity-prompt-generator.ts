@@ -108,7 +108,7 @@ export function generateMockIdentityPrompts(input: {
   }
 
   const sortedFutures = [...input.activeFutureSelves].sort(
-    (a, b) => b.momentum - a.momentum,
+    (a, b) => b.percentage - a.percentage,
   );
   const leadingFuture = sortedFutures[0];
 
@@ -120,7 +120,7 @@ export function generateMockIdentityPrompts(input: {
     drafts.push({
       prompt_type: "future_alignment",
       question: `${leadingFuture.name} may be pulling you forward. What small action this week might move you closer — or reveal that this future no longer fits?`,
-      context: `${leadingFuture.description}${currentSelfPhrase}`,
+      context: `${leadingFuture.summary}${currentSelfPhrase}`,
       themes: leadingFuture.themes,
     });
   }

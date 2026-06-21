@@ -90,7 +90,7 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
   )?.map((futureSelf) => ({
     ...futureSelf,
     name: truncateText(futureSelf.name, limits.alternateSelfName),
-    description: truncateText(futureSelf.description, limits.summary),
+    summary: truncateText(futureSelf.summary, limits.summary),
   }));
 
   if (bundle.currentSelf) {

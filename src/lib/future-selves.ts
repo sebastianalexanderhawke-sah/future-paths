@@ -36,7 +36,7 @@ export async function listFutureSelves(options?: {
     .from("future_selves")
     .select("*")
     .eq("user_id", auth.userId)
-    .order("momentum", { ascending: false })
+    .order("percentage", { ascending: false })
     .order("updated_at", { ascending: false });
 
   if (options?.status) {
@@ -57,7 +57,7 @@ export async function listFutureSelves(options?: {
 }
 
 export async function listActiveFutureSelves(
-  limit = 3,
+  limit = 4,
 ): Promise<{ futureSelves: FutureSelf[] } | { error: string }> {
   return listFutureSelves({ status: "active", limit });
 }
@@ -112,8 +112,8 @@ async function recordFutureSelfEvent(input: {
   userId: string;
   futureSelfId: string;
   eventType: "emerged" | "grew" | "faded" | "returned";
-  momentumBefore: number | null;
-  momentumAfter: number;
+  percentageBefore: number | null;
+  percentageAfter: number;
   summary: string;
 }) {
   const supabase = await createClient();
@@ -122,8 +122,8 @@ async function recordFutureSelfEvent(input: {
     user_id: input.userId,
     future_self_id: input.futureSelfId,
     event_type: input.eventType,
-    momentum_before: input.momentumBefore,
-    momentum_after: input.momentumAfter,
+    percentage_before: input.percentageBefore,
+    percentage_after: input.percentageAfter,
     summary: input.summary,
   });
 }
@@ -177,9 +177,9 @@ export async function generateFutureSelves(): Promise<
   );
   const draftNames = new Set(drafts.map((draft) => draft.name));
 
-  // Only a stage/status transition marks Current Self stale — a momentum
-  // tick alone (no stage change) is too noisy a signal on its own.
-  let hasStageTransition = false;
+  // Only an evidence_strength/status transition marks Current Self stale — a
+  // percentage tick alone (no strength change) is too noisy a signal on its own.
+  let hasMeaningfulTransition = false;
 
   for (const draft of drafts) {
     const existing = existingByName.get(draft.name);
@@ -190,9 +190,12 @@ export async function generateFutureSelves(): Promise<
         .insert({
           user_id: auth.userId,
           name: draft.name,
-          description: draft.description,
-          stage: draft.stage,
-          momentum: draft.momentum,
+          summary: draft.summary,
+          percentage: draft.percentage,
+          evidence_strength: draft.evidence_strength,
+          benefits: draft.benefits,
+          consequences: draft.consequences,
+          prediction: draft.prediction,
           themes: draft.themes,
           status: "active",
         })
@@ -207,12 +210,12 @@ export async function generateFutureSelves(): Promise<
         userId: auth.userId,
         futureSelfId: created.id,
         eventType: "emerged",
-        momentumBefore: null,
-        momentumAfter: draft.momentum,
+        percentageBefore: null,
+        percentageAfter: draft.percentage,
         summary: `${draft.name} may be emerging from your patterns.`,
       });
 
-      hasStageTransition = true;
+      hasMeaningfulTransition = true;
       continue;
     }
 
@@ -220,9 +223,12 @@ export async function generateFutureSelves(): Promise<
       const { error: updateError } = await supabase
         .from("future_selves")
         .update({
-          description: draft.description,
-          stage: draft.stage,
-          momentum: draft.momentum,
+          summary: draft.summary,
+          percentage: draft.percentage,
+          evidence_strength: draft.evidence_strength,
+          benefits: draft.benefits,
+          consequences: draft.consequences,
+          prediction: draft.prediction,
           themes: draft.themes,
           status: "active",
           updated_at: now,
@@ -238,22 +244,25 @@ export async function generateFutureSelves(): Promise<
         userId: auth.userId,
         futureSelfId: existing.id,
         eventType: "returned",
-        momentumBefore: existing.momentum,
-        momentumAfter: draft.momentum,
+        percentageBefore: existing.percentage,
+        percentageAfter: draft.percentage,
         summary: `${draft.name} may be returning as your patterns shift.`,
       });
 
-      hasStageTransition = true;
+      hasMeaningfulTransition = true;
       continue;
     }
 
-    const momentumIncreased = draft.momentum > existing.momentum;
-    const stageChanged = draft.stage !== existing.stage;
+    const percentageIncreased = draft.percentage > existing.percentage;
+    const evidenceStrengthChanged = draft.evidence_strength !== existing.evidence_strength;
     const hasChanges =
-      momentumIncreased ||
-      stageChanged ||
-      draft.description !== existing.description ||
-      JSON.stringify(draft.themes) !== JSON.stringify(existing.themes);
+      percentageIncreased ||
+      evidenceStrengthChanged ||
+      draft.summary !== existing.summary ||
+      draft.prediction !== existing.prediction ||
+      JSON.stringify(draft.themes) !== JSON.stringify(existing.themes) ||
+      JSON.stringify(draft.benefits) !== JSON.stringify(existing.benefits) ||
+      JSON.stringify(draft.consequences) !== JSON.stringify(existing.consequences);
 
     if (!hasChanges) {
       continue;
@@ -262,9 +271,12 @@ export async function generateFutureSelves(): Promise<
     const { error: updateError } = await supabase
       .from("future_selves")
       .update({
-        description: draft.description,
-        stage: draft.stage,
-        momentum: draft.momentum,
+        summary: draft.summary,
+        percentage: draft.percentage,
+        evidence_strength: draft.evidence_strength,
+        benefits: draft.benefits,
+        consequences: draft.consequences,
+        prediction: draft.prediction,
         themes: draft.themes,
         updated_at: now,
       })
@@ -275,19 +287,19 @@ export async function generateFutureSelves(): Promise<
       return { error: updateError.message };
     }
 
-    if (momentumIncreased) {
+    if (percentageIncreased) {
       await recordFutureSelfEvent({
         userId: auth.userId,
         futureSelfId: existing.id,
         eventType: "grew",
-        momentumBefore: existing.momentum,
-        momentumAfter: draft.momentum,
-        summary: `${draft.name} may be gaining momentum.`,
+        percentageBefore: existing.percentage,
+        percentageAfter: draft.percentage,
+        summary: `${draft.name} may be gaining strength.`,
       });
     }
 
-    if (stageChanged) {
-      hasStageTransition = true;
+    if (evidenceStrengthChanged) {
+      hasMeaningfulTransition = true;
     }
   }
 
@@ -300,7 +312,7 @@ export async function generateFutureSelves(): Promise<
       .from("future_selves")
       .update({
         status: "faded",
-        momentum: 0,
+        percentage: 0,
         updated_at: now,
       })
       .eq("id", existing.id)
@@ -314,15 +326,15 @@ export async function generateFutureSelves(): Promise<
       userId: auth.userId,
       futureSelfId: existing.id,
       eventType: "faded",
-      momentumBefore: existing.momentum,
-      momentumAfter: 0,
+      percentageBefore: existing.percentage,
+      percentageAfter: 0,
       summary: `${existing.name} may be fading for now.`,
     });
 
-    hasStageTransition = true;
+    hasMeaningfulTransition = true;
   }
 
-  if (hasStageTransition) {
+  if (hasMeaningfulTransition) {
     await requestCurrentSelfRegeneration(auth.userId);
   }
 

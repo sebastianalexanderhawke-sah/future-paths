@@ -58,10 +58,13 @@ describe("buildForecastSections", () => {
       crossroad,
       [
         {
-          name: "The Independent Explorer",
-          description: "A version focused on adaptation.",
-          stage: "emerging",
-          momentum: 72,
+          name: "Adapts quickly to the new city rather than waiting it out",
+          summary: "A version focused on adaptation.",
+          percentage: 72,
+          evidence_strength: "Moderate",
+          benefits: ["New routines form faster.", "Local opportunities open up sooner."],
+          consequences: ["Old routines and ties may fade.", "Less time spent weighing the move."],
+          prediction: "Becomes someone who treats relocation as routine rather than disruption.",
           themes: ["Growth"],
         },
       ],

@@ -6,7 +6,7 @@ import {
 export const currentSelfGenerateV1 = createPromptModule({
   promptId: "current_self.generate",
   promptVersion: "1",
-  taskInstructions: `Build a present-tense snapshot of who this person appears to be right now, using only the evidence in context: recent situations (moments), chosen paths, check-ins (reflection and reality_summary), reflectionQA, identity updates, and active future-self momentum.
+  taskInstructions: `Build a present-tense snapshot of who this person appears to be right now, using only the evidence in context: recent situations (moments), chosen paths, check-ins (reflection and reality_summary), reflectionQA, identity updates, and active future-self percentages.
 
 It should answer: "Given everything that has happened recently, who does this person appear to be right now?" A reader should think "yes, that's actually what has been happening" — and be able to see, for every claim, which piece of evidence it came from.
 

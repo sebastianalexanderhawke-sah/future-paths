@@ -1,58 +1,180 @@
 import type { ThemeChange } from "@/types/database";
-import type { FutureSelfStage, ThemeName } from "@/types/enums";
+import type { FutureSelfEvidenceStrength, ThemeName } from "@/types/enums";
 
 export type MockFutureSelfDraft = {
   name: string;
-  description: string;
-  stage: FutureSelfStage;
-  momentum: number;
+  summary: string;
+  percentage: number;
+  evidence_strength: FutureSelfEvidenceStrength;
+  benefits: string[];
+  consequences: string[];
+  prediction: string;
   themes: ThemeName[];
 };
 
-const THEME_ARCHETYPE: Record<ThemeName, string> = {
-  Connection: "The Connector",
-  Belonging: "The Connector",
-  Courage: "The Pioneer",
-  Growth: "The Builder",
-  Curiosity: "The Explorer",
-  Independence: "The Explorer",
-  Creativity: "The Creator",
-  Reflection: "The Creator",
-  Stability: "The Guardian",
-  Leadership: "The Mentor",
+type ThemeTrajectory = {
+  name: string;
+  summary: string;
+  benefits: string[];
+  consequences: string[];
+  prediction: string;
 };
 
-const ARCHETYPE_DESCRIPTIONS: Record<string, string> = {
-  "The Connector":
-    "You may be becoming someone who builds belonging and deepens relationships across your choices.",
-  "The Pioneer":
-    "You may be becoming someone who moves toward uncertainty with courage and opens new paths.",
-  "The Builder":
-    "You may be becoming someone who grows steadily, shaping long-term direction through deliberate effort.",
-  "The Explorer":
-    "You may be becoming someone who follows curiosity and carves out more independent ways of living.",
-  "The Creator":
-    "You may be becoming someone who expresses identity through reflection and creative possibility.",
-  "The Guardian":
-    "You may be becoming someone who values stability and protects what matters across your decisions.",
-  "The Mentor":
-    "You may be becoming someone who steps into leadership and helps others find their way forward.",
+// Concrete trajectory per theme — not an archetype/personality label, but a
+// description of what this person keeps choosing and what that costs.
+const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
+  Connection: {
+    name: "Increasingly prioritizes closeness with the people already in their life",
+    summary:
+      "Someone who chooses ongoing connection over independence when the two pull in different directions.",
+    benefits: [
+      "Relationships deepen and become more reliable.",
+      "Support is available during difficult stretches.",
+    ],
+    consequences: [
+      "Time and energy for solo pursuits shrinks.",
+      "Decisions increasingly bend around other people's needs.",
+    ],
+    prediction:
+      "Becomes someone whose sense of identity is closely tied to the people around them, with fewer choices made in isolation.",
+  },
+  Independence: {
+    name: "Builds a life that depends less on any one relationship or place",
+    summary:
+      "Someone who keeps choosing autonomy, even when it means stepping away from familiar support.",
+    benefits: [
+      "Decisions become easier to make without needing approval.",
+      "Self-reliance grows.",
+    ],
+    consequences: [
+      "Close relationships may thin out from lack of ongoing investment.",
+      "Support during hard moments may be harder to find.",
+    ],
+    prediction:
+      "Becomes someone increasingly comfortable making major decisions alone, with a smaller but more selective circle of close relationships.",
+  },
+  Curiosity: {
+    name: "Keeps choosing the unfamiliar option over the comfortable one",
+    summary:
+      "Someone who treats new information and new situations as worth pursuing, even at the cost of stability.",
+    benefits: [
+      "Exposure to more options and perspectives.",
+      "Adaptability to new circumstances increases.",
+    ],
+    consequences: [
+      "Commitments may be harder to sustain.",
+      "Less depth builds in any single pursuit.",
+    ],
+    prediction:
+      "Becomes someone defined by breadth of experience rather than mastery of one path, often mid-exploration rather than settled.",
+  },
+  Stability: {
+    name: "Protects existing routines and commitments over new opportunities",
+    summary:
+      "Someone who weighs new options against the cost to current stability, and often chooses to stay the course.",
+    benefits: [
+      "Day-to-day life remains predictable and manageable.",
+      "Existing commitments stay intact.",
+    ],
+    consequences: [
+      "Opportunities that require disruption go unexplored.",
+      "Growth may slow without new challenge.",
+    ],
+    prediction:
+      "Becomes someone who is reliable and consistent, but increasingly risk-averse about anything that threatens the current routine.",
+  },
+  Creativity: {
+    name: "Channels decisions through self-expression rather than convention",
+    summary:
+      "Someone who keeps choosing paths that let them make or shape something, even when a safer option is available.",
+    benefits: [
+      "Original work or expression accumulates over time.",
+      "A distinct point of view becomes more defined.",
+    ],
+    consequences: [
+      "Financial or schedule stability may suffer for the sake of the work.",
+      "Conventional paths get deprioritized.",
+    ],
+    prediction:
+      "Becomes someone whose identity is tied to what they make, increasingly uncomfortable in roles that don't allow for it.",
+  },
+  Growth: {
+    name: "Keeps taking on harder versions of the same challenge",
+    summary: "Someone who treats discomfort as a signal to keep going rather than to stop.",
+    benefits: [
+      "Skills and capability compound steadily.",
+      "Confidence builds from repeated effort.",
+    ],
+    consequences: [
+      "Rest and satisfaction with \"good enough\" become harder to access.",
+      "Other areas of life may be neglected in favor of the effort.",
+    ],
+    prediction:
+      "Becomes someone who measures their life largely by progress and improvement, often restless when things plateau.",
+  },
+  Belonging: {
+    name: "Orients major decisions around being part of a group or place",
+    summary:
+      "Someone who keeps choosing the option that keeps them embedded in a community rather than apart from one.",
+    benefits: [
+      "A stable sense of identity tied to a community forms.",
+      "Access to support and shared resources increases.",
+    ],
+    consequences: [
+      "Decisions that would separate them from the group become harder to make.",
+      "Individual preferences may get deprioritized for the sake of fitting in.",
+    ],
+    prediction:
+      "Becomes someone whose choices are increasingly shaped by what keeps them inside a group, with identity and group membership closely linked.",
+  },
+  Leadership: {
+    name: "Keeps stepping into the role of organizing or guiding others",
+    summary:
+      "Someone who, given the option, takes on responsibility for others' outcomes rather than only their own.",
+    benefits: [
+      "Influence over outcomes and direction increases.",
+      "Others increasingly rely on and trust their judgment.",
+    ],
+    consequences: [
+      "Personal needs may get deprioritized behind the group's.",
+      "Visibility increases the cost of mistakes.",
+    ],
+    prediction:
+      "Becomes someone others look to first, with identity increasingly tied to being responsible for a group's direction.",
+  },
+  Reflection: {
+    name: "Pauses to examine decisions before acting on them",
+    summary:
+      "Someone who keeps choosing to slow down and make sense of a situation before committing to a direction.",
+    benefits: [
+      "Decisions are made with more self-awareness.",
+      "Patterns are more likely to be recognized before they repeat.",
+    ],
+    consequences: [
+      "Action may be delayed past the point it was useful.",
+      "Overthinking may substitute for actually deciding.",
+    ],
+    prediction:
+      "Becomes someone who trusts their own analysis more than impulse, sometimes at the cost of momentum.",
+  },
+  Courage: {
+    name: "Keeps choosing the harder, riskier option when it matters",
+    summary:
+      "Someone who treats discomfort and uncertainty as a cost worth paying for the outcome on the other side.",
+    benefits: [
+      "New opportunities that require risk become available.",
+      "Confidence builds from having faced difficulty directly.",
+    ],
+    consequences: [
+      "Some risks taken will not pay off.",
+      "Stability is repeatedly put at stake for the sake of the attempt.",
+    ],
+    prediction:
+      "Becomes someone defined by a willingness to act despite uncertainty, with a track record that includes both gains and real losses.",
+  },
 };
 
-function computeStage(
-  momentCount: number,
-  checkInCount: number,
-): FutureSelfStage {
-  if (momentCount >= 10 && checkInCount >= 3) {
-    return "future_self";
-  }
-
-  if (momentCount >= 5) {
-    return "emerging";
-  }
-
-  return "possible";
-}
+type EvidenceSource = "path" | "checkin" | "identity";
 
 function themeChangeWeight(change: ThemeChange): number {
   if (change.direction === "strengthened") {
@@ -64,6 +186,36 @@ function themeChangeWeight(change: ThemeChange): number {
   }
 
   return 1;
+}
+
+function evidenceStrengthFromSources(
+  sources: Set<EvidenceSource>,
+): FutureSelfEvidenceStrength {
+  if (sources.size >= 3) {
+    return "Strong";
+  }
+
+  if (sources.size >= 2) {
+    return "Moderate";
+  }
+
+  return "Emerging";
+}
+
+function distributePercentages(scores: number[]): number[] {
+  const total = scores.reduce((sum, score) => sum + score, 0);
+
+  if (total <= 0) {
+    return scores.map(() => 0);
+  }
+
+  const raw = scores.map((score) => Math.max(1, Math.round((score / total) * 100)));
+  const rawTotal = raw.reduce((sum, value) => sum + value, 0);
+
+  // Reconcile rounding drift on the largest share so the array sums to 100.
+  raw[0] += 100 - rawTotal;
+
+  return raw;
 }
 
 export function generateMockFutureSelves(input: {
@@ -78,58 +230,54 @@ export function generateMockFutureSelves(input: {
   }
 
   const themeScores = new Map<ThemeName, number>();
+  const themeSources = new Map<ThemeName, Set<EvidenceSource>>();
+
+  function addEvidence(theme: ThemeName, weight: number, source: EvidenceSource) {
+    themeScores.set(theme, (themeScores.get(theme) ?? 0) + weight);
+    const sources = themeSources.get(theme) ?? new Set<EvidenceSource>();
+    sources.add(source);
+    themeSources.set(theme, sources);
+  }
 
   for (const theme of input.pathThemes) {
-    themeScores.set(theme, (themeScores.get(theme) ?? 0) + 1);
+    addEvidence(theme, 1, "path");
   }
 
   for (const change of input.checkInThemeChanges) {
-    const t = change.theme as ThemeName;
-    themeScores.set(t, (themeScores.get(t) ?? 0) + themeChangeWeight(change) * 3);
+    const theme = change.theme as ThemeName;
+    if (theme in THEME_TRAJECTORY) {
+      addEvidence(theme, themeChangeWeight(change) * 3, "checkin");
+    }
   }
 
   for (const theme of input.identityUpdateThemes) {
-    themeScores.set(theme, (themeScores.get(theme) ?? 0) + 2);
+    addEvidence(theme, 2, "identity");
   }
 
-  const archetypeScores = new Map<
-    string,
-    { score: number; themes: ThemeName[] }
-  >();
-
-  for (const [theme, score] of themeScores) {
-    if (score <= 0) {
-      continue;
-    }
-
-    const name = THEME_ARCHETYPE[theme];
-    const existing = archetypeScores.get(name) ?? { score: 0, themes: [] };
-
-    existing.score += score;
-    if (!existing.themes.includes(theme)) {
-      existing.themes.push(theme);
-    }
-
-    archetypeScores.set(name, existing);
-  }
-
-  const ranked = [...archetypeScores.entries()]
-    .filter(([, entry]) => entry.score > 0)
-    .sort((a, b) => b[1].score - a[1].score)
-    .slice(0, 3);
+  const ranked = [...themeScores.entries()]
+    .filter(([, score]) => score > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
 
   if (ranked.length === 0) {
     return [];
   }
 
-  const stage = computeStage(input.momentCount, input.checkInCount);
-  const topScore = ranked[0][1].score;
+  const percentages = distributePercentages(ranked.map(([, score]) => score));
 
-  return ranked.map(([name, entry]) => ({
-    name,
-    description: ARCHETYPE_DESCRIPTIONS[name],
-    stage,
-    momentum: Math.min(100, Math.max(10, Math.round((entry.score / topScore) * 100))),
-    themes: entry.themes.slice(0, 2),
-  }));
+  return ranked.map(([theme], index) => {
+    const trajectory = THEME_TRAJECTORY[theme];
+    const sources = themeSources.get(theme) ?? new Set<EvidenceSource>();
+
+    return {
+      name: trajectory.name,
+      summary: trajectory.summary,
+      percentage: percentages[index],
+      evidence_strength: evidenceStrengthFromSources(sources),
+      benefits: trajectory.benefits,
+      consequences: trajectory.consequences,
+      prediction: trajectory.prediction,
+      themes: [theme],
+    };
+  });
 }

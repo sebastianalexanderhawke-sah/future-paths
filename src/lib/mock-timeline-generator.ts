@@ -46,7 +46,7 @@ export type TimelineGenerationInput = {
   >[];
   futureSelves: Pick<
     FutureSelf,
-    "id" | "name" | "momentum" | "themes" | "status" | "updated_at"
+    "id" | "name" | "percentage" | "themes" | "status" | "updated_at"
   >[];
   contradictions: Pick<
     Contradiction,
@@ -367,7 +367,7 @@ function buildEvidenceItems(input: TimelineGenerationInput): InternalEvidence[] 
       continue;
     }
 
-    const weight = 1 + futureSelf.momentum / 50;
+    const weight = 1 + futureSelf.percentage / 50;
     const themeScores = new Map<string, number>();
 
     for (const theme of futureSelf.themes) {

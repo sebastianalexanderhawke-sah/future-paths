@@ -1,16 +1,10 @@
 import type { FutureSelf } from "@/types/database";
-import type { FutureSelfStage, ThemeName } from "@/types/enums";
+import type { ThemeName } from "@/types/enums";
 
 import { CardShell } from "@/components/ui/card-shell";
-import { MomentumRing } from "@/components/ui/momentum-ring";
+import { PercentageRing } from "@/components/ui/percentage-ring";
 import { ThemeChip } from "@/components/ui/theme-chip";
 import { getThemeCssVar } from "@/lib/design/theme-colors";
-
-const STAGE_LABELS: Record<FutureSelfStage, string> = {
-  possible: "Possible",
-  emerging: "Emerging",
-  future_self: "Future self",
-};
 
 type FutureSelfPortraitCardProps = {
   futureSelf: FutureSelf;
@@ -48,23 +42,23 @@ export function FutureSelfPortraitCard({
         }}
       >
         <div className="absolute inset-0 flex items-center justify-center pt-4">
-          <MomentumRing
-            momentum={futureSelf.momentum}
+          <PercentageRing
+            percentage={futureSelf.percentage}
             faded={isFaded}
-            label={isFaded ? "Faded" : STAGE_LABELS[futureSelf.stage]}
-            id={`momentum-ring-${futureSelf.id}`}
+            label={isFaded ? "Faded" : `${futureSelf.percentage}%`}
+            id={`percentage-ring-${futureSelf.id}`}
           />
         </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-4 p-6">
         <div>
-          <p className="text-label text-ink-tertiary">{STAGE_LABELS[futureSelf.stage]}</p>
+          <p className="text-label text-ink-tertiary">{futureSelf.evidence_strength} evidence</p>
           <h3 className="mt-2 text-h1 text-ink-primary">{futureSelf.name}</h3>
         </div>
 
         <p className="line-clamp-4 flex-1 text-body text-ink-secondary">
-          {futureSelf.description}
+          {futureSelf.summary}
         </p>
 
         {visibleThemes.length > 0 ? (

@@ -253,7 +253,7 @@ export function buildRawForecastAudit(
     blind_spots: [
       ...paths.map((path) => toRawFutureItem(path.future_shift)),
       ...futureSelves.map((futureSelf) =>
-        toRawFutureItem(`${futureSelf.name}: ${futureSelf.description}`),
+        toRawFutureItem(`${futureSelf.name}: ${futureSelf.summary}`),
       ),
     ],
   };

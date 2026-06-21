@@ -92,9 +92,9 @@ function buildCurrentVsFutureDraft(input: {
     title: "Today and tomorrow may be pulling in different directions",
     summary: `You currently tend toward ${currentThemes.toLowerCase()}, while ${input.leadingFuture.name} may be drawing you toward ${futureThemes.toLowerCase()}. This tension may show up when your present patterns and your emerging future both feel plausible.`,
     pole_a: input.currentSelf.title,
-    pole_b: `${input.leadingFuture.name} — ${input.leadingFuture.description}`,
+    pole_b: `${input.leadingFuture.name} — ${input.leadingFuture.summary}`,
     themes: mergeThemes(currentPositiveThemes, input.leadingFuture.themes),
-    intensity: computeIntensity(disjointCount, input.leadingFuture.momentum),
+    intensity: computeIntensity(disjointCount, input.leadingFuture.percentage),
     source_refs: {
       current_self_id: input.currentSelf.id,
       future_self_ids: [input.leadingFuture.id],
@@ -108,8 +108,8 @@ function buildDualFutureDraft(input: {
   secondFuture: FutureSelf;
 }): MockContradictionDraft | null {
   if (
-    input.firstFuture.momentum < 25 ||
-    input.secondFuture.momentum < 25 ||
+    input.firstFuture.percentage < 25 ||
+    input.secondFuture.percentage < 25 ||
     themeOverlap(input.firstFuture.themes, input.secondFuture.themes) > 0
   ) {
     return null;
@@ -127,7 +127,7 @@ function buildDualFutureDraft(input: {
     themes: mergeThemes(input.firstFuture.themes, input.secondFuture.themes),
     intensity: computeIntensity(
       input.firstFuture.themes.length + input.secondFuture.themes.length,
-      Math.max(input.firstFuture.momentum, input.secondFuture.momentum),
+      Math.max(input.firstFuture.percentage, input.secondFuture.percentage),
     ),
     source_refs: {
       future_self_ids: [input.firstFuture.id, input.secondFuture.id],
@@ -186,7 +186,7 @@ export function generateMockContradictions(input: {
   const drafts: MockContradictionDraft[] = [];
   const sortedFutures = [...input.activeFutureSelves]
     .filter((future) => future.status === "active")
-    .sort((a, b) => b.momentum - a.momentum);
+    .sort((a, b) => b.percentage - a.percentage);
   const leadingFuture = sortedFutures[0];
   const secondFuture = sortedFutures[1];
 

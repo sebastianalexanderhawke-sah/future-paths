@@ -1,5 +1,5 @@
-type MomentumRingProps = {
-  momentum: number;
+type PercentageRingProps = {
+  percentage: number;
   faded?: boolean;
   label: string;
   className?: string;
@@ -15,15 +15,15 @@ const ARC_FRACTION = 0.75;
 const ARC_LENGTH = CIRCUMFERENCE * ARC_FRACTION;
 const GAP_OFFSET = CIRCUMFERENCE * 0.125;
 
-export function MomentumRing({
-  momentum,
+export function PercentageRing({
+  percentage,
   faded = false,
   label,
   className = "",
-  id = "momentum-ring-gradient",
-}: MomentumRingProps) {
-  const clampedMomentum = Math.min(100, Math.max(0, momentum));
-  const filledLength = ARC_LENGTH * (clampedMomentum / 100);
+  id = "percentage-ring-gradient",
+}: PercentageRingProps) {
+  const clampedPercentage = Math.min(100, Math.max(0, percentage));
+  const filledLength = ARC_LENGTH * (clampedPercentage / 100);
   const trackDasharray = `${ARC_LENGTH} ${CIRCUMFERENCE - ARC_LENGTH}`;
 
   return (
@@ -33,7 +33,7 @@ export function MomentumRing({
         height={SIZE}
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         role="img"
-        aria-label={`${label}, momentum ${clampedMomentum} of 100`}
+        aria-label={`${label}, ${clampedPercentage} percent`}
         className="-rotate-[210deg]"
       >
         <circle

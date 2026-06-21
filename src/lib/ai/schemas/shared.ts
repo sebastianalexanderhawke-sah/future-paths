@@ -7,7 +7,7 @@ import {
 import {
   CHECK_IN_THEME_NAMES,
   CONTRADICTION_TYPES,
-  FUTURE_SELF_STAGES,
+  FUTURE_SELF_EVIDENCE_STRENGTHS,
   IDENTITY_PROMPT_TYPES,
   IDENTITY_UPDATE_TYPES,
   LIFE_CHAPTER_EVIDENCE_TYPES,
@@ -108,10 +108,12 @@ export const tentativeTextSchema = z
 export const themesSchema = z.array(themeNameSchema).min(1).max(3);
 
 export const identityUpdateTypeSchema = z.enum(IDENTITY_UPDATE_TYPES);
-export const futureSelfStageSchema = z.enum(FUTURE_SELF_STAGES);
+export const futureSelfEvidenceStrengthSchema = z.enum(FUTURE_SELF_EVIDENCE_STRENGTHS);
 export const identityPromptTypeSchema = z.enum(IDENTITY_PROMPT_TYPES);
 export const contradictionTypeSchema = z.enum(CONTRADICTION_TYPES);
 export const lifeChapterEvidenceTypeSchema = z.enum(LIFE_CHAPTER_EVIDENCE_TYPES);
+
+export const benefitsConsequencesListSchema = z.array(tentativeTextSchema).min(2).max(4);
 
 export function assertTentativeLanguage(value: string): string {
   return tentativeTextSchema.parse(value);

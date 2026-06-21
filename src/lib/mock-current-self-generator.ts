@@ -33,7 +33,7 @@ function aggregateThemes(input: {
   pathThemes: ThemeName[];
   checkIns: Pick<CheckIn, "theme_changes">[];
   identityUpdates: Pick<IdentityUpdate, "themes">[];
-  futureSelves: Pick<FutureSelf, "themes" | "momentum">[];
+  futureSelves: Pick<FutureSelf, "themes" | "percentage">[];
 }): CheckInThemeName[] {
   const scores = new Map<string, number>();
 
@@ -63,7 +63,7 @@ function aggregateThemes(input: {
     for (const theme of futureSelf.themes) {
       scores.set(
         theme,
-        (scores.get(theme) ?? 0) + Math.max(1, Math.round(futureSelf.momentum / 25)),
+        (scores.get(theme) ?? 0) + Math.max(1, Math.round(futureSelf.percentage / 25)),
       );
     }
   }
@@ -126,7 +126,7 @@ export function generateMockCurrentSelf(input: {
   });
 
   const sortedFutures = [...input.activeFutureSelves].sort(
-    (a, b) => b.momentum - a.momentum,
+    (a, b) => b.percentage - a.percentage,
   );
   const leadingFuture = sortedFutures[0];
   const secondaryFuture = sortedFutures[1];
@@ -148,7 +148,7 @@ export function generateMockCurrentSelf(input: {
 
   const observations = [
     `${themePhrase} shows up most across your recent moments, check-ins, and chosen paths.`,
-    `${leadingFuture.name} currently carries the most momentum among your active future selves.`,
+    `${leadingFuture.name} currently carries the most weight among your active future selves.`,
   ];
 
   if (difficultTheme) {

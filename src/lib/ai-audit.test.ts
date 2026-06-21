@@ -48,10 +48,13 @@ describe("ai audit", () => {
       },
       [
         {
-          name: "The Builder",
-          description: "You may become someone who ships consistently.",
-          stage: "emerging",
-          momentum: 40,
+          name: "Keeps shipping consistently even under pressure",
+          summary: "Someone who treats discomfort as a signal to keep going rather than to stop.",
+          percentage: 40,
+          evidence_strength: "Moderate",
+          benefits: ["Skills compound steadily."],
+          consequences: ["Other areas may be neglected."],
+          prediction: "Becomes someone who measures their life largely by progress.",
           themes: ["Growth"],
         },
       ],

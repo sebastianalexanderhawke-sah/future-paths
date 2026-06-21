@@ -43,7 +43,10 @@ export type IdentityContextBundle = {
   pathThemes?: ThemeName[];
   checkIns?: Pick<CheckIn, "theme_changes" | "identity_impact">[];
   identityUpdates?: Pick<IdentityUpdate, "title" | "summary" | "themes">[];
-  futureSelves?: Pick<FutureSelf, "name" | "description" | "momentum" | "themes">[];
+  futureSelves?: Pick<
+    FutureSelf,
+    "name" | "summary" | "percentage" | "evidence_strength" | "themes"
+  >[];
   currentSelf?: Pick<CurrentSelf, "title" | "summary" | "themes" | "observations">;
   // Richer Current Self evidence — recent situations, chosen path details,
   // and full check-in narratives (reflection/reality/reflection Q&A), so the
@@ -96,7 +99,7 @@ export type IdentityContextBundle = {
   >[];
   timelineFutureSelves?: Pick<
     FutureSelf,
-    "id" | "name" | "momentum" | "themes" | "status" | "updated_at"
+    "id" | "name" | "percentage" | "themes" | "status" | "updated_at"
   >[];
   chapterCandidates?: MockLifeChapterDraft[];
   discoveryGoal?: "decision" | "forecast";

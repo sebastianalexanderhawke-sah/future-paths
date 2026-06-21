@@ -81,8 +81,8 @@ export type DifficultThemeDirection = (typeof DIFFICULT_THEME_DIRECTIONS)[number
 
 export type ThemeChangeDirection = PositiveThemeDirection | DifficultThemeDirection;
 
-export const FUTURE_SELF_STAGES = ["possible", "emerging", "future_self"] as const;
-export type FutureSelfStage = (typeof FUTURE_SELF_STAGES)[number];
+export const FUTURE_SELF_EVIDENCE_STRENGTHS = ["Emerging", "Moderate", "Strong"] as const;
+export type FutureSelfEvidenceStrength = (typeof FUTURE_SELF_EVIDENCE_STRENGTHS)[number];
 
 export const FUTURE_SELF_STATUSES = ["active", "faded"] as const;
 export type FutureSelfStatus = (typeof FUTURE_SELF_STATUSES)[number];

@@ -1,6 +1,6 @@
 import type {
   FutureSelfEventType,
-  FutureSelfStage,
+  FutureSelfEvidenceStrength,
   FutureSelfStatus,
   AlternateSelfStatus,
   LifeChapterEvidenceType,
@@ -109,9 +109,12 @@ export type FutureSelf = {
   id: string;
   user_id: string;
   name: string;
-  description: string;
-  stage: FutureSelfStage;
-  momentum: number;
+  summary: string;
+  percentage: number;
+  evidence_strength: FutureSelfEvidenceStrength;
+  benefits: string[];
+  consequences: string[];
+  prediction: string;
   themes: ThemeName[];
   status: FutureSelfStatus;
   created_at: string;
@@ -123,8 +126,8 @@ export type FutureSelfEvent = {
   user_id: string;
   future_self_id: string;
   event_type: FutureSelfEventType;
-  momentum_before: number | null;
-  momentum_after: number;
+  percentage_before: number | null;
+  percentage_after: number;
   summary: string | null;
   created_at: string;
 };
@@ -362,7 +365,14 @@ export type IdentityUpdateInsert = Pick<
 
 export type FutureSelfInsert = Pick<
   FutureSelf,
-  "user_id" | "name" | "description" | "stage" | "momentum"
+  | "user_id"
+  | "name"
+  | "summary"
+  | "percentage"
+  | "evidence_strength"
+  | "benefits"
+  | "consequences"
+  | "prediction"
 > & {
   themes?: ThemeName[];
   status?: FutureSelfStatus;
@@ -371,15 +381,23 @@ export type FutureSelfInsert = Pick<
 export type FutureSelfUpdate = Partial<
   Pick<
     FutureSelf,
-    "description" | "stage" | "momentum" | "themes" | "status" | "updated_at"
+    | "summary"
+    | "percentage"
+    | "evidence_strength"
+    | "benefits"
+    | "consequences"
+    | "prediction"
+    | "themes"
+    | "status"
+    | "updated_at"
   >
 >;
 
 export type FutureSelfEventInsert = Pick<
   FutureSelfEvent,
-  "user_id" | "future_self_id" | "event_type" | "momentum_after"
+  "user_id" | "future_self_id" | "event_type" | "percentage_after"
 > & {
-  momentum_before?: number | null;
+  percentage_before?: number | null;
   summary?: string | null;
 };
 

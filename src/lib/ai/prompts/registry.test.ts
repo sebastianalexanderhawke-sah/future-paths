@@ -68,13 +68,14 @@ describe("prompt registry", () => {
     expect(systemPrompt).toContain("What happens?");
   });
 
-  it("requires future_self.discover to ban reflective forecast language", () => {
+  it("requires future_self.discover to use the evidence-weighted percentage model", () => {
     const definition = getPromptDefinition("future_self.discover");
     const systemPrompt = definition.buildSystemPrompt();
 
-    expect(systemPrompt).toContain("What happens?");
-    expect(systemPrompt).toContain("inner landscape");
-    expect(systemPrompt).toContain("gain clarity");
+    expect(systemPrompt).toContain("sum to exactly 100");
+    expect(systemPrompt).toContain("Emerging, Moderate, Strong");
+    expect(systemPrompt).toContain("Avoid: archetypes");
+    expect(systemPrompt).toContain("Do not predict specific events");
   });
 
   it("requires forecast.generate to produce dedicated future realities", () => {

@@ -3,7 +3,7 @@ import {
   CHECK_IN_THEME_NAMES,
   CONTRADICTION_TYPES,
   DIFFICULT_THEME_DIRECTIONS,
-  FUTURE_SELF_STAGES,
+  FUTURE_SELF_EVIDENCE_STRENGTHS,
   IDENTITY_PROMPT_TYPES,
   IDENTITY_UPDATE_TYPES,
   POSITIVE_THEME_DIRECTIONS,
@@ -11,7 +11,7 @@ import {
   type CheckInThemeName,
   type ContradictionType,
   type DifficultThemeDirection,
-  type FutureSelfStage,
+  type FutureSelfEvidenceStrength,
   type IdentityPromptType,
   type IdentityUpdateType,
   type PositiveThemeDirection,
@@ -425,25 +425,30 @@ export function normalizeIdentityPromptInOutput(data: unknown): unknown {
   });
 }
 
-const FUTURE_SELF_STAGE_SET = new Set<string>(FUTURE_SELF_STAGES);
+const FUTURE_SELF_EVIDENCE_STRENGTH_SET = new Set<string>(FUTURE_SELF_EVIDENCE_STRENGTHS);
 
-const FUTURE_SELF_STAGE_SYNONYMS: Record<string, FutureSelfStage> = {
-  developing: "emerging",
-  forming: "possible",
-  potential: "possible",
-  nascent: "possible",
-  tentative: "possible",
-  established: "future_self",
-  mature: "future_self",
-  "future-self": "future_self",
-  futureself: "future_self",
+const FUTURE_SELF_EVIDENCE_STRENGTH_SYNONYMS: Record<string, FutureSelfEvidenceStrength> = {
+  weak: "Emerging",
+  low: "Emerging",
+  early: "Emerging",
+  tentative: "Emerging",
+  nascent: "Emerging",
+  medium: "Moderate",
+  mid: "Moderate",
+  partial: "Moderate",
+  high: "Strong",
+  confirmed: "Strong",
+  established: "Strong",
+  robust: "Strong",
 };
 
-function normalizeFutureSelfStageKey(value: string): string {
-  return value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+function normalizeFutureSelfEvidenceStrengthKey(value: string): string {
+  return value.trim().toLowerCase();
 }
 
-export function normalizeFutureSelfStage(value: unknown): FutureSelfStage | null {
+export function normalizeFutureSelfEvidenceStrength(
+  value: unknown,
+): FutureSelfEvidenceStrength | null {
   if (typeof value !== "string") {
     return null;
   }
@@ -454,25 +459,21 @@ export function normalizeFutureSelfStage(value: unknown): FutureSelfStage | null
     return null;
   }
 
-  if (FUTURE_SELF_STAGE_SET.has(trimmed)) {
-    return trimmed as FutureSelfStage;
+  if (FUTURE_SELF_EVIDENCE_STRENGTH_SET.has(trimmed)) {
+    return trimmed as FutureSelfEvidenceStrength;
   }
 
-  const key = normalizeFutureSelfStageKey(trimmed);
+  const key = normalizeFutureSelfEvidenceStrengthKey(trimmed);
 
-  if (FUTURE_SELF_STAGE_SET.has(key)) {
-    return key as FutureSelfStage;
-  }
-
-  const caseInsensitiveMatch = FUTURE_SELF_STAGES.find(
-    (stage) => stage.toLowerCase() === key,
+  const caseInsensitiveMatch = FUTURE_SELF_EVIDENCE_STRENGTHS.find(
+    (strength) => strength.toLowerCase() === key,
   );
 
   if (caseInsensitiveMatch) {
     return caseInsensitiveMatch;
   }
 
-  return FUTURE_SELF_STAGE_SYNONYMS[key] ?? null;
+  return FUTURE_SELF_EVIDENCE_STRENGTH_SYNONYMS[key] ?? null;
 }
 
 export function normalizeFutureSelfInOutput(data: unknown): unknown {
@@ -486,11 +487,12 @@ export function normalizeFutureSelfInOutput(data: unknown): unknown {
     }
 
     const record = item as Record<string, unknown>;
-    const stage = normalizeFutureSelfStage(record.stage);
+    const evidenceStrength = normalizeFutureSelfEvidenceStrength(record.evidence_strength);
 
     return {
       ...record,
-      ...(stage ? { stage } : {}),
+      ...(evidenceStrength ? { evidence_strength: evidenceStrength } : {}),
+      themes: normalizeThemesArray(record.themes),
     };
   });
 }

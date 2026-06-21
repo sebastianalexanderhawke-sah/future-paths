@@ -795,7 +795,7 @@ function buildBlindSpotRealityFuture(
     path.future_shift,
     ...path.consequences,
     ...(futureSelf && !ARCHETYPE_NAME_PATTERN.test(futureSelf.name) ? [futureSelf.name] : []),
-    ...(futureSelf ? [futureSelf.description] : []),
+    ...(futureSelf ? [futureSelf.summary] : []),
   ].filter(
     (candidate) => candidate.trim().length > 0 && isGroundedFutureText(candidate, bundle),
   );
@@ -804,19 +804,19 @@ function buildBlindSpotRealityFuture(
     pickBestRealityCandidate(detailCandidates, bundle) ?? path.future_shift ?? path.consequences[0];
 
   const futureSelfOriginal = futureSelf
-    ? `${futureSelf.name}: ${futureSelf.description}`.trim()
+    ? `${futureSelf.name}: ${futureSelf.summary}`.trim()
     : null;
   const usesFutureSelf =
     futureSelf !== null &&
     (titleSource.trim() === futureSelf.name.trim() ||
-      titleSource.trim() === futureSelf.description.trim());
+      titleSource.trim() === futureSelf.summary.trim());
 
   const built = buildRealityFuture(
     titleSource,
     path,
     bundle,
-    futureSelf?.description ?? path.future_shift,
-    futureSelf?.description ?? path.future_shift,
+    futureSelf?.summary ?? path.future_shift,
+    futureSelf?.summary ?? path.future_shift,
   );
 
   if (!built) {

@@ -9,8 +9,8 @@ import {
   normalizeContradictionSourceRefs,
   normalizeContradictionType,
   normalizeCrossroadThemesInOutput,
+  normalizeFutureSelfEvidenceStrength,
   normalizeFutureSelfInOutput,
-  normalizeFutureSelfStage,
   normalizeIdentityPromptInOutput,
   normalizeIdentityPromptType,
   normalizeIdentityUpdateInOutput,
@@ -23,7 +23,7 @@ import {
 import { parseTimelineOutput } from "@/lib/ai/schemas/timeline";
 import {
   CONTRADICTION_TYPES,
-  FUTURE_SELF_STAGES,
+  FUTURE_SELF_EVIDENCE_STRENGTHS,
   IDENTITY_PROMPT_TYPES,
   IDENTITY_UPDATE_TYPES,
   THEME_NAMES,
@@ -39,16 +39,16 @@ describe("theme normalization", () => {
     }
   });
 
-  it("passes through approved future self stages unchanged", () => {
-    for (const stage of FUTURE_SELF_STAGES) {
-      expect(normalizeFutureSelfStage(stage)).toBe(stage);
+  it("passes through approved future self evidence strengths unchanged", () => {
+    for (const strength of FUTURE_SELF_EVIDENCE_STRENGTHS) {
+      expect(normalizeFutureSelfEvidenceStrength(strength)).toBe(strength);
     }
   });
 
-  it("maps common Claude stage inventions to approved values", () => {
-    expect(normalizeFutureSelfStage("developing")).toBe("emerging");
-    expect(normalizeFutureSelfStage("forming")).toBe("possible");
-    expect(normalizeFutureSelfStage("future self")).toBe("future_self");
+  it("maps common Claude evidence strength inventions to approved values", () => {
+    expect(normalizeFutureSelfEvidenceStrength("low")).toBe("Emerging");
+    expect(normalizeFutureSelfEvidenceStrength("medium")).toBe("Moderate");
+    expect(normalizeFutureSelfEvidenceStrength("confirmed")).toBe("Strong");
   });
 
   it("passes through approved contradiction types unchanged", () => {
@@ -259,19 +259,22 @@ describe("theme normalization", () => {
     expect(parseTimelineOutput(normalized)[0].themes).toEqual(["Belonging", "Curiosity"]);
   });
 
-  it("normalizes future self output stages before schema validation", () => {
+  it("normalizes future self evidence_strength before schema validation", () => {
     const normalized = normalizeFutureSelfInOutput([
       {
-        name: "The Builder",
-        description: "You may be becoming someone who grows steadily.",
-        stage: "developing",
-        momentum: 80,
+        name: "Keeps taking on harder versions of the same challenge",
+        summary: "Someone who treats discomfort as a signal to keep going rather than to stop.",
+        percentage: 100,
+        evidence_strength: "high",
+        benefits: ["Skills compound steadily.", "Confidence builds from repeated effort."],
+        consequences: ["Rest becomes harder to access.", "Other areas may be neglected."],
+        prediction: "Becomes someone who measures their life largely by progress.",
         themes: ["Growth"],
       },
     ]);
 
     expect(() => parseFutureSelfOutput(normalized)).not.toThrow();
-    expect(parseFutureSelfOutput(normalized)[0].stage).toBe("emerging");
+    expect(parseFutureSelfOutput(normalized)[0].evidence_strength).toBe("Strong");
   });
 
   it("normalizes contradiction output before schema validation", () => {

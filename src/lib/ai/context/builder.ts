@@ -305,7 +305,7 @@ async function loadCurrentSelfContext(
     .select("*")
     .eq("user_id", base.userId)
     .eq("status", "active")
-    .order("momentum", { ascending: false });
+    .order("percentage", { ascending: false });
 
   const { data: recentMoments } = await supabase
     .from("moments")
@@ -406,7 +406,7 @@ async function loadContradictionContext(
     .select("*")
     .eq("user_id", base.userId)
     .eq("status", "active")
-    .order("momentum", { ascending: false });
+    .order("percentage", { ascending: false });
 
   const { data: answeredPrompts } = await supabase
     .from("identity_prompts")
@@ -517,7 +517,7 @@ async function loadTimelineContext(
       .eq("user_id", base.userId),
     supabase
       .from("future_selves")
-      .select("id, name, momentum, themes, status, updated_at")
+      .select("id, name, percentage, themes, status, updated_at")
       .eq("user_id", base.userId)
       .eq("status", "active"),
     supabase
