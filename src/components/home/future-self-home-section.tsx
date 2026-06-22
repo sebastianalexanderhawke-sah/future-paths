@@ -1,6 +1,7 @@
 import { OverviewEmptyPanel } from "@/components/overview/overview-empty-panel";
 import { OverviewSection } from "@/components/overview/overview-section";
 import { CardShell } from "@/components/ui/card-shell";
+import { TrendIndicator } from "@/components/ui/trend-indicator";
 import type { FutureSelf } from "@/types/database";
 
 type FutureSelfHomeSectionProps = {
@@ -20,7 +21,8 @@ export function FutureSelfHomeSection({ futureSelves }: FutureSelfHomeSectionPro
             <CardShell key={futureSelf.id} variant="elevated" className="p-4">
               <h3 className="text-body font-medium text-ink-primary">{futureSelf.name}</h3>
               <p className="mt-1.5 text-label text-ink-tertiary">
-                {futureSelf.percentage}% · {futureSelf.evidence_strength} evidence
+                {futureSelf.percentage}% <TrendIndicator futureSelf={futureSelf} /> ·{" "}
+                {futureSelf.evidence_strength} evidence
               </p>
             </CardShell>
           ))}

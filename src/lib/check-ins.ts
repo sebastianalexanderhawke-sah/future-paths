@@ -9,6 +9,7 @@ import {
 } from "@/components/home/forecast-utils";
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { hasForecastForMomentAndPath, saveForecast } from "@/lib/forecasts";
+import { requestFutureSelfRegeneration } from "@/lib/future-selves";
 import { createIdentityUpdateIfMeaningful } from "@/lib/identity-updates";
 import { evaluateReflectionQuestion } from "@/lib/reflection-question";
 import { createClient } from "@/lib/supabase/server";
@@ -339,6 +340,7 @@ export async function createCheckIn(
 
   // Check-in recorded: identity-relevant evidence, but routine enough that
   // it shouldn't force a regeneration on every single one.
+  await requestFutureSelfRegeneration(auth.userId);
   await requestCurrentSelfRegeneration(auth.userId);
 
   revalidatePath(`/moments/${momentId}`);

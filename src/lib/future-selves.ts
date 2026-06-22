@@ -225,6 +225,7 @@ export async function generateFutureSelves(): Promise<
         .update({
           summary: draft.summary,
           percentage: draft.percentage,
+          previous_percentage: existing.percentage,
           evidence_strength: draft.evidence_strength,
           benefits: draft.benefits,
           consequences: draft.consequences,
@@ -255,24 +256,16 @@ export async function generateFutureSelves(): Promise<
 
     const percentageIncreased = draft.percentage > existing.percentage;
     const evidenceStrengthChanged = draft.evidence_strength !== existing.evidence_strength;
-    const hasChanges =
-      percentageIncreased ||
-      evidenceStrengthChanged ||
-      draft.summary !== existing.summary ||
-      draft.prediction !== existing.prediction ||
-      JSON.stringify(draft.themes) !== JSON.stringify(existing.themes) ||
-      JSON.stringify(draft.benefits) !== JSON.stringify(existing.benefits) ||
-      JSON.stringify(draft.consequences) !== JSON.stringify(existing.consequences);
 
-    if (!hasChanges) {
-      continue;
-    }
-
+    // Always snapshot previous_percentage, even when nothing else changed —
+    // trend tracking compares against "as of last generation," not "as of
+    // last change," so every active match must be touched every run.
     const { error: updateError } = await supabase
       .from("future_selves")
       .update({
         summary: draft.summary,
         percentage: draft.percentage,
+        previous_percentage: existing.percentage,
         evidence_strength: draft.evidence_strength,
         benefits: draft.benefits,
         consequences: draft.consequences,
@@ -313,6 +306,7 @@ export async function generateFutureSelves(): Promise<
       .update({
         status: "faded",
         percentage: 0,
+        previous_percentage: existing.percentage,
         updated_at: now,
       })
       .eq("id", existing.id)
@@ -339,4 +333,41 @@ export async function generateFutureSelves(): Promise<
   }
 
   return listFutureSelves({ status: "active" });
+}
+
+// How long a regeneration "covers" subsequent identity-relevant events.
+// Mirrors Current Self's debounce window so a chosen path, check-in, or
+// identity update doesn't trigger a regeneration on every single write.
+const REGENERATION_DEBOUNCE_MS = 15 * 60 * 1000;
+
+async function getFutureSelfLastGeneratedAt(userId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("future_selves")
+    .select("updated_at")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.updated_at ?? null;
+}
+
+/**
+ * Single entry point for identity-relevant events to request that Future
+ * Selves be brought up to date. Debounced by default, mirroring
+ * requestCurrentSelfRegeneration, so routine activity doesn't spam the
+ * generator.
+ */
+export async function requestFutureSelfRegeneration(userId: string): Promise<void> {
+  const lastGeneratedAt = await getFutureSelfLastGeneratedAt(userId);
+
+  if (
+    lastGeneratedAt &&
+    Date.now() - new Date(lastGeneratedAt).getTime() < REGENERATION_DEBOUNCE_MS
+  ) {
+    return;
+  }
+
+  await generateFutureSelves().catch(() => {});
 }

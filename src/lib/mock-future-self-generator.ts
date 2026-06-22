@@ -30,10 +30,12 @@ const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
     benefits: [
       "Relationships deepen and become more reliable.",
       "Support is available during difficult stretches.",
+      "Shared experiences accumulate faster.",
     ],
     consequences: [
       "Time and energy for solo pursuits shrinks.",
       "Decisions increasingly bend around other people's needs.",
+      "Independence muscles get less practice.",
     ],
     prediction:
       "Becomes someone whose sense of identity is closely tied to the people around them, with fewer choices made in isolation.",
@@ -45,10 +47,12 @@ const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
     benefits: [
       "Decisions become easier to make without needing approval.",
       "Self-reliance grows.",
+      "Major moves become easier to make on short notice.",
     ],
     consequences: [
       "Close relationships may thin out from lack of ongoing investment.",
       "Support during hard moments may be harder to find.",
+      "Fewer people end up with full context on the person's life.",
     ],
     prediction:
       "Becomes someone increasingly comfortable making major decisions alone, with a smaller but more selective circle of close relationships.",
@@ -60,10 +64,12 @@ const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
     benefits: [
       "Exposure to more options and perspectives.",
       "Adaptability to new circumstances increases.",
+      "New skills and interests keep entering the picture.",
     ],
     consequences: [
       "Commitments may be harder to sustain.",
       "Less depth builds in any single pursuit.",
+      "Unfinished projects pile up over time.",
     ],
     prediction:
       "Becomes someone defined by breadth of experience rather than mastery of one path, often mid-exploration rather than settled.",
@@ -75,10 +81,12 @@ const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
     benefits: [
       "Day-to-day life remains predictable and manageable.",
       "Existing commitments stay intact.",
+      "Stress from uncertainty stays low.",
     ],
     consequences: [
       "Opportunities that require disruption go unexplored.",
       "Growth may slow without new challenge.",
+      "The comfortable routine gets harder to leave the longer it continues.",
     ],
     prediction:
       "Becomes someone who is reliable and consistent, but increasingly risk-averse about anything that threatens the current routine.",
@@ -90,10 +98,12 @@ const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
     benefits: [
       "Original work or expression accumulates over time.",
       "A distinct point of view becomes more defined.",
+      "Work feels more personally meaningful.",
     ],
     consequences: [
       "Financial or schedule stability may suffer for the sake of the work.",
       "Conventional paths get deprioritized.",
+      "Feedback and rejection land harder when the work is personal.",
     ],
     prediction:
       "Becomes someone whose identity is tied to what they make, increasingly uncomfortable in roles that don't allow for it.",
@@ -104,10 +114,12 @@ const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
     benefits: [
       "Skills and capability compound steadily.",
       "Confidence builds from repeated effort.",
+      "Harder goals start to feel reachable.",
     ],
     consequences: [
       "Rest and satisfaction with \"good enough\" become harder to access.",
       "Other areas of life may be neglected in favor of the effort.",
+      "Burnout risk builds quietly over time.",
     ],
     prediction:
       "Becomes someone who measures their life largely by progress and improvement, often restless when things plateau.",
@@ -119,10 +131,12 @@ const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
     benefits: [
       "A stable sense of identity tied to a community forms.",
       "Access to support and shared resources increases.",
+      "A sense of belonging shows up in daily life.",
     ],
     consequences: [
       "Decisions that would separate them from the group become harder to make.",
       "Individual preferences may get deprioritized for the sake of fitting in.",
+      "Leaving or disagreeing with the group gets costlier over time.",
     ],
     prediction:
       "Becomes someone whose choices are increasingly shaped by what keeps them inside a group, with identity and group membership closely linked.",
@@ -134,10 +148,12 @@ const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
     benefits: [
       "Influence over outcomes and direction increases.",
       "Others increasingly rely on and trust their judgment.",
+      "More say in decisions that affect the group.",
     ],
     consequences: [
       "Personal needs may get deprioritized behind the group's.",
       "Visibility increases the cost of mistakes.",
+      "Free time shrinks as more people depend on them.",
     ],
     prediction:
       "Becomes someone others look to first, with identity increasingly tied to being responsible for a group's direction.",
@@ -149,10 +165,12 @@ const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
     benefits: [
       "Decisions are made with more self-awareness.",
       "Patterns are more likely to be recognized before they repeat.",
+      "Fewer impulsive choices that need walking back later.",
     ],
     consequences: [
       "Action may be delayed past the point it was useful.",
       "Overthinking may substitute for actually deciding.",
+      "Opportunities with short windows may close while still weighing options.",
     ],
     prediction:
       "Becomes someone who trusts their own analysis more than impulse, sometimes at the cost of momentum.",
@@ -164,10 +182,12 @@ const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
     benefits: [
       "New opportunities that require risk become available.",
       "Confidence builds from having faced difficulty directly.",
+      "Fewer regrets about chances not taken.",
     ],
     consequences: [
       "Some risks taken will not pay off.",
       "Stability is repeatedly put at stake for the sake of the attempt.",
+      "Recovery time after a bad outcome can be significant.",
     ],
     prediction:
       "Becomes someone defined by a willingness to act despite uncertainty, with a track record that includes both gains and real losses.",
@@ -257,7 +277,7 @@ export function generateMockFutureSelves(input: {
   const ranked = [...themeScores.entries()]
     .filter(([, score]) => score > 0)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 4);
+    .slice(0, 5);
 
   if (ranked.length === 0) {
     return [];

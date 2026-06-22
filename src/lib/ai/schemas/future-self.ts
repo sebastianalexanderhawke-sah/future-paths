@@ -42,12 +42,12 @@ function refinePercentagesSumTo100(
 export const futureSelfOutputSchema = z
   .array(futureSelfDraftSchema)
   .min(1)
-  .max(4)
+  .max(5)
   .superRefine(refinePercentagesSumTo100);
 
 export const futureSelfDiscoverOutputSchema = z
   .array(futureSelfDraftSchema)
-  .max(4)
+  .max(5)
   .superRefine(refinePercentagesSumTo100) satisfies z.ZodType<MockFutureSelfDraft[]>;
 
 export function parseFutureSelfOutput(data: unknown): MockFutureSelfDraft[] {

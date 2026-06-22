@@ -266,8 +266,16 @@ describe("theme normalization", () => {
         summary: "Someone who treats discomfort as a signal to keep going rather than to stop.",
         percentage: 100,
         evidence_strength: "high",
-        benefits: ["Skills compound steadily.", "Confidence builds from repeated effort."],
-        consequences: ["Rest becomes harder to access.", "Other areas may be neglected."],
+        benefits: [
+          "Skills compound steadily.",
+          "Confidence builds from repeated effort.",
+          "Harder goals start to feel reachable.",
+        ],
+        consequences: [
+          "Rest becomes harder to access.",
+          "Other areas may be neglected.",
+          "Burnout risk builds quietly.",
+        ],
         prediction: "Becomes someone who measures their life largely by progress.",
         themes: ["Growth"],
       },

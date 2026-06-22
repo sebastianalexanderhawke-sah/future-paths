@@ -4,6 +4,7 @@ import {
   encodePathDescriptionWithNativeTitle,
 } from "@/components/home/path-native-title";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
+import { requestFutureSelfRegeneration } from "@/lib/future-selves";
 import { createClient } from "@/lib/supabase/server";
 import type { Path } from "@/types/database";
 import type { ThemeName } from "@/types/enums";
@@ -270,6 +271,8 @@ export async function createForecastModePath(
     },
   });
 
+  await requestFutureSelfRegeneration(auth.userId);
+
   return { path };
 }
 
@@ -381,6 +384,8 @@ export async function choosePath(
       .eq("id", pathId);
     return { error: timelineError.message };
   }
+
+  await requestFutureSelfRegeneration(auth.userId);
 
   return { path: updatedPath };
 }

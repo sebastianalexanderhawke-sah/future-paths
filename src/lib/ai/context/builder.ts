@@ -268,6 +268,13 @@ async function loadFutureSelfContext(
     .eq("user_id", base.userId)
     .eq("is_chosen", true);
 
+  const { data: activeFutureSelves } = await supabase
+    .from("future_selves")
+    .select("name, summary, percentage, evidence_strength, themes")
+    .eq("user_id", base.userId)
+    .eq("status", "active")
+    .order("percentage", { ascending: false });
+
   return {
     ...base,
     counts: {
@@ -281,6 +288,7 @@ async function loadFutureSelfContext(
       summary: "",
       themes: update.themes,
     })),
+    futureSelves: activeFutureSelves ?? [],
   };
 }
 

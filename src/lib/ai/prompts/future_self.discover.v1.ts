@@ -8,7 +8,7 @@ import { FUTURE_SELF_FORECAST_RULES } from "@/lib/ai/prompts/shared/forecast-gen
 export const futureSelfDiscoverV1 = createPromptModule({
   promptId: "future_self.discover",
   promptVersion: "1",
-  taskInstructions: `Discover 2-4 future selves from recurring theme signals across this person's chosen paths, check-ins, reflections, and identity updates.
+  taskInstructions: `Discover 2-5 future selves from recurring theme signals across this person's situations, chosen paths, check-ins, reflections, and identity updates.
 
 This output answers: "Based on my recent actions and choices, what kinds of people am I becoming, and what are the benefits and costs of each path?"
 
@@ -20,7 +20,7 @@ ${STRICT_FUTURE_SELF_EVIDENCE_STRENGTH_RULES}`,
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
-      `Produce JSON array of 2-4 future self drafts.
+      `Produce JSON array of 2-5 future self drafts.
 
 The percentage field across all drafts in the array MUST sum to exactly 100.
 

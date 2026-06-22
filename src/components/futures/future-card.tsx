@@ -1,3 +1,4 @@
+import { TrendIndicator } from "@/components/ui/trend-indicator";
 import type { FutureSelf } from "@/types/database";
 
 type FutureCardProps = {
@@ -21,7 +22,9 @@ export function FutureCard({ futureSelf }: FutureCardProps) {
         {!isFaded ? (
           <div className="text-right">
             <p className="text-xs text-zinc-400">Likelihood</p>
-            <p className="text-sm font-medium text-zinc-900">{futureSelf.percentage}%</p>
+            <p className="text-sm font-medium text-zinc-900">
+              {futureSelf.percentage}% <TrendIndicator futureSelf={futureSelf} />
+            </p>
           </div>
         ) : (
           <p className="text-xs text-zinc-500">Faded</p>

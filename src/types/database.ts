@@ -111,6 +111,7 @@ export type FutureSelf = {
   name: string;
   summary: string;
   percentage: number;
+  previous_percentage: number | null;
   evidence_strength: FutureSelfEvidenceStrength;
   benefits: string[];
   consequences: string[];
@@ -383,6 +384,7 @@ export type FutureSelfUpdate = Partial<
     FutureSelf,
     | "summary"
     | "percentage"
+    | "previous_percentage"
     | "evidence_strength"
     | "benefits"
     | "consequences"

@@ -11,8 +11,16 @@ const draftA = {
   summary: "Someone who keeps building steadily within familiar structures.",
   percentage: 60,
   evidence_strength: "Strong" as const,
-  benefits: ["Stability compounds over time.", "Existing relationships deepen."],
-  consequences: ["New opportunities outside the routine go unexplored.", "Growth slows without new challenge."],
+  benefits: [
+    "Stability compounds over time.",
+    "Existing relationships deepen.",
+    "Day-to-day life stays predictable.",
+  ],
+  consequences: [
+    "New opportunities outside the routine go unexplored.",
+    "Growth slows without new challenge.",
+    "The routine gets harder to leave the longer it continues.",
+  ],
   prediction: "Continues to favor consistency over novelty, with deep but narrow relationships.",
   themes: ["Stability"],
 };
@@ -22,8 +30,16 @@ const draftB = {
   summary: "Someone who follows new opportunities even when it means starting over.",
   percentage: 40,
   evidence_strength: "Moderate" as const,
-  benefits: ["New environments open new opportunities.", "Independence grows."],
-  consequences: ["Existing relationships strain under distance.", "Temporary loneliness while rebuilding."],
+  benefits: [
+    "New environments open new opportunities.",
+    "Independence grows.",
+    "Adaptability to change increases.",
+  ],
+  consequences: [
+    "Existing relationships strain under distance.",
+    "Temporary loneliness while rebuilding.",
+    "Roots take longer to form in each new place.",
+  ],
   prediction: "Becomes someone who treats relocation as routine, trading depth of roots for breadth of experience.",
   themes: ["Independence", "Growth"],
 };

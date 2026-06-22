@@ -78,6 +78,14 @@ describe("prompt registry", () => {
     expect(systemPrompt).toContain("Do not predict specific events");
   });
 
+  it("requires future_self.discover to preserve identity across generations", () => {
+    const definition = getPromptDefinition("future_self.discover");
+    const systemPrompt = definition.buildSystemPrompt();
+
+    expect(systemPrompt).toContain("Continuity:");
+    expect(systemPrompt).toContain("reuse its exact name");
+  });
+
   it("requires forecast.generate to produce dedicated future realities", () => {
     const definition = getPromptDefinition("forecast.generate");
     const systemPrompt = definition.buildSystemPrompt();
