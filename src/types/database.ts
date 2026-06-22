@@ -117,6 +117,7 @@ export type FutureSelf = {
   consequences: string[];
   prediction: string;
   themes: ThemeName[];
+  why_changed: string;
   status: FutureSelfStatus;
   created_at: string;
   updated_at: string;
@@ -377,6 +378,7 @@ export type FutureSelfInsert = Pick<
 > & {
   themes?: ThemeName[];
   status?: FutureSelfStatus;
+  why_changed?: string;
 };
 
 export type FutureSelfUpdate = Partial<
@@ -392,6 +394,7 @@ export type FutureSelfUpdate = Partial<
     | "themes"
     | "status"
     | "updated_at"
+    | "why_changed"
   >
 >;
 

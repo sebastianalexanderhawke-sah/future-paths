@@ -1,7 +1,6 @@
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { identityUpdateNullableOutputSchema } from "@/lib/ai/schemas/identity-update";
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
-import { requestFutureSelfRegeneration } from "@/lib/future-selves";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn, IdentityUpdate, Moment } from "@/types/database";
 
@@ -135,8 +134,8 @@ export async function createIdentityUpdateIfMeaningful(input: {
     },
   });
 
-  // A curated identity update is meaningful evidence on its own, independent
-  // of the check-in that produced it.
-  await requestFutureSelfRegeneration(input.userId);
+  // Identity updates no longer trigger Future Self regeneration directly —
+  // the check-in that produced this update already does, and check-ins are
+  // the lived-evidence signal Future Selves should respond to.
   await requestCurrentSelfRegeneration(input.userId);
 }

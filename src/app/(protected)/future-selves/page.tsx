@@ -88,17 +88,23 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
 
         {fadedFutures.length > 0 ? (
           <section className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-sm font-medium text-zinc-900">Faded futures</h2>
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-zinc-900 [&::-webkit-details-marker]:hidden">
+                <span aria-hidden="true" className="text-zinc-400">
+                  <span className="group-open:hidden">▶</span>
+                  <span className="hidden group-open:inline">▼</span>
+                </span>
+                Faded Futures ({fadedFutures.length})
+              </summary>
               <p className="mt-1 text-sm text-zinc-500">
                 Trajectories that may have quieted for now.
               </p>
-            </div>
-            <div className="flex flex-col gap-3">
-              {fadedFutures.map((futureSelf) => (
-                <FutureCard key={futureSelf.id} futureSelf={futureSelf} />
-              ))}
-            </div>
+              <div className="mt-4 flex flex-col gap-3">
+                {fadedFutures.map((futureSelf) => (
+                  <FutureCard key={futureSelf.id} futureSelf={futureSelf} />
+                ))}
+              </div>
+            </details>
           </section>
         ) : null}
       </main>

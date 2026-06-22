@@ -68,11 +68,16 @@ describe("prompt registry", () => {
     expect(systemPrompt).toContain("What happens?");
   });
 
-  it("requires future_self.discover to use the evidence-weighted percentage model", () => {
+  it("requires future_self.discover to return movement_direction instead of a percentage", () => {
     const definition = getPromptDefinition("future_self.discover");
     const systemPrompt = definition.buildSystemPrompt();
+    const userPrompt = definition.buildUserPrompt({
+      userId: "user-1",
+      profile: "future_self",
+    });
 
-    expect(systemPrompt).toContain("sum to exactly 100");
+    expect(systemPrompt).toContain("movement_direction");
+    expect(userPrompt).toContain("positive, negative, unchanged");
     expect(systemPrompt).toContain("Emerging, Moderate, Strong");
     expect(systemPrompt).toContain("Avoid: archetypes");
     expect(systemPrompt).toContain("Do not predict specific events");

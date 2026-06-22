@@ -14,7 +14,7 @@ This output answers: "Based on my recent actions and choices, what kinds of peop
 
 ${FUTURE_SELF_FORECAST_RULES}
 
-Each draft needs name, summary, percentage (0-100), evidence_strength, benefits, consequences, prediction, and themes.
+Each draft needs name, summary, movement_direction, evidence_strength, benefits, consequences, prediction, themes, and why_changed.
 
 ${STRICT_FUTURE_SELF_EVIDENCE_STRENGTH_RULES}`,
   buildUserPrompt: (context) =>
@@ -22,7 +22,7 @@ ${STRICT_FUTURE_SELF_EVIDENCE_STRENGTH_RULES}`,
       context,
       `Produce JSON array of 2-5 future self drafts.
 
-The percentage field across all drafts in the array MUST sum to exactly 100.
+Each draft.movement_direction MUST be exactly one of: positive, negative, unchanged.
 
 Each draft.evidence_strength MUST be exactly one of the approved values below.
 

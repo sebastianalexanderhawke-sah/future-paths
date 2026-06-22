@@ -1,15 +1,19 @@
 import type { ThemeChange } from "@/types/database";
 import type { FutureSelfEvidenceStrength, ThemeName } from "@/types/enums";
 
+export const FUTURE_SELF_MOVEMENT_DIRECTIONS = ["positive", "negative", "unchanged"] as const;
+export type FutureSelfMovementDirection = (typeof FUTURE_SELF_MOVEMENT_DIRECTIONS)[number];
+
 export type MockFutureSelfDraft = {
   name: string;
   summary: string;
-  percentage: number;
+  movement_direction: FutureSelfMovementDirection;
   evidence_strength: FutureSelfEvidenceStrength;
   benefits: string[];
   consequences: string[];
   prediction: string;
   themes: ThemeName[];
+  why_changed: string;
 };
 
 type ThemeTrajectory = {
@@ -222,22 +226,6 @@ function evidenceStrengthFromSources(
   return "Emerging";
 }
 
-function distributePercentages(scores: number[]): number[] {
-  const total = scores.reduce((sum, score) => sum + score, 0);
-
-  if (total <= 0) {
-    return scores.map(() => 0);
-  }
-
-  const raw = scores.map((score) => Math.max(1, Math.round((score / total) * 100)));
-  const rawTotal = raw.reduce((sum, value) => sum + value, 0);
-
-  // Reconcile rounding drift on the largest share so the array sums to 100.
-  raw[0] += 100 - rawTotal;
-
-  return raw;
-}
-
 export function generateMockFutureSelves(input: {
   momentCount: number;
   checkInCount: number;
@@ -283,21 +271,20 @@ export function generateMockFutureSelves(input: {
     return [];
   }
 
-  const percentages = distributePercentages(ranked.map(([, score]) => score));
-
-  return ranked.map(([theme], index) => {
+  return ranked.map(([theme]) => {
     const trajectory = THEME_TRAJECTORY[theme];
     const sources = themeSources.get(theme) ?? new Set<EvidenceSource>();
 
     return {
       name: trajectory.name,
       summary: trajectory.summary,
-      percentage: percentages[index],
+      movement_direction: "positive" as const,
       evidence_strength: evidenceStrengthFromSources(sources),
       benefits: trajectory.benefits,
       consequences: trajectory.consequences,
       prediction: trajectory.prediction,
       themes: [theme],
+      why_changed: "",
     };
   });
 }

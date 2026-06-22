@@ -72,6 +72,7 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
     (checkIn) => ({
       ...checkIn,
       identity_impact: truncateText(checkIn.identity_impact, limits.identityImpact),
+      reality_summary: truncateText(checkIn.reality_summary, limits.realitySummary),
     }),
   );
 
@@ -261,6 +262,10 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     recentMoments: bundle.recentMoments,
     currentSelfChosenPaths: bundle.currentSelfChosenPaths,
     currentSelfCheckIns: bundle.currentSelfCheckIns,
+    pathThemes: bundle.pathThemes,
+    checkIns: bundle.checkIns,
+    identityUpdates: bundle.identityUpdates,
+    futureSelves: bundle.futureSelves,
   };
 
   serialized = JSON.stringify(reduced);
@@ -269,40 +274,11 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     return reduced;
   }
 
-  if (bundle.profile === "current_self") {
-    return {
-      userId: bundle.userId,
-      profile: bundle.profile,
-      counts: bundle.counts,
-      pathThemes: bundle.pathThemes,
-      recentMoments: truncateArray(bundle.recentMoments, 3)?.map((moment) => ({
-        ...moment,
-        description: truncateNullableText(moment.description, 150),
-      })),
-      currentSelfChosenPaths: truncateArray(bundle.currentSelfChosenPaths, 3)?.map(
-        (path) => ({
-          ...path,
-          description: truncateText(path.description, 150),
-        }),
-      ),
-      currentSelfCheckIns: truncateArray(bundle.currentSelfCheckIns, 3)?.map(
-        (checkIn) => ({
-          ...checkIn,
-          reflection: truncateText(checkIn.reflection, 150),
-          reality_summary: truncateText(checkIn.reality_summary, 150),
-          identity_impact: truncateText(checkIn.identity_impact, 150),
-          reflection_question: truncateNullableText(checkIn.reflection_question, 100),
-          reflection_answer: truncateNullableText(checkIn.reflection_answer, 150),
-        }),
-      ),
-      futureSelves: truncateArray(bundle.futureSelves, 3),
-      identityUpdates: truncateArray(bundle.identityUpdates, 3)?.map((update) => ({
-        ...update,
-        summary: truncateText(update.summary, 150),
-      })),
-    };
-  }
-
+  // Deep reduction: every profile that depends on checkIns/identityUpdates/
+  // futureSelves/pathThemes (future_self, current_self, identity_prompt,
+  // contradiction) must still receive a non-empty, shortened sample of each —
+  // an oversized bundle elsewhere must never zero out the evidence a profile
+  // actually needs to do its job.
   return {
     userId: bundle.userId,
     profile: bundle.profile,
@@ -312,6 +288,42 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     pastCrossroad: bundle.pastCrossroad,
     selectedPastPath: bundle.selectedPastPath,
     currentSelf: bundle.currentSelf,
+    counts: bundle.counts,
+    pathThemes: bundle.pathThemes?.slice(0, 10),
+    recentMoments: truncateArray(bundle.recentMoments, 3)?.map((moment) => ({
+      ...moment,
+      description: truncateNullableText(moment.description, 150),
+    })),
+    currentSelfChosenPaths: truncateArray(bundle.currentSelfChosenPaths, 3)?.map(
+      (path) => ({
+        ...path,
+        description: truncateText(path.description, 150),
+      }),
+    ),
+    currentSelfCheckIns: truncateArray(bundle.currentSelfCheckIns, 3)?.map(
+      (checkIn) => ({
+        ...checkIn,
+        reflection: truncateText(checkIn.reflection, 150),
+        reality_summary: truncateText(checkIn.reality_summary, 150),
+        identity_impact: truncateText(checkIn.identity_impact, 150),
+        reflection_question: truncateNullableText(checkIn.reflection_question, 100),
+        reflection_answer: truncateNullableText(checkIn.reflection_answer, 150),
+      }),
+    ),
+    checkIns: truncateArray(bundle.checkIns, 5)?.map((checkIn) => ({
+      ...checkIn,
+      identity_impact: truncateText(checkIn.identity_impact, 150),
+      reality_summary: truncateText(checkIn.reality_summary, 150),
+    })),
+    identityUpdates: truncateArray(bundle.identityUpdates, 5)?.map((update) => ({
+      ...update,
+      title: truncateText(update.title, 80),
+      summary: truncateText(update.summary, 150),
+    })),
+    futureSelves: truncateArray(bundle.futureSelves, 5)?.map((futureSelf) => ({
+      ...futureSelf,
+      summary: truncateText(futureSelf.summary, 150),
+    })),
   };
 }
 

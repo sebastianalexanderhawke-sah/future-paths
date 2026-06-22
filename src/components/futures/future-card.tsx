@@ -1,4 +1,5 @@
 import { TrendIndicator } from "@/components/ui/trend-indicator";
+import { getFutureSelfTrend } from "@/lib/future-self-trend";
 import type { FutureSelf } from "@/types/database";
 
 type FutureCardProps = {
@@ -7,6 +8,9 @@ type FutureCardProps = {
 
 export function FutureCard({ futureSelf }: FutureCardProps) {
   const isFaded = futureSelf.status === "faded";
+  const { direction } = getFutureSelfTrend(futureSelf);
+  const hasExplanation =
+    !isFaded && (direction === "up" || direction === "down") && futureSelf.why_changed !== "";
 
   return (
     <article
@@ -22,9 +26,26 @@ export function FutureCard({ futureSelf }: FutureCardProps) {
         {!isFaded ? (
           <div className="text-right">
             <p className="text-xs text-zinc-400">Likelihood</p>
-            <p className="text-sm font-medium text-zinc-900">
-              {futureSelf.percentage}% <TrendIndicator futureSelf={futureSelf} />
-            </p>
+            {hasExplanation ? (
+              <details className="group">
+                <summary className="flex cursor-pointer list-none items-center justify-end gap-1 text-sm font-medium text-zinc-900 [&::-webkit-details-marker]:hidden">
+                  <span>
+                    {futureSelf.percentage}% <TrendIndicator futureSelf={futureSelf} />
+                  </span>
+                  <span aria-hidden="true" className="text-xs text-zinc-400">
+                    <span className="group-open:hidden">▾</span>
+                    <span className="hidden group-open:inline">▴</span>
+                  </span>
+                </summary>
+                <p className="mt-1.5 max-w-[14rem] text-left text-sm leading-relaxed text-zinc-600">
+                  {futureSelf.why_changed}
+                </p>
+              </details>
+            ) : (
+              <p className="text-sm font-medium text-zinc-900">
+                {futureSelf.percentage}% <TrendIndicator futureSelf={futureSelf} />
+              </p>
+            )}
           </div>
         ) : (
           <p className="text-xs text-zinc-500">Faded</p>

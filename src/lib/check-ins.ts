@@ -9,7 +9,7 @@ import {
 } from "@/components/home/forecast-utils";
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { hasForecastForMomentAndPath, saveForecast } from "@/lib/forecasts";
-import { requestFutureSelfRegeneration } from "@/lib/future-selves";
+import { generateFutureSelves } from "@/lib/future-selves";
 import { createIdentityUpdateIfMeaningful } from "@/lib/identity-updates";
 import { evaluateReflectionQuestion } from "@/lib/reflection-question";
 import { createClient } from "@/lib/supabase/server";
@@ -338,9 +338,9 @@ export async function createCheckIn(
     checkIn.reflection_question = reflectionEvaluation.question;
   }
 
-  // Check-in recorded: identity-relevant evidence, but routine enough that
-  // it shouldn't force a regeneration on every single one.
-  await requestFutureSelfRegeneration(auth.userId);
+  // Check-ins are lived evidence — the strongest signal Future Selves
+  // respond to — so every check-in always triggers a regeneration.
+  await generateFutureSelves().catch(() => {});
   await requestCurrentSelfRegeneration(auth.userId);
 
   revalidatePath(`/moments/${momentId}`);

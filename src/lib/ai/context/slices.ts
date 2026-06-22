@@ -41,7 +41,7 @@ export type IdentityContextBundle = {
   checkInHistory?: Pick<CheckIn, "theme_changes">[];
   counts?: ContextCounts;
   pathThemes?: ThemeName[];
-  checkIns?: Pick<CheckIn, "theme_changes" | "identity_impact">[];
+  checkIns?: Pick<CheckIn, "theme_changes" | "identity_impact" | "reality_summary">[];
   identityUpdates?: Pick<IdentityUpdate, "title" | "summary" | "themes">[];
   futureSelves?: Pick<
     FutureSelf,

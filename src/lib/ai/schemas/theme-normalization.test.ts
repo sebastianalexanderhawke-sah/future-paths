@@ -264,7 +264,7 @@ describe("theme normalization", () => {
       {
         name: "Keeps taking on harder versions of the same challenge",
         summary: "Someone who treats discomfort as a signal to keep going rather than to stop.",
-        percentage: 100,
+        movement_direction: "positive",
         evidence_strength: "high",
         benefits: [
           "Skills compound steadily.",
@@ -278,6 +278,7 @@ describe("theme normalization", () => {
         ],
         prediction: "Becomes someone who measures their life largely by progress.",
         themes: ["Growth"],
+        why_changed: "You kept taking on harder workouts instead of easing off. That makes a growth-driven future feel more likely.",
       },
     ]);
 

@@ -254,12 +254,12 @@ async function loadFutureSelfContext(
 
   const { data: checkIns } = await supabase
     .from("check_ins")
-    .select("theme_changes, identity_impact")
+    .select("theme_changes, identity_impact, reality_summary")
     .eq("user_id", base.userId);
 
   const { data: identityUpdates } = await supabase
     .from("identity_updates")
-    .select("themes")
+    .select("title, summary, themes")
     .eq("user_id", base.userId);
 
   const { data: chosenPaths } = await supabase
@@ -283,11 +283,7 @@ async function loadFutureSelfContext(
     },
     pathThemes: (chosenPaths ?? []).flatMap((path) => path.themes),
     checkIns: checkIns ?? [],
-    identityUpdates: (identityUpdates ?? []).map((update) => ({
-      title: "",
-      summary: "",
-      themes: update.themes,
-    })),
+    identityUpdates: identityUpdates ?? [],
     futureSelves: activeFutureSelves ?? [],
   };
 }
@@ -356,6 +352,7 @@ async function loadCurrentSelfContext(
     checkIns: (checkIns ?? []).map((checkIn) => ({
       theme_changes: checkIn.theme_changes,
       identity_impact: checkIn.identity_impact,
+      reality_summary: checkIn.reality_summary,
     })),
     identityUpdates: identityUpdates ?? [],
     recentMoments: recentMoments ?? [],
