@@ -8,9 +8,38 @@ type FutureCardProps = {
 
 export function FutureCard({ futureSelf }: FutureCardProps) {
   const isFaded = futureSelf.status === "faded";
-  const { direction } = getFutureSelfTrend(futureSelf);
-  const hasExplanation =
-    !isFaded && (direction === "up" || direction === "down") && futureSelf.why_changed !== "";
+  const { delta } = getFutureSelfTrend(futureSelf);
+  // A disclosure only makes sense alongside an actual percentage change — a
+  // future that didn't move has nothing to disclose, and a faded future
+  // doesn't render a percentage row at all (see header below).
+  const hasExplanation = !isFaded && delta !== 0 && futureSelf.why_changed !== "";
+
+  const header = (
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <p className="text-xs text-zinc-400">{futureSelf.evidence_strength} evidence</p>
+        <h3 className="mt-1 text-sm font-medium text-zinc-900">{futureSelf.name}</h3>
+      </div>
+      {!isFaded ? (
+        <div className="text-right">
+          <p className="text-xs text-zinc-400">Likelihood</p>
+          <p className="flex items-center justify-end gap-1 text-sm font-medium text-zinc-900">
+            <span>
+              {futureSelf.percentage}% <TrendIndicator futureSelf={futureSelf} />
+            </span>
+            {hasExplanation ? (
+              <span aria-hidden="true" className="text-xs text-zinc-400">
+                <span className="group-open:hidden">▾</span>
+                <span className="hidden group-open:inline">▴</span>
+              </span>
+            ) : null}
+          </p>
+        </div>
+      ) : (
+        <p className="text-xs text-zinc-500">Faded</p>
+      )}
+    </div>
+  );
 
   return (
     <article
@@ -18,39 +47,19 @@ export function FutureCard({ futureSelf }: FutureCardProps) {
         isFaded ? "border-zinc-200 opacity-70" : "border-zinc-200"
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs text-zinc-400">{futureSelf.evidence_strength} evidence</p>
-          <h3 className="mt-1 text-sm font-medium text-zinc-900">{futureSelf.name}</h3>
-        </div>
-        {!isFaded ? (
-          <div className="text-right">
-            <p className="text-xs text-zinc-400">Likelihood</p>
-            {hasExplanation ? (
-              <details className="group">
-                <summary className="flex cursor-pointer list-none items-center justify-end gap-1 text-sm font-medium text-zinc-900 [&::-webkit-details-marker]:hidden">
-                  <span>
-                    {futureSelf.percentage}% <TrendIndicator futureSelf={futureSelf} />
-                  </span>
-                  <span aria-hidden="true" className="text-xs text-zinc-400">
-                    <span className="group-open:hidden">▾</span>
-                    <span className="hidden group-open:inline">▴</span>
-                  </span>
-                </summary>
-                <p className="mt-1.5 max-w-[14rem] text-left text-sm leading-relaxed text-zinc-600">
-                  {futureSelf.why_changed}
-                </p>
-              </details>
-            ) : (
-              <p className="text-sm font-medium text-zinc-900">
-                {futureSelf.percentage}% <TrendIndicator futureSelf={futureSelf} />
-              </p>
-            )}
+      {hasExplanation ? (
+        <details className="group">
+          <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            {header}
+          </summary>
+          <div className="mt-3 border-t border-zinc-100 pt-3">
+            <p className="text-xs font-medium text-zinc-500">Why it changed</p>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-600">{futureSelf.why_changed}</p>
           </div>
-        ) : (
-          <p className="text-xs text-zinc-500">Faded</p>
-        )}
-      </div>
+        </details>
+      ) : (
+        header
+      )}
 
       <p className="mt-3 text-sm leading-relaxed text-zinc-600">
         {futureSelf.summary}

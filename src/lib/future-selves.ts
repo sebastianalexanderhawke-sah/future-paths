@@ -2,10 +2,7 @@ import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { futureSelfDiscoverOutputSchema } from "@/lib/ai/schemas/future-self";
 import { isPositiveThemeName } from "@/lib/check-in-themes";
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
-import type {
-  FutureSelfMovementDirection,
-  MockFutureSelfDraft,
-} from "@/lib/mock-future-self-generator";
+import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
 import { createClient } from "@/lib/supabase/server";
 import type { ThemeChange, FutureSelf } from "@/types/database";
 import type { IdentityUpdateType, ThemeName } from "@/types/enums";
@@ -128,19 +125,36 @@ async function loadGenerationInput(userId: string): Promise<GenerationInput> {
   };
 }
 
-// Deterministic point values per evidence tier — the model only decides
-// movement_direction; code decides how far that direction moves the number.
-const MOVEMENT_POINTS: Record<"reality_shift" | "pattern_strengthened" | "theme_emerging", number> = {
+// Deterministic point values per evidence type — relative ordering matters
+// more than the exact numbers: a reality_shift should outweigh several
+// check-ins, but several check-ins should still outweigh one theme_emerging.
+const EVIDENCE_WEIGHTS = {
   reality_shift: 8,
   pattern_strengthened: 5,
   theme_emerging: 3,
-};
-const MINOR_EVIDENCE_POINTS = 1;
+  chosen_path: 2,
+  check_in: 1,
+} as const;
 
-function directionSign(direction: FutureSelfMovementDirection): -1 | 0 | 1 {
-  if (direction === "positive") return 1;
-  if (direction === "negative") return -1;
-  return 0;
+// Recency decay: a contribution's weight shrinks with age but never reaches
+// zero, so a trajectory built over months doesn't evaporate the moment
+// nothing new happens for a week.
+const EVIDENCE_DECAY_TIERS: { underDays: number; multiplier: number }[] = [
+  { underDays: 7, multiplier: 1 },
+  { underDays: 30, multiplier: 0.75 },
+  { underDays: 90, multiplier: 0.5 },
+];
+const EVIDENCE_DECAY_FLOOR = 0.25;
+
+function evidenceDecay(ageDays: number): number {
+  for (const tier of EVIDENCE_DECAY_TIERS) {
+    if (ageDays < tier.underDays) return tier.multiplier;
+  }
+  return EVIDENCE_DECAY_FLOOR;
+}
+
+function evidenceAgeDays(createdAt: string, now: string): number {
+  return (new Date(now).getTime() - new Date(createdAt).getTime()) / (24 * 60 * 60 * 1000);
 }
 
 function sharesTheme(a: readonly ThemeName[], b: readonly ThemeName[]): boolean {
@@ -259,56 +273,45 @@ function matchDraftsToExisting(
 }
 
 /**
- * Looks only at evidence created since the cutoff (the last generation run,
- * or unbounded for a future self that doesn't exist yet) and whose themes
- * overlap this future self's themes. No matching evidence at all means no
- * movement — direction alone never moves the percentage.
+ * Cumulative, recency-weighted trajectory strength — every matching piece of
+ * evidence contributes (not just the single strongest type), each discounted
+ * by age but never to zero. Used directly as the pre-normalization raw score
+ * rather than as a +/- delta on top of the previous percentage: an additive
+ * delta on a fixed 0-100 scale can't represent open-ended cumulative history
+ * without either going stale (bounded to "since last generation," which is
+ * frequently empty) or saturating the clamp ceiling (unbounded lookback) —
+ * the two failure modes this replaces. normalizeToHundred rescales the
+ * result, so its absolute magnitude doesn't matter, only its size relative
+ * to the other drafts in the same run.
  */
-function resolveEvidenceMagnitude(
+function computeTrajectoryStrength(
   futureThemes: ThemeName[],
   evidence: EvidenceBundle,
-  since: string | null,
+  now: string,
 ): number {
-  const isRecent = (createdAt: string) => !since || createdAt > since;
+  let strength = 0;
 
-  const matchingUpdates = evidence.identityUpdates.filter(
-    (update) => isRecent(update.created_at) && sharesTheme(futureThemes, update.themes),
-  );
-
-  if (matchingUpdates.some((update) => update.update_type === "reality_shift")) {
-    return MOVEMENT_POINTS.reality_shift;
+  for (const update of evidence.identityUpdates) {
+    if (!sharesTheme(futureThemes, update.themes)) continue;
+    strength +=
+      EVIDENCE_WEIGHTS[update.update_type] * evidenceDecay(evidenceAgeDays(update.created_at, now));
   }
 
-  if (matchingUpdates.some((update) => update.update_type === "pattern_strengthened")) {
-    return MOVEMENT_POINTS.pattern_strengthened;
-  }
-
-  const matchingCheckIns = evidence.checkIns.filter((checkIn) => {
-    if (!isRecent(checkIn.created_at)) {
-      return false;
-    }
+  for (const checkIn of evidence.checkIns) {
     const positiveThemes = checkIn.theme_changes
       .map((change) => change.theme)
       .filter(isPositiveThemeName);
-    return sharesTheme(futureThemes, positiveThemes);
-  });
-
-  if (
-    matchingUpdates.some((update) => update.update_type === "theme_emerging") ||
-    matchingCheckIns.length >= 2
-  ) {
-    return MOVEMENT_POINTS.theme_emerging;
+    if (!sharesTheme(futureThemes, positiveThemes)) continue;
+    strength += EVIDENCE_WEIGHTS.check_in * evidenceDecay(evidenceAgeDays(checkIn.created_at, now));
   }
 
-  const matchingPaths = evidence.chosenPaths.filter(
-    (path) => isRecent(path.chosen_at ?? "") && sharesTheme(futureThemes, path.themes),
-  );
-
-  if (matchingCheckIns.length >= 1 || matchingPaths.length >= 1) {
-    return MINOR_EVIDENCE_POINTS;
+  for (const path of evidence.chosenPaths) {
+    if (!sharesTheme(futureThemes, path.themes)) continue;
+    const age = path.chosen_at ? evidenceAgeDays(path.chosen_at, now) : Infinity;
+    strength += EVIDENCE_WEIGHTS.chosen_path * evidenceDecay(age);
   }
 
-  return 0;
+  return strength;
 }
 
 /** Proportionally rescales raw percentages to sum to 100, preserving ordering and relative differences. */
@@ -411,26 +414,11 @@ export async function generateFutureSelves(): Promise<
     [...draftMatches.values()].map((existing) => existing.id),
   );
 
-  const lastGeneratedAt = (existingRows ?? []).reduce<string | null>(
-    (max, row) => (!max || row.updated_at > max ? row.updated_at : max),
-    null,
-  );
-
   // Compute every draft's deterministic percentage before writing anything —
   // normalization needs the full set of this run's values up front.
   const computed = drafts.map((draft, index) => {
     const existing = draftMatches.get(index);
-    // Bound evidence to "since the last generation run" for every draft, not
-    // just ones that matched an existing name. Unbounded (null) lookback only
-    // makes sense when there has never been a prior run at all — otherwise a
-    // long-lived user's entire history almost always contains a reality_shift
-    // for any theme, which saturates every unmatched draft to the same max
-    // magnitude and collapses normalization into an even split.
-    const since = lastGeneratedAt;
-    const baseline = existing?.percentage ?? 0;
-    const magnitude = resolveEvidenceMagnitude(draft.themes, input, since);
-    const delta = directionSign(draft.movement_direction) * magnitude;
-    const raw = Math.min(100, Math.max(0, baseline + delta));
+    const raw = Math.max(0, computeTrajectoryStrength(draft.themes, input, now));
 
     return { draft, existing, raw };
   });

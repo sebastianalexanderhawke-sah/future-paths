@@ -225,17 +225,24 @@ describe("generateFutureSelves", () => {
       ],
     });
 
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
     const stub = createSupabaseStub({
       moments: { count: 10, data: null, error: null },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: {
         data: [
-          {
-            update_type: "reality_shift",
-            themes: ["Independence"],
-            created_at: "2026-06-15T00:00:00.000Z",
-          },
+          // Shared by all four drafts (every theme set includes Independence) —
+          // on its own this would tie every draft, which is the point: trajectory
+          // strength must keep summing the *other* evidence below to break the tie.
+          { update_type: "reality_shift", themes: ["Independence"], created_at: daysAgo(3) },
+          // Connection: only "Selectively Reconnecting".
+          { update_type: "reality_shift", themes: ["Connection"], created_at: daysAgo(1) },
+          // Growth: "Disciplined Solo Builder" and "Relocating and Building Independently".
+          { update_type: "pattern_strengthened", themes: ["Growth"], created_at: daysAgo(1) },
+          // Courage: "Relocating and Building Independently" and "Selectively Reconnecting".
+          { update_type: "theme_emerging", themes: ["Courage"], created_at: daysAgo(1) },
         ],
         error: null,
       },
@@ -281,22 +288,61 @@ describe("generateFutureSelves", () => {
 
     // "Builds a stable..." (29) should be claimed by "Disciplined Solo Builder"
     // over "Quietly Cutting Ties" (same theme overlap, lower summary similarity).
+    // previous_percentage still forwards the old baseline for trend tracking —
+    // trajectory strength no longer derives the new percentage *from* that
+    // baseline, so it isn't expected to exceed (or relate at all to) it.
     const builderMatch = writes.find((w) => w.oldId === "old-2");
     expect(builderMatch).toBeDefined();
     expect(builderMatch?.payload.previous_percentage).toBe(29);
-    expect(builderMatch?.payload.percentage).toBeGreaterThan(29);
 
-    // "Acts on instinct..." (39) should be claimed by "Relocating and Building
-    // Independently" over "Selectively Reconnecting" (higher summary similarity).
+    // "Acts on instinct..." (39) should be claimed by "Selectively Reconnecting"
+    // over "Relocating and Building Independently" (higher summary similarity —
+    // continuity matching is unchanged by this scoring rework).
     const actsMatch = writes.find((w) => w.oldId === "old-1");
     expect(actsMatch).toBeDefined();
     expect(actsMatch?.payload.previous_percentage).toBe(39);
-    expect(actsMatch?.payload.percentage).toBeGreaterThan(39);
 
     // The two old futures nothing claimed should be faded, not updated-as-matched.
     const fadeCalls = writes.filter(
       (w) => (w.oldId === "old-3" || w.oldId === "old-4") && w.payload.status === "faded",
     );
     expect(fadeCalls).toHaveLength(2);
+
+    // Regression guard for the 25/25/25/25 equilibrium bug: with differentiated
+    // evidence across the four drafts (one theme shared by all, others unique
+    // to a subset), trajectory strength must produce distinct percentages
+    // rather than collapsing every active future to the same share.
+    const updatedPercentages = writes
+      .filter((w) => w.payload.status !== "faded")
+      .map((w) => w.payload.percentage as number);
+    const insertCalls = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    const insertedPercentages = insertCalls.map(
+      (c) => (c.args[0] as Record<string, unknown>).percentage as number,
+    );
+    const allPercentages = [...updatedPercentages, ...insertedPercentages];
+    expect(allPercentages).toHaveLength(4);
+    expect(new Set(allPercentages).size).toBe(allPercentages.length);
+
+    // "Selectively Reconnecting" picked up the most matching evidence (shared
+    // Independence signal + its own unique Connection and Courage signals), so
+    // it should outscore "Quietly Cutting Ties" (only the shared Independence
+    // signal). Look up by themes, since continuity-matched updates don't carry
+    // the draft's name and either draft could land as an insert or an update.
+    const percentageByThemes = new Map<string, number>([
+      ...writes.map((w) => [JSON.stringify(w.payload.themes), w.payload.percentage as number] as const),
+      ...insertCalls.map((c) => {
+        const payload = c.args[0] as Record<string, unknown>;
+        return [JSON.stringify(payload.themes), payload.percentage as number] as const;
+      }),
+    ]);
+    const selectivelyReconnectingPercentage = percentageByThemes.get(
+      JSON.stringify(["Connection", "Courage", "Independence"]),
+    );
+    const quietlyCuttingTiesPercentage = percentageByThemes.get(
+      JSON.stringify(["Independence", "Stability"]),
+    );
+    expect(selectivelyReconnectingPercentage).toBeGreaterThan(quietlyCuttingTiesPercentage!);
   });
 });
