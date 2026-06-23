@@ -2,49 +2,44 @@
 
 ## Current task
 
-Improve Future Self naming quality. Trajectory differentiation (no
-near-duplicate futures within a batch) is now code-enforced (see
-`future-selves-status.md`). The next gap of the same kind is naming: the
-prompt (`FUTURE_SELF_DISCOVER_RULES`) already specifies detailed naming
-rules — under 8 words, verb/action-led phrasing, never archetypes,
-personality types, or role labels (explicitly bans examples like
-"Disciplined Solo Builder", "Intentional Connector") — but nothing checks
-that a returned `name` actually complies. The `name` field is validated only
-by the generic `tentativeTextSchema` (`src/lib/ai/schemas/shared.ts`):
-trim, banned-directive-phrase sanitization, length 1-2000. There is no
-word-count cap and no archetype/label detection.
+Evaluate Future Self naming quality using real generations. Trajectory
+differentiation and path responsiveness are both done (see
+`future-selves-status.md`). Before building code-side naming enforcement
+(word-count cap, archetype/label detection — the previously planned next
+step), first evaluate whether real model output actually violates the
+prompt's naming rules (`FUTURE_SELF_DISCOVER_RULES` in
+`src/lib/ai/prompts/shared/forecast-generation-instructions.ts`) often enough
+to justify it. This is an evaluation pass, not an implementation pass.
 
 ## Implementation goals
 
-* Add code-side validation/normalization for `futureSelfDraftSchema.name`
-  (`src/lib/ai/schemas/future-self.ts`) that enforces the rules the prompt
-  already states, rather than trusting the model to follow them:
-  * Word count cap (prompt says "under 8 words").
-  * Detection of disallowed archetype/personality-label phrasing (the
-    prompt's own ban list is a starting point) so violations are caught
-    deterministically, not just discouraged.
-* Decide a deterministic handling policy for a name that fails validation
-  (e.g. reject the draft, truncate/reformat the name, or fall back to a
-  theme-derived name) — must be code-driven, not a second AI call.
+* Run real `generateFutureSelves()` generations (not the mocked test stub)
+  against representative accounts/evidence and collect the resulting
+  `name` values.
+* Check each generated name against the prompt's own stated rules: under 8
+  words, verb/action-led phrasing, no archetypes/personality
+  types/role labels (e.g. the prompt's own banned examples: "Disciplined
+  Solo Builder", "Intentional Connector").
+* Quantify how often real generations violate these rules, and characterize
+  the failure modes actually seen (too many words? archetype-style naming?
+  something not anticipated by the existing rules?).
+* Produce a recommendation: is code-side enforcement worth building, and if
+  so, which specific rule(s) need it most.
 
 ## Constraints
 
 * Do not change trajectory scoring, percentage normalization, continuity
-  matching, fading, `why_changed`, or the new duplicate-detection logic in
+  matching, fading, `why_changed`, or duplicate-detection logic in
   `future-selves.ts` — all out of scope here.
-* Do not change the AI/code responsibility split: `name` stays AI-authored
-  content; only the validation/enforcement of its quality is code-owned.
-* Do not rewrite `FUTURE_SELF_DISCOVER_RULES` wholesale — the rules
-  themselves are already correct and validated by prior work; this task
-  enforces them, it doesn't redefine them.
+* Do not modify `FUTURE_SELF_DISCOVER_RULES` or any other prompt as part of
+  this task — this is observation, not a prompt-tuning pass.
+* Do not implement the word-count/archetype enforcement itself yet — that
+  was the prior plan, but it's now gated on this evaluation's findings.
 * No new runtime dependencies.
 
 ## Success criteria
 
-* A test where a draft's name violates the word-count cap or matches a
-  banned archetype/label pattern is caught and handled deterministically by
-  code, not silently passed through.
-* A test where a compliant name passes through unchanged.
-* Existing `future-selves.test.ts` and schema tests still pass unmodified.
-* `npm run build` (or project's equivalent typecheck/build command) passes
-  with no new errors.
+* A concrete sample of real generated names (not mocked/synthetic) checked
+  against each naming rule individually.
+* A clear count or rate of rule violations, by rule.
+* A written recommendation on whether/what to enforce in code next.

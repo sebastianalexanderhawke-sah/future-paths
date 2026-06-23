@@ -46,6 +46,24 @@
   * Covered by a new test in `future-selves.test.ts` asserting a
     near-duplicate pair collapses to one inserted future while an unrelated
     third draft survives untouched.
+* Path responsiveness implemented in `src/lib/future-selves.ts`:
+  * `MOST_RECENT_CHOSEN_PATH_WEIGHT` (20) replaces `EVIDENCE_WEIGHTS.chosen_path`
+    (2) for the single most-recently-chosen path (by `chosen_at`, across the
+    user's full path history, recomputed fresh every generation via
+    `mostRecentChosenAt()`). Every other historical chosen path keeps the
+    normal weight of 2.
+  * Rationale: a chosen path is a deliberate, predictive signal and should
+    visibly move Future Selves on the very next generation. A flat weight
+    bump on `chosen_path` can't do this — trajectory strength is recomputed
+    from full history every run, so scaling the weight scales the entire
+    historical chosen-path sum (often 30-50 contributions on a mature
+    future) by the same factor as the new contribution, leaving its *share*
+    of the total almost unchanged even at 10x. Elevating only the newest
+    path's weight avoids inflating history and guarantees the newest choice
+    is visible regardless of how much evidence already exists.
+  * Covered by a new test in `future-selves.test.ts`: two otherwise-symmetric
+    futures split 50/50 with no chosen path; one fresh path matching only one
+    of them shifts the split to 62/38 on the next generation.
 
 ## Known issues
 
@@ -77,6 +95,12 @@
   means something very different for a 2-theme list than a 5-theme list.
   Theme overlap is the gate; name/summary similarity only confirms it, the
   same "overlap gate, similarity confirms" pattern as continuity matching.
+* Path responsiveness is a per-path weight override, not a global weight
+  change — only the single newest chosen path gets `MOST_RECENT_CHOSEN_PATH_WEIGHT`;
+  all older chosen paths keep weight 2. This was a deliberate choice after
+  confirming (numerically, against real account data) that scaling
+  `EVIDENCE_WEIGHTS.chosen_path` itself does not produce visible movement —
+  see "things already investigated" below.
 
 ## Things already investigated (do not re-investigate)
 
@@ -89,6 +113,11 @@
   fields and code-owned fields are now explicitly separated.
 * Whether trajectory/name differentiation could be left to prompt
   instructions alone: rejected — now code-enforced via `dedupeDrafts()`.
+* Whether a flat increase to `EVIDENCE_WEIGHTS.chosen_path` (tried up to 10x
+  in simulation) would make a new path choice visible: rejected — confirmed
+  numerically to barely move displayed percentages, because the same scaling
+  factor inflates the entire historical chosen-path sum, not just the new
+  contribution. The fix targets only the single newest path instead.
 
 ## Things we should not re-investigate
 

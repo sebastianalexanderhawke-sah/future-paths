@@ -136,6 +136,21 @@ const EVIDENCE_WEIGHTS = {
   check_in: 1,
 } as const;
 
+// A flat chosen_path weight can't make a single new choice visible: a future
+// accumulates one chosen_path contribution per past path that shares its
+// theme, and themes repeat constantly, so a mature future can easily be
+// carrying 30-50 historical chosen-path contributions already. Scaling
+// EVIDENCE_WEIGHTS.chosen_path itself doesn't fix this — it scales that
+// entire historical sum by the same factor as the new contribution, so the
+// new path's *share* of the total barely moves even at 10x. Instead, only
+// the single most-recently-chosen path (by chosen_at, across all of the
+// user's paths) gets this higher weight; every older chosen_path keeps the
+// base weight above. The newest deliberate choice is meant to read as the
+// strongest signal in the system — stronger than a passively-observed
+// reality_shift — so picking a new path is guaranteed to be visible on the
+// next generation regardless of how much history already exists.
+const MOST_RECENT_CHOSEN_PATH_WEIGHT = 20;
+
 // Recency decay: a contribution's weight shrinks with age but never reaches
 // zero, so a trajectory built over months doesn't evaporate the moment
 // nothing new happens for a week.
@@ -160,6 +175,17 @@ function evidenceAgeDays(createdAt: string, now: string): number {
 function sharesTheme(a: readonly ThemeName[], b: readonly ThemeName[]): boolean {
   const set = new Set(b);
   return a.some((theme) => set.has(theme));
+}
+
+/** Most recent chosen_at across all of the user's chosen paths, or null if none have one. */
+function mostRecentChosenAt(chosenPaths: readonly ChosenPathEvidence[]): string | null {
+  let latest: string | null = null;
+  for (const path of chosenPaths) {
+    if (path.chosen_at && (!latest || path.chosen_at > latest)) {
+      latest = path.chosen_at;
+    }
+  }
+  return latest;
 }
 
 const SUMMARY_STOPWORDS = new Set([
@@ -305,10 +331,14 @@ function computeTrajectoryStrength(
     strength += EVIDENCE_WEIGHTS.check_in * evidenceDecay(evidenceAgeDays(checkIn.created_at, now));
   }
 
+  const latestChosenAt = mostRecentChosenAt(evidence.chosenPaths);
+
   for (const path of evidence.chosenPaths) {
     if (!sharesTheme(futureThemes, path.themes)) continue;
     const age = path.chosen_at ? evidenceAgeDays(path.chosen_at, now) : Infinity;
-    strength += EVIDENCE_WEIGHTS.chosen_path * evidenceDecay(age);
+    const isMostRecentChoice = path.chosen_at !== null && path.chosen_at === latestChosenAt;
+    const weight = isMostRecentChoice ? MOST_RECENT_CHOSEN_PATH_WEIGHT : EVIDENCE_WEIGHTS.chosen_path;
+    strength += weight * evidenceDecay(age);
   }
 
   return strength;

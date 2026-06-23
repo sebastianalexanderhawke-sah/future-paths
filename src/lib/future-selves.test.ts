@@ -425,4 +425,94 @@ describe("generateFutureSelves", () => {
     expect(insertedNames).not.toContain("Builds a steady, self-reliant life");
     expect(insertedNames).toContain("Invests in close relationships");
   });
+
+  it("makes the most recently chosen path produce visible percentage movement", async () => {
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    const secondsAgo = (seconds: number) => new Date(Date.now() - seconds * 1000).toISOString();
+
+    const drafts = [
+      {
+        name: "Builds Toward Stability",
+        summary: "A consistent pull toward steady, predictable circumstances.",
+        movement_direction: "positive",
+        evidence_strength: "Moderate",
+        benefits: ["Builds a dependable foundation."],
+        consequences: ["May avoid worthwhile risks."],
+        prediction: "Builds a life that rarely surprises them.",
+        themes: ["Stability"],
+        why_changed: "",
+      },
+      {
+        name: "Stays Socially Connected",
+        summary: "A consistent pull toward spending time with other people.",
+        movement_direction: "positive",
+        evidence_strength: "Moderate",
+        benefits: ["Builds a support network."],
+        consequences: ["Less solo time."],
+        prediction: "Known for always making time for people.",
+        themes: ["Connection"],
+        why_changed: "",
+      },
+    ];
+
+    // Identical, symmetric baseline evidence for both drafts (5 reality_shift
+    // updates each, 10 days old -> 0.75 decay -> 30 raw strength each) so the
+    // only difference between the two runs below is the chosen path.
+    const baselineIdentityUpdates = [
+      ...Array.from({ length: 5 }, () => ({
+        themes: ["Stability"],
+        update_type: "reality_shift",
+        created_at: daysAgo(10),
+      })),
+      ...Array.from({ length: 5 }, () => ({
+        themes: ["Connection"],
+        update_type: "reality_shift",
+        created_at: daysAgo(10),
+      })),
+    ];
+
+    async function runWith(chosenPaths: { themes: string[]; chosen_at: string }[]) {
+      runStructuredGenerationMock.mockResolvedValueOnce({ ok: true, data: drafts });
+
+      const stub = createSupabaseStub({
+        moments: { count: 10, data: null, error: null },
+        paths: { data: chosenPaths, error: null },
+        check_ins: { data: [], error: null },
+        identity_updates: { data: baselineIdentityUpdates, error: null },
+        future_selves: { data: [], error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      const insertCalls = stub.calls.filter(
+        (c) => c.table === "future_selves" && c.method === "insert",
+      );
+      const percentageByName = new Map(
+        insertCalls.map((c) => {
+          const payload = c.args[0] as Record<string, unknown>;
+          return [payload.name as string, payload.percentage as number];
+        }),
+      );
+      return percentageByName;
+    }
+
+    const without = await runWith([]);
+    const with_ = await runWith([
+      { themes: ["Stability"], chosen_at: secondsAgo(1) },
+    ]);
+
+    // With no chosen path, the two symmetric futures split evenly.
+    expect(without.get("Builds Toward Stability")).toBe(50);
+    expect(without.get("Stays Socially Connected")).toBe(50);
+
+    // A single freshly chosen path matching only "Builds Toward Stability"
+    // must produce visible movement on the very next generation — not get
+    // lost against the rest of the evidence.
+    expect(with_.get("Builds Toward Stability")).toBe(62);
+    expect(with_.get("Stays Socially Connected")).toBe(38);
+    expect(with_.get("Builds Toward Stability")!).toBeGreaterThan(
+      without.get("Builds Toward Stability")!,
+    );
+  });
 });
