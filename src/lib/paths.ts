@@ -4,6 +4,7 @@ import {
   encodePathDescriptionWithNativeTitle,
 } from "@/components/home/path-native-title";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
+import { generateFutureSelves } from "@/lib/future-selves";
 import { createClient } from "@/lib/supabase/server";
 import type { Path } from "@/types/database";
 import type { ThemeName } from "@/types/enums";
@@ -381,6 +382,11 @@ export async function choosePath(
       .eq("id", pathId);
     return { error: timelineError.message };
   }
+
+  // Choosing a path for a situation is itself predictive evidence — not just
+  // a record of intent — so it regenerates Future Selves immediately, the
+  // same way submitCheckIn() does for lived evidence.
+  await generateFutureSelves().catch(() => {});
 
   return { path: updatedPath };
 }

@@ -41,6 +41,11 @@ export type IdentityContextBundle = {
   checkInHistory?: Pick<CheckIn, "theme_changes">[];
   counts?: ContextCounts;
   pathThemes?: ThemeName[];
+  // The single most recently chosen path, surfaced as its own field rather
+  // than buried in pathThemes' flattened theme history — Future Self
+  // generation must always be able to see the newest decision distinctly
+  // from older accumulated pattern evidence.
+  mostRecentChosenPath?: Pick<Path, "description" | "themes" | "chosen_at" | "future_shift">;
   checkIns?: Pick<CheckIn, "theme_changes" | "identity_impact" | "reality_summary">[];
   identityUpdates?: Pick<IdentityUpdate, "title" | "summary" | "themes">[];
   futureSelves?: Pick<

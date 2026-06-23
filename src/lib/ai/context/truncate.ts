@@ -59,6 +59,13 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
     };
   }
 
+  if (bundle.mostRecentChosenPath) {
+    next.mostRecentChosenPath = {
+      ...bundle.mostRecentChosenPath,
+      description: truncateText(bundle.mostRecentChosenPath.description, limits.pathDescription),
+    };
+  }
+
   if (bundle.checkIn) {
     next.checkIn = {
       ...bundle.checkIn,
@@ -251,6 +258,7 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     profile: bundle.profile,
     moment: bundle.moment,
     chosenPath: bundle.chosenPath,
+    mostRecentChosenPath: bundle.mostRecentChosenPath,
     reflection: bundle.reflection,
     checkIn: bundle.checkIn,
     counts: bundle.counts,
@@ -284,6 +292,7 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     profile: bundle.profile,
     moment: bundle.moment,
     chosenPath: bundle.chosenPath,
+    mostRecentChosenPath: bundle.mostRecentChosenPath,
     reflection: bundle.reflection,
     pastCrossroad: bundle.pastCrossroad,
     selectedPastPath: bundle.selectedPastPath,

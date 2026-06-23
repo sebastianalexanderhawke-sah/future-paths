@@ -264,9 +264,10 @@ async function loadFutureSelfContext(
 
   const { data: chosenPaths } = await supabase
     .from("paths")
-    .select("themes")
+    .select("themes, chosen_at, description, future_shift")
     .eq("user_id", base.userId)
-    .eq("is_chosen", true);
+    .eq("is_chosen", true)
+    .order("chosen_at", { ascending: false });
 
   const { data: activeFutureSelves } = await supabase
     .from("future_selves")
@@ -275,6 +276,11 @@ async function loadFutureSelfContext(
     .eq("status", "active")
     .order("percentage", { ascending: false });
 
+  // Only the single newest path gets its own field — the rest of the
+  // history stays in pathThemes (themes only) so this doesn't duplicate
+  // the full chosen-path history into the prompt twice.
+  const mostRecentChosenPath = chosenPaths?.[0];
+
   return {
     ...base,
     counts: {
@@ -282,6 +288,14 @@ async function loadFutureSelfContext(
       checkIns: checkInCount ?? 0,
     },
     pathThemes: (chosenPaths ?? []).flatMap((path) => path.themes),
+    mostRecentChosenPath: mostRecentChosenPath
+      ? {
+          description: mostRecentChosenPath.description,
+          themes: mostRecentChosenPath.themes,
+          chosen_at: mostRecentChosenPath.chosen_at,
+          future_shift: mostRecentChosenPath.future_shift,
+        }
+      : undefined,
     checkIns: checkIns ?? [],
     identityUpdates: identityUpdates ?? [],
     futureSelves: activeFutureSelves ?? [],
