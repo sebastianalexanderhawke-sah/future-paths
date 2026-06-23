@@ -2,12 +2,13 @@
 
 ## Current task
 
-Evaluate naming quality and trajectory distinctness using real generations.
-Scoring (trajectory strength, percentage, path responsiveness) and narrative
-context (newest chosen path exposure) are both done (see
-`future-selves-status.md`). Before building any further code-side
-enforcement, evaluate how real model output actually behaves across two
-axes:
+Evaluate Future Self naming quality and trajectory distinctness using real
+generations. Scoring (trajectory strength, percentage, path responsiveness),
+narrative context (newest chosen path exposure), and percentage-movement
+disclosure (every non-zero delta now always has an explanation, AI-authored
+or deterministic fallback) are all done (see `future-selves-status.md`).
+Before building any further code-side enforcement, evaluate how real model
+output actually behaves across two axes:
 
 1. Naming quality against `FUTURE_SELF_DISCOVER_RULES`'s stated rules
    (under 8 words, verb/action-led phrasing, no archetypes/personality

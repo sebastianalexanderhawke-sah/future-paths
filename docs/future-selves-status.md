@@ -83,6 +83,28 @@
     dedicated signal to notice or talk about that same decision.
   * Covered by new tests in `src/lib/ai/context/builder.test.ts` and
     `truncate.test.ts`.
+* Every non-zero percentage change now produces a user-visible explanation,
+  not just ones where the model happened to populate `why_changed`
+  (`src/lib/future-self-trend.ts`, `src/components/futures/future-card.tsx`):
+  * `getFutureSelfExplanation()` is the single source of disclosure text: it
+    returns `null` when `delta === 0` (nothing to disclose), the AI-authored
+    `why_changed` verbatim whenever it's non-empty (always preferred), and
+    otherwise a deterministic fallback chosen purely by delta direction.
+  * Fallback strings are static and evidence-free — they describe *relative*
+    movement (this trajectory vs. others), never fabricate specific evidence
+    the model didn't supply. Decrease: "This trajectory did not gain new
+    supporting evidence, but other trajectories strengthened more strongly,
+    reducing its relative likelihood." Increase: "This trajectory gained
+    relative likelihood because recent evidence aligned more closely with
+    this direction than with competing trajectories."
+  * `FutureCard`'s disclosure (expand arrow + "Why it changed" body) now
+    renders whenever `delta !== 0`, full stop — previously it additionally
+    required `why_changed !== ""`, which left percentage moves with no AI
+    explanation displaying an arrow with nothing behind it.
+  * No changes to trajectory scoring, normalization, continuity matching,
+    deduplication, generation prompts, or schemas — this is purely a
+    presentation-layer fix to when/what the disclosure shows.
+  * Covered by new tests in `future-self-trend.test.ts`.
 
 ## Known issues
 
