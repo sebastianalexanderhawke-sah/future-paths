@@ -30,15 +30,26 @@
 * Regression test added (`future-selves.test.ts`) guarding against the
   25/25/25/25 equilibrium bug: four drafts with differentiated but
   overlapping theme evidence must produce four distinct percentages.
+* Trajectory differentiation enforcement implemented in
+  `src/lib/future-selves.ts`:
+  * `isNearDuplicateTrajectory()` gates on theme-set Jaccard similarity
+    >= 0.6, then confirms with name-token or summary-token Jaccard
+    similarity >= 0.5 (either one).
+  * `dedupeDrafts()` runs pairwise over a single batch (before continuity
+    matching), keeping the draft with the higher `computeTrajectoryStrength()`
+    raw score and dropping its near-duplicate twin; ties keep the
+    earlier-indexed draft. Dropping a draft can shrink the batch — this is
+    expected, not an error.
+  * This was previously prompt-only (`FUTURE_SELF_DISCOVER_RULES`); it is
+    now also code-enforced, matching the AI/code split already established
+    for percentage.
+  * Covered by a new test in `future-selves.test.ts` asserting a
+    near-duplicate pair collapses to one inserted future while an unrelated
+    third draft survives untouched.
 
 ## Known issues
 
-* Trajectory/name differentiation across drafts within a single generation
-  run relies entirely on prompt instructions
-  (`FUTURE_SELF_DISCOVER_RULES`: "only generate distinct trajectories...
-  merge them into one rather than listing both"). There is no code-side
-  check that two drafts in the same batch aren't near-duplicates in name or
-  theme set — unlike percentage, this property is not currently code-owned.
+* None open.
 
 ## Important design decisions
 
@@ -61,6 +72,11 @@
   legitimate "nothing changed" signal — existing active futures are left
   untouched rather than faded, since the two cases are indistinguishable from
   the caller's side.
+* Duplicate detection uses Jaccard similarity on theme sets, not raw overlap
+  count — draft theme lists are short (1-3 entries), so a shared count of 2
+  means something very different for a 2-theme list than a 5-theme list.
+  Theme overlap is the gate; name/summary similarity only confirms it, the
+  same "overlap gate, similarity confirms" pattern as continuity matching.
 
 ## Things already investigated (do not re-investigate)
 
@@ -71,6 +87,8 @@
   rejected, see design decisions above.
 * Whether AI output should influence the percentage directly: rejected — AI
   fields and code-owned fields are now explicitly separated.
+* Whether trajectory/name differentiation could be left to prompt
+  instructions alone: rejected — now code-enforced via `dedupeDrafts()`.
 
 ## Things we should not re-investigate
 

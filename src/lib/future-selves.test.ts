@@ -345,4 +345,84 @@ describe("generateFutureSelves", () => {
     );
     expect(selectivelyReconnectingPercentage).toBeGreaterThan(quietlyCuttingTiesPercentage!);
   });
+
+  it("drops near-duplicate trajectories within the same generation batch, keeping the stronger one", async () => {
+    runStructuredGenerationMock.mockClear();
+
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    // "Builds a stable, self-reliant life" and "Builds a steady, self-reliant
+    // life" overlap heavily on both theme set (Stability+Independence shared,
+    // Growth unique to the first) and wording — a near-duplicate pair. The
+    // unrelated "Invests in close relationships" future shares neither themes
+    // nor wording with either and must survive untouched.
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          name: "Builds a stable, self-reliant life",
+          summary: "Repeated choices toward independence and steady growth point toward self-reliance.",
+          movement_direction: "positive",
+          evidence_strength: "Moderate",
+          benefits: ["Builds a track record of consistent output."],
+          consequences: ["Burnout risk rises if rest stays secondary."],
+          prediction: "Builds a life on their own terms.",
+          themes: ["Stability", "Independence", "Growth"],
+          why_changed: "Sustained independent output.",
+        },
+        {
+          name: "Builds a steady, self-reliant life",
+          summary: "A consistent preference for independence and stability over external validation.",
+          movement_direction: "positive",
+          evidence_strength: "Moderate",
+          benefits: ["Reduces reliance on unstable circumstances."],
+          consequences: ["May close off help that could've sped things up."],
+          prediction: "Known for being steady and self-sufficient.",
+          themes: ["Stability", "Independence"],
+          why_changed: "Sustained independent output.",
+        },
+        {
+          name: "Invests in close relationships",
+          summary: "Repeated choices to prioritize a small circle of people over solitary pursuits.",
+          movement_direction: "positive",
+          evidence_strength: "Emerging",
+          benefits: ["Builds a reliable support network."],
+          consequences: ["Less time for solo pursuits."],
+          prediction: "Known for being there for the people closest to them.",
+          themes: ["Connection", "Belonging"],
+          why_changed: "Repeated check-ins prioritizing close relationships.",
+        },
+      ],
+    });
+
+    const stub = createSupabaseStub({
+      moments: { count: 10, data: null, error: null },
+      paths: { data: [], error: null },
+      check_ins: { data: [], error: null },
+      identity_updates: {
+        // Only the first draft's theme set includes Growth, so only it gets
+        // this contribution — that's what breaks the tie between the two
+        // near-duplicate drafts.
+        data: [{ update_type: "reality_shift", themes: ["Growth"], created_at: daysAgo(1) }],
+        error: null,
+      },
+      future_selves: { data: [], error: null },
+    });
+    setActiveStub(stub);
+
+    const result = await generateFutureSelves();
+    expect("error" in result).toBe(false);
+
+    const insertCalls = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    const insertedNames = insertCalls.map((c) => (c.args[0] as Record<string, unknown>).name);
+
+    // Only 2 futures should be created, not 3 — the duplicate was dropped,
+    // not just left alongside its twin.
+    expect(insertedNames).toHaveLength(2);
+    expect(insertedNames).toContain("Builds a stable, self-reliant life");
+    expect(insertedNames).not.toContain("Builds a steady, self-reliant life");
+    expect(insertedNames).toContain("Invests in close relationships");
+  });
 });

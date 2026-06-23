@@ -314,6 +314,64 @@ function computeTrajectoryStrength(
   return strength;
 }
 
+// Within-batch duplicate detection: theme overlap is the gate (mirrors
+// matchDraftsToExisting's gate), and name/summary similarity confirms it.
+// Jaccard, not raw overlap count, because draft theme lists are short
+// (1-3 entries) — a shared count of 2 means very different things for a
+// 2-theme vs. a 5-theme list.
+const DUPLICATE_THEME_JACCARD_THRESHOLD = 0.6;
+const DUPLICATE_NAME_OR_SUMMARY_JACCARD_THRESHOLD = 0.5;
+
+function isNearDuplicateTrajectory(a: MockFutureSelfDraft, b: MockFutureSelfDraft): boolean {
+  const themeSimilarity = jaccardSimilarity(new Set<string>(a.themes), new Set<string>(b.themes));
+  if (themeSimilarity < DUPLICATE_THEME_JACCARD_THRESHOLD) {
+    return false;
+  }
+
+  const nameSimilarity = jaccardSimilarity(tokenizeSummary(a.name), tokenizeSummary(b.name));
+  const summarySimilarity = jaccardSimilarity(tokenizeSummary(a.summary), tokenizeSummary(b.summary));
+
+  return (
+    nameSimilarity >= DUPLICATE_NAME_OR_SUMMARY_JACCARD_THRESHOLD ||
+    summarySimilarity >= DUPLICATE_NAME_OR_SUMMARY_JACCARD_THRESHOLD
+  );
+}
+
+/**
+ * Drops near-duplicate drafts within a single generation batch, keeping
+ * whichever twin has the stronger trajectory score. Pairwise and greedy by
+ * draft order: once a draft is dropped it's out for every later comparison,
+ * so the survivor of a duplicate cluster is always the one with the highest
+ * trajectory strength in that cluster, regardless of comparison order.
+ */
+function dedupeDrafts(
+  drafts: MockFutureSelfDraft[],
+  evidence: EvidenceBundle,
+  now: string,
+): MockFutureSelfDraft[] {
+  const rawStrength = drafts.map((draft) =>
+    Math.max(0, computeTrajectoryStrength(draft.themes, evidence, now)),
+  );
+  const dropped = drafts.map(() => false);
+
+  for (let i = 0; i < drafts.length; i++) {
+    if (dropped[i]) continue;
+
+    for (let j = i + 1; j < drafts.length; j++) {
+      if (dropped[j] || !isNearDuplicateTrajectory(drafts[i], drafts[j])) continue;
+
+      if (rawStrength[i] >= rawStrength[j]) {
+        dropped[j] = true;
+      } else {
+        dropped[i] = true;
+        break;
+      }
+    }
+  }
+
+  return drafts.filter((_, index) => !dropped[index]);
+}
+
 /** Proportionally rescales raw percentages to sum to 100, preserving ordering and relative differences. */
 function normalizeToHundred(rawValues: number[]): number[] {
   const total = rawValues.reduce((sum, value) => sum + value, 0);
@@ -366,6 +424,7 @@ export async function generateFutureSelves(): Promise<
     return input;
   }
 
+  const now = new Date().toISOString();
   let drafts: MockFutureSelfDraft[];
 
   if (input.momentCount < 1) {
@@ -395,10 +454,13 @@ export async function generateFutureSelves(): Promise<
           "Future Self generation returned no results. Existing active futures were left unchanged.",
       };
     }
+
+    // Enforce trajectory distinctness in code rather than relying solely on
+    // the prompt's "only generate distinct trajectories" instruction.
+    drafts = dedupeDrafts(drafts, input, now);
   }
 
   const supabase = await createClient();
-  const now = new Date().toISOString();
 
   const { data: existingRows, error: existingError } = await supabase
     .from("future_selves")
