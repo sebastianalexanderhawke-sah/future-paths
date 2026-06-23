@@ -64,6 +64,25 @@
   * Covered by a new test in `future-selves.test.ts`: two otherwise-symmetric
     futures split 50/50 with no chosen path; one fresh path matching only one
     of them shifts the split to 62/38 on the next generation.
+* Newest chosen path exposed to Future Self generation as a dedicated
+  context field (`src/lib/ai/context/slices.ts`, `builder.ts`, `truncate.ts`):
+  * `mostRecentChosenPath` (description, themes, chosen_at, future_shift) is
+    a top-level field on `IdentityContextBundle`, populated in
+    `loadFutureSelfContext()` from the newest row (`order by chosen_at desc`)
+    of the same chosen-paths query that already feeds `pathThemes` — no
+    duplicate query, no duplicate history in the prompt.
+  * `enforceContextLimits`/`enforceTotalJsonLimit` truncate and preserve it
+    the same way `chosenPath` already is, so it survives total-JSON-size
+    reduction instead of being silently dropped under a large context.
+  * `FUTURE_SELF_DISCOVER_RULES` now explicitly tells the model to treat
+    `mostRecentChosenPath` as a potential source of divergence and reflect
+    that in summary/prediction/why_changed, rather than describing only
+    older accumulated patterns.
+  * This closes the gap where scoring already reacted to a newly chosen path
+    (path responsiveness, above) but the generated narrative had no
+    dedicated signal to notice or talk about that same decision.
+  * Covered by new tests in `src/lib/ai/context/builder.test.ts` and
+    `truncate.test.ts`.
 
 ## Known issues
 
