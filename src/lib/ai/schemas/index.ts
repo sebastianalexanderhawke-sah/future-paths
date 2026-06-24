@@ -10,6 +10,7 @@ import { parseForecastOutput } from "@/lib/ai/schemas/forecast";
 import { parseFutureSelfOutput } from "@/lib/ai/schemas/future-self";
 import { parseIdentityPromptOutput } from "@/lib/ai/schemas/identity-prompt";
 import { parseIdentityUpdateOutput } from "@/lib/ai/schemas/identity-update";
+import { parseMonthlyIdentityNarrativeOutput } from "@/lib/ai/schemas/monthly-identity-narrative";
 import { parsePastAlternativePathOutput } from "@/lib/ai/schemas/past-alternative-path";
 import { parseTimelineOutput } from "@/lib/ai/schemas/timeline";
 import type { PromptId } from "@/lib/ai/prompts/ids";
@@ -27,6 +28,7 @@ const OUTPUT_PARSERS: Record<PromptId, (data: unknown) => unknown> = {
   "past_path.generate": parsePastAlternativePathOutput,
   "alternate_self.generate": parseAlternateSelfOutput,
   "timeline.generate": parseTimelineOutput,
+  "monthly_identity_narrative.generate": parseMonthlyIdentityNarrativeOutput,
 };
 
 export function parsePromptOutput(promptId: PromptId, data: unknown): unknown {
@@ -44,6 +46,7 @@ export {
   parseForecastOutput,
   parseIdentityPromptOutput,
   parseIdentityUpdateOutput,
+  parseMonthlyIdentityNarrativeOutput,
   parsePastAlternativePathOutput,
   parseTimelineOutput,
 };

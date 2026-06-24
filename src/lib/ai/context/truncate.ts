@@ -267,6 +267,7 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     pastCrossroad: bundle.pastCrossroad,
     selectedPastPath: bundle.selectedPastPath,
     chapterCandidates: bundle.chapterCandidates,
+    monthlyIdentityEvolution: bundle.monthlyIdentityEvolution,
     recentMoments: bundle.recentMoments,
     currentSelfChosenPaths: bundle.currentSelfChosenPaths,
     currentSelfCheckIns: bundle.currentSelfCheckIns,

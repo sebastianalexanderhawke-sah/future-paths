@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { ThemeName } from "@/types/enums";
 import type { AnsweredPromptResponse } from "@/lib/mock-contradiction-generator";
 import { buildTimelineChapterCandidates } from "@/lib/timeline-chapter-candidates";
+import { loadMonthlyIdentityEvolution } from "@/lib/monthly-identity-evolution";
 
 export type { BuildContextOptions, BuildContextOverrides, ContextProfile } from "@/lib/ai/context/profiles";
 export type { IdentityContextBundle } from "@/lib/ai/context/slices";
@@ -55,6 +56,8 @@ export async function buildIdentityContext(
       return enforceContextLimits(await loadAlternateSelfContext(supabase, base, options));
     case "timeline":
       return await loadTimelineContext(supabase, base);
+    case "monthly_identity_narrative":
+      return await loadMonthlyIdentityNarrativeContext(base);
     default:
       return { error: "Unknown context profile." };
   }
@@ -589,5 +592,16 @@ async function loadTimelineContext(
   return {
     ...bundle,
     chapterCandidates: buildTimelineChapterCandidates(bundle),
+  };
+}
+
+async function loadMonthlyIdentityNarrativeContext(
+  base: IdentityContextBundle,
+): Promise<IdentityContextBundle> {
+  const result = await loadMonthlyIdentityEvolution();
+
+  return {
+    ...base,
+    monthlyIdentityEvolution: "months" in result ? result.months : [],
   };
 }

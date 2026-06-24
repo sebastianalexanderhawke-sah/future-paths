@@ -10,6 +10,7 @@ export const PROMPT_MIGRATION_ORDER = [
   "contradiction.detect",
   "past_path.generate",
   "alternate_self.generate",
+  "monthly_identity_narrative.generate",
   "timeline.generate",
 ] as const;
 

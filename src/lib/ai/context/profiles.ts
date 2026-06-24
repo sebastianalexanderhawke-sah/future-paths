@@ -11,6 +11,7 @@ export const CONTEXT_PROFILES = [
   "past_alternative_path",
   "alternate_self",
   "timeline",
+  "monthly_identity_narrative",
 ] as const;
 
 export type ContextProfile = (typeof CONTEXT_PROFILES)[number];

@@ -24,6 +24,7 @@ export type ForecastPathContext = {
 
 import type { AnsweredPromptResponse } from "@/lib/mock-contradiction-generator";
 import type { MockLifeChapterDraft } from "@/lib/mock-timeline-generator";
+import type { MonthlyIdentityEvolution } from "@/lib/monthly-identity-evolution";
 
 export type ContextCounts = {
   moments: number;
@@ -107,6 +108,11 @@ export type IdentityContextBundle = {
     "id" | "name" | "percentage" | "themes" | "status" | "updated_at"
   >[];
   chapterCandidates?: MockLifeChapterDraft[];
+  // Pre-aggregated, deterministic monthly evidence from the aggregation
+  // layer — this profile's only job is turning each month's evidence into
+  // a title/summary/identity-changes narrative, not re-deriving the
+  // aggregation itself.
+  monthlyIdentityEvolution?: MonthlyIdentityEvolution[];
   discoveryGoal?: "decision" | "forecast";
   discoveryAdditionalContext?: string;
   checkInSummaries?: string[];

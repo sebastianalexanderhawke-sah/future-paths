@@ -10,6 +10,7 @@ import { forecastGenerateV1 } from "@/lib/ai/prompts/forecast.generate.v1";
 import { futureSelfDiscoverV1 } from "@/lib/ai/prompts/future_self.discover.v1";
 import { identityPromptGenerateV1 } from "@/lib/ai/prompts/identity_prompt.generate.v1";
 import { identityUpdateGenerateV1 } from "@/lib/ai/prompts/identity_update.generate.v1";
+import { monthlyIdentityNarrativeGenerateV1 } from "@/lib/ai/prompts/monthly_identity_narrative.generate.v1";
 import {
   FINAL_AI_MIGRATION_PROMPT_ID,
   PROMPT_MIGRATION_ORDER,
@@ -53,6 +54,7 @@ const PROMPT_REGISTRY: Record<PromptId, PromptDefinition> = {
   "past_path.generate": registerPrompt(pastPathGenerateV1),
   "alternate_self.generate": registerPrompt(alternateSelfGenerateV1),
   "timeline.generate": registerPrompt(timelineGenerateV1),
+  "monthly_identity_narrative.generate": registerPrompt(monthlyIdentityNarrativeGenerateV1),
 };
 
 export {

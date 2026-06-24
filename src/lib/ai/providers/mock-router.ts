@@ -21,6 +21,7 @@ import {
   timelineContextToGenerationInput,
 } from "@/lib/timeline-chapter-candidates";
 import { generateMockLifeChapters } from "@/lib/mock-timeline-generator";
+import { generateMockMonthlyIdentityNarratives } from "@/lib/mock-monthly-identity-narrative-generator";
 import type { PromptId } from "@/lib/ai/prompts/ids";
 
 function asCurrentSelf(
@@ -168,6 +169,9 @@ export function runMockGenerator(
       }
 
       return generateMockLifeChapters(timelineContextToGenerationInput(context));
+
+    case "monthly_identity_narrative.generate":
+      return generateMockMonthlyIdentityNarratives(context.monthlyIdentityEvolution ?? []);
 
     default:
       throw new Error(`Unsupported prompt id: ${promptId satisfies never}`);
