@@ -4,7 +4,7 @@ import { isPositiveThemeName } from "@/lib/check-in-themes";
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
 import { createClient } from "@/lib/supabase/server";
-import type { ThemeChange, FutureSelf } from "@/types/database";
+import type { ThemeChange, FutureSelf, FutureSelfEvent } from "@/types/database";
 import type { IdentityUpdateType, ThemeName } from "@/types/enums";
 
 type AuthSuccess = { userId: string };
@@ -62,6 +62,113 @@ export async function listActiveFutureSelves(
   limit = 4,
 ): Promise<{ futureSelves: FutureSelf[] } | { error: string }> {
   return listFutureSelves({ status: "active", limit });
+}
+
+export type FutureSelfImpactEntry = {
+  futureSelfId: string;
+  name: string;
+  eventType: FutureSelfEvent["event_type"];
+  percentageBefore: number;
+  percentageAfter: number;
+  delta: number;
+};
+
+// future_self_events carries no link back to the path that caused it — a
+// generation can also run after a check-in or reflection — so "the impact of
+// this path choice" can't be reconstructed exactly. The closest deterministic
+// proxy is the first batch of events recorded right after this path's
+// chosen_at and before the next path was chosen: since a single
+// generateFutureSelves() call writes all of its events back-to-back, events
+// less than this far apart belong to the same run.
+const FUTURE_SELF_IMPACT_RUN_GAP_MS = 10_000;
+
+/** Splits timestamp-ordered rows into runs, starting a new one whenever the gap exceeds the threshold. */
+function clusterByRun<T extends { created_at: string }>(rows: T[], gapMs: number): T[][] {
+  const runs: T[][] = [];
+  let current: T[] | null = null;
+  let lastTime = 0;
+
+  for (const row of rows) {
+    const time = new Date(row.created_at).getTime();
+    if (current && time - lastTime <= gapMs) {
+      current.push(row);
+    } else {
+      current = [row];
+      runs.push(current);
+    }
+    lastTime = time;
+  }
+
+  return runs;
+}
+
+/**
+ * For every chosen path, returns the Future Self percentage movement from
+ * the generation that ran immediately after it was chosen (and before the
+ * next path was chosen), keyed by path id. Only futures that actually moved
+ * are included — a future left untouched by a generation produces no event
+ * at all, so this never fabricates a zero-impact entry.
+ */
+export async function loadFutureSelfImpactByPath(): Promise<Map<string, FutureSelfImpactEntry[]>> {
+  const auth = await requireUser();
+  if ("error" in auth) {
+    return new Map();
+  }
+
+  const supabase = await createClient();
+
+  const [{ data: pathRows }, { data: eventRows }, { data: futureSelfRows }] = await Promise.all([
+    supabase
+      .from("paths")
+      .select("id, chosen_at")
+      .eq("user_id", auth.userId)
+      .eq("is_chosen", true)
+      .order("chosen_at", { ascending: true }),
+    supabase
+      .from("future_self_events")
+      .select("future_self_id, event_type, percentage_before, percentage_after, created_at")
+      .eq("user_id", auth.userId)
+      .order("created_at", { ascending: true }),
+    supabase.from("future_selves").select("id, name").eq("user_id", auth.userId),
+  ]);
+
+  const chosenPaths = (pathRows ?? []).filter(
+    (path): path is { id: string; chosen_at: string } => path.chosen_at !== null,
+  );
+  const events = eventRows ?? [];
+  const nameById = new Map((futureSelfRows ?? []).map((row) => [row.id, row.name]));
+  const impactByPath = new Map<string, FutureSelfImpactEntry[]>();
+
+  chosenPaths.forEach((path, index) => {
+    const windowStart = path.chosen_at;
+    const windowEnd = chosenPaths[index + 1]?.chosen_at ?? null;
+
+    const eventsInWindow = events.filter(
+      (event) =>
+        event.created_at >= windowStart && (windowEnd === null || event.created_at < windowEnd),
+    );
+
+    const [firstRun] = clusterByRun(eventsInWindow, FUTURE_SELF_IMPACT_RUN_GAP_MS);
+    if (!firstRun) return;
+
+    const entries = firstRun
+      .map((event) => ({
+        futureSelfId: event.future_self_id,
+        name: nameById.get(event.future_self_id) ?? "A future self",
+        eventType: event.event_type,
+        percentageBefore: event.percentage_before ?? 0,
+        percentageAfter: event.percentage_after,
+        delta: event.percentage_after - (event.percentage_before ?? 0),
+      }))
+      .filter((entry) => entry.delta !== 0)
+      .sort((a, b) => b.delta - a.delta);
+
+    if (entries.length > 0) {
+      impactByPath.set(path.id, entries);
+    }
+  });
+
+  return impactByPath;
 }
 
 type ChosenPathEvidence = { themes: ThemeName[]; chosen_at: string | null };
@@ -142,14 +249,42 @@ const EVIDENCE_WEIGHTS = {
 // carrying 30-50 historical chosen-path contributions already. Scaling
 // EVIDENCE_WEIGHTS.chosen_path itself doesn't fix this — it scales that
 // entire historical sum by the same factor as the new contribution, so the
-// new path's *share* of the total barely moves even at 10x. Instead, only
-// the single most-recently-chosen path (by chosen_at, across all of the
-// user's paths) gets this higher weight; every older chosen_path keeps the
-// base weight above. The newest deliberate choice is meant to read as the
-// strongest signal in the system — stronger than a passively-observed
-// reality_shift — so picking a new path is guaranteed to be visible on the
-// next generation regardless of how much history already exists.
-const MOST_RECENT_CHOSEN_PATH_WEIGHT = 20;
+// new path's *share* of the total barely moves even at 10x.
+//
+// Instead, the single most-recently-chosen path (by chosen_at, across all of
+// the user's paths) keeps its normal EVIDENCE_WEIGHTS.chosen_path
+// contribution (same architecture as every other historical chosen path) and
+// additionally earns a separate recency boost on top. A chosen path is
+// predictive — a deliberate signal about where someone is heading, ahead of
+// any confirming behavior — so it's meant to read as the strongest signal in
+// the system immediately after being chosen. But unlike the base evidence
+// weights, this boost decays fast and on its own schedule (a 3-day half-life,
+// independent of EVIDENCE_DECAY_TIERS) rather than the slow 7/30/90-day
+// tiers everything else uses: a chosen path is confirmatory only briefly,
+// and is meant to be naturally overtaken by check-ins and identity updates
+// (which use the normal, slower decay) as they accumulate to confirm or
+// contradict it. Once a newer path is chosen, this path also loses the boost
+// entirely — only ever the single newest gets it.
+//
+// The boost is a *fraction of this future's own accumulated strength*, not a
+// flat constant added on top. A flat bonus is the single largest per-instance
+// weight in the system, but a mature future easily carries hundreds of raw
+// points from a lifetime of identity updates and check-ins — against a base
+// that large, a flat +18 barely moves a future's *share* of the total. Worse,
+// because only the single newest path ever holds the boost, choosing a new
+// path mostly just moves the same flat bonus from the previous holder to the
+// new one; if the two paths overlap similar futures, the swap nets to almost
+// no change at all (confirmed against real account data — see "things
+// already investigated"). Scaling the boost to each future's own size keeps
+// the swing meaningful regardless of how much history has piled up, fixing
+// exactly that failure mode with no change to evidence sources, decay tiers,
+// or normalization.
+const MOST_RECENT_CHOSEN_PATH_BOOST_FRACTION = 0.5;
+const RECENCY_BOOST_HALF_LIFE_DAYS = 3;
+
+function recencyBoostDecay(ageDays: number): number {
+  return Math.pow(0.5, ageDays / RECENCY_BOOST_HALF_LIFE_DAYS);
+}
 
 // Recency decay: a contribution's weight shrinks with age but never reaches
 // zero, so a trajectory built over months doesn't evaporate the moment
@@ -196,14 +331,16 @@ const SUMMARY_STOPWORDS = new Set([
   "what", "which", "while", "over", "out", "up", "down", "into", "about",
 ]);
 
+function tokenizeWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !SUMMARY_STOPWORDS.has(word));
+}
+
 function tokenizeSummary(text: string): Set<string> {
-  return new Set(
-    text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, " ")
-      .split(/\s+/)
-      .filter((word) => word.length > 2 && !SUMMARY_STOPWORDS.has(word)),
-  );
+  return new Set(tokenizeWords(text));
 }
 
 function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
@@ -332,16 +469,54 @@ function computeTrajectoryStrength(
   }
 
   const latestChosenAt = mostRecentChosenAt(evidence.chosenPaths);
+  let mostRecentOverlapRatio = 0;
+  let mostRecentAge = 0;
+  let hasMostRecentMatch = false;
 
   for (const path of evidence.chosenPaths) {
     if (!sharesTheme(futureThemes, path.themes)) continue;
     const age = path.chosen_at ? evidenceAgeDays(path.chosen_at, now) : Infinity;
+
+    strength += EVIDENCE_WEIGHTS.chosen_path * evidenceDecay(age);
+
     const isMostRecentChoice = path.chosen_at !== null && path.chosen_at === latestChosenAt;
-    const weight = isMostRecentChoice ? MOST_RECENT_CHOSEN_PATH_WEIGHT : EVIDENCE_WEIGHTS.chosen_path;
-    strength += weight * evidenceDecay(age);
+    if (isMostRecentChoice) {
+      // Proportional to thematic overlap, not a boolean gate: a path sharing
+      // every theme with a future is a much stronger signal for that future
+      // than a path sharing only one of three themes.
+      mostRecentOverlapRatio = countThemeOverlap(futureThemes, path.themes) / path.themes.length;
+      mostRecentAge = age;
+      hasMostRecentMatch = true;
+    }
+  }
+
+  if (hasMostRecentMatch) {
+    // Scaled against this future's own strength so far (identity updates +
+    // check-ins + ordinary chosen-path contributions), not a fixed amount —
+    // see the rationale above MOST_RECENT_CHOSEN_PATH_BOOST_FRACTION.
+    strength +=
+      strength * MOST_RECENT_CHOSEN_PATH_BOOST_FRACTION * mostRecentOverlapRatio * recencyBoostDecay(mostRecentAge);
   }
 
   return strength;
+}
+
+// A growth trajectory and a risk trajectory can legitimately share themes —
+// "Builds independence through relocation" and "Becomes isolated through
+// relocation" are both about relocation and independence, but point in
+// opposite directions. Theme overlap and wording similarity can't tell them
+// apart on their own, so an explicit movement_direction conflict overrides
+// both the near-duplicate and dominant-theme-pair checks below: a positive
+// and a negative draft are never collapsed into one just for sharing
+// themes, regardless of how similar their themes or wording are.
+function hasOpposingDirection(
+  a: Pick<MockFutureSelfDraft, "movement_direction">,
+  b: Pick<MockFutureSelfDraft, "movement_direction">,
+): boolean {
+  return (
+    (a.movement_direction === "positive" && b.movement_direction === "negative") ||
+    (a.movement_direction === "negative" && b.movement_direction === "positive")
+  );
 }
 
 // Within-batch duplicate detection: theme overlap is the gate (mirrors
@@ -353,6 +528,10 @@ const DUPLICATE_THEME_JACCARD_THRESHOLD = 0.6;
 const DUPLICATE_NAME_OR_SUMMARY_JACCARD_THRESHOLD = 0.5;
 
 function isNearDuplicateTrajectory(a: MockFutureSelfDraft, b: MockFutureSelfDraft): boolean {
+  if (hasOpposingDirection(a, b)) {
+    return false;
+  }
+
   const themeSimilarity = jaccardSimilarity(new Set<string>(a.themes), new Set<string>(b.themes));
   if (themeSimilarity < DUPLICATE_THEME_JACCARD_THRESHOLD) {
     return false;
@@ -400,6 +579,291 @@ function dedupeDrafts(
   }
 
   return drafts.filter((_, index) => !dropped[index]);
+}
+
+/**
+ * The dominant theme pair is the first two themes in a draft's theme list
+ * (or the single theme, if only one exists), compared order-independently.
+ * Two drafts can pass dedupeDrafts() — different wording, not near-duplicate
+ * by the Jaccard gates above — while still leading with the same two themes
+ * and occupying the same identity territory (e.g. Independence+Stability
+ * vs. Independence+Stability+Courage). This is a coarser, theme-only check
+ * layered on top of dedupeDrafts, not a replacement for it.
+ */
+function dominantThemePairKey(themes: readonly ThemeName[]): string {
+  return [...themes.slice(0, 2)].sort().join("+");
+}
+
+/**
+ * Drops drafts that share a dominant theme pair within a single generation
+ * batch. Same pairwise/greedy shape as dedupeDrafts: keeps the higher
+ * computeTrajectoryStrength() draft, ties keep the earlier-indexed draft,
+ * and a dropped draft is never replaced — the batch is simply allowed to
+ * shrink.
+ */
+function enforceDominantThemePairDistinctness(
+  drafts: MockFutureSelfDraft[],
+  evidence: EvidenceBundle,
+  now: string,
+): MockFutureSelfDraft[] {
+  const rawStrength = drafts.map((draft) =>
+    Math.max(0, computeTrajectoryStrength(draft.themes, evidence, now)),
+  );
+  const dropped = drafts.map(() => false);
+
+  for (let i = 0; i < drafts.length; i++) {
+    if (dropped[i]) continue;
+
+    for (let j = i + 1; j < drafts.length; j++) {
+      if (
+        dropped[j] ||
+        hasOpposingDirection(drafts[i], drafts[j]) ||
+        dominantThemePairKey(drafts[i].themes) !== dominantThemePairKey(drafts[j].themes)
+      ) {
+        continue;
+      }
+
+      if (rawStrength[i] >= rawStrength[j]) {
+        dropped[j] = true;
+      } else {
+        dropped[i] = true;
+        break;
+      }
+    }
+  }
+
+  return drafts.filter((_, index) => !dropped[index]);
+}
+
+// Two drafts can have low theme overlap (failing dedupeDrafts' theme gate)
+// and different dominant theme pairs (failing enforceDominantThemePairDistinctness)
+// while still narrating the same underlying situation — e.g. "Relocating and
+// Building Independently" and "Disciplined Solo Builder" both being about
+// financial pressure, an interim job, and ongoing psychology applications.
+// Theme tags are short and coarse (1-3 entries) and can't capture that; the
+// actual subject matter lives in the prose — summary, prediction, benefits,
+// consequences — which both checks above ignore. Term-frequency cosine
+// similarity (not Jaccard) is used here deliberately: combining four fields
+// per draft produces a large, mostly-unique vocabulary (specific benefit/
+// consequence phrasing rarely repeats verbatim even on the same topic), and
+// plain set-based Jaccard gets diluted by that noise. Cosine over term
+// counts rewards drafts that repeat the same handful of subject words
+// (e.g. "psychology", "financial", "interim") even amid a lot of
+// non-overlapping phrasing, which is exactly the signal "same story,
+// different words" leaves behind.
+const SUBJECT_MATTER_COSINE_THRESHOLD = 0.32;
+
+function combinedContentWords(
+  draft: Pick<MockFutureSelfDraft, "summary" | "prediction" | "benefits" | "consequences">,
+): string[] {
+  return tokenizeWords(
+    [draft.summary, draft.prediction, ...draft.benefits, ...draft.consequences].join(" "),
+  );
+}
+
+function termFrequency(words: string[]): Map<string, number> {
+  const frequency = new Map<string, number>();
+  for (const word of words) {
+    frequency.set(word, (frequency.get(word) ?? 0) + 1);
+  }
+  return frequency;
+}
+
+function cosineSimilarity(a: Map<string, number>, b: Map<string, number>): number {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  const keys = new Set([...a.keys(), ...b.keys()]);
+
+  for (const key of keys) {
+    const x = a.get(key) ?? 0;
+    const y = b.get(key) ?? 0;
+    dot += x * y;
+    normA += x * x;
+    normB += y * y;
+  }
+
+  return normA === 0 || normB === 0 ? 0 : dot / Math.sqrt(normA * normB);
+}
+
+/**
+ * Same risk-trajectory protection as isNearDuplicateTrajectory and
+ * enforceDominantThemePairDistinctness: a growth and a risk draft can
+ * legitimately share the same subject matter ("Builds independence after
+ * relocating" vs. "Becomes isolated after relocating" are both about
+ * relocating) and must never be collapsed just because the topic overlaps —
+ * only the direction tells them apart.
+ */
+function isSameSubjectMatter(a: MockFutureSelfDraft, b: MockFutureSelfDraft): boolean {
+  if (hasOpposingDirection(a, b)) {
+    return false;
+  }
+
+  const similarity = cosineSimilarity(
+    termFrequency(combinedContentWords(a)),
+    termFrequency(combinedContentWords(b)),
+  );
+
+  return similarity >= SUBJECT_MATTER_COSINE_THRESHOLD;
+}
+
+/**
+ * Drops drafts that narrate the same subject matter within a single
+ * generation batch, even when themes and dominant theme pairs differ enough
+ * to pass the two checks above. Same pairwise/greedy shape: keeps the
+ * higher computeTrajectoryStrength() draft, ties keep the earlier-indexed
+ * draft, and a dropped draft is never replaced.
+ */
+function enforceSubjectMatterDistinctness(
+  drafts: MockFutureSelfDraft[],
+  evidence: EvidenceBundle,
+  now: string,
+): MockFutureSelfDraft[] {
+  const rawStrength = drafts.map((draft) =>
+    Math.max(0, computeTrajectoryStrength(draft.themes, evidence, now)),
+  );
+  const dropped = drafts.map(() => false);
+
+  for (let i = 0; i < drafts.length; i++) {
+    if (dropped[i]) continue;
+
+    for (let j = i + 1; j < drafts.length; j++) {
+      if (dropped[j] || !isSameSubjectMatter(drafts[i], drafts[j])) continue;
+
+      if (rawStrength[i] >= rawStrength[j]) {
+        dropped[j] = true;
+      } else {
+        dropped[i] = true;
+        break;
+      }
+    }
+  }
+
+  return drafts.filter((_, index) => !dropped[index]);
+}
+
+// Code-side enforcement for Future Self naming. The prompt already asks for
+// verb-led trajectory phrasing and bans personality/archetype labels, but
+// nothing previously stopped a label like "Disciplined Solo Builder" from
+// reaching storage. This validates structurally (word count, and the
+// "[Adjective(s)] [Identity Noun]" shape that's the actual signature of an
+// archetype label) rather than against a deny-list of literal phrases, so it
+// catches the pattern generally instead of only the prompt's own examples.
+const MAX_FUTURE_SELF_NAME_WORDS = 8;
+
+// Adjectives and nouns that recur in personality-type/archetype naming. Not
+// exhaustive — exhaustive is impossible for natural language — but covers
+// the shape the prompt explicitly warns against (e.g. "Disciplined Solo
+// Builder", "Intentional Connector", "Strategic Independent Thinker").
+const IDENTITY_LABEL_ADJECTIVES = new Set([
+  "disciplined", "intentional", "strategic", "independent", "determined",
+  "resilient", "focused", "bold", "decisive", "adaptive", "reflective",
+  "persistent", "driven", "grounded", "curious", "practical", "confident",
+  "patient", "loyal", "creative", "cautious", "restless", "quiet", "steady",
+  "ambitious", "deliberate", "solo", "thoughtful", "mindful", "purposeful",
+  "balanced", "authentic", "courageous", "fearless", "passionate",
+]);
+
+const IDENTITY_LABEL_NOUNS = new Set([
+  "builder", "builders", "connector", "connectors", "thinker", "thinkers",
+  "achiever", "achievers", "explorer", "explorers", "visionary", "visionaries",
+  "strategist", "strategists", "creator", "creators", "leader", "leaders",
+  "pioneer", "pioneers", "architect", "architects", "dreamer", "dreamers",
+  "wanderer", "wanderers", "seeker", "seekers", "adventurer", "adventurers",
+  "realist", "realists", "idealist", "idealists", "optimist", "optimists",
+  "pragmatist", "pragmatists", "communicator", "communicators",
+  "collaborator", "collaborators", "influencer", "influencers",
+  "innovator", "innovators", "specialist", "specialists", "individual",
+  "individuals",
+]);
+
+function normalizeWord(word: string): string {
+  return word.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+/**
+ * Matches the structural shape of a personality/archetype label: 2-3 words,
+ * ending in a known identity noun, with every preceding word a known
+ * identity adjective. This is the shared shape behind "Intentional
+ * Connector" (adjective + noun) and "Disciplined Solo Builder" (adjective +
+ * adjective + noun) — checking the shape generally, rather than denying
+ * specific phrases, catches names the prompt's own ban list doesn't name.
+ */
+function looksLikeIdentityLabel(name: string): boolean {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 3) {
+    return false;
+  }
+
+  const lastWord = normalizeWord(words[words.length - 1]);
+  if (!IDENTITY_LABEL_NOUNS.has(lastWord)) {
+    return false;
+  }
+
+  return words.slice(0, -1).every((word) => IDENTITY_LABEL_ADJECTIVES.has(normalizeWord(word)));
+}
+
+function isValidFutureSelfName(name: string): boolean {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0 || words.length > MAX_FUTURE_SELF_NAME_WORDS) {
+    return false;
+  }
+
+  return !looksLikeIdentityLabel(name);
+}
+
+// Deterministic trajectory-style fallback per theme, used only when a
+// generated name fails validation. Each phrase leads with one of the
+// preferred trajectory verbs (Builds/Moves/Chooses/Lets/Learns/Creates/
+// Trades) and stays grounded in the theme that's already meant to ground the
+// draft's evidence, so the rewrite preserves the draft's meaning instead of
+// replacing it with something generic and unrelated. No new evidence is
+// invented — it's a safe restatement of the trajectory the draft already
+// represents.
+const THEME_TRAJECTORY_NAME: Record<ThemeName, string> = {
+  Connection: "Builds closer connections with others",
+  Independence: "Moves toward greater independence",
+  Curiosity: "Learns through curiosity and exploration",
+  Stability: "Creates more stability and structure",
+  Creativity: "Creates more room for creative work",
+  Growth: "Chooses growth over staying comfortable",
+  Belonging: "Builds a stronger sense of belonging",
+  Leadership: "Chooses to lead and take initiative",
+  Reflection: "Learns through ongoing reflection",
+  Courage: "Trades comfort for courage",
+};
+
+const FALLBACK_TRAJECTORY_NAME = "Moves in a new direction";
+
+/**
+ * Deterministic rewrite for a name that fails validation — no AI call, no
+ * fabricated evidence. Driven entirely by the draft's first theme, which is
+ * already the model's own grounding for this trajectory.
+ */
+function rewriteFutureSelfName(draft: Pick<MockFutureSelfDraft, "themes">): string {
+  const primaryTheme = draft.themes[0];
+  return primaryTheme ? THEME_TRAJECTORY_NAME[primaryTheme] : FALLBACK_TRAJECTORY_NAME;
+}
+
+function ensureValidFutureSelfName(draft: MockFutureSelfDraft): string {
+  return isValidFutureSelfName(draft.name) ? draft.name : rewriteFutureSelfName(draft);
+}
+
+/**
+ * Continuity matching intentionally keeps an existing future's stored name
+ * rather than switching to whatever the model drafted this run — that's the
+ * point of continuity. But naming enforcement previously only ran on
+ * insert, so a legacy invalid name (stored before enforcement existed, or
+ * from before this check ran) could survive indefinitely once
+ * continuity-matched, since update() never wrote `name` at all. This checks
+ * the *existing* stored name against the same validation used at insert
+ * time, and only when it's invalid does it correct it — using the draft's
+ * themes (which are already being written to this row this generation) so
+ * the corrected name stays consistent with the row's new theme set. A valid
+ * existing name is returned untouched.
+ */
+function continuityEnforcedName(existing: FutureSelf, draft: MockFutureSelfDraft): string {
+  return isValidFutureSelfName(existing.name) ? existing.name : rewriteFutureSelfName(draft);
 }
 
 /** Proportionally rescales raw percentages to sum to 100, preserving ordering and relative differences. */
@@ -488,6 +952,15 @@ export async function generateFutureSelves(): Promise<
     // Enforce trajectory distinctness in code rather than relying solely on
     // the prompt's "only generate distinct trajectories" instruction.
     drafts = dedupeDrafts(drafts, input, now);
+
+    // dedupeDrafts catches near-duplicate wording; this catches drafts that
+    // still lead with the same two themes despite different wording.
+    drafts = enforceDominantThemePairDistinctness(drafts, input, now);
+
+    // Both checks above gate on themes, which are short and coarse enough
+    // that two drafts can narrate the same underlying situation while still
+    // passing both. This catches that by reading the actual prose instead.
+    drafts = enforceSubjectMatterDistinctness(drafts, input, now);
   }
 
   const supabase = await createClient();
@@ -512,7 +985,10 @@ export async function generateFutureSelves(): Promise<
     const existing = draftMatches.get(index);
     const raw = Math.max(0, computeTrajectoryStrength(draft.themes, input, now));
 
-    return { draft, existing, raw };
+    // Naming enforcement happens last, after matching/dedup have already run
+    // on the model's original name — it only affects what gets written, not
+    // which existing row a draft continues or how duplicates were resolved.
+    return { draft: { ...draft, name: ensureValidFutureSelfName(draft) }, existing, raw };
   });
 
   const normalizedPercentages = normalizeToHundred(computed.map((entry) => entry.raw));
@@ -564,6 +1040,7 @@ export async function generateFutureSelves(): Promise<
       const { error: updateError } = await supabase
         .from("future_selves")
         .update({
+          name: continuityEnforcedName(existing, draft),
           summary: draft.summary,
           percentage,
           previous_percentage: existing.percentage,
@@ -605,6 +1082,7 @@ export async function generateFutureSelves(): Promise<
     const { error: updateError } = await supabase
       .from("future_selves")
       .update({
+        name: continuityEnforcedName(existing, draft),
         summary: draft.summary,
         percentage,
         previous_percentage: existing.percentage,

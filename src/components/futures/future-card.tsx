@@ -1,5 +1,5 @@
 import { TrendIndicator } from "@/components/ui/trend-indicator";
-import { getFutureSelfTrend } from "@/lib/future-self-trend";
+import { getFutureSelfExplanation, getFutureSelfTrend } from "@/lib/future-self-trend";
 import type { FutureSelf } from "@/types/database";
 
 type FutureCardProps = {
@@ -9,10 +9,11 @@ type FutureCardProps = {
 export function FutureCard({ futureSelf }: FutureCardProps) {
   const isFaded = futureSelf.status === "faded";
   const { delta } = getFutureSelfTrend(futureSelf);
-  // A disclosure only makes sense alongside an actual percentage change — a
-  // future that didn't move has nothing to disclose, and a faded future
-  // doesn't render a percentage row at all (see header below).
-  const hasExplanation = !isFaded && delta !== 0 && futureSelf.why_changed !== "";
+  // A faded future doesn't render a percentage row at all (see header below),
+  // so it has nothing to disclose. Otherwise any nonzero delta must be
+  // explainable — AI-authored when present, deterministic fallback otherwise.
+  const explanation = isFaded ? null : getFutureSelfExplanation(futureSelf);
+  const hasExplanation = explanation !== null;
 
   const header = (
     <div className="flex items-start justify-between gap-3">
@@ -54,7 +55,7 @@ export function FutureCard({ futureSelf }: FutureCardProps) {
           </summary>
           <div className="mt-3 border-t border-zinc-100 pt-3">
             <p className="text-xs font-medium text-zinc-500">Why it changed</p>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-600">{futureSelf.why_changed}</p>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-600">{explanation}</p>
           </div>
         </details>
       ) : (

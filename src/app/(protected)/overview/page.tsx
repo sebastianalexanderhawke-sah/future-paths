@@ -12,7 +12,7 @@ import {
   getLastCheckInsForMoments,
 } from "@/lib/check-ins";
 import { getCurrentSelf } from "@/lib/current-self";
-import { listActiveFutureSelves } from "@/lib/future-selves";
+import { listActiveFutureSelves, loadFutureSelfImpactByPath } from "@/lib/future-selves";
 import { listArchivedMoments, listMoments } from "@/lib/moments";
 import { getChosenPathsForMoments } from "@/lib/paths";
 import { getUnansweredReflectionSummary } from "@/lib/reflections";
@@ -68,6 +68,7 @@ export default async function OverviewPage() {
     currentSelfResult,
     reflectionSummaryResult,
     timelineEventsResult,
+    futureSelfImpactByPath,
   ] = await Promise.all([
     listMoments(),
     listArchivedMoments(),
@@ -75,6 +76,7 @@ export default async function OverviewPage() {
     getCurrentSelf(),
     getUnansweredReflectionSummary(),
     listRecentTimelineEvents(20),
+    loadFutureSelfImpactByPath(),
   ]);
 
   const situations = "moments" in momentsResult ? momentsResult.moments : [];
@@ -293,21 +295,43 @@ export default async function OverviewPage() {
             {timelineItems.map((event) => {
               const headline = timelineEventHeadline(event);
               const momentId = event.metadata.moment_id;
+              const impact =
+                event.event_type === "path_chosen" && event.metadata.path_id
+                  ? futureSelfImpactByPath.get(event.metadata.path_id)
+                  : undefined;
+
               return (
-                <li key={event.id} className="flex items-baseline gap-3">
-                  <span className="w-28 shrink-0 text-xs text-zinc-400">
-                    {formatMonthYear(event.occurred_at)}
-                  </span>
-                  {momentId ? (
-                    <Link
-                      href={`/moments/${momentId}`}
-                      className="text-sm text-zinc-900 hover:underline underline-offset-2"
-                    >
-                      {headline}
-                    </Link>
-                  ) : (
-                    <span className="text-sm text-zinc-900">{headline}</span>
-                  )}
+                <li key={event.id} className="flex flex-col gap-1">
+                  <div className="flex items-baseline gap-3">
+                    <span className="w-28 shrink-0 text-xs text-zinc-400">
+                      {formatMonthYear(event.occurred_at)}
+                    </span>
+                    {momentId ? (
+                      <Link
+                        href={`/moments/${momentId}`}
+                        className="text-sm text-zinc-900 hover:underline underline-offset-2"
+                      >
+                        {headline}
+                      </Link>
+                    ) : (
+                      <span className="text-sm text-zinc-900">{headline}</span>
+                    )}
+                  </div>
+                  {impact && impact.length > 0 ? (
+                    <div className="ml-28 flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-3">
+                      <span className="text-xs text-zinc-400">Future impact:</span>
+                      {impact.slice(0, 3).map((entry) => (
+                        <span
+                          key={entry.futureSelfId}
+                          className={`text-xs ${entry.delta > 0 ? "text-emerald-600" : "text-rose-600"}`}
+                        >
+                          {entry.delta > 0 ? "↑" : "↓"} {entry.name} (
+                          {entry.delta > 0 ? "+" : ""}
+                          {entry.delta})
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </li>
               );
             })}

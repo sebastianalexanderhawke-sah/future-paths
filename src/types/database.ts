@@ -384,6 +384,7 @@ export type FutureSelfInsert = Pick<
 export type FutureSelfUpdate = Partial<
   Pick<
     FutureSelf,
+    | "name"
     | "summary"
     | "percentage"
     | "previous_percentage"
