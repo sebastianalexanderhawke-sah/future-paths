@@ -43,6 +43,34 @@ describe("MonthlyIdentityNarrativeCard — present fields", () => {
   });
 });
 
+describe("MonthlyIdentityNarrativeCard — month-over-month comparison", () => {
+  it("renders the comparison section between the summary and Themes", () => {
+    const summaryIndex = CARD_SOURCE.indexOf("narrative.summary");
+    const comparisonIndex = CARD_SOURCE.indexOf("narrative.comparison");
+    const themesHeadingIndex = CARD_SOURCE.indexOf("Themes</h4>");
+
+    expect(summaryIndex).toBeGreaterThan(-1);
+    expect(comparisonIndex).toBeGreaterThan(summaryIndex);
+    expect(themesHeadingIndex).toBeGreaterThan(comparisonIndex);
+  });
+
+  it("only renders when both a comparison and a previous month exist", () => {
+    expect(CARD_SOURCE).toContain("narrative.comparison &&");
+    expect(CARD_SOURCE).toContain("narrative.previousMonth &&");
+  });
+
+  it("labels the section with the previous month's name", () => {
+    expect(CARD_SOURCE).toContain("Compared to {narrative.previousMonth.split");
+  });
+
+  it("renders increased items with an up arrow in emerald and decreased items with a down arrow in rose", () => {
+    expect(CARD_SOURCE).toContain("narrative.comparison.increased.map");
+    expect(CARD_SOURCE).toContain("narrative.comparison.decreased.map");
+    expect(CARD_SOURCE).toMatch(/text-emerald-600[\s\S]*?↑ \{label\}/);
+    expect(CARD_SOURCE).toMatch(/text-rose-600[\s\S]*?↓ \{label\}/);
+  });
+});
+
 describe("MonthlyIdentityNarrativeCard — future shift styling", () => {
   it("uses an up arrow and a positive sign for gains, colored emerald", () => {
     expect(CARD_SOURCE).toContain('"↑"');

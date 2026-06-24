@@ -70,6 +70,8 @@ describe("crossroadOutputSchema with banned-phrase sanitization", () => {
         makeValidPath({ title: "Wait And Observe", themes: ["Reflection"] }),
         makeValidPath({ title: "Move On", themes: ["Independence"] }),
       ],
+      opportunity_themes: ["Courage"],
+      risk_themes: ["Stability"],
     };
 
     let parsed: ReturnType<typeof crossroadOutputSchema.parse>;

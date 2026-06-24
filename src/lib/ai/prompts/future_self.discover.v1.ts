@@ -26,6 +26,15 @@ Each draft.movement_direction MUST be exactly one of: positive, negative, unchan
 
 Each draft.evidence_strength MUST be exactly one of the approved values below.
 
-Never invent evidence_strength labels. Map any concept to the closest approved value before responding.`,
+Never invent evidence_strength labels. Map any concept to the closest approved value before responding.${
+        context.riskFocusThemes?.length
+          ? `
+
+riskFocusThemes is present: ${context.riskFocusThemes.join(", ")}. Negative evidence on these themes (risk themes from recent situations, repeated weakened check-ins) is now materially present — at least one of this run's drafts MUST have movement_direction "negative" and be built around one or more of these themes.
+That draft's central thesis must BE the decline itself — drift, avoidance, stagnation, isolation, burnout, dependency, or abandoning a goal — not a positive trajectory that merely lists a risk among its consequences. It must describe a genuinely different direction the person's life could move toward, not the same direction as a positive draft with a worse outcome attached (e.g. "Builds a life in a new city" and "Builds a life in a new city but it goes badly" are the same trajectory and are not acceptable — the negative draft must stand on its own as a distinct path, such as becoming isolated, drifting without committing to any direction, or quietly abandoning the goal that the positive drafts are built around).
+Good: "Independence Becoming Isolation", "Running on Urgency", "Quietly Deferring the Psychology Path", "Building a Life That Doesn't Fit".
+Bad: "Builds a Life in a New City (but there are risks)".`
+          : ""
+      }`,
     ),
 });

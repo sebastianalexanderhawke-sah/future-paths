@@ -274,24 +274,24 @@ export function normalizeCrossroadThemesInOutput(data: unknown): unknown {
 
   const record = data as Record<string, unknown>;
 
-  if (!Array.isArray(record.paths)) {
-    return data;
-  }
-
   return {
     ...record,
-    paths: record.paths.map((path) => {
-      if (!path || typeof path !== "object" || Array.isArray(path)) {
-        return path;
-      }
+    paths: Array.isArray(record.paths)
+      ? record.paths.map((path) => {
+          if (!path || typeof path !== "object" || Array.isArray(path)) {
+            return path;
+          }
 
-      const pathRecord = path as Record<string, unknown>;
+          const pathRecord = path as Record<string, unknown>;
 
-      return {
-        ...pathRecord,
-        themes: normalizeThemesArray(pathRecord.themes),
-      };
-    }),
+          return {
+            ...pathRecord,
+            themes: normalizeThemesArray(pathRecord.themes),
+          };
+        })
+      : record.paths,
+    opportunity_themes: normalizeThemesArray(record.opportunity_themes),
+    risk_themes: normalizeThemesArray(record.risk_themes),
   };
 }
 

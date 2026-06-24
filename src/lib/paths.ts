@@ -148,7 +148,11 @@ export async function generatePaths(
 
   const { error: updateError } = await supabase
     .from("moments")
-    .update({ current_understanding: generated.current_understanding })
+    .update({
+      current_understanding: generated.current_understanding,
+      opportunity_themes: generated.opportunity_themes,
+      risk_themes: generated.risk_themes,
+    })
     .eq("id", momentId)
     .eq("user_id", auth.userId);
 
@@ -175,7 +179,11 @@ export async function generatePaths(
   if (pathsError || !insertedPaths) {
     await supabase
       .from("moments")
-      .update({ current_understanding: moment.current_understanding })
+      .update({
+        current_understanding: moment.current_understanding,
+        opportunity_themes: moment.opportunity_themes,
+        risk_themes: moment.risk_themes,
+      })
       .eq("id", momentId);
     return { error: pathsError?.message ?? "Failed to generate paths." };
   }
@@ -201,7 +209,11 @@ export async function generatePaths(
     await supabase.from("paths").delete().eq("moment_id", momentId);
     await supabase
       .from("moments")
-      .update({ current_understanding: moment.current_understanding })
+      .update({
+        current_understanding: moment.current_understanding,
+        opportunity_themes: moment.opportunity_themes,
+        risk_themes: moment.risk_themes,
+      })
       .eq("id", momentId);
     return { error: timelineError.message };
   }

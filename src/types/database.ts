@@ -35,6 +35,8 @@ export type Moment = {
   description: string | null;
   current_understanding: string | null;
   status: MomentStatus;
+  opportunity_themes: ThemeName[];
+  risk_themes: ThemeName[];
   created_at: string;
   updated_at: string;
 };
@@ -313,7 +315,10 @@ export type MomentInsert = Pick<Moment, "user_id" | "title"> & {
 };
 
 export type MomentUpdate = Partial<
-  Pick<Moment, "title" | "description" | "current_understanding" | "status">
+  Pick<
+    Moment,
+    "title" | "description" | "current_understanding" | "status" | "opportunity_themes" | "risk_themes"
+  >
 >;
 
 export type PathInsert = Pick<

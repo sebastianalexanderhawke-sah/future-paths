@@ -11,17 +11,24 @@ import {
 export const crossroadGenerateV1 = createPromptModule({
   promptId: "crossroad.generate",
   promptVersion: "1",
-  taskInstructions: `Generate a current understanding and five to seven distinct decision paths for the user's moment.
+  taskInstructions: `Generate a current understanding, five to seven distinct decision paths, and the situation's opportunity/risk themes for the user's moment.
 
 This output powers both the Decision Simulator and Future Forecast. Raw output must already be concrete, strategic, and event-oriented. Post-processing will refine it — not rescue vague or reflective language.
 
 ${CROSSROAD_GENERATION_RULES}
 
-${STRICT_THEME_SELECTION_RULES}`,
+${STRICT_THEME_SELECTION_RULES}
+
+Situation polarity rules (opportunity_themes / risk_themes — strict):
+- These describe the situation itself, not any single path: which approved themes does just being in this situation make more likely to grow, and which does it put at risk, regardless of which path the person eventually picks?
+- opportunity_themes: 1-3 approved themes this situation could meaningfully strengthen.
+- risk_themes: 1-3 approved themes this situation could meaningfully weaken.
+- A theme may appear in both, only one, or neither list. Do not pad either list — only include themes genuinely implicated by this situation.
+- Chosen ONLY from the same approved theme list as path themes.`,
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
-      `Produce JSON with current_understanding and paths (5-7 items, default 5).
+      `Produce JSON with current_understanding, paths (5-7 items, default 5), opportunity_themes (1-3), and risk_themes (1-3).
 
 Each path needs title, description, benefits (2-4), consequences (2-4), future_shift, and themes (1-3).
 
@@ -29,7 +36,7 @@ Each path.title must be a standalone 2-6 word strategy label. Each path.descript
 
 Each path must be a distinct strategy with observable benefits, realistic consequences, and a behavioral future_shift.
 
-Each path.themes must contain 1-3 values chosen ONLY from this exact list:
+Each path.themes, opportunity_themes, and risk_themes must contain only values chosen ONLY from this exact list:
 ${APPROVED_THEMES_PROMPT_TEXT}
 
 Never invent theme labels. Map any concept to the closest approved theme before responding.`,

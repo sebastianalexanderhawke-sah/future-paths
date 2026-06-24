@@ -16,6 +16,12 @@ export const pathDraftSchema = z.object({
 export const crossroadOutputSchema = z.object({
   current_understanding: tentativeTextSchema,
   paths: z.array(pathDraftSchema).min(5).max(7),
+  // Situation polarity, generated alongside the candidate paths in this same
+  // call: which approved themes this situation could strengthen versus
+  // weaken, so a single situation can support some futures while working
+  // against others instead of acting as undifferentiated evidence for all.
+  opportunity_themes: themesSchema,
+  risk_themes: themesSchema,
 });
 
 export function parseCrossroadOutput(data: unknown): MockCrossroadResult {

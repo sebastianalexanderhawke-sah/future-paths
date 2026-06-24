@@ -171,17 +171,39 @@ export async function loadFutureSelfImpactByPath(): Promise<Map<string, FutureSe
   return impactByPath;
 }
 
-type ChosenPathEvidence = { themes: ThemeName[]; chosen_at: string | null };
+// Every candidate path generated for a moment — not just the one eventually
+// chosen — already carries AI-assigned themes from the moment it's
+// generated. Unfiltered by is_chosen: chosen_at stays null until one of them
+// actually is chosen, contributing nothing via the chosen-path loop below
+// until then. Reuses data that already exists — no new schema, AI field, or
+// migration.
+type ChosenPathEvidence = {
+  themes: ThemeName[];
+  chosen_at: string | null;
+  created_at: string;
+};
 type CheckInEvidence = { theme_changes: ThemeChange[]; created_at: string };
 type IdentityUpdateEvidence = {
   themes: ThemeName[];
   update_type: IdentityUpdateType;
   created_at: string;
 };
+// One entry per moment — a situation's polarity, not its candidate paths.
+// opportunity_themes/risk_themes are AI-assigned once per moment, in the
+// same generation call that produces its candidate paths, so a single
+// situation can strengthen futures matching its opportunity themes while
+// weakening futures matching its risk themes, instead of acting as
+// undifferentiated evidence for every future that shares any theme at all.
+type SituationEvidence = {
+  opportunity_themes: ThemeName[];
+  risk_themes: ThemeName[];
+  created_at: string;
+};
 
 type EvidenceBundle = {
   momentCount: number;
   chosenPaths: ChosenPathEvidence[];
+  situations: SituationEvidence[];
   checkIns: CheckInEvidence[];
   identityUpdates: IdentityUpdateEvidence[];
 };
@@ -192,20 +214,16 @@ async function loadGenerationInput(userId: string): Promise<GenerationInput> {
   const supabase = await createClient();
 
   const [
-    { count: momentCount, error: momentError },
+    { data: moments, error: momentError },
     { data: chosenPaths, error: pathsError },
     { data: checkIns, error: checkInsError },
     { data: identityUpdates, error: updatesError },
   ] = await Promise.all([
     supabase
       .from("moments")
-      .select("*", { count: "exact", head: true })
+      .select("opportunity_themes, risk_themes, created_at")
       .eq("user_id", userId),
-    supabase
-      .from("paths")
-      .select("themes, chosen_at")
-      .eq("user_id", userId)
-      .eq("is_chosen", true),
+    supabase.from("paths").select("themes, chosen_at, created_at").eq("user_id", userId),
     supabase.from("check_ins").select("theme_changes, created_at").eq("user_id", userId),
     supabase
       .from("identity_updates")
@@ -225,8 +243,9 @@ async function loadGenerationInput(userId: string): Promise<GenerationInput> {
   }
 
   return {
-    momentCount: momentCount ?? 0,
+    momentCount: moments?.length ?? 0,
     chosenPaths: chosenPaths ?? [],
+    situations: moments ?? [],
     checkIns: checkIns ?? [],
     identityUpdates: identityUpdates ?? [],
   };
@@ -240,87 +259,64 @@ const EVIDENCE_WEIGHTS = {
   pattern_strengthened: 5,
   theme_emerging: 3,
   chosen_path: 2,
+  situation: 2,
   check_in: 1,
 } as const;
 
-// A flat chosen_path weight can't make a single new choice visible: a future
-// accumulates one chosen_path contribution per past path that shares its
-// theme, and themes repeat constantly, so a mature future can easily be
-// carrying 30-50 historical chosen-path contributions already. Scaling
-// EVIDENCE_WEIGHTS.chosen_path itself doesn't fix this — it scales that
-// entire historical sum by the same factor as the new contribution, so the
-// new path's *share* of the total barely moves even at 10x.
+// A flat weight can't make a single new event visible on a mature account: a
+// future accumulates one contribution per past piece of evidence that shares
+// its theme, and themes repeat constantly, so a mature future can easily be
+// carrying hundreds of raw points of history already. Scaling a weight
+// itself doesn't fix this — it scales the entire historical sum by the same
+// factor as the new contribution, so the new event's *share* of the total
+// barely moves even at 10x (confirmed against real account data — see
+// "things already investigated"; this was originally addressed with a
+// recency boost scoped to chosen paths only, since they were the one
+// evidence type with a clean "most recent" sense — but the same dilution
+// affects every evidence type, not just chosen paths).
 //
-// Instead, the single most-recently-chosen path (by chosen_at, across all of
-// the user's paths) keeps its normal EVIDENCE_WEIGHTS.chosen_path
-// contribution (same architecture as every other historical chosen path) and
-// additionally earns a separate recency boost on top. A chosen path is
-// predictive — a deliberate signal about where someone is heading, ahead of
-// any confirming behavior — so it's meant to read as the strongest signal in
-// the system immediately after being chosen. But unlike the base evidence
-// weights, this boost decays fast and on its own schedule (a 3-day half-life,
-// independent of EVIDENCE_DECAY_TIERS) rather than the slow 7/30/90-day
-// tiers everything else uses: a chosen path is confirmatory only briefly,
-// and is meant to be naturally overtaken by check-ins and identity updates
-// (which use the normal, slower decay) as they accumulate to confirm or
-// contradict it. Once a newer path is chosen, this path also loses the boost
-// entirely — only ever the single newest gets it.
+// The fix: split every contribution into one of two pools by age, instead of
+// one flat sum. backgroundStrength is long-run identity — slow, cumulative,
+// the same continuous decay as always. currentForce is only what happened
+// within CURRENT_FORCE_WINDOW_DAYS — recent situations, recent chosen paths,
+// recent check-ins, recent identity updates — multiplied up before being
+// added back on top of the background. A single recent event can't get
+// drowned out by months of history because it's never summed into the same
+// pool as that history in the first place; it's a separate, amplified term.
+// Once an event ages out of the window it simply joins backgroundStrength at
+// its ordinary (unmultiplied) weight — nothing is ever double-counted, and
+// nothing needs a separate decay schedule of its own.
 //
-// The boost is a *fraction of this future's own accumulated strength*, not a
-// flat constant added on top. A flat bonus is the single largest per-instance
-// weight in the system, but a mature future easily carries hundreds of raw
-// points from a lifetime of identity updates and check-ins — against a base
-// that large, a flat +18 barely moves a future's *share* of the total. Worse,
-// because only the single newest path ever holds the boost, choosing a new
-// path mostly just moves the same flat bonus from the previous holder to the
-// new one; if the two paths overlap similar futures, the swap nets to almost
-// no change at all (confirmed against real account data — see "things
-// already investigated"). Scaling the boost to each future's own size keeps
-// the swing meaningful regardless of how much history has piled up, fixing
-// exactly that failure mode with no change to evidence sources, decay tiers,
-// or normalization.
-const MOST_RECENT_CHOSEN_PATH_BOOST_FRACTION = 0.5;
-const RECENCY_BOOST_HALF_LIFE_DAYS = 3;
-
-function recencyBoostDecay(ageDays: number): number {
-  return Math.pow(0.5, ageDays / RECENCY_BOOST_HALF_LIFE_DAYS);
-}
-
-// Recency decay: a contribution's weight shrinks with age but never reaches
-// zero, so a trajectory built over months doesn't evaporate the moment
-// nothing new happens for a week.
-const EVIDENCE_DECAY_TIERS: { underDays: number; multiplier: number }[] = [
-  { underDays: 7, multiplier: 1 },
-  { underDays: 30, multiplier: 0.75 },
-  { underDays: 90, multiplier: 0.5 },
-];
-const EVIDENCE_DECAY_FLOOR = 0.25;
+// Continuous half-life decay, no floor: a contribution's weight keeps
+// shrinking for as long as the trajectory runs, rather than settling at a
+// permanent 25% minimum after 90 days. On an account with months of history,
+// the old tiered/floored decay let accumulated evidence grow without bound,
+// diluting the marginal effect of any single new piece of evidence to
+// near-zero. A true half-life keeps the cumulative sum's steady state
+// bounded by the recent evidence rate instead, so fresh evidence keeps a
+// non-vanishing share of the total as the account matures.
+const EVIDENCE_HALF_LIFE_DAYS = 21;
 
 function evidenceDecay(ageDays: number): number {
-  for (const tier of EVIDENCE_DECAY_TIERS) {
-    if (ageDays < tier.underDays) return tier.multiplier;
-  }
-  return EVIDENCE_DECAY_FLOOR;
+  return Math.pow(0.5, ageDays / EVIDENCE_HALF_LIFE_DAYS);
 }
 
 function evidenceAgeDays(createdAt: string, now: string): number {
   return (new Date(now).getTime() - new Date(createdAt).getTime()) / (24 * 60 * 60 * 1000);
 }
 
+// The current-force window reuses the same half-life rather than inventing a
+// second number to tune: anything still within one half-life of its
+// original weight is "recent enough to be live," anything older has already
+// decayed past the halfway point and is purely background at that point.
+// The multiplier is the one new tunable this phase adds — see the real-
+// account investigation in the PR description for how its size was chosen.
+const CURRENT_FORCE_WINDOW_DAYS = EVIDENCE_HALF_LIFE_DAYS;
+const CURRENT_FORCE_MULTIPLIER = 10;
+
 function sharesTheme(a: readonly ThemeName[], b: readonly ThemeName[]): boolean {
   const set = new Set(b);
   return a.some((theme) => set.has(theme));
-}
-
-/** Most recent chosen_at across all of the user's chosen paths, or null if none have one. */
-function mostRecentChosenAt(chosenPaths: readonly ChosenPathEvidence[]): string | null {
-  let latest: string | null = null;
-  for (const path of chosenPaths) {
-    if (path.chosen_at && (!latest || path.chosen_at > latest)) {
-      latest = path.chosen_at;
-    }
-  }
-  return latest;
 }
 
 const SUMMARY_STOPWORDS = new Set([
@@ -436,69 +432,134 @@ function matchDraftsToExisting(
 }
 
 /**
- * Cumulative, recency-weighted trajectory strength — every matching piece of
- * evidence contributes (not just the single strongest type), each discounted
- * by age but never to zero. Used directly as the pre-normalization raw score
- * rather than as a +/- delta on top of the previous percentage: an additive
- * delta on a fixed 0-100 scale can't represent open-ended cumulative history
- * without either going stale (bounded to "since last generation," which is
- * frequently empty) or saturating the clamp ceiling (unbounded lookback) —
- * the two failure modes this replaces. normalizeToHundred rescales the
- * result, so its absolute magnitude doesn't matter, only its size relative
- * to the other drafts in the same run.
+ * Adds a piece of evidence's contribution to whichever of the two pools its
+ * age belongs to: still within the current-force window, or already
+ * background. Both pools use the same evidenceDecay — only which running
+ * total a contribution lands in (and whether CURRENT_FORCE_MULTIPLIER is
+ * applied later) depends on age.
+ */
+function addToPool(
+  pools: { backgroundStrength: number; currentForce: number },
+  contribution: number,
+  ageDays: number,
+): void {
+  if (ageDays <= CURRENT_FORCE_WINDOW_DAYS) {
+    pools.currentForce += contribution;
+  } else {
+    pools.backgroundStrength += contribution;
+  }
+}
+
+/**
+ * Two-pool trajectory strength: backgroundStrength is long-run identity
+ * (every matching piece of evidence older than the current-force window,
+ * each discounted by age but never to zero), currentForce is only what's
+ * happened within that window. effectiveStrength = backgroundStrength +
+ * currentForce * CURRENT_FORCE_MULTIPLIER — a single recent event is never
+ * summed into the same pool as months of history, so it can't be diluted
+ * into invisibility by it, while still leaving accumulated history intact
+ * once an event ages out of the window. Used directly as the
+ * pre-normalization raw score rather than as a +/- delta on top of the
+ * previous percentage: an additive delta on a fixed 0-100 scale can't
+ * represent open-ended cumulative history without either going stale
+ * (bounded to "since last generation," which is frequently empty) or
+ * saturating the clamp ceiling (unbounded lookback) — the two failure modes
+ * this replaces. normalizeToHundred rescales the result, so its absolute
+ * magnitude doesn't matter, only its size relative to the other drafts in
+ * the same run.
  */
 function computeTrajectoryStrength(
   futureThemes: ThemeName[],
   evidence: EvidenceBundle,
   now: string,
 ): number {
-  let strength = 0;
+  const pools = { backgroundStrength: 0, currentForce: 0 };
 
   for (const update of evidence.identityUpdates) {
     if (!sharesTheme(futureThemes, update.themes)) continue;
-    strength +=
-      EVIDENCE_WEIGHTS[update.update_type] * evidenceDecay(evidenceAgeDays(update.created_at, now));
+    const age = evidenceAgeDays(update.created_at, now);
+    addToPool(pools, EVIDENCE_WEIGHTS[update.update_type] * evidenceDecay(age), age);
   }
 
   for (const checkIn of evidence.checkIns) {
-    const positiveThemes = checkIn.theme_changes
-      .map((change) => change.theme)
-      .filter(isPositiveThemeName);
-    if (!sharesTheme(futureThemes, positiveThemes)) continue;
-    strength += EVIDENCE_WEIGHTS.check_in * evidenceDecay(evidenceAgeDays(checkIn.created_at, now));
-  }
+    const age = evidenceAgeDays(checkIn.created_at, now);
+    const decay = evidenceDecay(age);
 
-  const latestChosenAt = mostRecentChosenAt(evidence.chosenPaths);
-  let mostRecentOverlapRatio = 0;
-  let mostRecentAge = 0;
-  let hasMostRecentMatch = false;
-
-  for (const path of evidence.chosenPaths) {
-    if (!sharesTheme(futureThemes, path.themes)) continue;
-    const age = path.chosen_at ? evidenceAgeDays(path.chosen_at, now) : Infinity;
-
-    strength += EVIDENCE_WEIGHTS.chosen_path * evidenceDecay(age);
-
-    const isMostRecentChoice = path.chosen_at !== null && path.chosen_at === latestChosenAt;
-    if (isMostRecentChoice) {
-      // Proportional to thematic overlap, not a boolean gate: a path sharing
-      // every theme with a future is a much stronger signal for that future
-      // than a path sharing only one of three themes.
-      mostRecentOverlapRatio = countThemeOverlap(futureThemes, path.themes) / path.themes.length;
-      mostRecentAge = age;
-      hasMostRecentMatch = true;
+    for (const change of checkIn.theme_changes) {
+      if (!isPositiveThemeName(change.theme) || !futureThemes.includes(change.theme)) continue;
+      // "weakened" is evidence against this trajectory, not for it —
+      // strengthened/emerging confirm momentum, weakened counts against it.
+      const sign = change.direction === "weakened" ? -1 : 1;
+      addToPool(pools, sign * EVIDENCE_WEIGHTS.check_in * decay, age);
     }
   }
 
-  if (hasMostRecentMatch) {
-    // Scaled against this future's own strength so far (identity updates +
-    // check-ins + ordinary chosen-path contributions), not a fixed amount —
-    // see the rationale above MOST_RECENT_CHOSEN_PATH_BOOST_FRACTION.
-    strength +=
-      strength * MOST_RECENT_CHOSEN_PATH_BOOST_FRACTION * mostRecentOverlapRatio * recencyBoostDecay(mostRecentAge);
+  // Situation evidence: directional, not undifferentiated. A situation
+  // strengthens futures matching its opportunity themes and weakens futures
+  // matching its risk themes — one contribution per moment either way, the
+  // same continuous decay as everything else, no separate weight.
+  for (const situation of evidence.situations) {
+    const age = evidenceAgeDays(situation.created_at, now);
+    const decay = evidenceDecay(age);
+
+    if (sharesTheme(futureThemes, situation.opportunity_themes)) {
+      addToPool(pools, EVIDENCE_WEIGHTS.situation * decay, age);
+    }
+    if (sharesTheme(futureThemes, situation.risk_themes)) {
+      addToPool(pools, -EVIDENCE_WEIGHTS.situation * decay, age);
+    }
   }
 
-  return strength;
+  for (const path of evidence.chosenPaths) {
+    if (!path.chosen_at || !sharesTheme(futureThemes, path.themes)) continue;
+
+    // Chosen-path confirmation: only the path actually picked contributes
+    // here, scored from chosen_at. Recency is handled the same way as every
+    // other evidence type now — via the current-force window below, not a
+    // separate boost mechanism keyed to "most recently chosen."
+    const age = evidenceAgeDays(path.chosen_at, now);
+    addToPool(pools, EVIDENCE_WEIGHTS.chosen_path * evidenceDecay(age), age);
+  }
+
+  return pools.backgroundStrength + pools.currentForce * CURRENT_FORCE_MULTIPLIER;
+}
+
+// "Materially present" means repeated, not a one-off: a single risk-tagged
+// situation or a single weakened check-in is normal noise, but two or more
+// independent negative signals on the same theme — from either source, in
+// any combination — means that theme has a real negative pattern behind it,
+// not a fluke. Reuses the same EvidenceBundle already loaded for scoring;
+// no new evidence source, no decay weighting (this is a yes/no eligibility
+// gate for generation, not a strength computation).
+const RISK_ELIGIBILITY_THRESHOLD = 2;
+
+/**
+ * Themes with enough negative-directional evidence (risk_themes on
+ * situations, weakened check-ins) to require the next generation run to
+ * ensure at least one risk-led draft, per findRiskEligibleThemes' threshold.
+ */
+function findRiskEligibleThemes(evidence: EvidenceBundle): ThemeName[] {
+  const negativeSignalCount = new Map<ThemeName, number>();
+  const increment = (theme: ThemeName) =>
+    negativeSignalCount.set(theme, (negativeSignalCount.get(theme) ?? 0) + 1);
+
+  for (const situation of evidence.situations) {
+    for (const theme of situation.risk_themes) {
+      increment(theme);
+    }
+  }
+
+  for (const checkIn of evidence.checkIns) {
+    for (const change of checkIn.theme_changes) {
+      if (change.direction === "weakened" && isPositiveThemeName(change.theme)) {
+        increment(change.theme);
+      }
+    }
+  }
+
+  return [...negativeSignalCount.entries()]
+    .filter(([, count]) => count >= RISK_ELIGIBILITY_THRESHOLD)
+    .map(([theme]) => theme);
 }
 
 // A growth trajectory and a risk trajectory can legitimately share themes —
@@ -924,11 +985,14 @@ export async function generateFutureSelves(): Promise<
   if (input.momentCount < 1) {
     drafts = [];
   } else {
+    const riskFocusThemes = findRiskEligibleThemes(input);
+
     const generationResult = await runStructuredGeneration({
       userId: auth.userId,
       profile: "future_self",
       promptId: "future_self.discover",
       schema: futureSelfDiscoverOutputSchema,
+      overrides: riskFocusThemes.length > 0 ? { riskFocusThemes } : undefined,
     });
 
     if (!generationResult.ok) {
@@ -983,7 +1047,14 @@ export async function generateFutureSelves(): Promise<
   // normalization needs the full set of this run's values up front.
   const computed = drafts.map((draft, index) => {
     const existing = draftMatches.get(index);
-    const raw = Math.max(0, computeTrajectoryStrength(draft.themes, input, now));
+    // Not floored at 0: risk evidence can pull a draft's raw strength below
+    // zero, and normalizeToHundred needs that negative value intact to
+    // shrink the total and shift share toward the other drafts — clamping
+    // here would erase the asymmetry directional situation evidence exists
+    // to create. (The Math.max(0, ...) calls elsewhere stay: those compare
+    // candidates against each other within distinctness checks, not against
+    // normalizeToHundred.)
+    const raw = computeTrajectoryStrength(draft.themes, input, now);
 
     // Naming enforcement happens last, after matching/dedup have already run
     // on the model's original name — it only affects what gets written, not

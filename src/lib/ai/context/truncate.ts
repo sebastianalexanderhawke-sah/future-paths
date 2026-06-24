@@ -1,5 +1,34 @@
 import { CONTEXT_LIMITS } from "@/lib/ai/context/limits";
 import type { IdentityContextBundle } from "@/lib/ai/context/slices";
+import type { MonthlyIdentityEvolution } from "@/lib/monthly-identity-evolution";
+
+// Evidence arrays here are unbounded at the source (every chosen path / identity
+// update ever recorded for the month), so they're the one part of this profile's
+// context that can blow the total JSON budget on an active account. month,
+// dominantThemes, majorDecisions, and futureShifts are already small and final —
+// only the raw evidence lists get trimmed, to the newest entries.
+const MONTHLY_IDENTITY_EVOLUTION_EVIDENCE_LIMIT = 10;
+
+function trimMonthlyIdentityEvolution(
+  months: MonthlyIdentityEvolution[] | undefined,
+): MonthlyIdentityEvolution[] | undefined {
+  if (!months) {
+    return months;
+  }
+
+  return months.map((month) => ({
+    ...month,
+    identityChangeEvidence: {
+      ...month.identityChangeEvidence,
+      identityUpdates: [...month.identityChangeEvidence.identityUpdates]
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, MONTHLY_IDENTITY_EVOLUTION_EVIDENCE_LIMIT),
+      chosenPaths: [...month.identityChangeEvidence.chosenPaths]
+        .sort((a, b) => b.chosenAt.localeCompare(a.chosenAt))
+        .slice(0, MONTHLY_IDENTITY_EVOLUTION_EVIDENCE_LIMIT),
+    },
+  }));
+}
 
 export function truncateText(value: string, maxLength: number): string {
   const trimmed = value.trim();
@@ -42,6 +71,7 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
     checkInCount: bundle.checkInCount,
     crossroadSnippets: bundle.crossroadSnippets,
     chapterCandidates: bundle.chapterCandidates,
+    monthlyIdentityEvolution: trimMonthlyIdentityEvolution(bundle.monthlyIdentityEvolution),
   };
 
   if (bundle.moment) {
@@ -275,6 +305,7 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     checkIns: bundle.checkIns,
     identityUpdates: bundle.identityUpdates,
     futureSelves: bundle.futureSelves,
+    riskFocusThemes: bundle.riskFocusThemes,
   };
 
   serialized = JSON.stringify(reduced);
@@ -285,9 +316,10 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
 
   // Deep reduction: every profile that depends on checkIns/identityUpdates/
   // futureSelves/pathThemes (future_self, current_self, identity_prompt,
-  // contradiction) must still receive a non-empty, shortened sample of each —
-  // an oversized bundle elsewhere must never zero out the evidence a profile
-  // actually needs to do its job.
+  // contradiction) or monthlyIdentityEvolution (monthly_identity_narrative)
+  // must still receive a non-empty, shortened sample of each — an oversized
+  // bundle elsewhere must never zero out the evidence a profile actually
+  // needs to do its job.
   return {
     userId: bundle.userId,
     profile: bundle.profile,
@@ -299,6 +331,8 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     selectedPastPath: bundle.selectedPastPath,
     currentSelf: bundle.currentSelf,
     counts: bundle.counts,
+    monthlyIdentityEvolution: bundle.monthlyIdentityEvolution,
+    riskFocusThemes: bundle.riskFocusThemes,
     pathThemes: bundle.pathThemes?.slice(0, 10),
     recentMoments: truncateArray(bundle.recentMoments, 3)?.map((moment) => ({
       ...moment,

@@ -11,6 +11,28 @@ export function MonthlyIdentityNarrativeCard({ narrative }: MonthlyIdentityNarra
       <h3 className="mt-1 text-lg font-semibold text-zinc-900">{narrative.title}</h3>
       <p className="mt-3 text-sm leading-relaxed text-zinc-600">{narrative.summary}</p>
 
+      {narrative.comparison &&
+      narrative.previousMonth &&
+      (narrative.comparison.increased.length > 0 || narrative.comparison.decreased.length > 0) ? (
+        <div className="mt-4">
+          <h4 className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+            Compared to {narrative.previousMonth.split(" ")[0]}
+          </h4>
+          <ul className="mt-1.5 flex flex-col gap-1 text-sm">
+            {narrative.comparison.increased.map((label) => (
+              <li key={`increased-${label}`} className="text-emerald-600">
+                ↑ {label}
+              </li>
+            ))}
+            {narrative.comparison.decreased.map((label) => (
+              <li key={`decreased-${label}`} className="text-rose-600">
+                ↓ {label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {narrative.themes.length > 0 ? (
         <div className="mt-5">
           <h4 className="text-xs font-medium uppercase tracking-wide text-zinc-400">Themes</h4>

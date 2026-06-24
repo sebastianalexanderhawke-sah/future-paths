@@ -47,6 +47,11 @@ export type IdentityContextBundle = {
   // generation must always be able to see the newest decision distinctly
   // from older accumulated pattern evidence.
   mostRecentChosenPath?: Pick<Path, "description" | "themes" | "chosen_at" | "future_shift">;
+  // Themes with materially present negative evidence (risk themes on recent
+  // situations, repeated weakened check-ins) — set only when that threshold
+  // is met, so future_self generation can be told to ensure a risk-led
+  // trajectory instead of leaving risk evidence subordinate to positive ones.
+  riskFocusThemes?: ThemeName[];
   checkIns?: Pick<CheckIn, "theme_changes" | "identity_impact" | "reality_summary">[];
   identityUpdates?: Pick<IdentityUpdate, "title" | "summary" | "themes">[];
   futureSelves?: Pick<

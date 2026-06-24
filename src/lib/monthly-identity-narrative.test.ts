@@ -105,6 +105,74 @@ const ONE_MONTH_OF_DATA = {
   },
 };
 
+const TWO_MONTHS_OF_DATA = {
+  paths: {
+    data: [
+      {
+        id: "path-1",
+        moment_id: "moment-1",
+        description: "@native-title:Apply Wider, Move Faster@\nSend more applications.",
+        themes: ["Courage", "Independence"],
+        chosen_at: "2026-06-01T00:00:00.000Z",
+      },
+      {
+        id: "path-0",
+        moment_id: "moment-0",
+        description: "@native-title:Move Cities Alone@\nRelocate without waiting for company.",
+        themes: ["Independence"],
+        chosen_at: "2026-05-15T00:00:00.000Z",
+      },
+    ],
+    error: null,
+  },
+  identity_updates: {
+    data: [
+      {
+        id: "update-1",
+        moment_id: "moment-1",
+        update_type: "reality_shift",
+        title: "More willing to act without certainty",
+        summary: "Applied before having a finished plan.",
+        themes: ["Courage"],
+        created_at: "2026-06-02T00:00:00.000Z",
+      },
+      {
+        id: "update-0",
+        moment_id: "moment-0",
+        update_type: "reality_shift",
+        title: "Comfortable being the only one who decided",
+        summary: "No one else weighed in before the move.",
+        themes: ["Independence"],
+        created_at: "2026-05-16T00:00:00.000Z",
+      },
+    ],
+    error: null,
+  },
+  future_self_events: {
+    data: [
+      {
+        future_self_id: "f1",
+        event_type: "grew",
+        percentage_before: 10,
+        percentage_after: 46,
+        created_at: "2026-06-01T00:00:05.000Z",
+      },
+      {
+        future_self_id: "f1",
+        event_type: "grew",
+        percentage_before: 0,
+        percentage_after: 20,
+        created_at: "2026-05-01T00:00:05.000Z",
+      },
+    ],
+    error: null,
+  },
+  future_selves: {
+    data: [{ id: "f1", name: "Trades comfort for courage", themes: ["Courage"] }],
+    error: null,
+  },
+};
+
 describe("loadMonthlyIdentityNarratives", () => {
   beforeEach(() => {
     runStructuredGenerationMock.mockClear();
@@ -144,6 +212,8 @@ describe("loadMonthlyIdentityNarratives", () => {
           "Less dependent on ideal conditions before starting",
           "More comfortable carrying responsibility alone",
         ],
+        previousMonth: null,
+        comparison: null,
       },
     ]);
   });
@@ -199,8 +269,37 @@ describe("loadMonthlyIdentityNarratives", () => {
         majorDecisions: ["Apply Wider, Move Faster"],
         futureShifts: [{ futureName: "Trades comfort for courage", delta: 36 }],
         identityChanges: [],
+        previousMonth: null,
+        comparison: null,
       },
     ]);
+  });
+
+  it("attaches a deterministic month-over-month comparison to every month except the oldest", async () => {
+    setActiveStub(createSupabaseStub(TWO_MONTHS_OF_DATA));
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        { month: "June 2026", title: "T", summary: "S", identity_changes: [] },
+        { month: "May 2026", title: "T2", summary: "S2", identity_changes: [] },
+      ],
+    });
+
+    const result = await loadMonthlyIdentityNarratives();
+    if (!("narratives" in result)) throw new Error("expected narratives");
+
+    expect(result.narratives.map((n) => n.month)).toEqual(["June 2026", "May 2026"]);
+
+    const june = result.narratives[0];
+    expect(june.previousMonth).toBe("May 2026");
+    expect(june.comparison).toEqual({
+      increased: ["Courage", "Trades comfort for courage"],
+      decreased: ["Independence"],
+    });
+
+    const may = result.narratives[1];
+    expect(may.previousMonth).toBeNull();
+    expect(may.comparison).toBeNull();
   });
 
   it("propagates an AI generation failure as an error", async () => {

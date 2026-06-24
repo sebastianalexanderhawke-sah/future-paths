@@ -77,7 +77,10 @@ describe("generateFutureSelves", () => {
     runStructuredGenerationMock.mockResolvedValueOnce({ ok: true, data: [] });
 
     const stub = createSupabaseStub({
-      moments: { count: 5, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -110,7 +113,7 @@ describe("generateFutureSelves", () => {
     runStructuredGenerationMock.mockClear();
 
     const stub = createSupabaseStub({
-      moments: { count: 0, data: null, error: null },
+      moments: { data: [], error: null },
       future_selves: { data: [], error: null },
     });
     setActiveStub(stub);
@@ -228,7 +231,10 @@ describe("generateFutureSelves", () => {
     const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: {
@@ -396,7 +402,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: {
@@ -471,11 +480,16 @@ describe("generateFutureSelves", () => {
       })),
     ];
 
-    async function runWith(chosenPaths: { themes: string[]; chosen_at: string }[]) {
+    async function runWith(
+      chosenPaths: { themes: string[]; chosen_at: string; created_at: string }[],
+    ) {
       runStructuredGenerationMock.mockResolvedValueOnce({ ok: true, data: drafts });
 
       const stub = createSupabaseStub({
-        moments: { count: 10, data: null, error: null },
+        moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
         paths: { data: chosenPaths, error: null },
         check_ins: { data: [], error: null },
         identity_updates: { data: baselineIdentityUpdates, error: null },
@@ -499,7 +513,7 @@ describe("generateFutureSelves", () => {
 
     const without = await runWith([]);
     const with_ = await runWith([
-      { themes: ["Stability"], chosen_at: secondsAgo(1) },
+      { themes: ["Stability"], chosen_at: secondsAgo(1), created_at: secondsAgo(1) },
     ]);
 
     // With no chosen path, the two symmetric futures split evenly.
@@ -509,8 +523,8 @@ describe("generateFutureSelves", () => {
     // A single freshly chosen path matching only "Builds Toward Stability"
     // must produce visible movement on the very next generation — not get
     // lost against the rest of the evidence.
-    expect(with_.get("Builds Toward Stability")).toBe(62);
-    expect(with_.get("Stays Socially Connected")).toBe(38);
+    expect(with_.get("Builds Toward Stability")).toBe(52);
+    expect(with_.get("Stays Socially Connected")).toBe(48);
     expect(with_.get("Builds Toward Stability")!).toBeGreaterThan(
       without.get("Builds Toward Stability")!,
     );
@@ -537,7 +551,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -581,7 +598,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -621,7 +641,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -661,7 +684,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -719,7 +745,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: {
@@ -782,7 +811,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -840,7 +872,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -860,7 +895,7 @@ describe("generateFutureSelves", () => {
     );
   });
 
-  it("decays the chosen-path recency boost quickly as the same path ages", async () => {
+  it("keeps a chosen path's effect nearly flat while still inside the current-force window, then drops sharply once it ages out of it", async () => {
     runStructuredGenerationMock.mockClear();
 
     const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -911,8 +946,14 @@ describe("generateFutureSelves", () => {
       runStructuredGenerationMock.mockResolvedValueOnce({ ok: true, data: drafts });
 
       const stub = createSupabaseStub({
-        moments: { count: 10, data: null, error: null },
-        paths: { data: [{ themes: ["Stability"], chosen_at: chosenAt }], error: null },
+        moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
+        paths: {
+          data: [{ themes: ["Stability"], chosen_at: chosenAt, created_at: chosenAt }],
+          error: null,
+        },
         check_ins: { data: [], error: null },
         identity_updates: { data: baselineIdentityUpdates, error: null },
         future_selves: { data: [], error: null },
@@ -934,17 +975,25 @@ describe("generateFutureSelves", () => {
 
     const justChosen = await runWithChosenPathAge(secondsAgo(1));
     const tenDaysOld = await runWithChosenPathAge(daysAgo(10));
+    const wellPastWindow = await runWithChosenPathAge(daysAgo(35));
 
-    // Freshly chosen: same as the dedicated "fresh path" test — 62/38.
-    expect(justChosen.get("Builds Toward Stability")).toBe(62);
-    expect(justChosen.get("Stays Socially Connected")).toBe(38);
+    // Freshly chosen: same as the dedicated "fresh path" test — 52/48.
+    expect(justChosen.get("Builds Toward Stability")).toBe(52);
+    expect(justChosen.get("Stays Socially Connected")).toBe(48);
 
-    // The same path, 10 days later, still counts as the most recently chosen
-    // path (no newer one exists) and still gets a boost — but the boost's
-    // own 3-day half-life has decayed it to a small fraction of its original
-    // size, so the split is far closer to even than the freshly-chosen case.
-    expect(tenDaysOld.get("Builds Toward Stability")).toBe(52);
-    expect(tenDaysOld.get("Stays Socially Connected")).toBe(48);
+    // The same path, 10 days later, is still inside CURRENT_FORCE_WINDOW_DAYS
+    // (21) — only the ordinary, slow evidenceDecay applies, so the split
+    // barely moves from the freshly-chosen case. There's no separate fast
+    // recency-specific decay anymore.
+    expect(tenDaysOld.get("Builds Toward Stability")).toBe(51);
+    expect(tenDaysOld.get("Stays Socially Connected")).toBe(49);
+
+    // Once the same path ages past the window entirely (35 days), it moves
+    // out of currentForce and into backgroundStrength — losing
+    // CURRENT_FORCE_MULTIPLIER altogether rather than fading smoothly. The
+    // drop is sharp, not gradual: the chosen path's effect is nearly erased.
+    expect(wellPastWindow.get("Builds Toward Stability")).toBe(50);
+    expect(wellPastWindow.get("Stays Socially Connected")).toBe(50);
   });
 
   it("lets fresh check-ins overtake a long-decayed chosen-path boost", async () => {
@@ -981,16 +1030,28 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       // The most recently chosen path is 35 days old — old enough that its
       // recency boost (3-day half-life) has decayed to a negligible amount,
       // even though it's still the single most recent chosen path on record.
-      paths: { data: [{ themes: ["Stability"], chosen_at: daysAgo(35) }], error: null },
+      paths: {
+        data: [{ themes: ["Stability"], chosen_at: daysAgo(35), created_at: daysAgo(35) }],
+        error: null,
+      },
       // Two fresh check-ins confirming Connection, recorded today.
       check_ins: {
         data: [
-          { theme_changes: [{ theme: "Connection", direction: "up" }], created_at: daysAgo(0) },
-          { theme_changes: [{ theme: "Connection", direction: "up" }], created_at: daysAgo(0) },
+          {
+            theme_changes: [{ theme: "Connection", direction: "strengthened" }],
+            created_at: daysAgo(0),
+          },
+          {
+            theme_changes: [{ theme: "Connection", direction: "strengthened" }],
+            created_at: daysAgo(0),
+          },
         ],
         error: null,
       },
@@ -1033,73 +1094,277 @@ describe("generateFutureSelves", () => {
     );
   });
 
-  it("scales the recency boost by thematic overlap instead of gating it as all-or-nothing", async () => {
+  it("amplifies identically-weighted evidence far more when it's recent than when it's already background", async () => {
     runStructuredGenerationMock.mockClear();
 
-    const secondsAgo = (seconds: number) => new Date(Date.now() - seconds * 1000).toISOString();
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-    // The chosen path's themes are [Stability, Independence, Courage] (3
-    // themes). No identity updates or check-ins, so the only contribution to
-    // each future's raw strength is the ordinary chosen-path base weight
-    // (identical for all three, since they all share at least one theme —
-    // that part is unchanged) plus the recency boost, now scaled by overlap
-    // count / path theme count instead of a flat all-or-nothing bonus.
+    // Same evidence type, same weight (reality_shift, 8), same single piece
+    // of evidence each — the only difference is age: one falls inside
+    // CURRENT_FORCE_WINDOW_DAYS (1 day), the other well outside it (30
+    // days). If background and current force were still one pool, these two
+    // would only differ by the ordinary decay curve (a small gap). Split
+    // into two pools, the recent one also gets CURRENT_FORCE_MULTIPLIER,
+    // producing a far larger gap than decay alone ever would.
     runStructuredGenerationMock.mockResolvedValueOnce({
       ok: true,
       data: [
         {
-          name: "Builds toward stability and independence",
-          summary: "Saving consistently and turning down freelance gigs that don't pay reliably, in favor of a fixed schedule.",
+          name: "Builds Toward Stability",
+          summary: "A consistent pull toward steady, predictable circumstances.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a financial cushion."],
-          consequences: ["Fewer spontaneous opportunities."],
-          prediction: "Builds a financially predictable life with few surprises.",
-          themes: ["Independence", "Stability", "Courage"], // 3/3 overlap
+          benefits: ["Builds a dependable foundation."],
+          consequences: ["May avoid worthwhile risks."],
+          prediction: "Builds a life that rarely surprises them.",
+          themes: ["Stability"],
           why_changed: "",
         },
         {
-          name: "Chooses connection without losing independence",
-          summary: "Joining a weekly board game group while keeping weekends free for personal projects.",
+          name: "Stays Socially Connected",
+          summary: "A consistent pull toward spending time with other people.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a casual friend group."],
-          consequences: ["Less unstructured downtime."],
-          prediction: "Builds a circle of friends without giving up solo time.",
-          themes: ["Connection", "Independence", "Courage"], // 2/3 overlap
-          why_changed: "",
-        },
-        {
-          name: "Creates room to grow at a steady pace",
-          summary: "Taking on a stretch assignment at work but capping hours to avoid burnout.",
-          movement_direction: "positive",
-          evidence_strength: "Moderate",
-          benefits: ["Builds new skills gradually."],
-          consequences: ["Slower promotion timeline."],
-          prediction: "Grows skills steadily without sacrificing rest.",
-          themes: ["Growth", "Stability"], // 1/3 overlap
-          why_changed: "",
-        },
-        {
-          name: "Builds a close circle of belonging",
-          summary: "Hosting monthly dinners with the same small group of friends for over a year.",
-          movement_direction: "positive",
-          evidence_strength: "Emerging",
-          benefits: ["Builds deep, lasting friendships."],
-          consequences: ["Smaller social circle overall."],
-          prediction: "Known for a tight, loyal circle of friends.",
-          themes: ["Connection", "Belonging"], // 0/3 overlap
+          benefits: ["Builds a support network."],
+          consequences: ["Less solo time."],
+          prediction: "Known for always making time for people.",
+          themes: ["Connection"],
           why_changed: "",
         },
       ],
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
-      paths: {
-        data: [{ themes: ["Stability", "Independence", "Courage"], chosen_at: secondsAgo(1) }],
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
         error: null,
       },
+      paths: { data: [], error: null },
+      check_ins: { data: [], error: null },
+      identity_updates: {
+        data: [
+          { themes: ["Stability"], update_type: "reality_shift", created_at: daysAgo(1) },
+          { themes: ["Connection"], update_type: "reality_shift", created_at: daysAgo(30) },
+        ],
+        error: null,
+      },
+      future_selves: { data: [], error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    const insertCalls = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    const percentageByName = new Map(
+      insertCalls.map((c) => {
+        const payload = c.args[0] as Record<string, unknown>;
+        return [payload.name as string, payload.percentage as number];
+      }),
+    );
+
+    expect(percentageByName.get("Builds Toward Stability")).toBe(96);
+    expect(percentageByName.get("Stays Socially Connected")).toBe(4);
+  });
+
+  it("applies continuous half-life decay (21 days) in place of the old tiered/floored decay", async () => {
+    runStructuredGenerationMock.mockClear();
+
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          name: "Fresh Evidence Future",
+          summary: "A consistent pull toward steady, predictable circumstances.",
+          movement_direction: "positive",
+          evidence_strength: "Moderate",
+          benefits: ["Builds a dependable foundation."],
+          consequences: ["May avoid worthwhile risks."],
+          prediction: "Builds a life that rarely surprises them.",
+          themes: ["Stability"],
+          why_changed: "",
+        },
+        {
+          name: "Half-Life-Old Evidence Future",
+          summary: "A consistent pull toward spending time with other people.",
+          movement_direction: "positive",
+          evidence_strength: "Moderate",
+          benefits: ["Builds a support network."],
+          consequences: ["Less solo time."],
+          prediction: "Known for always making time for people.",
+          themes: ["Connection"],
+          why_changed: "",
+        },
+      ],
+    });
+
+    const stub = createSupabaseStub({
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
+      paths: { data: [], error: null },
+      check_ins: { data: [], error: null },
+      identity_updates: {
+        data: [
+          { themes: ["Stability"], update_type: "reality_shift", created_at: daysAgo(0) },
+          { themes: ["Connection"], update_type: "reality_shift", created_at: daysAgo(21) },
+        ],
+        error: null,
+      },
+      future_selves: { data: [], error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    const insertCalls = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    const percentageByName = new Map(
+      insertCalls.map((c) => {
+        const payload = c.args[0] as Record<string, unknown>;
+        return [payload.name as string, payload.percentage as number];
+      }),
+    );
+
+    // Identical evidence (one reality_shift each) except one is exactly one
+    // half-life (21 days) old: 0.5^(21/21) = 0.5 exactly, so its raw strength
+    // is exactly half the fresh one's — a clean 2:1 split. The old tiered
+    // scheme would have put both in the same "<30 days" tier (0.75 either
+    // way) and produced an even 50/50 split instead.
+    expect(percentageByName.get("Fresh Evidence Future")).toBe(67);
+    expect(percentageByName.get("Half-Life-Old Evidence Future")).toBe(33);
+  });
+
+  it("lets a 'weakened' check-in count against a trajectory instead of for it", async () => {
+    runStructuredGenerationMock.mockClear();
+
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          name: "Stability Future",
+          summary: "A consistent pull toward steady, predictable circumstances.",
+          movement_direction: "negative",
+          evidence_strength: "Moderate",
+          benefits: ["Builds a dependable foundation."],
+          consequences: ["May avoid worthwhile risks."],
+          prediction: "Builds a life that rarely surprises them.",
+          themes: ["Stability"],
+          why_changed: "",
+        },
+        {
+          name: "Connection Future",
+          summary: "A consistent pull toward spending time with other people.",
+          movement_direction: "positive",
+          evidence_strength: "Moderate",
+          benefits: ["Builds a support network."],
+          consequences: ["Less solo time."],
+          prediction: "Known for always making time for people.",
+          themes: ["Connection"],
+          why_changed: "",
+        },
+      ],
+    });
+
+    const stub = createSupabaseStub({
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
+      paths: { data: [], error: null },
+      // Same theme, opposite direction: a check-in saying Stability weakened
+      // should count against that future, while one saying Connection
+      // strengthened should count for it.
+      check_ins: {
+        data: [
+          { theme_changes: [{ theme: "Stability", direction: "weakened" }], created_at: daysAgo(0) },
+          {
+            theme_changes: [{ theme: "Connection", direction: "strengthened" }],
+            created_at: daysAgo(0),
+          },
+        ],
+        error: null,
+      },
+      // Identical, symmetric baseline so the check-ins are the only variable.
+      identity_updates: {
+        data: [
+          { themes: ["Stability"], update_type: "reality_shift", created_at: daysAgo(10) },
+          { themes: ["Connection"], update_type: "reality_shift", created_at: daysAgo(10) },
+        ],
+        error: null,
+      },
+      future_selves: { data: [], error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    const insertCalls = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    const percentageByName = new Map(
+      insertCalls.map((c) => {
+        const payload = c.args[0] as Record<string, unknown>;
+        return [payload.name as string, payload.percentage as number];
+      }),
+    );
+
+    // With identical baseline evidence, "weakened" pulls Stability below an
+    // even split and "strengthened" pushes Connection above it — not the old
+    // behavior, where both directions added the same flat +1 regardless.
+    expect(percentageByName.get("Stability Future")).toBe(41);
+    expect(percentageByName.get("Connection Future")).toBe(59);
+  });
+
+  it("strengthens a future matching the situation's opportunity themes, immediately and before any path is chosen", async () => {
+    runStructuredGenerationMock.mockClear();
+
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          name: "Independence Future",
+          summary: "Turning down a roommate's offer to keep full control over daily decisions.",
+          movement_direction: "positive",
+          evidence_strength: "Emerging",
+          benefits: ["Keeps daily choices entirely their own."],
+          consequences: ["Fewer people to share costs or chores with."],
+          prediction: "Years of choosing solo living over convenience could make solitude the comfortable default.",
+          themes: ["Independence"],
+          why_changed: "",
+        },
+        {
+          name: "Unrelated Future",
+          summary: "Joining a weekly trivia night with the same group for months running.",
+          movement_direction: "positive",
+          evidence_strength: "Emerging",
+          benefits: ["Builds a reliable, recurring social circle."],
+          consequences: ["Less flexibility on weeknights."],
+          prediction: "Showing up every week for years could make this group feel like found family.",
+          themes: ["Belonging"],
+          why_changed: "",
+        },
+      ],
+    });
+
+    const stub = createSupabaseStub({
+      // A brand-new situation, no candidate paths generated or chosen yet —
+      // its opportunity theme alone should still count as evidence, scored
+      // from the moment's created_at.
+      moments: {
+        data: [{ opportunity_themes: ["Independence"], risk_themes: [], created_at: daysAgo(0) }],
+        error: null,
+      },
+      paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
       future_selves: { data: [], error: null },
@@ -1118,24 +1383,165 @@ describe("generateFutureSelves", () => {
       }),
     );
 
-    const fullOverlap = percentageByName.get("Builds toward stability and independence")!;
-    const twoThirdsOverlap = percentageByName.get("Chooses connection without losing independence")!;
-    const oneThirdOverlap = percentageByName.get("Creates room to grow at a steady pace")!;
-    const noOverlap = percentageByName.get("Builds a close circle of belonging")!;
+    expect(percentageByName.get("Independence Future")).toBe(99);
+    expect(percentageByName.get("Unrelated Future")).toBe(1);
+  });
 
-    // Full overlap (3/3) outranks partial overlap (2/3).
-    expect(fullOverlap).toBeGreaterThan(twoThirdsOverlap);
-    // Partial overlap (2/3) outranks lesser partial overlap (1/3).
-    expect(twoThirdsOverlap).toBeGreaterThan(oneThirdOverlap);
-    // Partial overlap (1/3) outranks no overlap at all.
-    expect(oneThirdOverlap).toBeGreaterThan(noOverlap);
+  it("weakens a future matching the situation's risk themes, instead of treating every situation as support for everything", async () => {
+    runStructuredGenerationMock.mockClear();
 
-    // Exact values: raw strength is base(2) + base * 0.5 * overlap, i.e.
-    // [2*1.5, 2*1.333, 2*1.167, 0] = [3, 2.667, 2.333, 0], normalized to 100.
-    expect(fullOverlap).toBe(37);
-    expect(twoThirdsOverlap).toBe(33);
-    expect(oneThirdOverlap).toBe(29);
-    expect(noOverlap).toBe(1);
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          name: "Stability Future",
+          summary: "Renewing the same lease again and keeping the same routine for another year.",
+          movement_direction: "positive",
+          evidence_strength: "Moderate",
+          benefits: ["Keeps monthly costs predictable."],
+          consequences: ["Fewer changes to break up the routine."],
+          prediction: "Settles into a life defined by routine and a fixed address.",
+          themes: ["Stability"],
+          why_changed: "",
+        },
+        {
+          name: "Connection Future",
+          summary: "Hosting a small dinner with the same close friends every other week.",
+          movement_direction: "positive",
+          evidence_strength: "Moderate",
+          benefits: ["Keeps close friendships active."],
+          consequences: ["Less time for new acquaintances."],
+          prediction: "Known for a small, steady circle that always makes time for each other.",
+          themes: ["Connection"],
+          why_changed: "",
+        },
+      ],
+    });
+
+    const stub = createSupabaseStub({
+      // A new situation puts Stability specifically at risk, while leaving
+      // Connection untouched — the risk theme should pull Stability Future
+      // below the even baseline, not leave both futures equally supported.
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: ["Stability"], created_at: daysAgo(0) }],
+        error: null,
+      },
+      paths: { data: [], error: null },
+      check_ins: { data: [], error: null },
+      // Identical, symmetric baseline so the risk theme is the only variable.
+      identity_updates: {
+        data: [
+          { themes: ["Stability"], update_type: "reality_shift", created_at: daysAgo(10) },
+          { themes: ["Connection"], update_type: "reality_shift", created_at: daysAgo(10) },
+        ],
+        error: null,
+      },
+      future_selves: { data: [], error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    const insertCalls = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    const percentageByName = new Map(
+      insertCalls.map((c) => {
+        const payload = c.args[0] as Record<string, unknown>;
+        return [payload.name as string, payload.percentage as number];
+      }),
+    );
+
+    expect(percentageByName.get("Stability Future")).toBe(39);
+    expect(percentageByName.get("Connection Future")).toBe(61);
+  });
+
+  it("lets the same situation strengthen one future while weakening another, instead of moving every future the same direction", async () => {
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    async function runWith(situation: {
+      opportunity_themes: string[];
+      risk_themes: string[];
+      created_at: string;
+    } | null) {
+      runStructuredGenerationMock.mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            name: "Builds Toward Independence",
+            summary: "Turning a spare room into a home office instead of taking on a roommate.",
+            movement_direction: "positive",
+            evidence_strength: "Moderate",
+            benefits: ["Keeps full control over the space."],
+            consequences: ["Carries the full rent alone."],
+            prediction: "Builds a life centered on full control over their own space and time.",
+            themes: ["Independence"],
+            why_changed: "",
+          },
+          {
+            name: "Builds Toward A Fixed Routine",
+            summary: "Keeping the same gym schedule and grocery run every single week.",
+            movement_direction: "positive",
+            evidence_strength: "Moderate",
+            benefits: ["Keeps the week predictable."],
+            consequences: ["Little room for spontaneity."],
+            prediction: "Builds a life around a routine that rarely changes week to week.",
+            themes: ["Stability"],
+            why_changed: "",
+          },
+        ],
+      });
+
+      const stub = createSupabaseStub({
+        moments: {
+          data: [
+            situation ?? { opportunity_themes: [], risk_themes: [], created_at: daysAgo(0) },
+          ],
+          error: null,
+        },
+        paths: { data: [], error: null },
+        check_ins: { data: [], error: null },
+        // Identical, symmetric baseline so the situation is the only variable.
+        identity_updates: {
+          data: [
+            { themes: ["Independence"], update_type: "reality_shift", created_at: daysAgo(10) },
+            { themes: ["Stability"], update_type: "reality_shift", created_at: daysAgo(10) },
+          ],
+          error: null,
+        },
+        future_selves: { data: [], error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      const insertCalls = stub.calls.filter(
+        (c) => c.table === "future_selves" && c.method === "insert",
+      );
+      return new Map(
+        insertCalls.map((c) => {
+          const payload = c.args[0] as Record<string, unknown>;
+          return [payload.name as string, payload.percentage as number];
+        }),
+      );
+    }
+
+    const without = await runWith(null);
+    expect(without.get("Builds Toward Independence")).toBe(50);
+    expect(without.get("Builds Toward A Fixed Routine")).toBe(50);
+
+    const withSituation = await runWith({
+      opportunity_themes: ["Independence"],
+      risk_themes: ["Stability"],
+      created_at: daysAgo(0),
+    });
+
+    // One situation, opposite effects: Independence gains exactly what
+    // Stability loses, not the same flat boost applied to both.
+    expect(withSituation.get("Builds Toward Independence")!).toBeGreaterThan(50);
+    expect(withSituation.get("Builds Toward A Fixed Routine")!).toBeLessThan(50);
   });
 
   it("keeps a growth and a risk trajectory with overlapping themes and similar wording, instead of collapsing them as near-duplicates", async () => {
@@ -1175,7 +1581,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -1233,7 +1642,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -1288,7 +1700,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -1341,7 +1756,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -1405,7 +1823,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -1467,7 +1888,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -1565,7 +1989,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       // Independence-only evidence gives the first draft a strength
@@ -1623,7 +2050,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -1681,7 +2111,10 @@ describe("generateFutureSelves", () => {
     });
 
     const stub = createSupabaseStub({
-      moments: { count: 10, data: null, error: null },
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
       paths: { data: [], error: null },
       check_ins: { data: [], error: null },
       identity_updates: { data: [], error: null },
@@ -1699,6 +2132,191 @@ describe("generateFutureSelves", () => {
     expect(insertedNames).toHaveLength(2);
     expect(insertedNames).toContain("Builds independence after relocating");
     expect(insertedNames).toContain("Becomes isolated after relocating");
+  });
+
+  it("requires a risk-led draft when a theme has materially present negative evidence (>= 2 signals)", async () => {
+    runStructuredGenerationMock.mockClear();
+
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    runStructuredGenerationMock.mockResolvedValueOnce({ ok: true, data: [] });
+
+    const stub = createSupabaseStub({
+      // Two independent risk signals on "Stability": one situation tagging
+      // it as a risk theme, and one weakened check-in — different sources,
+      // same theme, meeting the threshold of 2.
+      moments: {
+        data: [
+          { opportunity_themes: [], risk_themes: ["Stability"], created_at: daysAgo(5) },
+          { opportunity_themes: [], risk_themes: [], created_at: daysAgo(10) },
+        ],
+        error: null,
+      },
+      paths: { data: [], error: null },
+      check_ins: {
+        data: [
+          { theme_changes: [{ theme: "Stability", direction: "weakened" }], created_at: daysAgo(3) },
+        ],
+        error: null,
+      },
+      identity_updates: { data: [], error: null },
+      future_selves: { data: [], error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    expect(runStructuredGenerationMock).toHaveBeenCalledTimes(1);
+    const callOptions = runStructuredGenerationMock.mock.calls[0][0] as {
+      overrides?: { riskFocusThemes?: string[] };
+    };
+    expect(callOptions.overrides?.riskFocusThemes).toEqual(["Stability"]);
+  });
+
+  it("does not require a risk-led draft when negative evidence stays below the threshold", async () => {
+    runStructuredGenerationMock.mockClear();
+
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    runStructuredGenerationMock.mockResolvedValueOnce({ ok: true, data: [] });
+
+    const stub = createSupabaseStub({
+      // Only a single risk signal on "Stability" — one situation, no
+      // weakened check-ins — below the threshold of 2.
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: ["Stability"], created_at: daysAgo(5) }],
+        error: null,
+      },
+      paths: { data: [], error: null },
+      check_ins: { data: [], error: null },
+      identity_updates: { data: [], error: null },
+      future_selves: { data: [], error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    expect(runStructuredGenerationMock).toHaveBeenCalledTimes(1);
+    const callOptions = runStructuredGenerationMock.mock.calls[0][0] as {
+      overrides?: { riskFocusThemes?: string[] };
+    };
+    expect(callOptions.overrides).toBeUndefined();
+  });
+
+  it("still generates positive futures normally when no risk threshold is met", async () => {
+    runStructuredGenerationMock.mockClear();
+
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          name: "Builds Toward Stability",
+          summary: "A consistent pull toward steady, predictable circumstances.",
+          movement_direction: "positive",
+          evidence_strength: "Moderate",
+          benefits: ["Builds a dependable foundation."],
+          consequences: ["May avoid worthwhile risks."],
+          prediction: "Builds a life that rarely surprises them.",
+          themes: ["Stability"],
+          why_changed: "",
+        },
+      ],
+    });
+
+    const stub = createSupabaseStub({
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
+      paths: { data: [], error: null },
+      check_ins: { data: [], error: null },
+      identity_updates: { data: [], error: null },
+      future_selves: { data: [], error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    const callOptions = runStructuredGenerationMock.mock.calls[0][0] as {
+      overrides?: { riskFocusThemes?: string[] };
+    };
+    expect(callOptions.overrides).toBeUndefined();
+
+    const insertCalls = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    expect(insertCalls.map((c) => (c.args[0] as Record<string, unknown>).name)).toContain(
+      "Builds Toward Stability",
+    );
+  });
+
+  it("preserves continuity for a persisting risk-led (negative) future across generations", async () => {
+    runStructuredGenerationMock.mockClear();
+
+    const existingRows = [
+      {
+        id: "risk-1",
+        user_id: "user-1",
+        name: "Independence Becoming Isolation",
+        themes: ["Independence", "Stability"],
+        summary: "A pattern of withdrawing from prior support while distancing from new ones forming.",
+        percentage: 24,
+        evidence_strength: "Moderate",
+        status: "active",
+        updated_at: "2026-06-01T00:00:00.000Z",
+      },
+    ];
+
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          name: "Independence Becoming Isolation",
+          summary: "Continuing to decline invitations while leaning further into self-reliance.",
+          movement_direction: "negative",
+          evidence_strength: "Moderate",
+          benefits: ["Avoids relationships that weren't working anyway."],
+          consequences: ["Loneliness may compound over time.", "Support network keeps shrinking."],
+          prediction: "Becomes someone who mistakes distance for independence.",
+          themes: ["Independence", "Stability"],
+          why_changed: "",
+        },
+      ],
+    });
+
+    const stub = createSupabaseStub({
+      moments: {
+        data: [{ opportunity_themes: [], risk_themes: [], created_at: "2020-01-01T00:00:00.000Z" }],
+        error: null,
+      },
+      paths: { data: [], error: null },
+      check_ins: { data: [], error: null },
+      identity_updates: { data: [], error: null },
+      future_selves: { data: existingRows, error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    // Matched by theme/continuity to the existing row, not inserted fresh.
+    const insertCalls = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    expect(insertCalls).toHaveLength(0);
+
+    let updatedPayload: Record<string, unknown> | null = null;
+    let matchedExistingId: unknown;
+    for (const call of stub.calls) {
+      if (call.table !== "future_selves") continue;
+      if (call.method === "update") {
+        updatedPayload = call.args[0] as Record<string, unknown>;
+      } else if (call.method === "eq" && call.args[0] === "id" && call.args[1] === "risk-1") {
+        matchedExistingId = call.args[1];
+      }
+    }
+
+    expect(matchedExistingId).toBe("risk-1");
+    expect(updatedPayload?.previous_percentage).toBe(24);
   });
 });
 

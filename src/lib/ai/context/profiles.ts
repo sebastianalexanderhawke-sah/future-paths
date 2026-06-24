@@ -28,6 +28,7 @@ export type BuildContextOverrides = {
   situationGoal?: "decision" | "forecast";
   additionalContext?: string;
   checkInHistory?: string[];
+  riskFocusThemes?: string[];
   reflectionQA?: {
     question: string;
     answer: string;

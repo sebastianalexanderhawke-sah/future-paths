@@ -1,6 +1,10 @@
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { monthlyIdentityNarrativeDiscoverOutputSchema } from "@/lib/ai/schemas/monthly-identity-narrative";
 import {
+  computeMonthlyComparison,
+  type MonthlyComparison,
+} from "@/lib/monthly-identity-comparison";
+import {
   loadMonthlyIdentityEvolution,
   type MonthlyFutureShift,
 } from "@/lib/monthly-identity-evolution";
@@ -31,6 +35,8 @@ export type MonthlyIdentityNarrative = {
   majorDecisions: string[];
   futureShifts: MonthlyFutureShift[];
   identityChanges: string[];
+  previousMonth: string | null;
+  comparison: MonthlyComparison | null;
 };
 
 /**
@@ -71,8 +77,11 @@ export async function loadMonthlyIdentityNarratives(): Promise<
 
   const draftByMonth = new Map(generationResult.data.map((draft) => [draft.month, draft]));
 
-  const narratives: MonthlyIdentityNarrative[] = months.map((month) => {
+  // months is sorted newest-first, so the chronologically previous month for
+  // entry i is months[i + 1] — the oldest entry (last in the array) has none.
+  const narratives: MonthlyIdentityNarrative[] = months.map((month, index) => {
     const draft = draftByMonth.get(month.month);
+    const previousMonth = months[index + 1];
 
     return {
       month: month.month,
@@ -82,6 +91,8 @@ export async function loadMonthlyIdentityNarratives(): Promise<
       majorDecisions: month.majorDecisions,
       futureShifts: month.futureShifts,
       identityChanges: draft?.identity_changes ?? [],
+      previousMonth: previousMonth?.month ?? null,
+      comparison: previousMonth ? computeMonthlyComparison(month, previousMonth) : null,
     };
   });
 

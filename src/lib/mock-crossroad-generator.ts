@@ -13,6 +13,8 @@ export type MockPathDraft = {
 export type MockCrossroadResult = {
   current_understanding: string;
   paths: MockPathDraft[];
+  opportunity_themes: ThemeName[];
+  risk_themes: ThemeName[];
 };
 
 export function generateMockCrossroads(
@@ -102,5 +104,10 @@ export function generateMockCrossroads(
     paths[0].description = `Act on "${title}" with the context you shared in mind: ${description.slice(0, 120)}${description.length > 120 ? "…" : ""}`;
   }
 
-  return { current_understanding, paths };
+  return {
+    current_understanding,
+    paths,
+    opportunity_themes: ["Courage", "Independence"],
+    risk_themes: ["Stability", "Connection"],
+  };
 }
