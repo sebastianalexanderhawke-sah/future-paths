@@ -1,87 +1,71 @@
 import type { MonthlyIdentityEvolution } from "@/lib/monthly-identity-evolution";
 
 const MAX_COMPARISON_ITEMS = 3;
+const TRAIT_RANK_LIMIT = 4;
 
 export type MonthlyComparison = {
-  increased: string[];
-  decreased: string[];
+  traitsMorePresent: string[];
+  traitsLessPresent: string[];
 };
 
 /**
- * dominantThemes already pools themes from chosen paths, identity updates,
- * and future-self events (see computeDominantThemes in
- * monthly-identity-evolution.ts) — so diffing it against the previous
- * month's ranking is also how identity-update evidence factors into the
- * comparison, without re-reading identityChangeEvidence directly.
+ * Ranks by frequency, first-seen order as the tiebreak (stable sort) — same
+ * shape as the private ranking helper in monthly-identity-evolution.ts, but
+ * reimplemented here since that one isn't exported and this module must not
+ * change the aggregation layer.
  */
-function compareThemes(
-  current: MonthlyIdentityEvolution,
-  previous: MonthlyIdentityEvolution,
-): MonthlyComparison {
-  const increased: string[] = [];
-  const decreased: string[] = [];
-
-  for (const theme of current.dominantThemes) {
-    const previousRank = previous.dominantThemes.indexOf(theme);
-
-    if (previousRank === -1) {
-      increased.push(theme);
-      continue;
-    }
-
-    const currentRank = current.dominantThemes.indexOf(theme);
-    if (currentRank < previousRank) {
-      increased.push(theme);
-    }
+function rankByFrequency(items: string[], limit: number): string[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    counts.set(item, (counts.get(item) ?? 0) + 1);
   }
 
-  for (const theme of previous.dominantThemes) {
-    const currentRank = current.dominantThemes.indexOf(theme);
-
-    if (currentRank === -1) {
-      decreased.push(theme);
-      continue;
-    }
-
-    const previousRank = previous.dominantThemes.indexOf(theme);
-    if (currentRank > previousRank) {
-      decreased.push(theme);
-    }
-  }
-
-  return { increased, decreased };
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([item]) => item);
 }
 
-function compareFutureShifts(
-  current: MonthlyIdentityEvolution,
-  previous: MonthlyIdentityEvolution,
-): MonthlyComparison {
+/**
+ * Diffs two already-ranked lists: an item that's new or climbed rank counts
+ * as increased; an item that's gone or fallen rank counts as decreased. When
+ * `previous` is empty (no prior month to compare against), every item in
+ * `current` is necessarily "new" — increased — and nothing can decrease,
+ * since there's nothing in `previous` to fall away from. That's what makes
+ * this safe to reuse for both baseline months and real comparisons.
+ */
+function diffRankedLists(
+  current: string[],
+  previous: string[],
+): { increased: string[]; decreased: string[] } {
   const increased: string[] = [];
   const decreased: string[] = [];
 
-  const previousDeltaByName = new Map(
-    previous.futureShifts.map((shift) => [shift.futureName, shift.delta]),
-  );
-  const currentDeltaByName = new Map(
-    current.futureShifts.map((shift) => [shift.futureName, shift.delta]),
-  );
+  for (const item of current) {
+    const previousRank = previous.indexOf(item);
 
-  for (const [futureName, currentDelta] of currentDeltaByName) {
-    const previousDelta = previousDeltaByName.get(futureName);
-    if (previousDelta === undefined) {
+    if (previousRank === -1) {
+      increased.push(item);
       continue;
     }
 
-    if (currentDelta > previousDelta) {
-      increased.push(futureName);
-    } else if (currentDelta < previousDelta) {
-      decreased.push(futureName);
+    const currentRank = current.indexOf(item);
+    if (currentRank < previousRank) {
+      increased.push(item);
     }
   }
 
-  for (const futureName of previousDeltaByName.keys()) {
-    if (!currentDeltaByName.has(futureName)) {
-      decreased.push(futureName);
+  for (const item of previous) {
+    const currentRank = current.indexOf(item);
+
+    if (currentRank === -1) {
+      decreased.push(item);
+      continue;
+    }
+
+    const previousRank = previous.indexOf(item);
+    if (currentRank > previousRank) {
+      decreased.push(item);
     }
   }
 
@@ -89,25 +73,35 @@ function compareFutureShifts(
 }
 
 /**
- * Deterministic month-over-month comparison — no AI involved. Themes are
- * weighted ahead of future-self trajectories when both lists are capped,
- * since dominantThemes is the more direct identity signal.
+ * Traits are ranked from a narrower pool than themes: only the themes
+ * attached to that month's identityUpdates (direct evidence of an identity
+ * shift), not the broader pool that also includes chosen-path and
+ * future-event themes (dominantThemes). This is also why traits work as a
+ * baseline signal — a month's strongest identity evidence, independent of
+ * whether a previous month exists to compare against.
+ */
+function traitPool(month: MonthlyIdentityEvolution): string[] {
+  return month.identityChangeEvidence.identityUpdates.flatMap((update) => update.themes);
+}
+
+/**
+ * Compares a month's identity-update evidence against the previous month's,
+ * or against no prior evidence at all when `previous` is null — the
+ * earliest month on record. In that baseline case every trait the month's
+ * identityUpdates actually support shows up as "more present" (there's
+ * nothing it could have lost ground against), and traitsLessPresent is
+ * always empty: nothing is invented as a decline.
  */
 export function computeMonthlyComparison(
   current: MonthlyIdentityEvolution,
-  previous: MonthlyIdentityEvolution,
+  previous: MonthlyIdentityEvolution | null,
 ): MonthlyComparison {
-  const themeChanges = compareThemes(current, previous);
-  const futureShiftChanges = compareFutureShifts(current, previous);
+  const currentRanked = rankByFrequency(traitPool(current), TRAIT_RANK_LIMIT);
+  const previousRanked = rankByFrequency(previous ? traitPool(previous) : [], TRAIT_RANK_LIMIT);
+  const traitChanges = diffRankedLists(currentRanked, previousRanked);
 
   return {
-    increased: [...themeChanges.increased, ...futureShiftChanges.increased].slice(
-      0,
-      MAX_COMPARISON_ITEMS,
-    ),
-    decreased: [...themeChanges.decreased, ...futureShiftChanges.decreased].slice(
-      0,
-      MAX_COMPARISON_ITEMS,
-    ),
+    traitsMorePresent: traitChanges.increased.slice(0, MAX_COMPARISON_ITEMS),
+    traitsLessPresent: traitChanges.decreased.slice(0, MAX_COMPARISON_ITEMS),
   };
 }

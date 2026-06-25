@@ -290,6 +290,58 @@ describe("loadMonthlyIdentityEvolution", () => {
     expect(result.months[0].dominantThemes).toEqual(["Stability", "Courage", "Growth", "Independence"]);
   });
 
+  it("groups check-ins by calendar month and carries their evidence through unchanged", async () => {
+    const stub = createSupabaseStub({
+      paths: { data: [], error: null },
+      identity_updates: { data: [], error: null },
+      future_self_events: { data: [], error: null },
+      future_selves: { data: [], error: null },
+      check_ins: {
+        data: [
+          {
+            id: "check-in-may",
+            reflection: "Felt unsure about reaching out.",
+            reality_summary: "Stayed quiet most of the month.",
+            theme_changes: [{ theme: "Loneliness", direction: "present" }],
+            identity_impact: "Avoided initiating contact.",
+            created_at: "2026-05-20T00:00:00.000Z",
+          },
+          {
+            id: "check-in-june",
+            reflection: "Reached out without overthinking it.",
+            reality_summary: "Texted two old friends.",
+            theme_changes: [{ theme: "Connection", direction: "strengthened" }],
+            identity_impact: "Initiated contact more easily.",
+            created_at: "2026-06-05T00:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+    });
+    setActiveStub(stub);
+
+    const result = await loadMonthlyIdentityEvolution();
+    if (!("months" in result)) throw new Error("expected months");
+
+    expect(result.months.map((m) => m.month)).toEqual(["June 2026", "May 2026"]);
+
+    const june = result.months.find((m) => m.month === "June 2026")!;
+    expect(june.identityChangeEvidence.checkIns).toEqual([
+      {
+        id: "check-in-june",
+        reflection: "Reached out without overthinking it.",
+        realitySummary: "Texted two old friends.",
+        identityImpact: "Initiated contact more easily.",
+        themeChanges: [{ theme: "Connection", direction: "strengthened" }],
+        createdAt: "2026-06-05T00:00:00.000Z",
+      },
+    ]);
+
+    const may = result.months.find((m) => m.month === "May 2026")!;
+    expect(may.identityChangeEvidence.checkIns).toHaveLength(1);
+    expect(may.identityChangeEvidence.checkIns[0].id).toBe("check-in-may");
+  });
+
   it("returns an empty months array when the account has no relevant activity", async () => {
     const stub = createSupabaseStub({
       paths: { data: [], error: null },

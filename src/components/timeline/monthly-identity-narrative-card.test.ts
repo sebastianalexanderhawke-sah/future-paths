@@ -22,77 +22,60 @@ describe("MonthlyIdentityNarrativeCard — present fields", () => {
     expect(CARD_SOURCE).toContain("narrative.month");
   });
 
-  it("renders the chapter-style title and summary", () => {
-    expect(CARD_SOURCE).toContain("narrative.title");
-    expect(CARD_SOURCE).toContain("narrative.summary");
+  it("renders the headline", () => {
+    expect(CARD_SOURCE).toContain("narrative.headline");
   });
 
-  it("renders themes as a single dot-separated line", () => {
-    expect(CARD_SOURCE).toContain("narrative.themes");
-    expect(CARD_SOURCE).toContain('" • "');
+  it("renders both opening paragraphs", () => {
+    expect(CARD_SOURCE).toContain("narrative.openingBeginning");
+    expect(CARD_SOURCE).toContain("narrative.openingEnd");
   });
 
-  it("renders major decisions as a bullet list", () => {
-    expect(CARD_SOURCE).toContain("narrative.majorDecisions");
-    expect(CARD_SOURCE).toMatch(/[•][^\n]*\{decision\}/);
-  });
-
-  it("renders identity changes as a bullet list", () => {
-    expect(CARD_SOURCE).toContain("narrative.identityChanges");
+  it("renders how-you-changed as a bullet list", () => {
+    expect(CARD_SOURCE).toContain("narrative.howYouChanged");
     expect(CARD_SOURCE).toMatch(/[•][^\n]*\{change\}/);
   });
-});
 
-describe("MonthlyIdentityNarrativeCard — month-over-month comparison", () => {
-  it("renders the comparison section between the summary and Themes", () => {
-    const summaryIndex = CARD_SOURCE.indexOf("narrative.summary");
-    const comparisonIndex = CARD_SOURCE.indexOf("narrative.comparison");
-    const themesHeadingIndex = CARD_SOURCE.indexOf("Themes</h4>");
-
-    expect(summaryIndex).toBeGreaterThan(-1);
-    expect(comparisonIndex).toBeGreaterThan(summaryIndex);
-    expect(themesHeadingIndex).toBeGreaterThan(comparisonIndex);
-  });
-
-  it("only renders when both a comparison and a previous month exist", () => {
-    expect(CARD_SOURCE).toContain("narrative.comparison &&");
-    expect(CARD_SOURCE).toContain("narrative.previousMonth &&");
-  });
-
-  it("labels the section with the previous month's name", () => {
-    expect(CARD_SOURCE).toContain("Compared to {narrative.previousMonth.split");
-  });
-
-  it("renders increased items with an up arrow in emerald and decreased items with a down arrow in rose", () => {
-    expect(CARD_SOURCE).toContain("narrative.comparison.increased.map");
-    expect(CARD_SOURCE).toContain("narrative.comparison.decreased.map");
-    expect(CARD_SOURCE).toMatch(/text-emerald-600[\s\S]*?↑ \{label\}/);
-    expect(CARD_SOURCE).toMatch(/text-rose-600[\s\S]*?↓ \{label\}/);
+  it("renders why-this-changed as a paragraph", () => {
+    expect(CARD_SOURCE).toContain("narrative.whyThisChanged");
   });
 });
 
-describe("MonthlyIdentityNarrativeCard — future shift styling", () => {
-  it("uses an up arrow and a positive sign for gains, colored emerald", () => {
-    expect(CARD_SOURCE).toContain('"↑"');
-    expect(CARD_SOURCE).toContain("text-emerald-600");
-  });
+describe("MonthlyIdentityNarrativeCard — section order", () => {
+  it("orders sections as: headline, opening, how you changed, why this changed", () => {
+    const headlineIndex = CARD_SOURCE.indexOf("narrative.headline");
+    const openingBeginningIndex = CARD_SOURCE.indexOf("narrative.openingBeginning");
+    const openingEndIndex = CARD_SOURCE.indexOf("narrative.openingEnd");
+    const howYouChangedIndex = CARD_SOURCE.indexOf("How you changed");
+    const whyThisChangedIndex = CARD_SOURCE.indexOf("Why this changed");
 
-  it("uses a down arrow for losses, colored rose", () => {
-    expect(CARD_SOURCE).toContain('"↓"');
-    expect(CARD_SOURCE).toContain("text-rose-600");
-  });
-
-  it("branches on delta sign to choose arrow and color", () => {
-    expect(CARD_SOURCE).toContain("shift.delta > 0");
+    expect(headlineIndex).toBeGreaterThan(-1);
+    expect(openingBeginningIndex).toBeGreaterThan(headlineIndex);
+    expect(openingEndIndex).toBeGreaterThan(openingBeginningIndex);
+    expect(howYouChangedIndex).toBeGreaterThan(openingEndIndex);
+    expect(whyThisChangedIndex).toBeGreaterThan(howYouChangedIndex);
   });
 });
 
-describe("MonthlyIdentityNarrativeCard — omits empty sections", () => {
-  it("guards themes, majorDecisions, futureShifts, and identityChanges behind a length check", () => {
-    expect(CARD_SOURCE).toContain("narrative.themes.length > 0");
-    expect(CARD_SOURCE).toContain("narrative.majorDecisions.length > 0");
-    expect(CARD_SOURCE).toContain("narrative.futureShifts.length > 0");
-    expect(CARD_SOURCE).toContain("narrative.identityChanges.length > 0");
+describe("MonthlyIdentityNarrativeCard — no evidence-report sections", () => {
+  it("does not render major decisions, future shifts, themes, or raw identity-shift evidence lists", () => {
+    expect(CARD_SOURCE).not.toContain("majorDecisions");
+    expect(CARD_SOURCE).not.toContain("futureShifts");
+    expect(CARD_SOURCE).not.toContain("narrative.themes");
+    expect(CARD_SOURCE).not.toContain("Future movements");
+    expect(CARD_SOURCE).not.toContain("Major decisions");
+  });
+});
+
+describe("MonthlyIdentityNarrativeCard — omits empty sections without fabricating content", () => {
+  it("guards howYouChanged and whyThisChanged behind a truthy/length check", () => {
+    expect(CARD_SOURCE).toContain("narrative.howYouChanged.length > 0");
+    expect(CARD_SOURCE).toContain("narrative.whyThisChanged ?");
+  });
+
+  it("guards each opening paragraph independently", () => {
+    expect(CARD_SOURCE).toContain("narrative.openingBeginning ?");
+    expect(CARD_SOURCE).toContain("narrative.openingEnd ?");
   });
 });
 

@@ -26,6 +26,9 @@ function trimMonthlyIdentityEvolution(
       chosenPaths: [...month.identityChangeEvidence.chosenPaths]
         .sort((a, b) => b.chosenAt.localeCompare(a.chosenAt))
         .slice(0, MONTHLY_IDENTITY_EVOLUTION_EVIDENCE_LIMIT),
+      checkIns: [...month.identityChangeEvidence.checkIns]
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, MONTHLY_IDENTITY_EVOLUTION_EVIDENCE_LIMIT),
     },
   }));
 }

@@ -12,6 +12,7 @@ function buildMonth(overrides: Partial<MonthlyIdentityEvolution> = {}): MonthlyI
     identityChangeEvidence: {
       identityUpdates: [],
       chosenPaths: [],
+      checkIns: [],
       dominantThemes: [],
       futureShifts: [],
     },
@@ -19,117 +20,121 @@ function buildMonth(overrides: Partial<MonthlyIdentityEvolution> = {}): MonthlyI
   };
 }
 
-describe("computeMonthlyComparison", () => {
-  it("flags a theme as increased when it's newly appearing", () => {
-    const current = buildMonth({ dominantThemes: ["Courage"] });
-    const previous = buildMonth({ dominantThemes: [] });
+function identityUpdate(themes: string[]) {
+  return {
+    id: `update-${Math.random()}`,
+    title: "An identity update",
+    summary: "Summary.",
+    themes,
+    updateType: "reality_shift" as const,
+    createdAt: "2026-06-01T00:00:00.000Z",
+  };
+}
 
-    expect(computeMonthlyComparison(current, previous)).toEqual({
-      increased: ["Courage"],
-      decreased: [],
-    });
-  });
-
-  it("flags a theme as decreased when it disappears", () => {
-    const current = buildMonth({ dominantThemes: [] });
-    const previous = buildMonth({ dominantThemes: ["Avoidance"] });
-
-    expect(computeMonthlyComparison(current, previous)).toEqual({
-      increased: [],
-      decreased: ["Avoidance"],
-    });
-  });
-
-  it("flags a theme as increased when its frequency rank improves", () => {
-    const current = buildMonth({ dominantThemes: ["Courage", "Independence"] });
-    const previous = buildMonth({ dominantThemes: ["Independence", "Courage"] });
-
-    expect(computeMonthlyComparison(current, previous)).toEqual({
-      increased: ["Courage"],
-      decreased: ["Independence"],
-    });
-  });
-
-  it("does not flag a theme that holds the same rank", () => {
-    const current = buildMonth({ dominantThemes: ["Courage", "Independence"] });
-    const previous = buildMonth({ dominantThemes: ["Courage", "Independence"] });
-
-    expect(computeMonthlyComparison(current, previous)).toEqual({
-      increased: [],
-      decreased: [],
-    });
-  });
-
-  it("flags a future trajectory as increased when its net movement strengthens", () => {
-    const current = buildMonth({
-      futureShifts: [{ futureName: "Trades comfort for courage", delta: 36 }],
-    });
-    const previous = buildMonth({
-      futureShifts: [{ futureName: "Trades comfort for courage", delta: 20 }],
-    });
-
-    expect(computeMonthlyComparison(current, previous)).toEqual({
-      increased: ["Trades comfort for courage"],
-      decreased: [],
-    });
-  });
-
-  it("flags a future trajectory as decreased when its net movement weakens", () => {
-    const current = buildMonth({
-      futureShifts: [{ futureName: "Trades comfort for courage", delta: 5 }],
-    });
-    const previous = buildMonth({
-      futureShifts: [{ futureName: "Trades comfort for courage", delta: 20 }],
-    });
-
-    expect(computeMonthlyComparison(current, previous)).toEqual({
-      increased: [],
-      decreased: ["Trades comfort for courage"],
-    });
-  });
-
-  it("flags a future trajectory as decreased when it vanishes entirely", () => {
-    const current = buildMonth({ futureShifts: [] });
-    const previous = buildMonth({
-      futureShifts: [{ futureName: "Quietly cutting ties", delta: 5 }],
-    });
-
-    expect(computeMonthlyComparison(current, previous)).toEqual({
-      increased: [],
-      decreased: ["Quietly cutting ties"],
-    });
-  });
-
-  it("does not flag a future trajectory that only appears in the current month", () => {
-    const current = buildMonth({
-      futureShifts: [{ futureName: "New trajectory", delta: 12 }],
-    });
-    const previous = buildMonth({ futureShifts: [] });
-
-    expect(computeMonthlyComparison(current, previous)).toEqual({
-      increased: [],
-      decreased: [],
-    });
-  });
-
-  it("caps increased and decreased at 3 items each", () => {
-    const current = buildMonth({
-      dominantThemes: ["A", "B", "C", "D"],
-      futureShifts: [
-        { futureName: "F1", delta: 10 },
-        { futureName: "F2", delta: 10 },
-      ],
-    });
-    const previous = buildMonth({
+function withIdentityUpdates(...updates: ReturnType<typeof identityUpdate>[]) {
+  return buildMonth({
+    identityChangeEvidence: {
+      identityUpdates: updates,
+      chosenPaths: [],
+      checkIns: [],
       dominantThemes: [],
-      futureShifts: [
-        { futureName: "F1", delta: 1 },
-        { futureName: "F2", delta: 1 },
-      ],
-    });
+      futureShifts: [],
+    },
+  });
+}
+
+describe("computeMonthlyComparison — baseline (no previous month)", () => {
+  it("surfaces the month's strongest identity evidence as traitsMorePresent", () => {
+    const current = withIdentityUpdates(identityUpdate(["Courage"]));
+
+    const result = computeMonthlyComparison(current, null);
+    expect(result.traitsMorePresent).toEqual(["Courage"]);
+    expect(result.traitsLessPresent).toEqual([]);
+  });
+
+  it("never fabricates a decline when there is no previous month", () => {
+    const current = withIdentityUpdates(identityUpdate(["Courage"]), identityUpdate(["Independence"]));
+
+    const result = computeMonthlyComparison(current, null);
+    expect(result.traitsLessPresent).toEqual([]);
+  });
+
+  it("ranks baseline traits by frequency within the month's identityUpdates", () => {
+    const current = withIdentityUpdates(
+      identityUpdate(["Courage"]),
+      identityUpdate(["Courage"]),
+      identityUpdate(["Independence"]),
+    );
+
+    const result = computeMonthlyComparison(current, null);
+    expect(result.traitsMorePresent).toEqual(["Courage", "Independence"]);
+  });
+
+  it("returns no shifts when the month has no identityUpdates evidence at all", () => {
+    const current = buildMonth();
+
+    const result = computeMonthlyComparison(current, null);
+    expect(result.traitsMorePresent).toEqual([]);
+    expect(result.traitsLessPresent).toEqual([]);
+  });
+});
+
+describe("computeMonthlyComparison — comparison against a previous month", () => {
+  it("flags a trait as more present when it's newly appearing in identityUpdates", () => {
+    const current = withIdentityUpdates(identityUpdate(["Courage"]));
+    const previous = buildMonth();
 
     const result = computeMonthlyComparison(current, previous);
-    expect(result.increased).toHaveLength(3);
-    expect(result.increased).toEqual(["A", "B", "C"]);
+    expect(result.traitsMorePresent).toEqual(["Courage"]);
+    expect(result.traitsLessPresent).toEqual([]);
+  });
+
+  it("flags a trait as less present when it no longer appears in identityUpdates", () => {
+    const current = buildMonth();
+    const previous = withIdentityUpdates(identityUpdate(["Independence"]));
+
+    const result = computeMonthlyComparison(current, previous);
+    expect(result.traitsMorePresent).toEqual([]);
+    expect(result.traitsLessPresent).toEqual(["Independence"]);
+  });
+
+  it("does not surface a trait decrease when neither month has identityUpdates", () => {
+    const current = buildMonth();
+    const previous = buildMonth();
+
+    const result = computeMonthlyComparison(current, previous);
+    expect(result.traitsMorePresent).toEqual([]);
+    expect(result.traitsLessPresent).toEqual([]);
+  });
+
+  it("flags a trait as more present when its frequency rank improves", () => {
+    const current = withIdentityUpdates(
+      identityUpdate(["Courage"]),
+      identityUpdate(["Courage"]),
+      identityUpdate(["Independence"]),
+    );
+    const previous = withIdentityUpdates(
+      identityUpdate(["Independence"]),
+      identityUpdate(["Independence"]),
+      identityUpdate(["Courage"]),
+    );
+
+    const result = computeMonthlyComparison(current, previous);
+    expect(result.traitsMorePresent).toEqual(["Courage"]);
+    expect(result.traitsLessPresent).toEqual(["Independence"]);
+  });
+
+  it("caps traitsMorePresent and traitsLessPresent at 3 items each", () => {
+    const current = withIdentityUpdates(
+      identityUpdate(["A"]),
+      identityUpdate(["B"]),
+      identityUpdate(["C"]),
+      identityUpdate(["D"]),
+    );
+    const previous = buildMonth();
+
+    const result = computeMonthlyComparison(current, previous);
+    expect(result.traitsMorePresent).toHaveLength(3);
+    expect(result.traitsMorePresent).toEqual(["A", "B", "C"]);
   });
 });

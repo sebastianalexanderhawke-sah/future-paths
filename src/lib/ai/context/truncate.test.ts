@@ -80,6 +80,14 @@ describe("serializeContext — monthlyIdentityEvolution", () => {
           themes,
           chosenAt: `2026-06-${String((i % 28) + 1).padStart(2, "0")}T00:00:00.000Z`,
         })),
+        checkIns: Array.from({ length: evidenceCount }, (_, i) => ({
+          id: `check-in-${i}`,
+          reflection: "x".repeat(80),
+          realitySummary: "x".repeat(80),
+          identityImpact: "x".repeat(80),
+          themeChanges: [],
+          createdAt: `2026-06-${String((i % 28) + 1).padStart(2, "0")}T00:00:00.000Z`,
+        })),
       },
     };
   }
@@ -103,5 +111,6 @@ describe("serializeContext — monthlyIdentityEvolution", () => {
     expect(month.futureShifts).toEqual([{ futureName: "Trades comfort for courage", delta: 36 }]);
     expect(month.identityChangeEvidence.identityUpdates).toHaveLength(10);
     expect(month.identityChangeEvidence.chosenPaths).toHaveLength(10);
+    expect(month.identityChangeEvidence.checkIns).toHaveLength(10);
   });
 });

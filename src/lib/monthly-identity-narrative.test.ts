@@ -178,20 +178,18 @@ describe("loadMonthlyIdentityNarratives", () => {
     runStructuredGenerationMock.mockClear();
   });
 
-  it("merges AI-generated title/summary/identity_changes with the deterministic fields from the aggregation layer", async () => {
+  it("merges AI-generated headline/opening/why-changed with the deterministic how-you-changed bullets", async () => {
     setActiveStub(createSupabaseStub(ONE_MONTH_OF_DATA));
     runStructuredGenerationMock.mockResolvedValueOnce({
       ok: true,
       data: [
         {
           month: "June 2026",
-          title: "Acting Before Certainty",
-          summary: "Financial pressure forced several difficult decisions this month.",
-          identity_changes: [
-            "More willing to act without certainty",
-            "Less dependent on ideal conditions before starting",
-            "More comfortable carrying responsibility alone",
-          ],
+          headline: "Decisions started getting made before certainty arrived.",
+          opening_beginning: "At the beginning of the month, plans waited for a clearer picture.",
+          opening_end: "By the end of the month, action came first and the picture filled in after.",
+          why_this_changed:
+            "Repeated decisions made under pressure reinforced the same response each time.",
         },
       ],
     });
@@ -202,18 +200,14 @@ describe("loadMonthlyIdentityNarratives", () => {
     expect(result.narratives).toEqual([
       {
         month: "June 2026",
-        title: "Acting Before Certainty",
-        summary: "Financial pressure forced several difficult decisions this month.",
-        themes: ["Courage", "Independence"],
-        majorDecisions: ["Apply Wider, Move Faster"],
-        futureShifts: [{ futureName: "Trades comfort for courage", delta: 36 }],
-        identityChanges: [
-          "More willing to act without certainty",
-          "Less dependent on ideal conditions before starting",
-          "More comfortable carrying responsibility alone",
-        ],
+        headline: "Decisions started getting made before certainty arrived.",
+        openingBeginning: "At the beginning of the month, plans waited for a clearer picture.",
+        openingEnd: "By the end of the month, action came first and the picture filled in after.",
+        howYouChanged: ["You became more willing to act without certainty."],
+        whyThisChanged:
+          "Repeated decisions made under pressure reinforced the same response each time.",
         previousMonth: null,
-        comparison: null,
+        comparison: { traitsMorePresent: ["Courage"], traitsLessPresent: [] },
       },
     ]);
   });
@@ -222,7 +216,15 @@ describe("loadMonthlyIdentityNarratives", () => {
     setActiveStub(createSupabaseStub(ONE_MONTH_OF_DATA));
     runStructuredGenerationMock.mockResolvedValueOnce({
       ok: true,
-      data: [{ month: "June 2026", title: "T", summary: "S", identity_changes: ["a", "b", "c"] }],
+      data: [
+        {
+          month: "June 2026",
+          headline: "H",
+          opening_beginning: "At the beginning of the month, B.",
+          opening_end: "By the end of the month, E.",
+          why_this_changed: "W",
+        },
+      ],
     });
 
     await loadMonthlyIdentityNarratives();
@@ -263,25 +265,36 @@ describe("loadMonthlyIdentityNarratives", () => {
     expect(result.narratives).toEqual([
       {
         month: "June 2026",
-        title: "June 2026",
-        summary: "",
-        themes: ["Courage", "Independence"],
-        majorDecisions: ["Apply Wider, Move Faster"],
-        futureShifts: [{ futureName: "Trades comfort for courage", delta: 36 }],
-        identityChanges: [],
+        headline: "June 2026",
+        openingBeginning: "",
+        openingEnd: "",
+        howYouChanged: ["You became more willing to act without certainty."],
+        whyThisChanged: "",
         previousMonth: null,
-        comparison: null,
+        comparison: { traitsMorePresent: ["Courage"], traitsLessPresent: [] },
       },
     ]);
   });
 
-  it("attaches a deterministic month-over-month comparison to every month except the oldest", async () => {
+  it("derives how-you-changed bullets from a comparison against the previous month once one exists", async () => {
     setActiveStub(createSupabaseStub(TWO_MONTHS_OF_DATA));
     runStructuredGenerationMock.mockResolvedValueOnce({
       ok: true,
       data: [
-        { month: "June 2026", title: "T", summary: "S", identity_changes: [] },
-        { month: "May 2026", title: "T2", summary: "S2", identity_changes: [] },
+        {
+          month: "June 2026",
+          headline: "H1",
+          opening_beginning: "At the beginning of the month, B1.",
+          opening_end: "By the end of the month, E1.",
+          why_this_changed: "W1",
+        },
+        {
+          month: "May 2026",
+          headline: "H2",
+          opening_beginning: "At the beginning of the month, B2.",
+          opening_end: "By the end of the month, E2.",
+          why_this_changed: "W2",
+        },
       ],
     });
 
@@ -293,13 +306,24 @@ describe("loadMonthlyIdentityNarratives", () => {
     const june = result.narratives[0];
     expect(june.previousMonth).toBe("May 2026");
     expect(june.comparison).toEqual({
-      increased: ["Courage", "Trades comfort for courage"],
-      decreased: ["Independence"],
+      traitsMorePresent: ["Courage"],
+      traitsLessPresent: ["Independence"],
     });
+    expect(june.howYouChanged).toEqual([
+      "You became more willing to act without certainty.",
+      "You became less comfortable making decisions alone.",
+    ]);
 
+    // The oldest month has no previous month to compare against, but still
+    // derives how-you-changed bullets from its own strongest identity
+    // evidence — a baseline reading, never a fabricated decline.
     const may = result.narratives[1];
     expect(may.previousMonth).toBeNull();
-    expect(may.comparison).toBeNull();
+    expect(may.comparison).toEqual({
+      traitsMorePresent: ["Independence"],
+      traitsLessPresent: [],
+    });
+    expect(may.howYouChanged).toEqual(["You became more comfortable making decisions alone."]);
   });
 
   it("propagates an AI generation failure as an error", async () => {

@@ -2,7 +2,7 @@ import { decodeNativePathFields } from "@/components/home/path-native-title";
 import { toFirstSentence } from "@/components/home/output-refinement";
 import { loadFutureSelfImpactByPath, type FutureSelfImpactEntry } from "@/lib/future-selves";
 import { createClient } from "@/lib/supabase/server";
-import type { FutureSelfEvent, IdentityUpdate, Path } from "@/types/database";
+import type { CheckIn, FutureSelfEvent, IdentityUpdate, Path, ThemeChange } from "@/types/database";
 import type { IdentityUpdateType, ThemeName } from "@/types/enums";
 
 type AuthSuccess = { userId: string };
@@ -43,9 +43,19 @@ export type MonthlyIdentityUpdateEvidence = {
   createdAt: string;
 };
 
+export type MonthlyCheckInEvidence = {
+  id: string;
+  reflection: string;
+  realitySummary: string;
+  identityImpact: string;
+  themeChanges: ThemeChange[];
+  createdAt: string;
+};
+
 export type MonthlyIdentityChangeEvidence = {
   identityUpdates: MonthlyIdentityUpdateEvidence[];
   chosenPaths: MonthlyChosenPathEvidence[];
+  checkIns: MonthlyCheckInEvidence[];
   dominantThemes: string[];
   futureShifts: MonthlyFutureShift[];
 };
@@ -177,11 +187,11 @@ function computeFutureShifts(
 
 /**
  * Builds one MonthlyIdentityEvolution per calendar month that had any
- * activity (a chosen path, an identity update, or a future-self event).
- * This is aggregation only: no AI calls, no prose, no schema changes — the
- * `identityChangeEvidence` bundle is raw, for a future synthesis step to
- * turn into the "You became more socially engaged" / "Identity changes"
- * narrative text.
+ * activity (a chosen path, an identity update, a check-in, or a future-self
+ * event). This is aggregation only: no AI calls, no prose, no schema
+ * changes — the `identityChangeEvidence` bundle is raw, for a future
+ * synthesis step to turn into the "You became more socially engaged" /
+ * identity-shift narrative text.
  */
 export async function loadMonthlyIdentityEvolution(): Promise<
   { months: MonthlyIdentityEvolution[] } | { error: string }
@@ -198,6 +208,7 @@ export async function loadMonthlyIdentityEvolution(): Promise<
     { data: identityUpdateRows, error: identityUpdatesError },
     { data: eventRows, error: eventsError },
     { data: futureSelfRows, error: futureSelvesError },
+    { data: checkInRows, error: checkInsError },
     impactByPath,
   ] = await Promise.all([
     supabase
@@ -208,10 +219,11 @@ export async function loadMonthlyIdentityEvolution(): Promise<
     supabase.from("identity_updates").select("*").eq("user_id", auth.userId),
     supabase.from("future_self_events").select("*").eq("user_id", auth.userId),
     supabase.from("future_selves").select("id, name, themes").eq("user_id", auth.userId),
+    supabase.from("check_ins").select("*").eq("user_id", auth.userId),
     loadFutureSelfImpactByPath(),
   ]);
 
-  const error = pathsError ?? identityUpdatesError ?? eventsError ?? futureSelvesError;
+  const error = pathsError ?? identityUpdatesError ?? eventsError ?? futureSelvesError ?? checkInsError;
   if (error) {
     return { error: typeof error === "string" ? error : "Failed to load identity evolution data." };
   }
@@ -220,6 +232,7 @@ export async function loadMonthlyIdentityEvolution(): Promise<
   const identityUpdates: IdentityUpdate[] = identityUpdateRows ?? [];
   const events: FutureSelfEvent[] = eventRows ?? [];
   const futureSelves: { id: string; name: string; themes: ThemeName[] }[] = futureSelfRows ?? [];
+  const checkIns: CheckIn[] = checkInRows ?? [];
 
   const nameById = new Map(futureSelves.map((f) => [f.id, f.name]));
   const themesById = new Map(futureSelves.map((f) => [f.id, f.themes]));
@@ -228,6 +241,7 @@ export async function loadMonthlyIdentityEvolution(): Promise<
     ...chosenPaths.filter((p) => p.chosen_at).map((p) => monthKeyOf(p.chosen_at!)),
     ...identityUpdates.map((u) => monthKeyOf(u.created_at)),
     ...events.map((e) => monthKeyOf(e.created_at)),
+    ...checkIns.map((c) => monthKeyOf(c.created_at)),
   ]);
 
   const months = [...monthKeys]
@@ -240,6 +254,7 @@ export async function loadMonthlyIdentityEvolution(): Promise<
         (u) => monthKeyOf(u.created_at) === monthKey,
       );
       const monthEvents = events.filter((e) => monthKeyOf(e.created_at) === monthKey);
+      const monthCheckIns = checkIns.filter((c) => monthKeyOf(c.created_at) === monthKey);
 
       const monthFutureThemes = monthEvents.flatMap((e) => themesById.get(e.future_self_id) ?? []);
 
@@ -269,6 +284,14 @@ export async function loadMonthlyIdentityEvolution(): Promise<
           title: pathTitle(path),
           themes: path.themes,
           chosenAt: path.chosen_at!,
+        })),
+        checkIns: monthCheckIns.map((checkIn) => ({
+          id: checkIn.id,
+          reflection: checkIn.reflection,
+          realitySummary: checkIn.reality_summary,
+          identityImpact: checkIn.identity_impact,
+          themeChanges: checkIn.theme_changes,
+          createdAt: checkIn.created_at,
         })),
         dominantThemes,
         futureShifts,

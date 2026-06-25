@@ -1,13 +1,14 @@
 import { z } from "zod";
 
-import { benefitsConsequencesListSchema, tentativeTextSchema } from "@/lib/ai/schemas/shared";
+import { tentativeTextSchema } from "@/lib/ai/schemas/shared";
 import type { MockMonthlyIdentityNarrativeDraft } from "@/lib/mock-monthly-identity-narrative-generator";
 
 export const monthlyIdentityNarrativeDraftSchema = z.object({
   month: z.string().trim().min(1).max(40),
-  title: tentativeTextSchema,
-  summary: tentativeTextSchema,
-  identity_changes: benefitsConsequencesListSchema,
+  headline: tentativeTextSchema,
+  opening_beginning: tentativeTextSchema,
+  opening_end: tentativeTextSchema,
+  why_this_changed: tentativeTextSchema,
 }) satisfies z.ZodType<MockMonthlyIdentityNarrativeDraft>;
 
 export const monthlyIdentityNarrativeOutputSchema = z
