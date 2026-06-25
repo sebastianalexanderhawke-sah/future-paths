@@ -193,6 +193,7 @@ export async function generateCurrentSelf(
         summary: draft.summary,
         themes: draft.themes,
         observations: draft.observations,
+        recent_growth: draft.recent_growth,
         updated_at: now,
       })
       .eq("id", existing.id)
@@ -215,6 +216,7 @@ export async function generateCurrentSelf(
       summary: draft.summary,
       themes: draft.themes,
       observations: draft.observations,
+      recent_growth: draft.recent_growth,
     })
     .select("*")
     .single();

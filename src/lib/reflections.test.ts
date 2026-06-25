@@ -124,7 +124,7 @@ describe("overview Reflection Waiting section", () => {
   });
 
   it("shows section only when unanswered reflections exist", () => {
-    expect(OVERVIEW_SOURCE).toContain("unansweredReflectionCount > 0");
+    expect(OVERVIEW_SOURCE).toContain("pendingReflection");
     expect(OVERVIEW_SOURCE).toContain("ReflectionWaitingHomeSection");
   });
 

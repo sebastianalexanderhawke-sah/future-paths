@@ -334,6 +334,8 @@ describe("loadMonthlyIdentityEvolution", () => {
         identityImpact: "Initiated contact more easily.",
         themeChanges: [{ theme: "Connection", direction: "strengthened" }],
         createdAt: "2026-06-05T00:00:00.000Z",
+        reflectionQuestion: null,
+        reflectionAnswer: null,
       },
     ]);
 

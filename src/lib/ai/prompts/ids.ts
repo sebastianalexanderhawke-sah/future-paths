@@ -11,6 +11,7 @@ export const PROMPT_MIGRATION_ORDER = [
   "past_path.generate",
   "alternate_self.generate",
   "monthly_identity_narrative.generate",
+  "reflection_question.evaluate",
   "timeline.generate",
 ] as const;
 

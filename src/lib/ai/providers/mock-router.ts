@@ -173,6 +173,9 @@ export function runMockGenerator(
     case "monthly_identity_narrative.generate":
       return generateMockMonthlyIdentityNarratives(context.monthlyIdentityEvolution ?? []);
 
+    case "reflection_question.evaluate":
+      return { should_reflect: false, question: null };
+
     default:
       throw new Error(`Unsupported prompt id: ${promptId satisfies never}`);
   }

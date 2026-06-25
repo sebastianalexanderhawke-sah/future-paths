@@ -58,6 +58,8 @@ export async function buildIdentityContext(
       return await loadTimelineContext(supabase, base);
     case "monthly_identity_narrative":
       return await loadMonthlyIdentityNarrativeContext(base);
+    case "reflection_question":
+      return enforceContextLimits(loadReflectionQuestionContext(base, options));
     default:
       return { error: "Unknown context profile." };
   }
@@ -258,7 +260,7 @@ async function loadFutureSelfContext(
 
   const { data: checkIns } = await supabase
     .from("check_ins")
-    .select("theme_changes, identity_impact, reality_summary")
+    .select("theme_changes, identity_impact, reality_summary, reflection_question, reflection_answer")
     .eq("user_id", base.userId);
 
   const { data: identityUpdates } = await supabase
@@ -280,10 +282,25 @@ async function loadFutureSelfContext(
     .eq("status", "active")
     .order("percentage", { ascending: false });
 
+  const { data: currentSelf } = await supabase
+    .from("current_self")
+    .select("title, summary, themes, observations, recent_growth")
+    .eq("user_id", base.userId)
+    .maybeSingle();
+
   // Only the single newest path gets its own field — the rest of the
   // history stays in pathThemes (themes only) so this doesn't duplicate
   // the full chosen-path history into the prompt twice.
   const mostRecentChosenPath = chosenPaths?.[0];
+
+  // Answered reflections extracted as a dedicated evidence layer so the AI
+  // can treat them as highest-confidence without hunting through checkIns.
+  const confirmedReflections = (checkIns ?? [])
+    .filter(
+      (c): c is typeof c & { reflection_question: string; reflection_answer: string } =>
+        typeof c.reflection_question === "string" && typeof c.reflection_answer === "string",
+    )
+    .map((c) => ({ question: c.reflection_question, answer: c.reflection_answer }));
 
   return {
     ...base,
@@ -301,8 +318,10 @@ async function loadFutureSelfContext(
         }
       : undefined,
     checkIns: checkIns ?? [],
+    confirmedReflections: confirmedReflections.length ? confirmedReflections : undefined,
     identityUpdates: identityUpdates ?? [],
     futureSelves: activeFutureSelves ?? [],
+    currentSelf: currentSelf ?? undefined,
     riskFocusThemes: options.overrides?.riskFocusThemes?.length
       ? (options.overrides.riskFocusThemes as ThemeName[])
       : undefined,
@@ -394,7 +413,7 @@ async function loadIdentityPromptContext(
   const [{ data: currentSelf }, { data: identityUpdates }] = await Promise.all([
     supabase
       .from("current_self")
-      .select("title, summary, themes, observations")
+      .select("title, summary, themes, observations, recent_growth")
       .eq("user_id", base.userId)
       .maybeSingle(),
     supabase
@@ -535,7 +554,7 @@ async function loadTimelineContext(
       .eq("is_chosen", true),
     supabase
       .from("check_ins")
-      .select("id, reflection, theme_changes, identity_impact, created_at")
+      .select("id, reflection, theme_changes, identity_impact, created_at, reflection_question, reflection_answer")
       .eq("user_id", base.userId),
     supabase
       .from("identity_updates")
@@ -558,7 +577,7 @@ async function loadTimelineContext(
       .eq("status", "active"),
     supabase
       .from("current_self")
-      .select("title, summary, themes, observations")
+      .select("title, summary, themes, observations, recent_growth")
       .eq("user_id", base.userId)
       .maybeSingle(),
   ]);
@@ -607,5 +626,16 @@ async function loadMonthlyIdentityNarrativeContext(
   return {
     ...base,
     monthlyIdentityEvolution: "months" in result ? result.months : [],
+  };
+}
+
+function loadReflectionQuestionContext(
+  base: IdentityContextBundle,
+  options: BuildContextOptions,
+): IdentityContextBundle {
+  return {
+    ...base,
+    reflection: options.overrides?.reflection,
+    realitySummary: options.overrides?.realitySummary,
   };
 }

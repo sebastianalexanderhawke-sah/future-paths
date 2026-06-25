@@ -12,6 +12,7 @@ import { parseIdentityPromptOutput } from "@/lib/ai/schemas/identity-prompt";
 import { parseIdentityUpdateOutput } from "@/lib/ai/schemas/identity-update";
 import { parseMonthlyIdentityNarrativeOutput } from "@/lib/ai/schemas/monthly-identity-narrative";
 import { parsePastAlternativePathOutput } from "@/lib/ai/schemas/past-alternative-path";
+import { parseReflectionQuestionOutput } from "@/lib/ai/schemas/reflection-question";
 import { parseTimelineOutput } from "@/lib/ai/schemas/timeline";
 import type { PromptId } from "@/lib/ai/prompts/ids";
 
@@ -29,6 +30,7 @@ const OUTPUT_PARSERS: Record<PromptId, (data: unknown) => unknown> = {
   "alternate_self.generate": parseAlternateSelfOutput,
   "timeline.generate": parseTimelineOutput,
   "monthly_identity_narrative.generate": parseMonthlyIdentityNarrativeOutput,
+  "reflection_question.evaluate": parseReflectionQuestionOutput,
 };
 
 export function parsePromptOutput(promptId: PromptId, data: unknown): unknown {

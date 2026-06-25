@@ -52,13 +52,16 @@ export type IdentityContextBundle = {
   // is met, so future_self generation can be told to ensure a risk-led
   // trajectory instead of leaving risk evidence subordinate to positive ones.
   riskFocusThemes?: ThemeName[];
-  checkIns?: Pick<CheckIn, "theme_changes" | "identity_impact" | "reality_summary">[];
+  checkIns?: Pick<CheckIn, "theme_changes" | "identity_impact" | "reality_summary" | "reflection_question" | "reflection_answer">[];
+  // Reflection Q&A pairs where the user has written an answer — the highest-confidence
+  // identity evidence, separated from general check-ins so the AI can treat them distinctly.
+  confirmedReflections?: { question: string; answer: string }[];
   identityUpdates?: Pick<IdentityUpdate, "title" | "summary" | "themes">[];
   futureSelves?: Pick<
     FutureSelf,
     "name" | "summary" | "percentage" | "evidence_strength" | "themes"
   >[];
-  currentSelf?: Pick<CurrentSelf, "title" | "summary" | "themes" | "observations">;
+  currentSelf?: Pick<CurrentSelf, "title" | "summary" | "themes" | "observations" | "recent_growth">;
   // Richer Current Self evidence — recent situations, chosen path details,
   // and full check-in narratives (reflection/reality/reflection Q&A), so the
   // generated snapshot can cite specific evidence rather than just themes.
@@ -102,7 +105,7 @@ export type IdentityContextBundle = {
   >[];
   timelineCheckIns?: Pick<
     CheckIn,
-    "id" | "reflection" | "theme_changes" | "identity_impact" | "created_at"
+    "id" | "reflection" | "theme_changes" | "identity_impact" | "created_at" | "reflection_question" | "reflection_answer"
   >[];
   timelineIdentityUpdates?: Pick<
     IdentityUpdate,
@@ -121,6 +124,7 @@ export type IdentityContextBundle = {
   discoveryGoal?: "decision" | "forecast";
   discoveryAdditionalContext?: string;
   checkInSummaries?: string[];
+  realitySummary?: string;
   reflectionQA?: {
     question: string;
     answer: string;

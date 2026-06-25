@@ -1,4 +1,5 @@
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
+import { generateFutureSelves } from "@/lib/future-selves";
 import { validateReflectionAnswerLength } from "@/lib/reflections-validation";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn, Moment } from "@/types/database";
@@ -46,13 +47,10 @@ async function attachMomentsToCheckIns(
 
   const titleByMomentId = new Map((moments ?? []).map((moment) => [moment.id, moment.title]));
 
-  return checkIns.flatMap((checkIn) => {
-    const title = titleByMomentId.get(checkIn.moment_id);
-    if (!title) {
-      return [];
-    }
-    return [{ ...checkIn, moment: { title } }];
-  });
+  return checkIns.map((checkIn) => ({
+    ...checkIn,
+    moment: { title: titleByMomentId.get(checkIn.moment_id) ?? "Situation" },
+  }));
 }
 
 export async function listReflectionCheckIns(): Promise<
@@ -92,23 +90,25 @@ export async function getUnansweredReflectionSummary(): Promise<
   }
 
   const supabase = await createClient();
-  const { data, error, count } = await supabase
+  const { data, error } = await supabase
     .from("check_ins")
-    .select("*", { count: "exact" })
+    .select("*")
     .eq("user_id", auth.userId)
     .not("reflection_question", "is", null)
-    .is("reflection_answer", null)
     .order("created_at", { ascending: false });
 
   if (error) {
     return { error: error.message };
   }
 
-  const pendingRows = data ?? [];
+  // Filter unanswered in JavaScript — not at the DB level — so that both
+  // NULL and empty-string defaults for reflection_answer are treated as
+  // unanswered, consistent with how listReflectionCheckIns handles this.
+  const pendingRows = (data ?? []).filter((row) => !row.reflection_answer);
   const pendingCheckIns = await attachMomentsToCheckIns(pendingRows, auth.userId);
 
   return {
-    unansweredCount: count ?? pendingRows.length,
+    unansweredCount: pendingRows.length,
     pending: pendingCheckIns[0] ?? null,
   };
 }
@@ -184,6 +184,11 @@ export async function submitReflectionAnswer(
       },
     },
   });
+
+  // Reflection answers are first-class identity evidence — regenerate Future
+  // Selves so they can incorporate the user's own interpretation of what the
+  // experience revealed, in addition to Current Self which already receives it.
+  await generateFutureSelves().catch(() => {});
 
   return { ok: true };
 }

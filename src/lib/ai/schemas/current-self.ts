@@ -8,15 +8,18 @@ import { checkInThemeNameSchema, tentativeTextSchema } from "@/lib/ai/schemas/sh
 // or contradiction as a theme, not just growth-oriented ones.
 export const currentSelfThemesSchema = z.array(checkInThemeNameSchema).min(4).max(6);
 
-// Each observation is a short, evidence-traceable statement about what
-// appears true right now — not advice, not a prediction.
-export const currentSelfObservationsSchema = z.array(tentativeTextSchema).min(3).max(5);
+// Core traits: short one-phrase bullets describing who this person is.
+export const currentSelfObservationsSchema = z.array(tentativeTextSchema).min(4).max(6);
+
+// Recent growth: exactly 3 bullets describing what is currently shifting.
+export const currentSelfRecentGrowthSchema = z.array(tentativeTextSchema).length(3);
 
 export const currentSelfOutputSchema = z.object({
   title: tentativeTextSchema,
   summary: tentativeTextSchema,
   themes: currentSelfThemesSchema,
   observations: currentSelfObservationsSchema,
+  recent_growth: currentSelfRecentGrowthSchema,
 }) satisfies z.ZodType<MockCurrentSelfDraft>;
 
 export const currentSelfNullableOutputSchema =

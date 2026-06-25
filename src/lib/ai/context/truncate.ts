@@ -115,6 +115,13 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
       reality_summary: truncateText(checkIn.reality_summary, limits.realitySummary),
     }),
   );
+  next.confirmedReflections = truncateArray(
+    bundle.confirmedReflections,
+    CONTEXT_LIMITS.COUNTS.checkIns,
+  )?.map((r) => ({
+    question: truncateText(r.question, limits.question),
+    answer: truncateText(r.answer, limits.reflection),
+  }));
 
   next.identityUpdates = truncateArray(
     bundle.identityUpdates,
@@ -141,6 +148,9 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
       summary: truncateText(bundle.currentSelf.summary, limits.summary),
       observations: bundle.currentSelf.observations.map((observation) =>
         truncateText(observation, limits.observation),
+      ),
+      recent_growth: bundle.currentSelf.recent_growth.map((item) =>
+        truncateText(item, limits.observation),
       ),
     };
   }

@@ -71,6 +71,7 @@ describe("buildIdentityContext — future_self profile", () => {
           error: null,
         },
         future_selves: { data: [], error: null },
+        current_self: { data: null, error: null },
       }),
     );
 
@@ -99,6 +100,7 @@ describe("buildIdentityContext — future_self profile", () => {
         identity_updates: { data: [], error: null },
         paths: { data: [], error: null },
         future_selves: { data: [], error: null },
+        current_self: { data: null, error: null },
       }),
     );
 

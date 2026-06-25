@@ -12,6 +12,7 @@ export const CONTEXT_PROFILES = [
   "alternate_self",
   "timeline",
   "monthly_identity_narrative",
+  "reflection_question",
 ] as const;
 
 export type ContextProfile = (typeof CONTEXT_PROFILES)[number];
@@ -20,6 +21,7 @@ export type BuildContextOverrides = {
   momentId?: string;
   pathId?: string;
   reflection?: string;
+  realitySummary?: string;
   checkInId?: string;
   crossroadId?: string;
   selectedPathId?: string;

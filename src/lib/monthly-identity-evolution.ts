@@ -50,6 +50,8 @@ export type MonthlyCheckInEvidence = {
   identityImpact: string;
   themeChanges: ThemeChange[];
   createdAt: string;
+  reflectionQuestion: string | null;
+  reflectionAnswer: string | null;
 };
 
 export type MonthlyIdentityChangeEvidence = {
@@ -292,6 +294,8 @@ export async function loadMonthlyIdentityEvolution(): Promise<
           identityImpact: checkIn.identity_impact,
           themeChanges: checkIn.theme_changes,
           createdAt: checkIn.created_at,
+          reflectionQuestion: checkIn.reflection_question ?? null,
+          reflectionAnswer: checkIn.reflection_answer ?? null,
         })),
         dominantThemes,
         futureShifts,

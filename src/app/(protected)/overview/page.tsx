@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CurrentSelfHomeSection } from "@/components/home/current-self-home-section";
 import { FutureSelfHomeSection } from "@/components/home/future-self-home-section";
 import { toFirstSentence } from "@/components/home/output-refinement";
+import { ReflectionWaitingHomeSection } from "@/components/home/reflection-waiting-home-section";
 import { MomentCard } from "@/components/moments/moment-card";
 import { OverviewHeader } from "@/components/overview/overview-header";
 import { OverviewPageShell } from "@/components/overview/overview-page-shell";
@@ -90,6 +91,11 @@ export default async function OverviewPage() {
       : 0;
   const pendingReflection =
     "pending" in reflectionSummaryResult ? reflectionSummaryResult.pending : null;
+
+  // DEBUG — remove after confirming reflection renders
+  console.log("[overview] reflectionSummaryResult:", JSON.stringify(reflectionSummaryResult, null, 2));
+  console.log("[overview] pendingReflection:", pendingReflection ? `id=${pendingReflection.id} moment=${pendingReflection.moment.title}` : "null");
+
   const timelineEvents = "events" in timelineEventsResult ? timelineEventsResult.events : [];
 
   const momentIds = situations.map((m) => m.id);
@@ -130,15 +136,6 @@ export default async function OverviewPage() {
     }
   }
 
-  if (unansweredCount > 0 && pendingReflection) {
-    attentionItems.push({
-      key: `reflection-${pendingReflection.id}`,
-      label: `Forecast update waiting — ${pendingReflection.moment.title}`,
-      href: `/moments/${pendingReflection.moment_id}#check-in`,
-      priority: 1,
-    });
-  }
-
   for (const moment of situations) {
     if (!enrichments[moment.id]?.chosenPathTitle) {
       attentionItems.push({
@@ -177,7 +174,15 @@ export default async function OverviewPage() {
       {/* 1. CURRENT SELF — who am I now? */}
       <CurrentSelfHomeSection currentSelf={currentSelf} />
 
-      {/* 2. ACTIVE SITUATIONS — what am I navigating? */}
+      {/* 2. REFLECTION — highest-confidence identity evidence waiting for input */}
+      {pendingReflection ? (
+        <ReflectionWaitingHomeSection
+          unansweredCount={unansweredCount}
+          pending={pendingReflection}
+        />
+      ) : null}
+
+      {/* 3. ACTIVE SITUATIONS — what am I navigating? */}
       {hasAnySituations ? (
         <OverviewSection
           label="Situations"
@@ -222,7 +227,7 @@ export default async function OverviewPage() {
         </section>
       )}
 
-      {/* 3. NEEDS ATTENTION — what needs action? */}
+      {/* 4. NEEDS ATTENTION — what needs action? */}
       {visibleAttentionItems.length > 0 ? (
         <OverviewSection label="Attention" title="What needs attention?">
           <ul className="flex flex-col gap-2">
@@ -262,7 +267,7 @@ export default async function OverviewPage() {
         </OverviewSection>
       ) : null}
 
-      {/* 4. RECENT REALITY — what changed recently? */}
+      {/* 5. RECENT REALITY — what changed recently? */}
       {recentReality.length > 0 ? (
         <OverviewSection label="Reality" title="What changed recently?">
           <ul className="flex flex-col gap-2">
@@ -285,10 +290,10 @@ export default async function OverviewPage() {
         </OverviewSection>
       ) : null}
 
-      {/* 5. FUTURE SELVES — who might I be becoming? */}
+      {/* 6. FUTURE SELVES — who might I be becoming? */}
       <FutureSelfHomeSection futureSelves={futureSelves} />
 
-      {/* 6. TIMELINE — meaningful identity events, not raw situation names */}
+      {/* 7. TIMELINE — meaningful identity events, not raw situation names */}
       {timelineItems.length > 0 ? (
         <OverviewSection label="Timeline" title="Recent chapters" viewAllHref="/timeline">
           <ul className="flex flex-col gap-2">
@@ -339,7 +344,7 @@ export default async function OverviewPage() {
         </OverviewSection>
       ) : null}
 
-      {/* 7. RESOLVED SITUATIONS — collapsed by default */}
+      {/* 8. RESOLVED SITUATIONS — collapsed by default */}
       {resolvedSituations.length > 0 ? (
         <section className="flex flex-col gap-3">
           <details className="group rounded-xl border border-zinc-200 bg-white">

@@ -6,37 +6,78 @@ import {
 export const currentSelfGenerateV1 = createPromptModule({
   promptId: "current_self.generate",
   promptVersion: "1",
-  taskInstructions: `Build a present-tense snapshot of who this person appears to be right now, using only the evidence in context: recent situations (moments), chosen paths, check-ins (reflection and reality_summary), reflectionQA, identity updates, and active future-self percentages.
+  taskInstructions: `Produce a structured identity snapshot with four fields: title, summary, observations, and recent_growth.
 
-It should answer: "Given everything that has happened recently, who does this person appear to be right now?" A reader should think "yes, that's actually what has been happening" — and be able to see, for every claim, which piece of evidence it came from.
+---
 
-Produce JSON with title, summary, themes, and observations.
+title:
+A short phrase — the most stable, enduring pattern visible right now. Not an event. Not a period. Who this person appears to be across many moments.
 
-- title: a short, plain-language phrase naming the strongest pattern right now. Not a poetic headline, not a diagnosis, not a verdict on their character.
-- summary: 2-4 sentences naming the pattern, tension, or recurring direction that is emerging — not a recap of what happened. Prioritize what seems to be emerging over what happened. Mention a specific situation, path, or check-in only when it's needed as evidence for that broader pattern — never as a chronological retelling of events.
-- themes: 4-6 entries from the approved vocabulary (positive and difficult both). Include a theme only when at least two separate pieces of context support it (e.g. a chosen path AND a check-in, or two check-ins). Dynamic count — use 4 when only 4 are well-supported; never pad to 6. Themes are the strongest forces currently shaping this person, whichever direction they cut. Do not exclude a difficult theme (Disappointment, Uncertainty, Hurt, Frustration, Loneliness, Grief, Acceptance, Resilience) just because it is uncomfortable — exclude it only when the evidence does not actually support it. If fewer than 4 themes meet the two-signal bar, include the next-strongest theme(s) supported by at least one clear piece of evidence until you reach 4. Never invent a theme with no supporting evidence and never fabricate evidence to justify one.
-- observations: 3-5 distilled, present-tense statements of what appears true right now (not advice, not a prediction). Each one is one sentence, a pattern-level conclusion grounded in the evidence — not a recap of it, and not an event-level note about a single situation or check-in in isolation. State the conclusion the evidence points to; never describe the evidence itself (no "the check-in says...", "the moment records...", "X happened and..."). Synthesize across moments rather than reporting one moment at a time.
+---
 
-Observation style:
-- Good: "Connection is appearing even when it is not being actively pursued." / "Public action is replacing private preparation." / "Grief remains present rather than resolved." / "Several important outcomes are still uncertain." / "Independence and connection are being tested simultaneously."
-- Bad: "A meetup happened and it went well." / "The website was launched and users were invited." / "Someone from a friend's family reached out." / "The check-in noted uncertainty about marketing."
+summary (identity paragraph):
+2-4 sentences. Who this person IS — not what they did, not what happened to them.
+Write as if you know this person but have no knowledge of their recent calendar.
+Only describe character: what they value, how they make decisions, what tensions they carry.
 
-Required honesty:
-- If the evidence shows struggle, contradiction, disappointment, hurt, tension, or unresolved uncertainty, say so directly in the summary, themes, and/or observations — do not soften it into a strength or skip past it.
-- Do not produce a uniformly positive snapshot if the evidence contains friction. Describing only strengths when check-ins or reflections show conflict is wrong.
-- If the evidence on some point is thin, say less rather than inventing texture to fill the space.
+Forbidden: any named situation, event, or time reference. Any causal chain. "After", "Since", "Because", "Across the past", "Following", "This happened because."
 
-Avoid:
-- motivational language ("you're growing", "keep going", "embrace this")
-- therapy language ("processing", "holding space", "inner journey", "healing")
-- personality profiling ("you are the type of person who...")
-- generic positivity not tied to a specific piece of evidence
-- hedging real friction away with vague optimism
+---
 
-When context includes reflectionQA (a follow-up question and answer after a check-in), treat it as a strong, specific signal — weight it alongside check-ins and identity updates rather than as background color.`,
+observations (core traits):
+4-6 short bullets. Each is a single phrase or one short sentence.
+Each describes a stable trait — something that would still be true in two months.
+These are facts about who this person is, not what they are doing.
+
+Required format: short, punchy, lowercase-first phrase.
+Examples:
+• Acts before certainty arrives
+• Recovers quickly from setbacks
+• Prefers direct communication
+• Thinks independently under pressure
+• Values stability without avoiding change
+• Holds contradictions without resolving them immediately
+
+Every bullet must stand alone. No "tends to" framing needed — just state the trait directly.
+Forbidden: any event, time reference, situation name, or causal explanation.
+
+---
+
+recent_growth:
+Exactly 3 bullets. These describe what is currently shifting — not permanent traits, not events.
+Each answers: "What is changing in this person right now?"
+
+Required format: present-tense movement phrase.
+Examples:
+• Becoming more comfortable making decisions alone
+• Learning to tolerate uncertainty without forcing resolution
+• Trusting personal judgment more than external validation
+• Pulling away from consensus-seeking
+• Moving toward clarity over approval
+
+Forbidden: event references, situation names, past tense, causal explanations.
+You MUST return exactly 3 items in this array.
+
+---
+
+themes:
+4-6 entries from the approved vocabulary. Dynamic count — include a theme only when multiple data points support it. Include difficult themes (Disappointment, Uncertainty, Hurt, Frustration, Loneliness, Grief, Acceptance, Resilience) when the patterns support them.
+
+---
+
+Honesty rules:
+- Name friction, contradiction, struggle, or unresolved tension directly. Do not soften.
+- Uniformly positive output when evidence shows conflict is wrong.
+- Thin data: write fewer bullets, not more.
+
+Forbidden everywhere:
+- Motivational language ("you're growing", "keep going")
+- Therapy language ("processing", "holding space", "inner journey", "healing")
+- Personality archetypes ("you are the type of person who")
+- Generic statements not grounded in repeated patterns`,
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
-      "Produce JSON with title, summary, themes, and observations, grounded only in the evidence below.",
+      "Produce JSON with title, summary, themes, observations (4-6 core trait bullets), and recent_growth (exactly 3 movement bullets).",
     ),
 });

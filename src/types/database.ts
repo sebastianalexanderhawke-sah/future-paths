@@ -143,6 +143,7 @@ export type CurrentSelf = {
   summary: string;
   themes: CheckInThemeName[];
   observations: string[];
+  recent_growth: string[];
   created_at: string;
   updated_at: string;
 };
@@ -418,10 +419,11 @@ export type CurrentSelfInsert = Pick<
 > & {
   themes?: CheckInThemeName[];
   observations?: string[];
+  recent_growth?: string[];
 };
 
 export type CurrentSelfUpdate = Partial<
-  Pick<CurrentSelf, "title" | "summary" | "themes" | "observations" | "updated_at">
+  Pick<CurrentSelf, "title" | "summary" | "themes" | "observations" | "recent_growth" | "updated_at">
 >;
 
 export type IdentityPromptInsert = Pick<

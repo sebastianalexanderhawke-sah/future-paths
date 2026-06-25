@@ -324,6 +324,7 @@ export async function createCheckIn(
   }
 
   const reflectionEvaluation = await evaluateReflectionQuestion(
+    auth.userId,
     trimmedReflection,
     generated.reality_summary,
   ).catch(() => null);

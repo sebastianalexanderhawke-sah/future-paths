@@ -11,7 +11,8 @@ export type MockCurrentSelfDraft = {
   title: string;
   summary: string;
   themes: CheckInThemeName[];
-  observations: string[];
+  observations: string[];    // core traits — short bullets about who this person is
+  recent_growth: string[];   // exactly 3 bullets about what is currently shifting
 };
 
 const THEME_COUNT_MIN = 4;
@@ -134,45 +135,54 @@ export function generateMockCurrentSelf(input: {
   const themePhrase = formatThemeList(themes);
   const difficultTheme = themes.find((theme) => isDifficultCheckInTheme(theme));
 
-  const title = `Currently shaped by ${themePhrase.toLowerCase()}`;
+  const title = `Shaped by ${themePhrase.toLowerCase()}`;
 
   const futurePhrase = secondaryFuture
-    ? `${leadingFuture.name} and ${secondaryFuture.name} may both be shaping how you move forward`
-    : `${leadingFuture.name} may be shaping how you move forward`;
+    ? `drawn toward both ${leadingFuture.name.toLowerCase()} and ${secondaryFuture.name.toLowerCase()}`
+    : `drawn toward ${leadingFuture.name.toLowerCase()}`;
 
   const updatePhrase = recentUpdate
-    ? ` Your recent shift — "${recentUpdate.title.toLowerCase()}" — may reflect how this is showing up now.`
+    ? ` A recent shift — ${recentUpdate.title.toLowerCase()} — may be part of that.`
     : "";
 
-  const summary = `Across your moments and check-ins, ${themePhrase.toLowerCase()} shows up most in how you choose and follow through. ${futurePhrase}, while your recorded reality may keep refining that picture.${updatePhrase}`;
+  const summary = `Someone ${futurePhrase}, with ${themePhrase.toLowerCase()} running through how they choose and follow through.${updatePhrase} Their recorded reality keeps refining that picture.`;
 
-  const observations = [
-    `${themePhrase} shows up most across your recent moments, check-ins, and chosen paths.`,
-    `${leadingFuture.name} currently carries the most weight among your active future selves.`,
+  // Core traits: short bullets, one phrase each, describing who the person is
+  const observations: string[] = [
+    `Navigates ${themes[0]?.toLowerCase() ?? "uncertainty"} as a recurring pattern`,
+    `Tends to move toward ${leadingFuture.name.toLowerCase()}`,
   ];
 
   if (difficultTheme) {
-    observations.push(
-      `${difficultTheme} has appeared in recent check-ins and may not be fully resolved yet.`,
-    );
+    observations.push(`Carries unresolved ${difficultTheme.toLowerCase()}`);
+  } else {
+    observations.push(`Values continuity across decisions`);
   }
 
   if (recentUpdate) {
-    observations.push(
-      `A recent shift — "${recentUpdate.title.toLowerCase()}" — lines up with this pattern.`,
-    );
+    observations.push(`Recently shifted — ${recentUpdate.title.toLowerCase()}`);
+  } else {
+    observations.push(`Relies on pattern recognition over impulsive choice`);
   }
 
-  observations.push(
-    `You have recorded ${input.checkInCount} check-in${input.checkInCount === 1 ? "" : "s"} across ${input.momentCount} situation${input.momentCount === 1 ? "" : "s"} so far.`,
-  );
+  // Pad to meet minimum of 4 if needed (already at 4 minimum above)
 
-  // Always 3 (theme + leading future + cadence) to 5 (+ difficult theme,
-  // + recent update) entries — matches the schema's bounds by construction.
+  // Recent growth: exactly 3 movement bullets
+  const recent_growth = [
+    `Building clearer understanding of ${themes[0]?.toLowerCase() ?? "personal"} patterns`,
+    secondaryFuture
+      ? `Weighing ${leadingFuture.name.toLowerCase()} against ${secondaryFuture.name.toLowerCase()}`
+      : `Strengthening commitment to ${leadingFuture.name.toLowerCase()}`,
+    difficultTheme
+      ? `Learning to sit with ${difficultTheme.toLowerCase()} without resolving it immediately`
+      : `Developing more deliberate decision-making habits`,
+  ];
+
   return {
     title,
     summary,
     themes,
     observations,
+    recent_growth,
   };
 }
