@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { CheckIn, Moment } from "@/types/database";
 
 export type ReflectionCheckIn = CheckIn & {
-  moment: Pick<Moment, "title">;
+  moment: Pick<Moment, "title" | "description" | "current_understanding">;
 };
 
 type AuthSuccess = { userId: string };
@@ -42,16 +42,23 @@ async function attachMomentsToCheckIns(
   const momentIds = [...new Set(checkIns.map((checkIn) => checkIn.moment_id))];
   const { data: moments } = await supabase
     .from("moments")
-    .select("id, title")
+    .select("id, title, description, current_understanding")
     .eq("user_id", userId)
     .in("id", momentIds);
 
-  const titleByMomentId = new Map((moments ?? []).map((moment) => [moment.id, moment.title]));
+  const momentById = new Map((moments ?? []).map((moment) => [moment.id, moment]));
 
-  return checkIns.map((checkIn) => ({
-    ...checkIn,
-    moment: { title: titleByMomentId.get(checkIn.moment_id) ?? "Situation" },
-  }));
+  return checkIns.map((checkIn) => {
+    const moment = momentById.get(checkIn.moment_id);
+    return {
+      ...checkIn,
+      moment: {
+        title: moment?.title ?? "Situation",
+        description: moment?.description ?? null,
+        current_understanding: moment?.current_understanding ?? null,
+      },
+    };
+  });
 }
 
 export async function listReflectionCheckIns(): Promise<

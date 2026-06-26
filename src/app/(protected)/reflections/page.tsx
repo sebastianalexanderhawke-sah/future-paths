@@ -1,6 +1,8 @@
 import Link from "next/link";
 
+import { CompletedReflectionsList } from "@/components/reflections/completed-reflections-list";
 import { ReflectionPredictionCard } from "@/components/reflections/reflection-prediction-card";
+import { SituationTitleExpander } from "@/components/reflections/situation-title-expander";
 import { listReflectionCheckIns } from "@/lib/reflections";
 
 export default async function ReflectionsPage() {
@@ -27,9 +29,11 @@ export default async function ReflectionsPage() {
   // listReflectionCheckIns returns newest-first. For the queue, the oldest
   // unanswered reflection is the active one — so reverse to find it.
   const unanswered = result.checkIns.filter((c) => !c.reflection_answer);
-  const answered = result.checkIns.filter((c) => c.reflection_answer);
   // Oldest unanswered = last element of the newest-first array.
   const pending = unanswered.length > 0 ? unanswered[unanswered.length - 1] : null;
+  // All check-ins except the currently active pending one go into the completed list.
+  // This includes both answered reflections and queued-but-not-yet-active ones.
+  const completed = result.checkIns.filter((c) => c.id !== pending?.id);
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -49,9 +53,13 @@ export default async function ReflectionsPage() {
           {pending ? (
             <div className="mt-4">
               <article className="rounded-lg border border-zinc-200 bg-white px-5 py-5">
-                <p className="text-xs text-zinc-400">
-                  {pending.moment.title} · {new Date(pending.created_at).toLocaleDateString()}
-                </p>
+                <SituationTitleExpander
+                  title={pending.moment.title}
+                  date={new Date(pending.created_at).toLocaleDateString()}
+                  summary={
+                    pending.moment.current_understanding ?? pending.moment.description ?? null
+                  }
+                />
                 <p className="mt-3 text-base font-medium text-zinc-900">
                   {pending.reflection_question}
                 </p>
@@ -64,35 +72,15 @@ export default async function ReflectionsPage() {
               </article>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-zinc-500">You're up to date.</p>
+            <p className="mt-4 text-sm text-zinc-500">You&apos;re up to date.</p>
           )}
         </section>
 
-        {answered.length > 0 ? (
+        {completed.length > 0 ? (
           <section>
             <h2 className="text-sm font-medium text-zinc-900">Completed</h2>
-            <div className="mt-4 flex flex-col gap-4">
-              {answered.map((checkIn) => (
-                <article
-                  key={checkIn.id}
-                  className="rounded-lg border border-zinc-200 bg-white px-5 py-5"
-                >
-                  <p className="text-xs text-zinc-400">
-                    {checkIn.moment.title} · {new Date(checkIn.created_at).toLocaleDateString()}
-                  </p>
-                  <p className="mt-3 text-sm font-medium text-zinc-900">
-                    {checkIn.reflection_question}
-                  </p>
-                  <div className="mt-4 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3">
-                    <p className="text-xs text-zinc-400">Predicted answer</p>
-                    <p className="mt-1 text-sm text-zinc-600">{checkIn.identity_impact}</p>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-xs text-zinc-400">Your answer</p>
-                    <p className="mt-1 text-sm text-zinc-900">{checkIn.reflection_answer}</p>
-                  </div>
-                </article>
-              ))}
+            <div className="mt-4">
+              <CompletedReflectionsList checkIns={completed} />
             </div>
           </section>
         ) : null}

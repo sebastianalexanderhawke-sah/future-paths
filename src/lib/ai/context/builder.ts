@@ -392,12 +392,19 @@ async function loadCurrentSelfContext(
     checkIns: (checkIns ?? []).map((checkIn) => ({
       theme_changes: checkIn.theme_changes,
       identity_impact: checkIn.identity_impact,
-      reality_summary: checkIn.reality_summary,
     })),
     identityUpdates: identityUpdates ?? [],
     recentMoments: recentMoments ?? [],
     currentSelfChosenPaths: chosenPaths ?? [],
-    currentSelfCheckIns: checkIns ?? [],
+    currentSelfCheckIns: (checkIns ?? []).map((checkIn) => ({
+      id: checkIn.id,
+      moment_id: checkIn.moment_id,
+      theme_changes: checkIn.theme_changes,
+      identity_impact: checkIn.identity_impact,
+      reflection_question: checkIn.reflection_question ?? null,
+      reflection_answer: checkIn.reflection_answer ?? null,
+      created_at: checkIn.created_at,
+    })),
     ...(options?.overrides?.reflectionQA
       ? { reflectionQA: options.overrides.reflectionQA }
       : {}),

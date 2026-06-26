@@ -8,7 +8,7 @@ import {
   type ReflectionAnswerFormState,
 } from "@/actions/reflections";
 
-type Mode = "choosing" | "editing" | "writing";
+type Mode = "choosing" | "editing";
 
 type ReflectionPredictionCardProps = {
   checkInId: string;
@@ -29,8 +29,6 @@ export function ReflectionPredictionCard({
   const router = useRouter();
   const wasPending = useRef(false);
 
-  // Refresh the server component after a successful submission so the answered
-  // reflection moves from "waiting" to "past reflections" without a manual reload.
   useEffect(() => {
     if (wasPending.current && !pending && !state.error) {
       router.refresh();
@@ -63,7 +61,7 @@ export function ReflectionPredictionCard({
               className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left text-sm text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-50 disabled:opacity-50"
             >
               <span className="text-base">✓</span>
-              <span>Yes, that's close</span>
+              <span>Yes, that&apos;s close</span>
             </button>
           </form>
 
@@ -73,16 +71,7 @@ export function ReflectionPredictionCard({
             className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left text-sm text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-50"
           >
             <span className="text-base">✏</span>
-            <span>Close, but I'd change it</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setMode("writing")}
-            className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left text-sm text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-50"
-          >
-            <span className="text-base">✍</span>
-            <span>No, here's what I'd actually say</span>
+            <span>Edit answer</span>
           </button>
 
           {state.error ? (
@@ -97,7 +86,7 @@ export function ReflectionPredictionCard({
 
   return (
     <div className="flex flex-col gap-5">
-      {mode === "editing" ? predictionBlock : null}
+      {predictionBlock}
 
       <form action={formAction} className="flex flex-col gap-3">
         <input type="hidden" name="checkInId" value={checkInId} />
@@ -108,8 +97,7 @@ export function ReflectionPredictionCard({
           maxLength={2000}
           // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
-          defaultValue={mode === "editing" ? identityImpact : undefined}
-          placeholder={mode === "writing" ? "Your reflection…" : undefined}
+          defaultValue={identityImpact}
           className="rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-zinc-400"
         />
 

@@ -52,7 +52,13 @@ export type IdentityContextBundle = {
   // is met, so future_self generation can be told to ensure a risk-led
   // trajectory instead of leaving risk evidence subordinate to positive ones.
   riskFocusThemes?: ThemeName[];
-  checkIns?: Pick<CheckIn, "theme_changes" | "identity_impact" | "reality_summary" | "reflection_question" | "reflection_answer">[];
+  checkIns?: {
+    theme_changes: CheckIn["theme_changes"];
+    identity_impact: string;
+    reality_summary?: string;
+    reflection_question?: string | null;
+    reflection_answer?: string | null;
+  }[];
   // Reflection Q&A pairs where the user has written an answer — the highest-confidence
   // identity evidence, separated from general check-ins so the AI can treat them distinctly.
   confirmedReflections?: { question: string; answer: string }[];
@@ -71,8 +77,6 @@ export type IdentityContextBundle = {
     CheckIn,
     | "id"
     | "moment_id"
-    | "reflection"
-    | "reality_summary"
     | "theme_changes"
     | "identity_impact"
     | "reflection_question"

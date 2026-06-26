@@ -112,7 +112,9 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
     (checkIn) => ({
       ...checkIn,
       identity_impact: truncateText(checkIn.identity_impact, limits.identityImpact),
-      reality_summary: truncateText(checkIn.reality_summary, limits.realitySummary),
+      ...(checkIn.reality_summary !== undefined
+        ? { reality_summary: truncateText(checkIn.reality_summary, limits.realitySummary) }
+        : {}),
     }),
   );
   next.confirmedReflections = truncateArray(
@@ -177,8 +179,6 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
     CONTEXT_LIMITS.COUNTS.checkIns,
   )?.map((checkIn) => ({
     ...checkIn,
-    reflection: truncateText(checkIn.reflection, limits.reflection),
-    reality_summary: truncateText(checkIn.reality_summary, limits.realitySummary),
     identity_impact: truncateText(checkIn.identity_impact, limits.identityImpact),
     reflection_question: truncateNullableText(checkIn.reflection_question, limits.question),
     reflection_answer: truncateNullableText(checkIn.reflection_answer, limits.response),
@@ -360,8 +360,6 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     currentSelfCheckIns: truncateArray(bundle.currentSelfCheckIns, 3)?.map(
       (checkIn) => ({
         ...checkIn,
-        reflection: truncateText(checkIn.reflection, 150),
-        reality_summary: truncateText(checkIn.reality_summary, 150),
         identity_impact: truncateText(checkIn.identity_impact, 150),
         reflection_question: truncateNullableText(checkIn.reflection_question, 100),
         reflection_answer: truncateNullableText(checkIn.reflection_answer, 150),
@@ -370,7 +368,9 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     checkIns: truncateArray(bundle.checkIns, 5)?.map((checkIn) => ({
       ...checkIn,
       identity_impact: truncateText(checkIn.identity_impact, 150),
-      reality_summary: truncateText(checkIn.reality_summary, 150),
+      ...(checkIn.reality_summary !== undefined
+        ? { reality_summary: truncateText(checkIn.reality_summary, 150) }
+        : {}),
     })),
     identityUpdates: truncateArray(bundle.identityUpdates, 5)?.map((update) => ({
       ...update,

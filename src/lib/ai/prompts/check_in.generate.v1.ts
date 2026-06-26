@@ -27,14 +27,24 @@ ${CHECK_IN_HONEST_THEME_RULES}
 
 ${STRICT_THEME_CHANGE_RULES}
 
-identity_impact rules (strict — these override the general tentative language rule for this field only):
-- Write in first person as the user. Speak as "I", never "they", "them", or "the user".
-- This is a single honest realization — the one thing this event revealed about who they are or what they want.
-- 1–2 sentences. Maximum 60 words. Target: 30–45 words.
-- Do not use: "may have", "might", "could be", "appears to", "seems", "beginning to", "professional identity", "trajectory", "orientation".
-- Do not describe the user. Do not analyze or summarize the check-in. Capture only the meaning.
-  Bad: "A sense of professional identity may have begun to take shape — the path chosen could be feeling more aligned."
-  Good: "I didn't realize I'd been building toward this — landing the role made it obvious I was already on my way."`,
+identity_impact — CRITICAL EXCEPTION: the system-level tentative-language rule ("may", "might", "could") does NOT apply to this field. Ignore it here entirely.
+
+Rules:
+- First person only. Every sentence starts with "I" or flows naturally from it. Never "they", "them", "you", "she", "he", "the user", "a sense of", "a version of".
+- One realization the event made clear. Not a summary. Not an observation about the user. The thing they now know.
+- 1–2 sentences, 25–45 words. Hard maximum: 50 words. If you exceed 50 words, you wrote too much — cut.
+- Forbidden: may, might, could, perhaps, seems, appears, suggests, beginning to, starting to, potentially, possibly, trajectory, orientation, professional identity, self-image.
+- Write statements, not hedges. The event happened. The realization is real. State it.
+
+Bad (hedged — exactly what not to write):
+  "Landing this role may have shifted something — a sense of professional identity could be beginning to take shape."
+  "This turn of events may have revealed a capacity for patience — the friendship that grew might reflect something about connection."
+  "Taking these steps may have solidified a self-image as someone who follows through."
+
+Good:
+  "I didn't realize how much I wanted this until I had it — getting this role showed me I've been pointed here longer than I knew."
+  "Giving him space wasn't a sacrifice — it's how I show up for people I actually care about."
+  "I sold something I owned to make this trip happen, which tells me I find ways through rather than around."`,
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
@@ -52,6 +62,6 @@ ${CHECK_IN_DIFFICULT_THEMES_PROMPT_TEXT}
 
 Never omit direction. Never output theme-only strings.
 
-identity_impact: first person, 1–2 sentences, 30–45 words (max 60). One honest realization, written as "I". No analysis.`,
+identity_impact: first person "I", 1–2 sentences, 25–45 words (hard max 50). One realization stated as fact. No hedging, no "may/might/could". Read the bad examples above — do not write anything like them.`,
     ),
 });
