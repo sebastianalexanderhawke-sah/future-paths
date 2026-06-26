@@ -15,7 +15,7 @@ export function CurrentSelfHomeSection({ currentSelf }: CurrentSelfHomeSectionPr
       label="Identity"
       title="Who am I now?"
       viewAllHref={currentSelf ? "/current-self" : undefined}
-      viewAllLabel="Full profile"
+      viewAllLabel="View full profile →"
     >
       {currentSelf ? (
         <CardShell variant="elevated" className="p-5 sm:p-6">

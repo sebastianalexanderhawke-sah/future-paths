@@ -330,13 +330,17 @@ export async function createCheckIn(
   ).catch(() => null);
 
   if (reflectionEvaluation?.should_reflect && reflectionEvaluation.question) {
-    await supabase
+    const { error: reflectionUpdateError } = await supabase
       .from("check_ins")
       .update({ reflection_question: reflectionEvaluation.question })
       .eq("id", checkIn.id)
       .eq("user_id", auth.userId);
 
-    checkIn.reflection_question = reflectionEvaluation.question;
+    if (reflectionUpdateError) {
+      console.error("[createCheckIn] Failed to persist reflection_question:", reflectionUpdateError.message);
+    } else {
+      checkIn.reflection_question = reflectionEvaluation.question;
+    }
   }
 
   // Check-ins are lived evidence — the strongest signal Future Selves

@@ -105,6 +105,14 @@ export const tentativeTextSchema = z
   .transform(sanitizeBannedPhrases)
   .pipe(z.string().min(1).max(2000));
 
+// Tighter variant for identity_impact: first-person realization, 1–2 sentences,
+// max 60 words (~420 chars). Enforces brevity at parse time rather than truncating.
+export const identityImpactSchema = z
+  .string()
+  .trim()
+  .transform(sanitizeBannedPhrases)
+  .pipe(z.string().min(1).max(420));
+
 export const themesSchema = z.array(themeNameSchema).min(1).max(3);
 
 export const identityUpdateTypeSchema = z.enum(IDENTITY_UPDATE_TYPES);

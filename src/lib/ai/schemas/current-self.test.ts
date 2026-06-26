@@ -49,11 +49,11 @@ describe("current self output", () => {
     ).toThrow();
   });
 
-  it("rejects more than 6 core trait observations", () => {
+  it("rejects more than 4 core trait observations", () => {
     expect(() =>
       parseCurrentSelfOutput({
         ...VALID_DRAFT,
-        observations: ["A", "B", "C", "D", "E", "F", "G"],
+        observations: ["A", "B", "C", "D", "E"],
       }),
     ).toThrow();
   });

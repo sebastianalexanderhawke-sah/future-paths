@@ -102,10 +102,10 @@ describe("/reflections page", () => {
     "utf-8",
   );
 
-  it("renders pending and answered sections", () => {
-    expect(PAGE_SOURCE).toContain("Waiting for your reflection");
-    expect(PAGE_SOURCE).toContain("Past reflections");
-    expect(PAGE_SOURCE).toContain("ReflectionAnswerForm");
+  it("renders waiting and completed sections with prediction card", () => {
+    expect(PAGE_SOURCE).toContain("Waiting");
+    expect(PAGE_SOURCE).toContain("Completed");
+    expect(PAGE_SOURCE).toContain("ReflectionPredictionCard");
   });
 });
 
@@ -123,15 +123,17 @@ describe("overview Reflection Waiting section", () => {
     expect(OVERVIEW_SOURCE).toContain("getUnansweredReflectionSummary");
   });
 
-  it("shows section only when unanswered reflections exist", () => {
+  it("passes pending reflection to section component", () => {
     expect(OVERVIEW_SOURCE).toContain("pendingReflection");
     expect(OVERVIEW_SOURCE).toContain("ReflectionWaitingHomeSection");
   });
 
-  it("shows count badge and view all link", () => {
-    expect(SECTION_SOURCE).toContain("unansweredCount");
+  it("links to /reflections and shows queue state and empty state", () => {
     expect(SECTION_SOURCE).toContain("/reflections");
-    expect(SECTION_SOURCE).toContain("View all reflections");
+    expect(SECTION_SOURCE).toContain("1 reflection waiting");
+    expect(SECTION_SOURCE).toContain("Reflect →");
+    expect(SECTION_SOURCE).toContain("You're up to date.");
+    expect(SECTION_SOURCE).toContain("View all reflections →");
   });
 });
 

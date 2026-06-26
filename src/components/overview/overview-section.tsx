@@ -6,7 +6,7 @@ type OverviewSectionProps = {
   description?: string;
   viewAllHref?: string;
   viewAllLabel?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 };
 

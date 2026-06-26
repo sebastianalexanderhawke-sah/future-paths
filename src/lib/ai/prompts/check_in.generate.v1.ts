@@ -14,7 +14,7 @@ import {
 export const checkInGenerateV1 = createPromptModule({
   promptId: "check_in.generate",
   promptVersion: "1",
-  taskInstructions: `Summarize lived reality for this check-in. Return reality_summary, theme_changes (1-3), and identity_impact using tentative language.
+  taskInstructions: `Summarize lived reality for this check-in. Return reality_summary, theme_changes (1-3), and identity_impact.
 
 Reality summary rules (strict):
 - Keep reality_summary short and direct — 2-3 short sentences total, never a multi-paragraph essay. The user already knows what happened; do not re-explain or elaborate on it.
@@ -25,7 +25,16 @@ Reality summary rules (strict):
 
 ${CHECK_IN_HONEST_THEME_RULES}
 
-${STRICT_THEME_CHANGE_RULES}`,
+${STRICT_THEME_CHANGE_RULES}
+
+identity_impact rules (strict — these override the general tentative language rule for this field only):
+- Write in first person as the user. Speak as "I", never "they", "them", or "the user".
+- This is a single honest realization — the one thing this event revealed about who they are or what they want.
+- 1–2 sentences. Maximum 60 words. Target: 30–45 words.
+- Do not use: "may have", "might", "could be", "appears to", "seems", "beginning to", "professional identity", "trajectory", "orientation".
+- Do not describe the user. Do not analyze or summarize the check-in. Capture only the meaning.
+  Bad: "A sense of professional identity may have begun to take shape — the path chosen could be feeling more aligned."
+  Good: "I didn't realize I'd been building toward this — landing the role made it obvious I was already on my way."`,
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
@@ -41,6 +50,8 @@ ${CHECK_IN_POSITIVE_THEMES_PROMPT_TEXT}
 Difficult themes:
 ${CHECK_IN_DIFFICULT_THEMES_PROMPT_TEXT}
 
-Never omit direction. Never output theme-only strings.`,
+Never omit direction. Never output theme-only strings.
+
+identity_impact: first person, 1–2 sentences, 30–45 words (max 60). One honest realization, written as "I". No analysis.`,
     ),
 });

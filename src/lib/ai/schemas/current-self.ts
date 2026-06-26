@@ -8,8 +8,8 @@ import { checkInThemeNameSchema, tentativeTextSchema } from "@/lib/ai/schemas/sh
 // or contradiction as a theme, not just growth-oriented ones.
 export const currentSelfThemesSchema = z.array(checkInThemeNameSchema).min(4).max(6);
 
-// Core traits: short one-phrase bullets describing who this person is.
-export const currentSelfObservationsSchema = z.array(tentativeTextSchema).min(4).max(6);
+// Core traits: exactly 4 short sentences describing who this person is.
+export const currentSelfObservationsSchema = z.array(tentativeTextSchema).length(4);
 
 // Recent growth: exactly 3 bullets describing what is currently shifting.
 export const currentSelfRecentGrowthSchema = z.array(tentativeTextSchema).length(3);

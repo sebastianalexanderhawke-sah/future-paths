@@ -1,5 +1,6 @@
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { generateFutureSelves } from "@/lib/future-selves";
+import { evaluateReflectionQuestion } from "@/lib/reflection-question";
 import { validateReflectionAnswerLength } from "@/lib/reflections-validation";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn, Moment } from "@/types/database";
@@ -95,20 +96,20 @@ export async function getUnansweredReflectionSummary(): Promise<
     .select("*")
     .eq("user_id", auth.userId)
     .not("reflection_question", "is", null)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: true }); // oldest first — queue order
 
   if (error) {
     return { error: error.message };
   }
 
-  // Filter unanswered in JavaScript — not at the DB level — so that both
-  // NULL and empty-string defaults for reflection_answer are treated as
-  // unanswered, consistent with how listReflectionCheckIns handles this.
+  // Filter unanswered in JavaScript so both NULL and empty-string are treated
+  // as unanswered, consistent with how listReflectionCheckIns handles this.
   const pendingRows = (data ?? []).filter((row) => !row.reflection_answer);
   const pendingCheckIns = await attachMomentsToCheckIns(pendingRows, auth.userId);
 
   return {
     unansweredCount: pendingRows.length,
+    // First item is the oldest unanswered — the active queue entry.
     pending: pendingCheckIns[0] ?? null,
   };
 }
@@ -190,5 +191,45 @@ export async function submitReflectionAnswer(
   // experience revealed, in addition to Current Self which already receives it.
   await generateFutureSelves().catch(() => {});
 
+  // Advance the queue: evaluate the next unanswered check-in so the user
+  // never lands on an empty reflection queue after answering one.
+  await advanceReflectionQueue(auth.userId).catch(() => {});
+
   return { ok: true };
+}
+
+// Finds the most recent check-ins without a reflection_question and evaluates
+// them one-by-one until a worthy question is generated. Stops after saving one
+// so the queue advances by exactly one entry at a time.
+async function advanceReflectionQueue(userId: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { data: candidates } = await supabase
+    .from("check_ins")
+    .select("id, reflection, reality_summary")
+    .eq("user_id", userId)
+    .is("reflection_question", null)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (!candidates || candidates.length === 0) return;
+
+  for (const candidate of candidates) {
+    if (!candidate.reflection || !candidate.reality_summary) continue;
+
+    const result = await evaluateReflectionQuestion(
+      userId,
+      candidate.reflection,
+      candidate.reality_summary,
+    ).catch(() => null);
+
+    if (result?.should_reflect && result.question) {
+      await supabase
+        .from("check_ins")
+        .update({ reflection_question: result.question })
+        .eq("id", candidate.id)
+        .eq("user_id", userId);
+      return;
+    }
+  }
 }

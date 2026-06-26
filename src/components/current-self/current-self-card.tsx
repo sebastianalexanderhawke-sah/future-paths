@@ -7,34 +7,14 @@ type CurrentSelfCardProps = {
 export function CurrentSelfCard({ currentSelf }: CurrentSelfCardProps) {
   return (
     <article className="rounded-lg border border-zinc-200 bg-white p-4">
-      <p className="text-xs text-zinc-400">
-        Updated {new Date(currentSelf.updated_at).toLocaleDateString()}
-      </p>
-      <h3 className="mt-2 text-sm font-medium text-zinc-900">{currentSelf.title}</h3>
-
-      {/* Identity paragraph */}
+      {/* Identity */}
+      <h3 className="text-sm font-medium text-zinc-900">{currentSelf.title}</h3>
       <p className="mt-3 text-sm leading-relaxed text-zinc-600">{currentSelf.summary}</p>
-
-      {/* Themes */}
-      {currentSelf.themes.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {currentSelf.themes.map((theme) => (
-            <span
-              key={theme}
-              className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600"
-            >
-              {theme}
-            </span>
-          ))}
-        </div>
-      ) : null}
 
       {/* Core traits */}
       {currentSelf.observations.length > 0 ? (
         <div className="mt-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-            Core traits
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Core traits</p>
           <ul className="mt-1.5 flex flex-col gap-1">
             {currentSelf.observations.map((trait) => (
               <li key={trait} className="flex gap-2 text-sm text-zinc-600">
@@ -46,11 +26,11 @@ export function CurrentSelfCard({ currentSelf }: CurrentSelfCardProps) {
         </div>
       ) : null}
 
-      {/* Recent growth */}
+      {/* What's changing */}
       {currentSelf.recent_growth.length > 0 ? (
         <div className="mt-4">
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-            Recent growth
+            What&apos;s changing
           </p>
           <ul className="mt-1.5 flex flex-col gap-1">
             {currentSelf.recent_growth.map((item) => (
@@ -62,6 +42,27 @@ export function CurrentSelfCard({ currentSelf }: CurrentSelfCardProps) {
           </ul>
         </div>
       ) : null}
+
+      {/* Themes */}
+      {currentSelf.themes.length > 0 ? (
+        <div className="mt-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Themes</p>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {currentSelf.themes.map((theme) => (
+              <span
+                key={theme}
+                className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600"
+              >
+                {theme}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <p className="mt-4 text-xs text-zinc-400">
+        Updated {new Date(currentSelf.updated_at).toLocaleDateString()}
+      </p>
     </article>
   );
 }

@@ -85,16 +85,8 @@ export default async function OverviewPage() {
   const futureSelves = "futureSelves" in futuresResult ? futuresResult.futureSelves : [];
   const currentSelf =
     "currentSelf" in currentSelfResult ? currentSelfResult.currentSelf : null;
-  const unansweredCount =
-    "unansweredCount" in reflectionSummaryResult
-      ? reflectionSummaryResult.unansweredCount
-      : 0;
   const pendingReflection =
     "pending" in reflectionSummaryResult ? reflectionSummaryResult.pending : null;
-
-  // DEBUG — remove after confirming reflection renders
-  console.log("[overview] reflectionSummaryResult:", JSON.stringify(reflectionSummaryResult, null, 2));
-  console.log("[overview] pendingReflection:", pendingReflection ? `id=${pendingReflection.id} moment=${pendingReflection.moment.title}` : "null");
 
   const timelineEvents = "events" in timelineEventsResult ? timelineEventsResult.events : [];
 
@@ -174,15 +166,7 @@ export default async function OverviewPage() {
       {/* 1. CURRENT SELF — who am I now? */}
       <CurrentSelfHomeSection currentSelf={currentSelf} />
 
-      {/* 2. REFLECTION — highest-confidence identity evidence waiting for input */}
-      {pendingReflection ? (
-        <ReflectionWaitingHomeSection
-          unansweredCount={unansweredCount}
-          pending={pendingReflection}
-        />
-      ) : null}
-
-      {/* 3. ACTIVE SITUATIONS — what am I navigating? */}
+      {/* 2. ACTIVE SITUATIONS — what am I navigating? */}
       {hasAnySituations ? (
         <OverviewSection
           label="Situations"
@@ -227,7 +211,7 @@ export default async function OverviewPage() {
         </section>
       )}
 
-      {/* 4. NEEDS ATTENTION — what needs action? */}
+      {/* 3. NEEDS ATTENTION — what needs action? */}
       {visibleAttentionItems.length > 0 ? (
         <OverviewSection label="Attention" title="What needs attention?">
           <ul className="flex flex-col gap-2">
@@ -267,7 +251,7 @@ export default async function OverviewPage() {
         </OverviewSection>
       ) : null}
 
-      {/* 5. RECENT REALITY — what changed recently? */}
+      {/* 4. RECENT REALITY — what changed recently? */}
       {recentReality.length > 0 ? (
         <OverviewSection label="Reality" title="What changed recently?">
           <ul className="flex flex-col gap-2">
@@ -289,6 +273,9 @@ export default async function OverviewPage() {
           </ul>
         </OverviewSection>
       ) : null}
+
+      {/* 5. REFLECTION — interpretation step between reality and future selves */}
+      <ReflectionWaitingHomeSection pending={pendingReflection} />
 
       {/* 6. FUTURE SELVES — who might I be becoming? */}
       <FutureSelfHomeSection futureSelves={futureSelves} />
