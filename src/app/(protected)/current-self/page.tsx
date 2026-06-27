@@ -3,7 +3,7 @@ import Link from "next/link";
 import { generateCurrentSelfAction } from "@/actions/current-self";
 import { signOut } from "@/actions/auth";
 import { CurrentSelfCard } from "@/components/current-self/current-self-card";
-import { getCurrentSelf } from "@/lib/current-self";
+import { getActivitySummary, getCurrentSelf } from "@/lib/current-self";
 
 type CurrentSelfPageProps = {
   searchParams: Promise<{ error?: string }>;
@@ -11,7 +11,10 @@ type CurrentSelfPageProps = {
 
 export default async function CurrentSelfPage({ searchParams }: CurrentSelfPageProps) {
   const { error } = await searchParams;
-  const result = await getCurrentSelf();
+  const [result, activity] = await Promise.all([
+    getCurrentSelf(),
+    getActivitySummary(),
+  ]);
 
   if ("error" in result) {
     return (
@@ -69,7 +72,7 @@ export default async function CurrentSelfPage({ searchParams }: CurrentSelfPageP
           </div>
 
           {currentSelf ? (
-            <CurrentSelfCard currentSelf={currentSelf} />
+            <CurrentSelfCard currentSelf={currentSelf} activity={activity} />
           ) : (
             <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-8 text-center text-sm text-zinc-600">
               No Current Self yet. Capture a moment, check in, refresh your Future

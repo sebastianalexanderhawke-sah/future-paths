@@ -135,47 +135,47 @@ export function generateMockCurrentSelf(input: {
   const themePhrase = formatThemeList(themes);
   const difficultTheme = themes.find((theme) => isDifficultCheckInTheme(theme));
 
-  const title = `Shaped by ${themePhrase.toLowerCase()}`;
+  const primaryTheme = themes[0]?.toLowerCase() ?? "independence";
+  const futureLabel = leadingFuture.name.toLowerCase();
+  const secondaryLabel = secondaryFuture?.name.toLowerCase();
 
-  const futurePhrase = secondaryFuture
-    ? `drawn toward both ${leadingFuture.name.toLowerCase()} and ${secondaryFuture.name.toLowerCase()}`
-    : `drawn toward ${leadingFuture.name.toLowerCase()}`;
+  // Title: short character phrase, not event-driven
+  const title = secondaryLabel
+    ? `Moving toward ${futureLabel}`
+    : `Building toward ${futureLabel}`;
 
-  const updatePhrase = recentUpdate
-    ? ` A recent shift — ${recentUpdate.title.toLowerCase()} — may be part of that.`
-    : "";
+  // Summary: 2-3 short paragraphs, second person, character-driven
+  const para1 = `You tend to move before you have everything figured out. ${themes[0] ? `${themes[0]} runs through most of your decisions` : "Action tends to come before certainty"}.`;
 
-  const summary = `Someone ${futurePhrase}, with ${themePhrase.toLowerCase()} running through how they choose and follow through.${updatePhrase} Their recorded reality keeps refining that picture.`;
+  const para2 = secondaryFuture
+    ? `You seem pulled in two directions — toward ${futureLabel} and toward ${secondaryLabel}. That tension isn't confusion; it's just where you are right now.`
+    : `You appear to learn more through doing than through planning. Once you've decided on a direction, you commit.`;
 
-  // Core traits: short bullets, one phrase each, describing who the person is
+  const para3 = difficultTheme
+    ? `You don't always resolve things cleanly. ${difficultTheme} surfaces and you sit with it rather than immediately fixing it.`
+    : recentUpdate
+      ? `You've shown a consistent pattern: when something shifts, you adapt quickly rather than holding the old position.`
+      : null;
+
+  const summary = [para1, para2, para3].filter(Boolean).join("\n\n");
+
+  // Core traits: 2–5 word timeless labels
   const observations: string[] = [
-    `Navigates ${themes[0]?.toLowerCase() ?? "uncertainty"} as a recurring pattern`,
-    `Tends to move toward ${leadingFuture.name.toLowerCase()}`,
+    difficultTheme ? `Sits with ${difficultTheme.toLowerCase()}` : "Acts before certainty",
+    `Drawn toward ${futureLabel}`,
+    "Learns through action",
+    recentUpdate ? "Adapts when things shift" : "Trusts own judgment",
   ];
 
-  if (difficultTheme) {
-    observations.push(`Carries unresolved ${difficultTheme.toLowerCase()}`);
-  } else {
-    observations.push(`Values continuity across decisions`);
-  }
-
-  if (recentUpdate) {
-    observations.push(`Recently shifted — ${recentUpdate.title.toLowerCase()}`);
-  } else {
-    observations.push(`Relies on pattern recognition over impulsive choice`);
-  }
-
-  // Pad to meet minimum of 4 if needed (already at 4 minimum above)
-
-  // Recent growth: exactly 3 movement bullets
+  // Recent growth: 3–6 word present-tense movement phrases
   const recent_growth = [
-    `Building clearer understanding of ${themes[0]?.toLowerCase() ?? "personal"} patterns`,
-    secondaryFuture
-      ? `Weighing ${leadingFuture.name.toLowerCase()} against ${secondaryFuture.name.toLowerCase()}`
-      : `Strengthening commitment to ${leadingFuture.name.toLowerCase()}`,
+    `Trusting ${primaryTheme} more`,
+    secondaryLabel
+      ? `Weighing ${futureLabel} against ${secondaryLabel}`
+      : `Committing more fully to ${futureLabel}`,
     difficultTheme
-      ? `Learning to sit with ${difficultTheme.toLowerCase()} without resolving it immediately`
-      : `Developing more deliberate decision-making habits`,
+      ? `Sitting with ${difficultTheme.toLowerCase()} longer`
+      : "Deciding with less deliberation",
   ];
 
   return {

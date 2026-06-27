@@ -151,7 +151,7 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
       observations: bundle.currentSelf.observations.map((observation) =>
         truncateText(observation, limits.observation),
       ),
-      recent_growth: bundle.currentSelf.recent_growth.map((item) =>
+      recent_growth: (bundle.currentSelf.recent_growth ?? []).map((item) =>
         truncateText(item, limits.observation),
       ),
     };

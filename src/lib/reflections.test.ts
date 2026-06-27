@@ -82,7 +82,7 @@ describe("submitReflectionAnswer pipeline", () => {
   });
 
   it("triggers Current Self update after storing the answer", () => {
-    expect(REFLECTIONS_SOURCE).toContain("generateCurrentSelf");
+    expect(REFLECTIONS_SOURCE).toContain("requestCurrentSelfRegeneration");
     expect(REFLECTIONS_SOURCE).toContain("checkInReflection");
   });
 
@@ -102,9 +102,9 @@ describe("/reflections page", () => {
     "utf-8",
   );
 
-  it("renders waiting and completed sections with prediction card", () => {
+  it("renders waiting section, completed reflections list, and prediction card", () => {
     expect(PAGE_SOURCE).toContain("Waiting");
-    expect(PAGE_SOURCE).toContain("Completed");
+    expect(PAGE_SOURCE).toContain("CompletedReflectionsList");
     expect(PAGE_SOURCE).toContain("ReflectionPredictionCard");
   });
 });

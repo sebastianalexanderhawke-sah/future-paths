@@ -246,6 +246,57 @@ async function getCurrentSelfUpdatedAt(userId: string): Promise<string | null> {
   return data?.updated_at ?? null;
 }
 
+export type ActivitySummary = {
+  checkInCount: number;
+  reflectionCount: number;
+  monthsActive: number;
+};
+
+export async function getActivitySummary(): Promise<ActivitySummary> {
+  const auth = await requireUser();
+  if ("error" in auth) {
+    return { checkInCount: 0, reflectionCount: 0, monthsActive: 0 };
+  }
+
+  const supabase = await createClient();
+  const [
+    { count: checkInCount },
+    { count: reflectionCount },
+    { data: earliest },
+  ] = await Promise.all([
+    supabase
+      .from("check_ins")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", auth.userId),
+    supabase
+      .from("identity_prompt_responses")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", auth.userId),
+    supabase
+      .from("moments")
+      .select("created_at")
+      .eq("user_id", auth.userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  let monthsActive = 0;
+  if (earliest?.created_at) {
+    const msPerMonth = 1000 * 60 * 60 * 24 * 30;
+    monthsActive = Math.max(
+      1,
+      Math.round((Date.now() - new Date(earliest.created_at).getTime()) / msPerMonth),
+    );
+  }
+
+  return {
+    checkInCount: checkInCount ?? 0,
+    reflectionCount: reflectionCount ?? 0,
+    monthsActive,
+  };
+}
+
 /**
  * Single entry point for identity-relevant events to request that Current
  * Self be brought up to date. Debounced by default; callers for
