@@ -5,9 +5,16 @@ type OverviewPageShellProps = {
 
 export function OverviewPageShell({ header, children }: OverviewPageShellProps) {
   return (
-    <div className="flex flex-1 flex-col bg-canvas">
+    <div style={{ minHeight: "100vh", backgroundColor: "#060606" }}>
       {header}
-      <main className="mx-auto flex w-full max-w-[70rem] flex-1 flex-col gap-[var(--space-section)] px-6 py-12">
+      <main
+        style={{
+          maxWidth: "620px",
+          margin: "0 auto",
+          padding: "0 18px",
+          fontFamily: "system-ui, -apple-system, sans-serif",
+        }}
+      >
         {children}
       </main>
     </div>

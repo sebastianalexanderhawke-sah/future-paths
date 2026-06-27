@@ -128,12 +128,10 @@ describe("overview Reflection Waiting section", () => {
     expect(OVERVIEW_SOURCE).toContain("ReflectionWaitingHomeSection");
   });
 
-  it("links to /reflections and shows queue state and empty state", () => {
+  it("links to /reflections and shows pending reflection", () => {
     expect(SECTION_SOURCE).toContain("/reflections");
-    expect(SECTION_SOURCE).toContain("1 reflection waiting");
-    expect(SECTION_SOURCE).toContain("Reflect →");
-    expect(SECTION_SOURCE).toContain("You're up to date.");
-    expect(SECTION_SOURCE).toContain("View all reflections →");
+    expect(SECTION_SOURCE).toContain("Reflection Waiting");
+    expect(SECTION_SOURCE).toContain("Answer");
   });
 });
 

@@ -51,7 +51,7 @@ const MIN_BLIND_SPOT_FUTURES = 2;
 const MAX_BLIND_SPOT_FUTURES = 3;
 const MIN_WILD_CARD_FUTURES = 1;
 const MAX_WILD_CARD_FUTURES = 2;
-const MAX_TITLE_LENGTH = 52;
+const MAX_TITLE_LENGTH = 100;
 const MAX_SUMMARY_LENGTH = 160;
 
 // Global floor for the unified, undivided list shown to the user: fallback
@@ -491,15 +491,15 @@ export function formatForecastTitle(text: string): string {
     .replace(/^a (possible )?/i, "")
     .replace(/^the /i, "the ");
 
-  phrase = toFirstSentence(phrase, 52).replace(/[.!?]+$/, "").trim();
+  phrase = toFirstSentence(phrase, MAX_TITLE_LENGTH).replace(/[.!?]+$/, "").trim();
   phrase = phrase.replace(/^to /i, "");
 
   if (ARCHETYPE_NAME_PATTERN.test(phrase)) {
     return "";
   }
 
-  if (phrase.length > 52) {
-    phrase = toShortPhrase(phrase, 52);
+  if (phrase.length > MAX_TITLE_LENGTH) {
+    phrase = toShortPhrase(phrase, MAX_TITLE_LENGTH);
   }
 
   const title = toTitleCase(phrase);

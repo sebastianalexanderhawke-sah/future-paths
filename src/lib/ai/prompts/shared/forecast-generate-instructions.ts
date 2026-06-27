@@ -82,7 +82,7 @@ Good: If a check-in says "she agreed to meet up", don't generate "She Says Yes O
 Bad: Ignoring the check-in history and regenerating the same futures as the original forecast.
 
 Each future object needs:
-- title: short scene-level headline (2-6 words)
+- title: scene-level headline that reads like a newspaper headline — it must describe one complete future event, stand on its own without any context, and never end mid-thought. Maximum 3–8 words. Maximum approximately 60 characters. Never rely on truncation to finish the thought — the full event must be expressed in the title itself.
 - why: one sentence grounded in real-world dynamics — social incentives, human behavior, information gaps, or observable circumstances. Not therapy language, generic growth language, or abstract personal-development reasoning.
 - impact: one sentence on what visibly changes outside the user's head when it happens — a relationship, a social dynamic, an opportunity, what other people now know or do. Not a feeling, realization, or internal state.
 - signals: exactly 3 signals as described in RULE 3 above — 5-8 words each, title case, specific to this future, never a restatement of the title.
