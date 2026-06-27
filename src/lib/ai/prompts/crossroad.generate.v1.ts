@@ -28,7 +28,9 @@ Situation polarity rules (opportunity_themes / risk_themes — strict):
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
-      `Produce JSON with current_understanding, paths (5-7 items, default 5), opportunity_themes (1-3), and risk_themes (1-3).
+      `Produce JSON with current_understanding, paths (5–7 items), opportunity_themes (1-3), and risk_themes (1-3).
+
+Generate five paths. Then evaluate whether the available evidence supports another genuinely distinct future not already represented. If so, generate a sixth path. Repeat this evaluation once more for a possible seventh path. Otherwise stop. Never exceed 7. Never generate an additional path unless the evidence justifies it.
 
 Each path needs title, description, benefits (2-4), consequences (2-4), future_shift, and themes (1-3).
 

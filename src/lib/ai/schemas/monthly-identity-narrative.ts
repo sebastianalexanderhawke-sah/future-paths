@@ -8,7 +8,6 @@ export const monthlyIdentityNarrativeDraftSchema = z.object({
   headline: tentativeTextSchema,
   opening_beginning: tentativeTextSchema,
   opening_end: tentativeTextSchema,
-  why_this_changed: tentativeTextSchema,
 }) satisfies z.ZodType<MockMonthlyIdentityNarrativeDraft>;
 
 export const monthlyIdentityNarrativeOutputSchema = z

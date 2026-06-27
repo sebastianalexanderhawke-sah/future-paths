@@ -36,28 +36,36 @@ describe("MonthlyIdentityNarrativeCard — present fields", () => {
     expect(CARD_SOURCE).toMatch(/[•][^\n]*\{change\}/);
   });
 
-  it("renders why-this-changed as a paragraph", () => {
-    expect(CARD_SOURCE).toContain("narrative.whyThisChanged");
+  it("renders evidence counts", () => {
+    expect(CARD_SOURCE).toContain("situationCount");
+    expect(CARD_SOURCE).toContain("checkInCount");
+    expect(CARD_SOURCE).toContain("reflectionCount");
+    expect(CARD_SOURCE).toContain("Evidence");
   });
 });
 
 describe("MonthlyIdentityNarrativeCard — section order", () => {
-  it("orders sections as: headline, opening, how you changed, why this changed", () => {
+  it("orders sections as: headline, opening, how you changed, evidence", () => {
     const headlineIndex = CARD_SOURCE.indexOf("narrative.headline");
     const openingBeginningIndex = CARD_SOURCE.indexOf("narrative.openingBeginning");
     const openingEndIndex = CARD_SOURCE.indexOf("narrative.openingEnd");
     const howYouChangedIndex = CARD_SOURCE.indexOf("How you changed");
-    const whyThisChangedIndex = CARD_SOURCE.indexOf("Why this changed");
+    const evidenceIndex = CARD_SOURCE.indexOf("Evidence");
 
     expect(headlineIndex).toBeGreaterThan(-1);
     expect(openingBeginningIndex).toBeGreaterThan(headlineIndex);
     expect(openingEndIndex).toBeGreaterThan(openingBeginningIndex);
     expect(howYouChangedIndex).toBeGreaterThan(openingEndIndex);
-    expect(whyThisChangedIndex).toBeGreaterThan(howYouChangedIndex);
+    expect(evidenceIndex).toBeGreaterThan(howYouChangedIndex);
   });
 });
 
-describe("MonthlyIdentityNarrativeCard — no evidence-report sections", () => {
+describe("MonthlyIdentityNarrativeCard — removed sections", () => {
+  it("does not render a why-this-changed section", () => {
+    expect(CARD_SOURCE).not.toContain("narrative.whyThisChanged");
+    expect(CARD_SOURCE).not.toContain("Why this changed");
+  });
+
   it("does not render major decisions, future shifts, themes, or raw identity-shift evidence lists", () => {
     expect(CARD_SOURCE).not.toContain("majorDecisions");
     expect(CARD_SOURCE).not.toContain("futureShifts");
@@ -68,9 +76,8 @@ describe("MonthlyIdentityNarrativeCard — no evidence-report sections", () => {
 });
 
 describe("MonthlyIdentityNarrativeCard — omits empty sections without fabricating content", () => {
-  it("guards howYouChanged and whyThisChanged behind a truthy/length check", () => {
+  it("guards howYouChanged behind a length check", () => {
     expect(CARD_SOURCE).toContain("narrative.howYouChanged.length > 0");
-    expect(CARD_SOURCE).toContain("narrative.whyThisChanged ?");
   });
 
   it("guards each opening paragraph independently", () => {

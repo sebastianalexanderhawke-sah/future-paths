@@ -5,7 +5,6 @@ export type MockMonthlyIdentityNarrativeDraft = {
   headline: string;
   opening_beginning: string;
   opening_end: string;
-  why_this_changed: string;
 };
 
 // Headline fragments keyed by dominant theme — picked by the month's
@@ -56,12 +55,6 @@ function openingEndFor(month: MonthlyIdentityEvolution): string {
   return "By the end of the month, the pattern from earlier in the month had mostly held steady.";
 }
 
-function whyThisChangedFor(month: MonthlyIdentityEvolution): string {
-  return month.majorDecisions.length > 0
-    ? "Repeated decisions made in similar circumstances reinforced the same response each time, rather than any single moment causing the shift."
-    : "A few small, similar choices added up over the month, rather than any single event causing the shift.";
-}
-
 export function generateMockMonthlyIdentityNarratives(
   months: MonthlyIdentityEvolution[],
 ): MockMonthlyIdentityNarrativeDraft[] {
@@ -70,6 +63,5 @@ export function generateMockMonthlyIdentityNarratives(
     headline: headlineFor(month.dominantThemes),
     opening_beginning: openingBeginningFor(month),
     opening_end: openingEndFor(month),
-    why_this_changed: whyThisChangedFor(month),
   }));
 }

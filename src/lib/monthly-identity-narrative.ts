@@ -33,9 +33,11 @@ export type MonthlyIdentityNarrative = {
   openingBeginning: string;
   openingEnd: string;
   howYouChanged: string[];
-  whyThisChanged: string;
   previousMonth: string | null;
   comparison: MonthlyComparison;
+  situationCount: number;
+  checkInCount: number;
+  reflectionCount: number;
 };
 
 // Short disposition phrases per theme, used to turn a bare trait-presence
@@ -81,12 +83,10 @@ function howYouChangedFor(comparison: MonthlyComparison): string[] {
 
 /**
  * Turns each month's deterministic MonthlyIdentityEvolution into a chapter
- * about change, not a report of events. The AI only writes the headline,
- * the two opening paragraphs, and the "why this changed" synthesis — all
- * grounded in that month's evidence (chosen paths, identity updates,
- * check-ins, future-self movement) and explicitly forbidden from listing it.
- * "How you changed" is deterministic, carried through from the comparison
- * layer, never re-derived or invented by the model.
+ * about change, not a report of events. The AI writes the headline and the
+ * two narrative paragraphs — grounded in that month's evidence and forbidden
+ * from listing it. "How you changed" is deterministic. Evidence counts are
+ * computed directly from the evolution data, never estimated.
  */
 export async function loadMonthlyIdentityNarratives(): Promise<
   { narratives: MonthlyIdentityNarrative[] } | { error: string }
@@ -126,15 +126,19 @@ export async function loadMonthlyIdentityNarratives(): Promise<
     const previousMonth = months[index + 1];
     const comparison = computeMonthlyComparison(month, previousMonth ?? null);
 
+    const checkIns = month.identityChangeEvidence.checkIns;
+
     return {
       month: month.month,
       headline: draft?.headline ?? month.month,
       openingBeginning: draft?.opening_beginning ?? "",
       openingEnd: draft?.opening_end ?? "",
       howYouChanged: howYouChangedFor(comparison),
-      whyThisChanged: draft?.why_this_changed ?? "",
       previousMonth: previousMonth?.month ?? null,
       comparison,
+      situationCount: month.identityChangeEvidence.chosenPaths.length,
+      checkInCount: checkIns.length,
+      reflectionCount: checkIns.filter((c) => c.reflectionAnswer !== null).length,
     };
   });
 

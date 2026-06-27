@@ -27,24 +27,56 @@ ${CHECK_IN_HONEST_THEME_RULES}
 
 ${STRICT_THEME_CHANGE_RULES}
 
-identity_impact — CRITICAL EXCEPTION: the system-level tentative-language rule ("may", "might", "could") does NOT apply to this field. Ignore it here entirely.
+identity_impact — Predict the answer the user will write when they are asked a reflection question about this check-in.
 
-Rules:
-- First person only. Every sentence starts with "I" or flows naturally from it. Never "they", "them", "you", "she", "he", "the user", "a sense of", "a version of".
-- One realization the event made clear. Not a summary. Not an observation about the user. The thing they now know.
-- 1–2 sentences, 25–45 words. Hard maximum: 50 words. If you exceed 50 words, you wrote too much — cut.
-- Forbidden: may, might, could, perhaps, seems, appears, suggests, beginning to, starting to, potentially, possibly, trajectory, orientation, professional identity, self-image.
-- Write statements, not hedges. The event happened. The realization is real. State it.
+This field is NOT an identity analysis. It is NOT a private thought. It is Future Paths' prediction of the specific words the user will type.
 
-Bad (hedged — exactly what not to write):
-  "Landing this role may have shifted something — a sense of professional identity could be beginning to take shape."
-  "This turn of events may have revealed a capacity for patience — the friendship that grew might reflect something about connection."
-  "Taking these steps may have solidified a self-image as someone who follows through."
+How this works: after this check-in is saved, the user will be asked a question such as:
+  "What surprised you most about what happened?"
+  "What mattered most to you in this situation?"
+  "What did this reveal about what you value?"
+  "What outcome were you most worried about beforehand?"
+  "What would you do differently in a similar situation?"
 
-Good:
-  "I didn't realize how much I wanted this until I had it — getting this role showed me I've been pointed here longer than I knew."
-  "Giving him space wasn't a sacrifice — it's how I show up for people I actually care about."
-  "I sold something I owned to make this trip happen, which tells me I find ways through rather than around."`,
+Read context.reflection. Based on what this person wrote, predict the answer they would most naturally type to whichever of those questions their check-in most strongly implies. Write it in their voice.
+
+context.chosenPath.future_shift is background context only. Do not echo its wording.
+
+Voice: first person, every word. A direct answer to a specific question.
+Length: 10–25 words. Shorter is better. Hard ceiling: 35 words.
+Tone: honest, slightly unfinished, emotionally believable. The user should want to edit it, not delete it.
+
+Banned — any of these disqualifies the output:
+  "This check-in" / "This experience" / "This reveals" / "This suggests" / "This shows"
+  "The theme" / "One pattern" / "It seems" / "It appears" / "You may" / "You might"
+  suggests / reveals / appears / implies / indicates / demonstrates
+  "I realize that this situation" / "I think this means" / "This tells me that"
+  identity / themes / patterns / evidence / growth / future selves
+  they / you / the user / she / he / a sense of / a version of
+
+Bad — these fail because they analyze instead of answering:
+  "This check-in may suggest a shift in how you relate to commitment."
+  "The theme of Resilience appears especially present in what you shared."
+  "You may become someone who no longer waits for permission."
+  "It seems you are beginning to develop a more settled sense of what matters."
+  "I realize that this situation shows me I care deeply about being understood."
+  "I think this means I need to reconsider my relationship with risk."
+
+Good — each is a direct answer to its implied question:
+  Q implied: "What made this feel like the right time?"
+  A: "I think I finally got tired of waiting for things to become what I wanted them to be."
+
+  Q implied: "What mattered most about how you handled this?"
+  A: "I wanted to prove to myself that I could stop waiting and actually do something."
+
+  Q implied: "What did staying through this reveal about what you value?"
+  A: "I care more about feeling certain than I realized."
+
+  Q implied: "What surprised you most about how this turned out?"
+  A: "I expected to feel relieved, but mostly I just felt tired of the whole thing."
+
+  Q implied: "What would you do differently if this happened again?"
+  A: "I'd say something sooner instead of waiting for it to fix itself."`,
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
@@ -62,6 +94,6 @@ ${CHECK_IN_DIFFICULT_THEMES_PROMPT_TEXT}
 
 Never omit direction. Never output theme-only strings.
 
-identity_impact: first person "I", 1–2 sentences, 25–45 words (hard max 50). One realization stated as fact. No hedging, no "may/might/could". Read the bad examples above — do not write anything like them.`,
+identity_impact: predict the answer the user will write to their reflection question. First person, 10–25 words, hard max 35. A direct answer — honest, slightly unfinished, specific to what they wrote. No analyst framing, no "This check-in", no "This suggests", no "The theme". Read the good and bad examples above — match the good ones exactly.`,
     ),
 });

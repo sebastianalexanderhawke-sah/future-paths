@@ -39,15 +39,37 @@ function ReflectionCard({ checkIn }: { checkIn: ReflectionCheckIn }) {
 }
 
 export function CompletedReflectionsList({ checkIns }: CompletedReflectionsListProps) {
+  const [open, setOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
 
   const recent = checkIns.slice(0, RECENT_COUNT);
   const older = checkIns.slice(RECENT_COUNT);
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-sm text-zinc-500 hover:text-zinc-700"
+      >
+        ▼ View completed reflections ({checkIns.length})
+      </button>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-10">
       <section>
-        <h2 className="text-sm font-medium text-zinc-900">Recent reflections</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-zinc-900">Recent reflections</h2>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="text-sm text-zinc-500 hover:text-zinc-700"
+          >
+            Collapse ↑
+          </button>
+        </div>
         <div className="mt-4 flex flex-col gap-4">
           {recent.map((checkIn) => (
             <ReflectionCard key={checkIn.id} checkIn={checkIn} />

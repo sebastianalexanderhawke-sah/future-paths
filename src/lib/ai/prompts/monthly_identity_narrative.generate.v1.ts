@@ -9,7 +9,6 @@ import {
   MONTHLY_IDENTITY_NARRATIVE_PURPOSE,
   MONTHLY_IDENTITY_NARRATIVE_REQUIRED_FIELDS,
   MONTHLY_IDENTITY_NARRATIVE_STYLE_RULES,
-  MONTHLY_IDENTITY_NARRATIVE_WHY_CHANGED_RULES,
 } from "@/lib/ai/prompts/shared/monthly-identity-narrative-instructions";
 
 export const monthlyIdentityNarrativeGenerateV1 = createPromptModule({
@@ -25,8 +24,6 @@ ${MONTHLY_IDENTITY_NARRATIVE_HEADLINE_RULES}
 
 ${MONTHLY_IDENTITY_NARRATIVE_OPENING_RULES}
 
-${MONTHLY_IDENTITY_NARRATIVE_WHY_CHANGED_RULES}
-
 ${MONTHLY_IDENTITY_NARRATIVE_STYLE_RULES}
 
 ${MONTHLY_IDENTITY_NARRATIVE_DATA_PRIORITY}`,
@@ -37,6 +34,6 @@ ${MONTHLY_IDENTITY_NARRATIVE_DATA_PRIORITY}`,
 
 Each narrative.month MUST exactly match the corresponding context.monthlyIdentityEvolution[].month string.
 
-Do not restate dominantThemes, majorDecisions, or futureShifts in your output, and do not produce a "How you changed" list — that's computed deterministically and rendered separately. Only produce month, headline, opening_beginning, opening_end, and why_this_changed.`,
+Do not restate dominantThemes, majorDecisions, or futureShifts in your output, and do not produce a "How you changed" list — that's computed deterministically and rendered separately. Only produce month, headline, opening_beginning, and opening_end.`,
     ),
 });

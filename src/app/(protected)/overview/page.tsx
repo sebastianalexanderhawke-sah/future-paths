@@ -13,30 +13,16 @@ import {
   getLastCheckInsForMoments,
 } from "@/lib/check-ins";
 import { getCurrentSelf } from "@/lib/current-self";
-import { listActiveFutureSelves, loadFutureSelfImpactByPath } from "@/lib/future-selves";
+import { listActiveFutureSelves } from "@/lib/future-selves";
 import { listArchivedMoments, listMoments } from "@/lib/moments";
+import { loadMonthlyIdentityNarratives } from "@/lib/monthly-identity-narrative";
 import { getChosenPathsForMoments } from "@/lib/paths";
 import { getUnansweredReflectionSummary } from "@/lib/reflections";
 import { formatRelativeTime, isCheckInStale } from "@/lib/relative-time";
-import { listRecentTimelineEvents } from "@/lib/timeline";
-import type { Moment, TimelineEvent } from "@/types/database";
+import type { Moment } from "@/types/database";
 
 const ATTENTION_VISIBLE_LIMIT = 5;
-const TIMELINE_VISIBLE_LIMIT = 5;
-// Event types that represent an actual identity-relevant moment, not the
-// procedural mechanics of creating a situation or generating options.
-const IDENTITY_TIMELINE_EVENT_TYPES = new Set<TimelineEvent["event_type"]>([
-  "path_chosen",
-  "identity_update",
-  "check_in_recorded",
-]);
-
-function formatMonthYear(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
-}
+const MONTHLY_OVERVIEW_LIMIT = 3;
 
 function formatResolvedDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString(undefined, {
@@ -53,14 +39,6 @@ function toCompactHeadline(text: string): string {
   return toFirstSentence(text.replace(/^reality:\s*/i, "").trim());
 }
 
-function timelineEventHeadline(event: TimelineEvent): string {
-  if (event.event_type === "identity_update") {
-    return toFirstSentence(event.title);
-  }
-
-  return toCompactHeadline(event.summary ?? event.title);
-}
-
 export default async function OverviewPage() {
   const [
     momentsResult,
@@ -68,16 +46,14 @@ export default async function OverviewPage() {
     futuresResult,
     currentSelfResult,
     reflectionSummaryResult,
-    timelineEventsResult,
-    futureSelfImpactByPath,
+    narrativesResult,
   ] = await Promise.all([
     listMoments(),
     listArchivedMoments(),
     listActiveFutureSelves(3),
     getCurrentSelf(),
     getUnansweredReflectionSummary(),
-    listRecentTimelineEvents(20),
-    loadFutureSelfImpactByPath(),
+    loadMonthlyIdentityNarratives(),
   ]);
 
   const situations = "moments" in momentsResult ? momentsResult.moments : [];
@@ -88,7 +64,7 @@ export default async function OverviewPage() {
   const pendingReflection =
     "pending" in reflectionSummaryResult ? reflectionSummaryResult.pending : null;
 
-  const timelineEvents = "events" in timelineEventsResult ? timelineEventsResult.events : [];
+  const monthlyNarratives = "narratives" in narrativesResult ? narrativesResult.narratives.slice(0, MONTHLY_OVERVIEW_LIMIT) : [];
 
   const momentIds = situations.map((m) => m.id);
   const [chosenPaths, lastCheckIns, lastRealities] = await Promise.all([
@@ -153,12 +129,6 @@ export default async function OverviewPage() {
     )
     .sort((a, b) => new Date(b.reality.created_at).getTime() - new Date(a.reality.created_at).getTime())
     .slice(0, 5);
-
-  // Timeline: identity-relevant events (a path chosen, a reality lived, an
-  // identity shift detected) — not raw "situation created" entries.
-  const timelineItems = timelineEvents
-    .filter((event) => IDENTITY_TIMELINE_EVENT_TYPES.has(event.event_type))
-    .slice(0, TIMELINE_VISIBLE_LIMIT);
 
   return (
     <OverviewPageShell header={<OverviewHeader />}>
@@ -280,50 +250,24 @@ export default async function OverviewPage() {
       {/* 6. FUTURE SELVES — who might I be becoming? */}
       <FutureSelfHomeSection futureSelves={futureSelves} />
 
-      {/* 7. TIMELINE — meaningful identity events, not raw situation names */}
-      {timelineItems.length > 0 ? (
+      {/* 7. TIMELINE — one card per month, newest first */}
+      {monthlyNarratives.length > 0 ? (
         <OverviewSection label="Timeline" title="Recent chapters" viewAllHref="/timeline">
-          <ul className="flex flex-col gap-2">
-            {timelineItems.map((event) => {
-              const headline = timelineEventHeadline(event);
-              const momentId = event.metadata.moment_id;
-              const impact =
-                event.event_type === "path_chosen" && event.metadata.path_id
-                  ? futureSelfImpactByPath.get(event.metadata.path_id)
-                  : undefined;
-
+          <ul className="flex flex-col gap-3">
+            {monthlyNarratives.map((narrative) => {
+              const { situationCount, checkInCount, reflectionCount } = narrative;
               return (
-                <li key={event.id} className="flex flex-col gap-1">
-                  <div className="flex items-baseline gap-3">
-                    <span className="w-28 shrink-0 text-xs text-zinc-400">
-                      {formatMonthYear(event.occurred_at)}
-                    </span>
-                    {momentId ? (
-                      <Link
-                        href={`/moments/${momentId}`}
-                        className="text-sm text-zinc-900 hover:underline underline-offset-2"
-                      >
-                        {headline}
-                      </Link>
-                    ) : (
-                      <span className="text-sm text-zinc-900">{headline}</span>
-                    )}
-                  </div>
-                  {impact && impact.length > 0 ? (
-                    <div className="ml-28 flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-3">
-                      <span className="text-xs text-zinc-400">Future impact:</span>
-                      {impact.slice(0, 3).map((entry) => (
-                        <span
-                          key={entry.futureSelfId}
-                          className={`text-xs ${entry.delta > 0 ? "text-emerald-600" : "text-rose-600"}`}
-                        >
-                          {entry.delta > 0 ? "↑" : "↓"} {entry.name} (
-                          {entry.delta > 0 ? "+" : ""}
-                          {entry.delta})
-                        </span>
-                      ))}
-                    </div>
+                <li key={narrative.month} className="rounded-lg border border-zinc-200 bg-white px-5 py-4">
+                  <p className="text-xs text-zinc-400">{narrative.month}</p>
+                  <p className="mt-1 text-sm font-medium text-zinc-900">{narrative.headline}</p>
+                  {narrative.openingBeginning ? (
+                    <p className="mt-1.5 text-sm text-zinc-600">
+                      {toFirstSentence(narrative.openingBeginning)}
+                    </p>
                   ) : null}
+                  <p className="mt-3 text-xs text-zinc-400">
+                    {situationCount} {situationCount === 1 ? "situation" : "situations"} · {checkInCount} {checkInCount === 1 ? "check-in" : "check-ins"} · {reflectionCount} {reflectionCount === 1 ? "reflection" : "reflections"}
+                  </p>
                 </li>
               );
             })}

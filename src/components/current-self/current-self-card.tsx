@@ -49,13 +49,23 @@ export function CurrentSelfCard({ currentSelf, activity }: CurrentSelfCardProps)
           <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-400 mb-3">
             Core traits
           </h3>
-          <ul className="flex flex-col gap-2">
-            {currentSelf.observations.map((trait) => (
-              <li key={trait} className="flex items-baseline gap-2.5 text-sm text-zinc-700">
-                <span className="shrink-0 text-zinc-300 text-base leading-none">·</span>
-                <span>{trait}</span>
-              </li>
-            ))}
+          <ul className="flex flex-col gap-3">
+            {currentSelf.observations.map((observation) => {
+              const newlineIndex = observation.indexOf("\n");
+              const trait = newlineIndex !== -1 ? observation.slice(0, newlineIndex) : observation;
+              const strength = newlineIndex !== -1 ? observation.slice(newlineIndex + 1) : null;
+              return (
+                <li key={observation} className="flex items-start gap-2.5">
+                  <span className="shrink-0 text-zinc-300 text-base leading-none mt-0.5">·</span>
+                  <div>
+                    <span className="text-sm text-zinc-700">{trait}</span>
+                    {strength ? (
+                      <span className="block text-xs text-zinc-400 mt-0.5">{strength}</span>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </section>
       ) : null}

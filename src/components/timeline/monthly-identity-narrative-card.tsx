@@ -5,6 +5,8 @@ type MonthlyIdentityNarrativeCardProps = {
 };
 
 export function MonthlyIdentityNarrativeCard({ narrative }: MonthlyIdentityNarrativeCardProps) {
+  const { situationCount, checkInCount, reflectionCount } = narrative;
+
   return (
     <article className="rounded-lg border border-zinc-200 bg-white p-6">
       <p className="text-xs text-zinc-400">{narrative.month}</p>
@@ -28,16 +30,14 @@ export function MonthlyIdentityNarrativeCard({ narrative }: MonthlyIdentityNarra
         </div>
       ) : null}
 
-      {narrative.whyThisChanged ? (
-        <div className="mt-5">
-          <h4 className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-            Why this changed
-          </h4>
-          <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">
-            {narrative.whyThisChanged}
-          </p>
-        </div>
-      ) : null}
+      <div className="mt-5">
+        <h4 className="text-xs font-medium uppercase tracking-wide text-zinc-400">Evidence</h4>
+        <p className="mt-1.5 text-sm text-zinc-600">
+          {situationCount} {situationCount === 1 ? "situation" : "situations"} · {checkInCount}{" "}
+          {checkInCount === 1 ? "check-in" : "check-ins"} · {reflectionCount}{" "}
+          {reflectionCount === 1 ? "reflection" : "reflections"}
+        </p>
+      </div>
     </article>
   );
 }

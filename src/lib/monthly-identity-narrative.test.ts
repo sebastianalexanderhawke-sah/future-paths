@@ -178,7 +178,7 @@ describe("loadMonthlyIdentityNarratives", () => {
     runStructuredGenerationMock.mockClear();
   });
 
-  it("merges AI-generated headline/opening/why-changed with the deterministic how-you-changed bullets", async () => {
+  it("merges AI-generated headline/opening with the deterministic how-you-changed bullets and evidence counts", async () => {
     setActiveStub(createSupabaseStub(ONE_MONTH_OF_DATA));
     runStructuredGenerationMock.mockResolvedValueOnce({
       ok: true,
@@ -186,10 +186,8 @@ describe("loadMonthlyIdentityNarratives", () => {
         {
           month: "June 2026",
           headline: "Decisions started getting made before certainty arrived.",
-          opening_beginning: "At the beginning of the month, plans waited for a clearer picture.",
-          opening_end: "By the end of the month, action came first and the picture filled in after.",
-          why_this_changed:
-            "Repeated decisions made under pressure reinforced the same response each time.",
+          opening_beginning: "Plans waited for a clearer picture.",
+          opening_end: "Action came first and the picture filled in after.",
         },
       ],
     });
@@ -201,13 +199,14 @@ describe("loadMonthlyIdentityNarratives", () => {
       {
         month: "June 2026",
         headline: "Decisions started getting made before certainty arrived.",
-        openingBeginning: "At the beginning of the month, plans waited for a clearer picture.",
-        openingEnd: "By the end of the month, action came first and the picture filled in after.",
+        openingBeginning: "Plans waited for a clearer picture.",
+        openingEnd: "Action came first and the picture filled in after.",
         howYouChanged: ["You became more willing to act without certainty."],
-        whyThisChanged:
-          "Repeated decisions made under pressure reinforced the same response each time.",
         previousMonth: null,
         comparison: { traitsMorePresent: ["Courage"], traitsLessPresent: [] },
+        situationCount: 1,
+        checkInCount: 0,
+        reflectionCount: 0,
       },
     ]);
   });
@@ -269,9 +268,11 @@ describe("loadMonthlyIdentityNarratives", () => {
         openingBeginning: "",
         openingEnd: "",
         howYouChanged: ["You became more willing to act without certainty."],
-        whyThisChanged: "",
         previousMonth: null,
         comparison: { traitsMorePresent: ["Courage"], traitsLessPresent: [] },
+        situationCount: 1,
+        checkInCount: 0,
+        reflectionCount: 0,
       },
     ]);
   });

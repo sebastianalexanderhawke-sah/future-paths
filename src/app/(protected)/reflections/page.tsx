@@ -5,8 +5,6 @@ import { ReflectionPredictionCard } from "@/components/reflections/reflection-pr
 import { SituationTitleExpander } from "@/components/reflections/situation-title-expander";
 import { listReflectionCheckIns } from "@/lib/reflections";
 
-const UPCOMING_PREVIEW = 3;
-
 export default async function ReflectionsPage() {
   const result = await listReflectionCheckIns();
 
@@ -33,13 +31,8 @@ export default async function ReflectionsPage() {
   const unanswered = result.checkIns.filter((c) => !c.reflection_answer);
   // Oldest unanswered = last element of the newest-first array.
   const pending = unanswered.length > 0 ? unanswered[unanswered.length - 1] : null;
-  // Upcoming = remaining unanswered in queue order (oldest-next first).
-  // Slice off the last element (pending), then reverse so 2nd-oldest is first.
-  const upcoming = pending
-    ? unanswered.slice(0, unanswered.length - 1).reverse()
-    : [];
-  const upcomingPreview = upcoming.slice(0, UPCOMING_PREVIEW);
-  const upcomingOverflow = Math.max(0, upcoming.length - UPCOMING_PREVIEW);
+  // Count of waiting reflections beyond the active one.
+  const waitingCount = pending ? unanswered.length - 1 : 0;
   // Completed = only reflections the user has explicitly answered.
   const completed = result.checkIns.filter((c) => !!c.reflection_answer);
 
@@ -75,38 +68,14 @@ export default async function ReflectionsPage() {
                 <div className="mt-5">
                   <ReflectionPredictionCard
                     checkInId={pending.id}
-                    identityImpact={pending.identity_impact}
                   />
                 </div>
               </article>
 
-              {/* Upcoming queue — read-only previews */}
-              {upcomingPreview.length > 0 ? (
-                <div>
-                  <p className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-400">
-                    Up next
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    {upcomingPreview.map((checkIn) => (
-                      <div
-                        key={checkIn.id}
-                        className="rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3.5"
-                      >
-                        <p className="text-xs font-medium text-zinc-400">
-                          {checkIn.moment.title}
-                        </p>
-                        <p className="mt-1 text-sm text-zinc-500">
-                          {checkIn.reflection_question}
-                        </p>
-                      </div>
-                    ))}
-                    {upcomingOverflow > 0 ? (
-                      <p className="px-1 text-xs text-zinc-400">
-                        +{upcomingOverflow} more in queue
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
+              {waitingCount > 0 ? (
+                <p className="px-1 text-xs text-zinc-400">
+                  {waitingCount} more {waitingCount === 1 ? "reflection" : "reflections"} waiting
+                </p>
               ) : null}
             </div>
           ) : (

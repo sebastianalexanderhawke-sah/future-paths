@@ -13,7 +13,21 @@ export const GENERATION_PREFERENCE_LIST = `Generation preference list (use these
 - concrete outcomes the user could observe in real life within months`;
 
 export const CROSSROAD_PATH_RULES = `Path rules (Decision Simulator):
-- Default to exactly 5 distinct strategies. Only generate 6 or 7 if the situation genuinely supports that many MEANINGFULLY DISTINCT approaches — each representing a different underlying strategy or posture, not a variation of another path. Do not pad to reach 6 or 7, and never exceed 7.
+
+Path count — 5 minimum, 5 default, 7 maximum:
+- Generate five paths. Then evaluate whether the available evidence supports another genuinely distinct future not already represented. If so, generate a sixth path. Repeat this evaluation once more for a possible seventh path. Otherwise stop.
+- Do not generate an additional path unless the evidence justifies it. Never exceed 7. Five excellent paths are always better than seven repetitive ones.
+
+How to decide between 5, 6, or 7 — evaluate branching complexity, not apparent seriousness:
+- Do not judge the size or weight of the decision to determine path count. A seemingly small decision may have many genuinely distinct futures. A seemingly large decision may have only five.
+- Instead, evaluate how many meaningfully distinct futures are supported by: the specific situation, the user's follow-up answers, existing identity context, the uncertainty within the decision, and the number of plausible outcomes that lead somewhere different.
+
+A sixth or seventh path is only justified if all three conditions are met:
+- It represents a meaningfully different future — a different underlying posture or strategy, not a variation of one already generated.
+- It would lead to materially different downstream outcomes — the forecasts, consequences, and future_shift it produces would differ substantially from every other path.
+- A user reading it would feel they are considering a genuinely different possibility, not another version of the same outcome.
+
+Do not justify an additional path through timing differences, confidence differences, wording, logistics, or minor variations of an existing path. Do not add filler paths. Do not create weaker versions of existing paths. Do not split one future into two nearly identical futures.
 - Each path must include a native title and a description.
 - path.title must be 2-6 words, human-readable, strategy-oriented, and stand on its own.
 - Good titles: "Ask Her Out", "Friendship First", "Launch The MVP", "Find A Co-Founder", "Take The Job", "Stay Where You Are".
@@ -31,6 +45,12 @@ export const CROSSROAD_PATH_RULES = `Path rules (Decision Simulator):
   Before finalising, check each path against every context answer: does this path state or imply the opposite of something the user explicitly said? If so, rewrite the path to fit what the user actually said.
 
 - Distinct-strategy rule: Paths must represent genuinely different approaches, not the same underlying strategy said two different ways. Before finalising, check each pair of paths: if both paths would lead the user to do essentially the same thing (e.g. two variations of "reach out and explain yourself"), merge them and replace one with a path built on a different underlying posture — for example, when the situation involves another person, draw from a mix of postures like: re-engage/reconnect, confront/address directly, create distance, accept and let go, or seek closure without re-engaging. Not every situation supports all of these, but no two paths should land on the same posture.
+
+- Future-first rule: When evaluating whether paths are truly distinct, do not ask "is this a different action?" Ask: "If this path became reality, how would the person's life meaningfully differ one year from now?" Vary the future that follows, not only the decision being made. Two paths that take different actions but converge on the same life outcome are not distinct — merge them and replace one.
+
+- Reframe rule: At least one path should reframe the decision rather than simply choosing between the visible options. A reframe path asks: what if the user is solving the wrong problem, or taking a constraint for granted that is not actually fixed? This path must be realistic and grounded in the user's actual situation — not abstract advice, not a general life direction, not philosophical. If no genuine reframe exists in the evidence, do not manufacture one.
+
+- Insight rule: At least one path should surface something the user may not have considered. Do not force novelty. Do not invent unrealistic options. Do not be clever for its own sake. Look for an option that is genuinely available but not visible from the user's current framing of the problem. If the evidence does not support one, do not include it.
 
 - Move-on rule: When the situation centres on whether to reconnect, re-engage, or pursue something involving another person, at least one path must represent deliberately choosing NOT to pursue it — accepting the situation as it stands and moving forward without re-engaging. This is a distinct, dignified choice, not the same as "wait and see" (which is passive and temporary). Only include this if genuinely relevant to the situation; not all situations involve a relationship to disengage from.`;
 

@@ -27,7 +27,7 @@ export function generateMockCheckIn(input: {
     ? `Regarding "${moment.title}", you noted: "${reflectionSnippet}". What happened may reflect how your choice to ${path.description.toLowerCase()} is unfolding in real life.`
     : `Regarding "${moment.title}", you noted: "${reflectionSnippet}". What happened may reflect how your chosen direction is unfolding in real life.`;
 
-  const identity_impact = `This check-in may suggest movement toward ${path.future_shift.toLowerCase()} The theme of ${primaryTheme} appears especially present in what you shared.`;
+  const identity_impact = `Going through this showed me I'm genuinely moving toward ${path.future_shift.toLowerCase()} — the way ${primaryTheme.toLowerCase()} kept coming up made that obvious.`;
 
   return {
     reality_summary,
