@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+@keyframes scrollBall {
+  0%   { transform: translateX(-50%) translateY(0);   opacity: 1; }
+  80%  { transform: translateX(-50%) translateY(8px); opacity: 0; }
+  100% { transform: translateX(-50%) translateY(8px); opacity: 0; }
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
 /* ── Light mode (warm linen canvas) ─────────────────────────────────────── */
 
 :root {

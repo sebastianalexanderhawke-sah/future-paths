@@ -1,166 +1,205 @@
 import Link from "next/link";
 
 import { OverviewSection } from "@/components/overview/overview-section";
-import { getFutureSelfTrend } from "@/lib/future-self-trend";
 import type { FutureSelf } from "@/types/database";
 
-type FutureSelfHomeSectionProps = {
-  futureSelves: FutureSelf[];
-};
+type Props = { futureSelves: FutureSelf[] };
 
-const FS_COLORS = [
-  { bg: "#0A1208", border: "#101E0E", text: "#34D399", label: "PATH 1" },
-  { bg: "#0E0A00", border: "#1C1400", text: "#F59E0B", label: "PATH 2" },
-  { bg: "#080C16", border: "#0E1428", text: "#38BDF8", label: "PATH 3" },
-];
+const RING_COLORS = ["#8b7cf8", "#f59e0b", "#60a5fa"];
 
-export function FutureSelfHomeSection({ futureSelves }: FutureSelfHomeSectionProps) {
+function percentage(fs: FutureSelf) {
+  return Math.min(100, Math.max(0, fs.percentage));
+}
+
+function dashOffset(pct: number) {
+  const circumference = 226;
+  return circumference - (pct / 100) * circumference;
+}
+
+export function FutureSelfHomeSection({ futureSelves }: Props) {
   if (futureSelves.length === 0) return null;
 
+  const displayed = futureSelves.slice(0, 3);
+
   return (
-    <OverviewSection
-      label="Becoming"
-      title="Who you might become"
-      viewAllHref="/future-selves"
-      viewAllLabel="View all →"
-    >
+    <OverviewSection id="future-selves">
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: "10px",
+          background: "#f0efeb",
+          borderRadius: "22px",
+          overflow: "hidden",
+          position: "relative",
+          color: "#0a0a0a",
+          padding: "38px 44px",
         }}
       >
-        {futureSelves.slice(0, 3).map((fs, i) => {
-          const c = FS_COLORS[i % FS_COLORS.length]!;
-          const { delta, direction } = getFutureSelfTrend(fs);
-          const trendStr =
-            direction === "up"
-              ? `↑ +${delta}`
-              : direction === "down"
-                ? `↓ ${delta}`
-                : null;
+        {/* Arrow button */}
+        <Link
+          href="/future-selves"
+          style={{
+            position: "absolute",
+            top: "28px",
+            right: "28px",
+            width: "36px",
+            height: "36px",
+            borderRadius: "50%",
+            background: "#fff",
+            border: "1px solid rgba(0,0,0,0.08)",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textDecoration: "none",
+            fontSize: "15px",
+            color: "#111",
+          }}
+        >
+          →
+        </Link>
 
-          return (
-            <Link
-              key={fs.id}
-              href="/future-selves"
+        {/* Tag */}
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "#eeedfb",
+            borderRadius: "10px",
+            padding: "5px 12px",
+            marginBottom: "24px",
+          }}
+        >
+          <span
+            style={{
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              background: "#8b7cf8",
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.13em",
+              textTransform: "uppercase",
+              color: "#8b7cf8",
+            }}
+          >
+            Future Selves
+          </span>
+        </div>
+
+        {/* Grid: text left, rings right */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto",
+            alignItems: "center",
+            gap: "40px",
+          }}
+        >
+          {/* Left: title + desc */}
+          <div>
+            <p
               style={{
-                backgroundColor: c.bg,
-                border: `1px solid ${c.border}`,
-                borderRadius: "16px",
-                padding: "18px",
-                cursor: "pointer",
-                minHeight: "148px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-                textDecoration: "none",
-                transition: "border-color 0.2s",
+                fontSize: "24px",
+                fontWeight: 700,
+                color: "#111",
+                lineHeight: 1.25,
+                letterSpacing: "-0.4px",
+                marginBottom: "8px",
               }}
-              className="hover:border-[#222]"
             >
-              {/* Tag */}
-              <span
-                style={{
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  opacity: 0.3,
-                  color: c.text,
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-              >
-                {c.label}
-              </span>
+              Multiple versions of your future.
+            </p>
+            <p style={{ fontSize: "13px", color: "#888", lineHeight: 1.5 }}>
+              Possible trajectories based on your choices.
+            </p>
+          </div>
 
-              {/* Name */}
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 500,
-                  lineHeight: 1.45,
-                  flex: 1,
-                  color: c.text,
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-              >
-                {fs.name}
-              </span>
+          {/* Right: progress rings */}
+          <div style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
+            {displayed.map((fs, i) => {
+              const pct = percentage(fs);
+              const offset = dashOffset(pct);
+              const color = RING_COLORS[i % RING_COLORS.length]!;
 
-              {/* Bottom */}
-              <div>
-                {/* Pct + trend */}
+              return (
                 <div
+                  key={fs.id}
                   style={{
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                    marginBottom: "6px",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "8px",
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: "30px",
-                      fontWeight: 800,
-                      letterSpacing: "-1px",
-                      color: c.text,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {fs.percentage}%
-                  </span>
-                  {trendStr ? (
+                  {/* SVG ring */}
+                  <div style={{ position: "relative", width: "86px", height: "86px" }}>
+                    <svg
+                      width="86"
+                      height="86"
+                      viewBox="0 0 86 86"
+                      style={{ transform: "rotate(-90deg)" }}
+                    >
+                      {/* Track */}
+                      <circle
+                        cx="43"
+                        cy="43"
+                        r="36"
+                        fill="none"
+                        stroke="#e8e6de"
+                        strokeWidth="7"
+                      />
+                      {/* Fill */}
+                      <circle
+                        cx="43"
+                        cy="43"
+                        r="36"
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="7"
+                        strokeLinecap="round"
+                        strokeDasharray="226"
+                        strokeDashoffset={offset}
+                      />
+                    </svg>
+                    {/* Centered text */}
                     <span
                       style={{
-                        fontSize: "10px",
-                        color: "#1E1E2E",
-                        fontFamily: "system-ui, -apple-system, sans-serif",
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "16px",
+                        fontWeight: 800,
+                        color: "#111",
                       }}
                     >
-                      {trendStr}
+                      {pct}%
                     </span>
-                  ) : null}
-                </div>
+                  </div>
 
-                {/* Progress bar */}
-                <div
-                  style={{
-                    height: "2px",
-                    backgroundColor: "rgba(255,255,255,0.04)",
-                    borderRadius: "2px",
-                    overflow: "hidden",
-                    marginBottom: "8px",
-                  }}
-                >
-                  <div
+                  {/* Name */}
+                  <span
                     style={{
-                      width: `${fs.percentage}%`,
-                      height: "100%",
-                      backgroundColor: c.text,
-                      borderRadius: "2px",
+                      fontSize: "11px",
+                      color: "#777",
+                      textAlign: "center",
+                      maxWidth: "80px",
+                      lineHeight: 1.3,
                     }}
-                  />
+                  >
+                    {fs.name}
+                  </span>
                 </div>
-
-                {/* Evidence */}
-                <span
-                  style={{
-                    fontSize: "9px",
-                    opacity: 0.2,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    color: "#fff",
-                    fontFamily: "system-ui, -apple-system, sans-serif",
-                  }}
-                >
-                  {fs.evidence_strength} evidence
-                </span>
-              </div>
-            </Link>
-          );
-        })}
+              );
+            })}
+          </div>
+        </div>
       </div>
     </OverviewSection>
   );

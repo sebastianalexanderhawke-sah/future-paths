@@ -6,17 +6,24 @@ export function OverviewHeader() {
   return (
     <header
       style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "56px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        height: "54px",
-        padding: "0 18px",
-        backgroundColor: "#060606",
-        borderBottom: "1px solid #0F0F0F",
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        padding: "0 32px",
+        background: "rgba(10,10,10,0.95)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid #141414",
+        zIndex: 200,
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
       }}
     >
-      {/* Logo */}
       <span
         style={{
           color: "#fff",
@@ -28,43 +35,48 @@ export function OverviewHeader() {
         Future Paths
       </span>
 
-      {/* Right side */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        {/* Avatar circle */}
-        <form action={signOut} style={{ display: "flex", alignItems: "center" }}>
-          <button
-            type="submit"
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "50%",
-              backgroundColor: "#141414",
-              border: "1px solid #1A1A1A",
-              cursor: "pointer",
-              padding: 0,
-            }}
-            title="Sign out"
-            aria-label="Sign out"
-          />
-        </form>
-
-        {/* New situation button */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <Link
           href="/situations/new"
           style={{
             backgroundColor: "#fff",
             color: "#000",
-            borderRadius: "20px",
-            padding: "7px 16px",
-            fontSize: "12px",
+            borderRadius: "24px",
+            padding: "9px 20px",
+            fontSize: "13px",
             fontWeight: 700,
             textDecoration: "none",
             display: "inline-block",
             lineHeight: 1,
           }}
         >
-          New situation
+          + New situation
         </Link>
+
+        <form action={signOut} style={{ display: "flex", alignItems: "center" }}>
+          <button
+            type="submit"
+            title="Sign out"
+            aria-label="Sign out"
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "50%",
+              background: "#1e1e1e",
+              border: "1px solid #2a2a2a",
+              color: "#666",
+              fontSize: "13px",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+            }}
+          >
+            A
+          </button>
+        </form>
       </div>
     </header>
   );

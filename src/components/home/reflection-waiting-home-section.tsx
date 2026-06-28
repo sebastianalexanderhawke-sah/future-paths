@@ -2,66 +2,42 @@ import Link from "next/link";
 
 import type { ReflectionCheckIn } from "@/lib/reflections";
 
-type ReflectionWaitingHomeSectionProps = {
-  pending: ReflectionCheckIn | null;
-};
+type Props = { pending: ReflectionCheckIn | null };
 
-export function ReflectionWaitingHomeSection({ pending }: ReflectionWaitingHomeSectionProps) {
+export function ReflectionWaitingHomeSection({ pending }: Props) {
   if (!pending) return null;
 
   return (
     <div
       style={{
-        backgroundColor: "#0C0A18",
-        border: "1px solid #161228",
+        background: "#f4f0ff",
         borderRadius: "16px",
-        padding: "24px",
+        padding: "28px",
         position: "relative",
         overflow: "hidden",
-        marginBottom: "10px",
-        transition: "border-color 0.2s",
+        color: "#0a0a0a",
       }}
-      className="hover:border-[#222]"
     >
-      {/* Top-left glow */}
+      {/* Tag */}
       <div
         style={{
-          position: "absolute",
-          top: "-40px",
-          left: "-40px",
-          width: "160px",
-          height: "160px",
-          background: "radial-gradient(circle, #8B7CF808, transparent)",
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* Eyebrow */}
-      <div
-        style={{
-          display: "flex",
+          display: "inline-flex",
           alignItems: "center",
-          gap: "6px",
-          marginBottom: "8px",
+          gap: "8px",
+          background: "#ede8ff",
+          borderRadius: "10px",
+          padding: "5px 12px",
+          marginBottom: "16px",
         }}
       >
+        <span style={{ fontSize: "12px", color: "#8b7cf8" }}>✦</span>
         <span
           style={{
-            width: "6px",
-            height: "6px",
-            borderRadius: "50%",
-            backgroundColor: "#A78BFA",
-            flexShrink: 0,
-          }}
-        />
-        <span
-          style={{
-            fontSize: "9px",
+            fontSize: "11px",
             fontWeight: 700,
-            letterSpacing: "0.12em",
-            color: "#2E2050",
+            letterSpacing: "0.13em",
             textTransform: "uppercase",
-            fontFamily: "system-ui, -apple-system, sans-serif",
+            color: "#6d5ce6",
           }}
         >
           Reflection Waiting
@@ -71,51 +47,56 @@ export function ReflectionWaitingHomeSection({ pending }: ReflectionWaitingHomeS
       {/* From label */}
       <p
         style={{
-          fontSize: "11px",
-          color: "#201840",
-          fontWeight: 500,
-          marginBottom: "10px",
-          fontFamily: "system-ui, -apple-system, sans-serif",
+          fontSize: "10px",
+          color: "#9090c0",
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          fontWeight: 600,
+          marginBottom: "4px",
         }}
       >
-        From: {pending.moment.title}
+        From your situation
+      </p>
+      <p
+        style={{
+          fontSize: "11px",
+          color: "#8080b8",
+          marginBottom: "12px",
+        }}
+      >
+        {pending.moment.title}
       </p>
 
       {/* Question */}
       <p
         style={{
-          fontSize: "18px",
-          color: "#C8C0F0",
-          fontWeight: 600,
+          fontSize: "19px",
+          fontWeight: 700,
+          color: "#1e0e60",
           lineHeight: 1.4,
           letterSpacing: "-0.3px",
-          marginBottom: "18px",
-          fontFamily: "system-ui, -apple-system, sans-serif",
+          marginBottom: "16px",
         }}
       >
         {pending.reflection_question}
       </p>
 
-      {/* Visual textarea (links to /reflections for actual answering) */}
+      {/* Textarea visual */}
       <Link href="/reflections" style={{ display: "block", textDecoration: "none" }}>
         <div
           style={{
-            width: "100%",
-            backgroundColor: "#080814",
-            border: "1px solid #14121E",
-            borderRadius: "12px",
+            background: "#fff",
+            border: "1.5px solid #d0c8f8",
+            borderRadius: "11px",
             padding: "14px 16px",
-            color: "#2A2050",
-            fontSize: "13px",
-            height: "72px",
-            cursor: "text",
-            fontFamily: "system-ui, -apple-system, sans-serif",
+            height: "68px",
             display: "flex",
             alignItems: "flex-start",
+            cursor: "text",
           }}
         >
-          <span style={{ color: "#161428", fontSize: "13px" }}>
-            What&apos;s on your mind...
+          <span style={{ fontSize: "13px", color: "#c0b8e8" }}>
+            Take your time...
           </span>
         </div>
       </Link>
@@ -131,33 +112,24 @@ export function ReflectionWaitingHomeSection({ pending }: ReflectionWaitingHomeS
       >
         <Link
           href="/reflections"
-          style={{
-            fontSize: "11px",
-            color: "#1E1830",
-            textDecoration: "none",
-            cursor: "pointer",
-            fontFamily: "system-ui, -apple-system, sans-serif",
-          }}
+          style={{ fontSize: "11px", color: "#a8a0d0", textDecoration: "none" }}
         >
-          Skip
+          Skip for now
         </Link>
         <Link
           href="/reflections"
           style={{
-            background: "linear-gradient(135deg, #7C6AFA, #9B8BFF)",
+            background: "#8b7cf8",
             color: "#fff",
-            border: "none",
             borderRadius: "20px",
-            padding: "9px 20px",
+            padding: "8px 18px",
             fontSize: "12px",
-            fontWeight: 700,
+            fontWeight: 600,
             textDecoration: "none",
             display: "inline-block",
-            fontFamily: "system-ui, -apple-system, sans-serif",
-            cursor: "pointer",
           }}
         >
-          Answer
+          Save reflection
         </Link>
       </div>
     </div>

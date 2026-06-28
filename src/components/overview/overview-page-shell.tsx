@@ -1,3 +1,6 @@
+import { OverviewScrollHint } from "./overview-scroll-hint";
+import { OverviewSidebar } from "./overview-sidebar";
+
 type OverviewPageShellProps = {
   header: React.ReactNode;
   children: React.ReactNode;
@@ -5,14 +8,24 @@ type OverviewPageShellProps = {
 
 export function OverviewPageShell({ header, children }: OverviewPageShellProps) {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#060606" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#0a0a0a",
+        overflowX: "hidden",
+      }}
+    >
       {header}
+      <OverviewSidebar />
+      <OverviewScrollHint />
+
       <main
         style={{
-          maxWidth: "620px",
-          margin: "0 auto",
-          padding: "0 18px",
-          fontFamily: "system-ui, -apple-system, sans-serif",
+          marginLeft: "180px",
+          marginRight: "60px",
+          paddingTop: "56px",
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
         }}
       >
         {children}

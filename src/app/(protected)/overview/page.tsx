@@ -21,7 +21,6 @@ import { getUnansweredReflectionSummary } from "@/lib/reflections";
 import { formatRelativeTime, isCheckInStale } from "@/lib/relative-time";
 import type { Moment } from "@/types/database";
 
-const ATTENTION_VISIBLE_LIMIT = 5;
 const MONTHLY_OVERVIEW_LIMIT = 3;
 
 function formatResolvedDate(dateStr: string): string {
@@ -32,9 +31,6 @@ function formatResolvedDate(dateStr: string): string {
   });
 }
 
-// Check-in reality summaries are stored as "Reality: <fact>. What changed:
-// <delta>." — strip the label and keep just the first clause so homepage
-// entries read as a short headline, not a mini-essay.
 function toCompactHeadline(text: string): string {
   return toFirstSentence(text.replace(/^reality:\s*/i, "").trim());
 }
@@ -46,14 +42,14 @@ function getGreeting(): string {
   return "Good evening";
 }
 
-const FEED_DOT_COLORS = [
-  { border: "#34D399", bg: "#071512" },
-  { border: "#38BDF8", bg: "#060C18" },
-  { border: "#FB7185", bg: "#140810" },
-  { border: "#F59E0B", bg: "#100900" },
+// Feed dot colors (cream card context — visible on #f0efeb)
+const FEED_DOT_COLORS = ["#22c55e", "#22c55e", "#60a5fa", "#f59e0b"];
+const FEED_SITUATION_TAG_COLORS = [
+  "#1a8044",
+  "#1a8044",
+  "#1a58c0",
+  "#b87416",
 ];
-
-const ATTENTION_DOT_COLORS = ["#F59E0B", "#F59E0B", "#F59E0B"];
 
 export default async function OverviewPage() {
   const [
@@ -73,14 +69,21 @@ export default async function OverviewPage() {
   ]);
 
   const situations = "moments" in momentsResult ? momentsResult.moments : [];
-  const resolvedSituations = "moments" in archivedResult ? archivedResult.moments : [];
-  const futureSelves = "futureSelves" in futuresResult ? futuresResult.futureSelves : [];
+  const resolvedSituations =
+    "moments" in archivedResult ? archivedResult.moments : [];
+  const futureSelves =
+    "futureSelves" in futuresResult ? futuresResult.futureSelves : [];
   const currentSelf =
     "currentSelf" in currentSelfResult ? currentSelfResult.currentSelf : null;
   const pendingReflection =
-    "pending" in reflectionSummaryResult ? reflectionSummaryResult.pending : null;
+    "pending" in reflectionSummaryResult
+      ? reflectionSummaryResult.pending
+      : null;
 
-  const monthlyNarratives = "narratives" in narrativesResult ? narrativesResult.narratives.slice(0, MONTHLY_OVERVIEW_LIMIT) : [];
+  const monthlyNarratives =
+    "narratives" in narrativesResult
+      ? narrativesResult.narratives.slice(0, MONTHLY_OVERVIEW_LIMIT)
+      : [];
 
   const momentIds = situations.map((m) => m.id);
   const [chosenPaths, lastCheckIns, lastRealities] = await Promise.all([
@@ -94,22 +97,23 @@ export default async function OverviewPage() {
       id,
       {
         chosenPathTitle: chosenPaths[id],
-        lastCheckIn: lastCheckIns[id] ? { created_at: lastCheckIns[id] } : undefined,
+        lastCheckIn: lastCheckIns[id]
+          ? { created_at: lastCheckIns[id] }
+          : undefined,
       },
     ]),
   );
 
   const hasAnySituations = situations.length > 0;
-
-  // Count situations that have at least one check-in for the stat box
   const checkInCount = momentIds.filter((id) => !!lastCheckIns[id]).length;
 
-  // Needs attention: a small, prioritized stack — not every open thread.
-  // Priority order: overdue check-ins, then a waiting forecast/reflection
-  // follow-up, then situations that were never taken past "exploring."
-  // Anything beyond the visible limit collapses behind "View all" instead of
-  // being silently capped, so nothing is lost — just deferred.
-  type AttentionItem = { key: string; label: string; situationName: string; href: string; priority: number };
+  type AttentionItem = {
+    key: string;
+    label: string;
+    situationName: string;
+    href: string;
+    priority: number;
+  };
   const attentionItems: AttentionItem[] = [];
 
   for (const moment of situations) {
@@ -123,7 +127,6 @@ export default async function OverviewPage() {
       });
     }
   }
-
   for (const moment of situations) {
     if (!enrichments[moment.id]?.chosenPathTitle) {
       attentionItems.push({
@@ -135,28 +138,34 @@ export default async function OverviewPage() {
       });
     }
   }
-
   attentionItems.sort((a, b) => a.priority - b.priority);
-  // Hard limit: show max 3 attention items on overview (per spec)
   const visibleAttentionItems = attentionItems.slice(0, 3);
   const hiddenAttentionCount = Math.max(0, attentionItems.length - 3);
 
-  // Recent reality: the latest lived outcome per situation, as a short
-  // headline + relative time — not the full check-in summary.
   const recentReality = situations
     .map((moment) => ({ moment, reality: lastRealities[moment.id] }))
     .filter(
-      (entry): entry is { moment: Moment; reality: { created_at: string; reality_summary: string } } =>
-        entry.reality !== undefined,
+      (
+        entry,
+      ): entry is {
+        moment: Moment;
+        reality: { created_at: string; reality_summary: string };
+      } => entry.reality !== undefined,
     )
-    .sort((a, b) => new Date(b.reality.created_at).getTime() - new Date(a.reality.created_at).getTime())
+    .sort(
+      (a, b) =>
+        new Date(b.reality.created_at).getTime() -
+        new Date(a.reality.created_at).getTime(),
+    )
     .slice(0, 4);
 
-  // Resolved this month (for the timeline section)
   const now = new Date();
   const currentMonthResolved = resolvedSituations.filter((m) => {
     const d = new Date(m.updated_at);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    return (
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
   });
 
   const greeting = getGreeting();
@@ -165,803 +174,877 @@ export default async function OverviewPage() {
   return (
     <OverviewPageShell header={<OverviewHeader />}>
 
-      {/* ── Greeting ─────────────────────────────────────────── */}
+      {/* ── Greeting ──────────────────────────────────────────── */}
       <div
+        id="top"
         style={{
           textAlign: "center",
-          paddingTop: "48px",
-          paddingBottom: "52px",
-          fontFamily: "system-ui, -apple-system, sans-serif",
+          maxWidth: "800px",
+          margin: "0 auto",
+          padding: "72px 40px 60px",
+          scrollMarginTop: "72px",
         }}
       >
         <p
           style={{
-            fontSize: "10px",
-            color: "#222",
+            fontSize: "11px",
             fontWeight: 700,
-            letterSpacing: "0.1em",
+            letterSpacing: "0.16em",
             textTransform: "uppercase",
-            marginBottom: "10px",
+            color: "#8b7cf8",
+            marginBottom: "24px",
+            fontFamily:
+              "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
           }}
         >
-          {greeting}
+          {greeting.toUpperCase()}
         </p>
+
         <h1
           style={{
-            fontSize: "30px",
-            fontWeight: 700,
-            color: "#C8C8C8",
-            letterSpacing: "-0.8px",
-            lineHeight: 1.15,
+            fontSize: "64px",
+            fontWeight: 800,
+            color: "#fff",
+            letterSpacing: "-2.8px",
+            lineHeight: 1.0,
             margin: 0,
+            fontFamily:
+              "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
           }}
         >
-          Here&apos;s where things
-          <br />
-          stand{" "}
-          <span style={{ color: "#fff", fontWeight: 700 }}>today</span>
+          Here&apos;s where things stand{" "}
+          <span style={{ color: "#8b7cf8" }}>today</span>
         </h1>
-        {/* Divider */}
+
+        <p
+          style={{
+            fontSize: "16px",
+            color: "#222",
+            marginTop: "20px",
+            fontFamily:
+              "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+          }}
+        >
+          Your journey. Your choices. Your future.
+        </p>
+
         <div
           style={{
-            marginTop: "32px",
+            marginTop: "56px",
             height: "1px",
-            background: "linear-gradient(to right, transparent, #15151E, transparent)",
+            background:
+              "linear-gradient(to right, transparent, #141414, transparent)",
           }}
         />
       </div>
 
-      {/* ── Section 1: Current Self ───────────────────────────── */}
-      <CurrentSelfHomeSection currentSelf={currentSelf} />
+      {/* ── Cards stack ───────────────────────────────────────── */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px",
+          padding: "0 40px 80px",
+          maxWidth: "1120px",
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+        }}
+      >
 
-      {/* ── Section 2: Your Situations ───────────────────────── */}
-      {hasAnySituations ? (
-        <OverviewSection
-          label="Situations"
-          title="What you're navigating"
-          viewAllHref="/moments"
-          viewAllLabel="All situations →"
-        >
-          {/* Stats row */}
+        {/* Card 1: Current Self */}
+        <CurrentSelfHomeSection currentSelf={currentSelf} />
+
+        {/* Card 2: Situations */}
+        {hasAnySituations ? (
+          <OverviewSection id="situations">
+            <div
+              style={{
+                background: "#f4f0ff",
+                borderRadius: "22px",
+                overflow: "hidden",
+                position: "relative",
+                color: "#0a0a0a",
+              }}
+            >
+              {/* Arrow button */}
+              <Link
+                href="/moments"
+                style={{
+                  position: "absolute",
+                  top: "28px",
+                  right: "28px",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  background: "#fff",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  fontSize: "15px",
+                  color: "#111",
+                }}
+              >
+                →
+              </Link>
+
+              {/* Top grid */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 200px 200px",
+                  gap: "16px",
+                  padding: "32px 36px 24px",
+                }}
+              >
+                {/* Left: title + desc */}
+                <div style={{ paddingRight: "48px" }}>
+                  {/* Tag */}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      background: "#ede8ff",
+                      borderRadius: "10px",
+                      padding: "5px 12px",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "#8b7cf8",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        letterSpacing: "0.13em",
+                        textTransform: "uppercase",
+                        color: "#6d5ce6",
+                      }}
+                    >
+                      Situations
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: 700,
+                      color: "#111",
+                      lineHeight: 1.25,
+                      letterSpacing: "-0.4px",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    {situations.length} active situation
+                    {situations.length !== 1 ? "s" : ""} shaping your path.
+                  </p>
+                  <p style={{ fontSize: "13px", color: "#888", lineHeight: 1.5 }}>
+                    You&apos;re navigating key areas of your life. Stay
+                    consistent with check-ins.
+                  </p>
+                </div>
+
+                {/* Stat: Active */}
+                <div
+                  style={{
+                    background: "#fff",
+                    border: "1px solid #d8d0f8",
+                    borderRadius: "14px",
+                    padding: "22px 24px",
+                    textAlign: "center",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "#a0a0c0",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Active
+                  </p>
+                  <p
+                    style={{
+                      fontSize: "48px",
+                      fontWeight: 800,
+                      color: "#f59e0b",
+                      letterSpacing: "-1.5px",
+                      lineHeight: 1,
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {situations.length}
+                  </p>
+                  <p style={{ fontSize: "11px", color: "#a0a0c0" }}>
+                    situations open
+                  </p>
+                </div>
+
+                {/* Stat: Check-ins */}
+                <div
+                  style={{
+                    background: "#fff",
+                    border: "1px solid #d8d0f8",
+                    borderRadius: "14px",
+                    padding: "22px 24px",
+                    textAlign: "center",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "#a0a0c0",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Check-ins
+                  </p>
+                  <p
+                    style={{
+                      fontSize: "48px",
+                      fontWeight: 800,
+                      color: "#22c55e",
+                      letterSpacing: "-1.5px",
+                      lineHeight: 1,
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {checkInCount}
+                  </p>
+                  <p style={{ fontSize: "11px", color: "#a0a0c0" }}>
+                    total recorded
+                  </p>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: "1px", background: "#e0d8f8" }} />
+
+              {/* Situation rows */}
+              {situations.slice(0, 5).map((moment, i) => {
+                const overdue = isCheckInStale(
+                  enrichments[moment.id]?.lastCheckIn?.created_at,
+                );
+                return (
+                  <div key={moment.id}>
+                    <MomentCard
+                      moment={moment}
+                      chosenPathTitle={enrichments[moment.id]?.chosenPathTitle}
+                      lastCheckIn={enrichments[moment.id]?.lastCheckIn}
+                      variant="dark"
+                      dotColorIndex={i}
+                      isOverdue={overdue}
+                    />
+                  </div>
+                );
+              })}
+
+              {/* Footer */}
+              <Link
+                href="/moments"
+                style={{
+                  display: "block",
+                  padding: "14px 36px",
+                  fontSize: "14px",
+                  color: "#9090c0",
+                  textDecoration: "none",
+                  borderTop: "1px solid #e8e0f8",
+                }}
+              >
+                View all situations ↓
+              </Link>
+            </div>
+          </OverviewSection>
+        ) : null}
+
+        {/* Two-column grid: Needs Attention + Reflection */}
+        {(visibleAttentionItems.length > 0 || pendingReflection) ? (
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: "10px",
-              marginBottom: "10px",
+              gap: "14px",
             }}
           >
-            {/* Active count */}
-            <Link
-              href="/moments"
-              style={{
-                backgroundColor: "#0E0900",
-                border: "1px solid #201400",
-                borderRadius: "16px",
-                padding: "20px",
-                cursor: "pointer",
-                textDecoration: "none",
-                display: "block",
-                transition: "border-color 0.2s",
-              }}
-              className="hover:border-[#222]"
-            >
-              <p
-                style={{
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  letterSpacing: "0.12em",
-                  color: "#553300",
-                  textTransform: "uppercase",
-                  marginBottom: "8px",
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-              >
-                Active
-              </p>
-              <p
-                style={{
-                  fontSize: "36px",
-                  fontWeight: 800,
-                  color: "#F59E0B",
-                  letterSpacing: "-1.2px",
-                  lineHeight: 1,
-                  marginBottom: "4px",
-                }}
-              >
-                {situations.length}
-              </p>
-              <p
-                style={{
-                  fontSize: "11px",
-                  color: "#553300",
-                  opacity: 0.4,
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-              >
-                situations open
-              </p>
-            </Link>
-
-            {/* Check-ins count */}
-            <Link
-              href="/moments"
-              style={{
-                backgroundColor: "#060E08",
-                border: "1px solid #0A1E0E",
-                borderRadius: "16px",
-                padding: "20px",
-                cursor: "pointer",
-                textDecoration: "none",
-                display: "block",
-                transition: "border-color 0.2s",
-              }}
-              className="hover:border-[#222]"
-            >
-              <p
-                style={{
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  letterSpacing: "0.12em",
-                  color: "#0E2830",
-                  textTransform: "uppercase",
-                  marginBottom: "8px",
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-              >
-                Check-ins
-              </p>
-              <p
-                style={{
-                  fontSize: "36px",
-                  fontWeight: 800,
-                  color: "#34D399",
-                  letterSpacing: "-1.2px",
-                  lineHeight: 1,
-                  marginBottom: "4px",
-                }}
-              >
-                {checkInCount}
-              </p>
-              <p
-                style={{
-                  fontSize: "11px",
-                  color: "#0E2830",
-                  opacity: 0.4,
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-              >
-                total recorded
-              </p>
-            </Link>
-          </div>
-
-          {/* Situations list card */}
-          <div
-            style={{
-              backgroundColor: "#0C0C0C",
-              border: "1px solid #141414",
-              borderRadius: "16px",
-              overflow: "hidden",
-              transition: "border-color 0.2s",
-            }}
-            className="hover:border-[#222]"
-          >
-            {/* Card header */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "14px 18px",
-                borderBottom: "1px solid #0F0F0F",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  color: "#252525",
-                  textTransform: "uppercase",
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-              >
-                Recent Situations
-              </span>
-              <Link
-                href="/moments"
-                style={{
-                  fontSize: "11px",
-                  color: "#1E1E1E",
-                  textDecoration: "none",
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-                className="hover:text-[#555]"
-              >
-                All →
-              </Link>
-            </div>
-
-            {/* Rows */}
-            {situations.slice(0, 5).map((moment, i) => {
-              const isLast = i === Math.min(situations.length, 5) - 1;
-              const overdue = isCheckInStale(enrichments[moment.id]?.lastCheckIn?.created_at);
-              return (
-                <div
-                  key={moment.id}
-                  style={{
-                    borderBottom: isLast ? "none" : "1px solid #0A0A0A",
-                  }}
-                >
-                  <MomentCard
-                    moment={moment}
-                    chosenPathTitle={enrichments[moment.id]?.chosenPathTitle}
-                    lastCheckIn={enrichments[moment.id]?.lastCheckIn}
-                    variant="dark"
-                    dotColorIndex={i}
-                    isOverdue={overdue}
-                  />
-                </div>
-              );
-            })}
-
-            {/* Add situation row */}
-            <Link
-              href="/situations/new"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "12px 18px",
-                color: "#181818",
-                fontSize: "12px",
-                cursor: "pointer",
-                textDecoration: "none",
-                borderTop: "1px solid #0A0A0A",
-                fontFamily: "system-ui, -apple-system, sans-serif",
-                transition: "color 0.15s",
-              }}
-              className="hover:text-[#444]"
-            >
-              {/* Dashed circle */}
-              <span
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
-                  border: "1px dashed currentColor",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  fontSize: "12px",
-                  lineHeight: 1,
-                }}
-              >
-                +
-              </span>
-              Add a situation
-            </Link>
-          </div>
-        </OverviewSection>
-      ) : null}
-
-      {/* ── Section 3: Needs Attention + Reflection ──────────── */}
-      {(visibleAttentionItems.length > 0 || pendingReflection) ? (
-        <OverviewSection label="Attention" title="What needs you">
-          {/* Attention card */}
-          {visibleAttentionItems.length > 0 ? (
-            <div
-              style={{
-                backgroundColor: "#0F0C00",
-                border: "1px solid #1C1600",
-                borderRadius: "16px",
-                padding: "22px",
-                marginBottom: "10px",
-                transition: "border-color 0.2s",
-              }}
-              className="hover:border-[#222]"
-            >
-              {/* Header row */}
+            {/* Left: Needs Attention */}
+            {visibleAttentionItems.length > 0 ? (
               <div
                 style={{
-                  display: "flex",
+                  background: "#fffbf0",
+                  borderRadius: "22px",
+                  overflow: "hidden",
+                  color: "#0a0a0a",
+                  padding: "28px",
+                }}
+              >
+                {/* Tag */}
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    background: "#fff8e0",
+                    borderRadius: "10px",
+                    padding: "5px 12px",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <span style={{ fontSize: "12px", color: "#f59e0b" }}>⚑</span>
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      letterSpacing: "0.13em",
+                      textTransform: "uppercase",
+                      color: "#c97c1a",
+                    }}
+                  >
+                    Needs Attention
+                  </span>
+                </div>
+
+                <p
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: 700,
+                    color: "#111",
+                    lineHeight: 1.2,
+                    letterSpacing: "-0.4px",
+                    marginBottom: "6px",
+                  }}
+                >
+                  What needs your attention.
+                </p>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "#888",
+                    marginBottom: "20px",
+                  }}
+                >
+                  {attentionItems.length} situation
+                  {attentionItems.length !== 1 ? "s" : ""} overdue for a
+                  check-in.
+                </p>
+
+                {/* Attention items */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  {visibleAttentionItems.map((item) => (
+                    <Link
+                      key={item.key}
+                      href={item.href}
+                      style={{
+                        background: "#fff9e6",
+                        border: "1px solid #eedcb0",
+                        borderRadius: "11px",
+                        padding: "11px 14px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        textDecoration: "none",
+                        transition: "border-color 0.15s",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "50%",
+                          background: "#f59e0b",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: "13px",
+                          color: "#5c4400",
+                          flex: 1,
+                          minWidth: 0,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {item.situationName}
+                        {" — "}
+                        <span style={{ color: "#888" }}>{item.label}</span>
+                      </span>
+                      <span style={{ color: "#f59e0b", opacity: 0.5, fontSize: "12px" }}>→</span>
+                    </Link>
+                  ))}
+                </div>
+
+                {hiddenAttentionCount > 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      paddingTop: "14px",
+                      marginTop: "8px",
+                      borderTop: "1px solid #eedcb0",
+                      fontSize: "11px",
+                      color: "#b8a070",
+                    }}
+                  >
+                    <Link
+                      href="/moments"
+                      style={{ color: "inherit", textDecoration: "none" }}
+                    >
+                      + {hiddenAttentionCount} more situation
+                      {hiddenAttentionCount !== 1 ? "s" : ""} need a check-in
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              /* placeholder if no attention items but reflection exists */
+              <div />
+            )}
+
+            {/* Right: Reflection Waiting */}
+            <ReflectionWaitingHomeSection pending={pendingReflection} />
+          </div>
+        ) : null}
+
+        {/* Card 4: What's Been Happening */}
+        {recentReality.length > 0 ? (
+          <OverviewSection>
+            <div
+              style={{
+                background: "#f0efeb",
+                borderRadius: "22px",
+                overflow: "hidden",
+                color: "#0a0a0a",
+                padding: "32px 36px",
+              }}
+            >
+              {/* Tag */}
+              <div
+                style={{
+                  display: "inline-flex",
                   alignItems: "center",
-                  gap: "6px",
-                  marginBottom: "14px",
+                  gap: "8px",
+                  background: "#e6f4ed",
+                  borderRadius: "10px",
+                  padding: "5px 12px",
+                  marginBottom: "24px",
                 }}
               >
                 <span
                   style={{
-                    width: "6px",
-                    height: "6px",
+                    width: "8px",
+                    height: "8px",
                     borderRadius: "50%",
-                    backgroundColor: "#F59E0B",
+                    background: "#22c55e",
                     flexShrink: 0,
                   }}
                 />
                 <span
                   style={{
-                    fontSize: "9px",
+                    fontSize: "11px",
                     fontWeight: 700,
-                    letterSpacing: "0.12em",
-                    color: "#3A2800",
+                    letterSpacing: "0.13em",
                     textTransform: "uppercase",
-                    fontFamily: "system-ui, -apple-system, sans-serif",
+                    color: "#1a8044",
                   }}
                 >
-                  Needs Attention
+                  What&apos;s Been Happening
                 </span>
               </div>
 
-              {/* Items (max 3) */}
-              {visibleAttentionItems.map((item) => (
-                <Link
-                  key={item.key}
-                  href={item.href}
+              {/* Feed rows */}
+              <div>
+                {recentReality.map(({ moment, reality }, i) => {
+                  const isLast = i === recentReality.length - 1;
+                  const dotColor = FEED_DOT_COLORS[i % FEED_DOT_COLORS.length]!;
+                  const tagColor =
+                    FEED_SITUATION_TAG_COLORS[
+                      i % FEED_SITUATION_TAG_COLORS.length
+                    ]!;
+                  return (
+                    <Link
+                      key={moment.id}
+                      href={`/moments/${moment.id}`}
+                      style={{
+                        display: "block",
+                        padding: "15px 0",
+                        borderBottom: isLast ? "none" : "1px solid #e8e5dd",
+                        textDecoration: "none",
+                        transition: "opacity 0.15s",
+                      }}
+                    >
+                      {/* Top row: dot + timestamp + situation tag */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          marginBottom: "6px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: "7px",
+                            height: "7px",
+                            borderRadius: "50%",
+                            background: dotColor,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            color: "#bbb",
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.08em",
+                          }}
+                        >
+                          {formatRelativeTime(reality.created_at)}
+                        </span>
+                        <span
+                          style={{
+                            marginLeft: "auto",
+                            fontSize: "10px",
+                            color: tagColor,
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.06em",
+                          }}
+                        >
+                          {moment.title}
+                        </span>
+                      </div>
+
+                      {/* Reality text */}
+                      <p
+                        style={{
+                          fontSize: "14px",
+                          color: "#666",
+                          lineHeight: 1.6,
+                          paddingLeft: "15px",
+                        }}
+                      >
+                        {toCompactHeadline(reality.reality_summary)}
+                      </p>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <Link
+                href="/moments"
+                style={{
+                  display: "inline-block",
+                  marginTop: "14px",
+                  fontSize: "12px",
+                  color: "#bbb",
+                  textDecoration: "none",
+                }}
+              >
+                View all updates →
+              </Link>
+            </div>
+          </OverviewSection>
+        ) : null}
+
+        {/* Future Selves */}
+        <FutureSelfHomeSection futureSelves={futureSelves} />
+
+        {/* Card 5: Your Journey (Timeline) */}
+        {latestNarrative ? (
+          <OverviewSection id="timeline">
+            <div
+              style={{
+                background: "#f0efeb",
+                borderRadius: "22px",
+                overflow: "hidden",
+                color: "#0a0a0a",
+              }}
+            >
+              {/* Arrow */}
+              <Link
+                href="/timeline"
+                style={{
+                  position: "absolute",
+                  top: "28px",
+                  right: "28px",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  background: "#fff",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  fontSize: "15px",
+                  color: "#111",
+                }}
+              >
+                →
+              </Link>
+
+              {/* Top content */}
+              <div style={{ padding: "32px 36px" }}>
+                {/* Tag */}
+                <div
                   style={{
-                    backgroundColor: "#130F00",
-                    border: "1px solid #1E1800",
-                    borderRadius: "12px",
-                    padding: "10px 14px",
-                    marginBottom: "8px",
-                    cursor: "pointer",
-                    display: "flex",
+                    display: "inline-flex",
                     alignItems: "center",
-                    gap: "10px",
-                    textDecoration: "none",
-                    transition: "border-color 0.15s",
+                    gap: "8px",
+                    background: "#e4edfb",
+                    borderRadius: "10px",
+                    padding: "5px 12px",
+                    marginBottom: "24px",
                   }}
-                  className="hover:border-[#2A2200]"
                 >
                   <span
                     style={{
-                      width: "5px",
-                      height: "5px",
+                      width: "8px",
+                      height: "8px",
                       borderRadius: "50%",
-                      backgroundColor: "#F59E0B",
-                      opacity: 0.6,
+                      background: "#60a5fa",
                       flexShrink: 0,
                     }}
                   />
                   <span
                     style={{
-                      fontSize: "12px",
-                      color: "#3A2C00",
-                      flex: 1,
-                      fontFamily: "system-ui, -apple-system, sans-serif",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      letterSpacing: "0.13em",
+                      textTransform: "uppercase",
+                      color: "#1a5fc9",
                     }}
                   >
-                    {item.label}{" "}
-                    <span style={{ color: "#5C4400", fontWeight: 600 }}>
-                      {item.situationName}
-                    </span>
+                    Your Journey
                   </span>
-                  <span style={{ color: "#F59E0B", opacity: 0.5, fontSize: "12px" }}>→</span>
-                </Link>
-              ))}
+                </div>
 
-              {/* View all link */}
-              {hiddenAttentionCount > 0 ? (
+                {/* Period row */}
                 <div
                   style={{
-                    textAlign: "center",
-                    paddingTop: "10px",
-                    borderTop: "1px solid #181200",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    marginBottom: "20px",
                   }}
                 >
-                  <Link
-                    href="/moments"
+                  <div
+                    style={{ flex: 1, height: "1px", background: "#dedad0" }}
+                  />
+                  <span
                     style={{
-                      fontSize: "11px",
-                      color: "#2A2000",
-                      textDecoration: "none",
-                      fontFamily: "system-ui, -apple-system, sans-serif",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      color: "#bbb",
+                      letterSpacing: "0.1em",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    View all ({hiddenAttentionCount} more) →
-                  </Link>
+                    {latestNarrative.month}
+                  </span>
+                  <div
+                    style={{ flex: 1, height: "1px", background: "#dedad0" }}
+                  />
                 </div>
-              ) : null}
-            </div>
-          ) : null}
 
-          {/* Reflection card */}
-          <ReflectionWaitingHomeSection pending={pendingReflection} />
-        </OverviewSection>
-      ) : null}
-
-      {/* ── Section 4: What's Been Happening ─────────────────── */}
-      {recentReality.length > 0 ? (
-        <OverviewSection
-          label="Reality"
-          title="What's been happening"
-          viewAllHref="/moments"
-          viewAllLabel="View all →"
-        >
-          <div
-            style={{
-              backgroundColor: "#0C0C0C",
-              border: "1px solid #141414",
-              borderRadius: "16px",
-              padding: "22px",
-              transition: "border-color 0.2s",
-            }}
-            className="hover:border-[#222]"
-          >
-            {/* Inner header */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "20px",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  color: "#252525",
-                  textTransform: "uppercase",
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-              >
-                Latest Updates
-              </span>
-              <Link
-                href="/moments"
-                style={{
-                  fontSize: "11px",
-                  color: "#1E1E1E",
-                  textDecoration: "none",
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-                className="hover:text-[#555]"
-              >
-                All →
-              </Link>
-            </div>
-
-            {/* Feed */}
-            <div style={{ position: "relative", paddingLeft: "22px" }}>
-              {/* Vertical spine */}
-              <div
-                style={{
-                  position: "absolute",
-                  left: "6px",
-                  top: "6px",
-                  bottom: "6px",
-                  width: "1px",
-                  background: "linear-gradient(to bottom, #1E1E2A, #16162A)",
-                }}
-              />
-
-              {recentReality.map(({ moment, reality }, i) => {
-                const isLast = i === recentReality.length - 1;
-                const dot = FEED_DOT_COLORS[i % FEED_DOT_COLORS.length]!;
-                return (
-                  <Link
-                    key={moment.id}
-                    href={`/moments/${moment.id}`}
-                    style={{
-                      position: "relative",
-                      display: "block",
-                      marginBottom: isLast ? 0 : "20px",
-                      textDecoration: "none",
-                    }}
-                  >
-                    {/* Dot */}
-                    <span
-                      style={{
-                        position: "absolute",
-                        left: "-20px",
-                        top: "4px",
-                        width: "10px",
-                        height: "10px",
-                        borderRadius: "50%",
-                        border: `2px solid ${dot.border}`,
-                        backgroundColor: dot.bg,
-                        display: "block",
-                      }}
-                    />
-
-                    {/* Timestamp */}
-                    <p
-                      style={{
-                        fontSize: "9px",
-                        color: "#1E1E2E",
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.1em",
-                        marginBottom: "5px",
-                        fontFamily: "system-ui, -apple-system, sans-serif",
-                      }}
-                    >
-                      {formatRelativeTime(reality.created_at)}
-                    </p>
-
-                    {/* Reality text */}
-                    <p
-                      style={{
-                        fontSize: "13px",
-                        color: "#404055",
-                        lineHeight: 1.65,
-                        fontFamily: "system-ui, -apple-system, sans-serif",
-                      }}
-                    >
-                      {toCompactHeadline(reality.reality_summary)}
-                    </p>
-
-                    {/* Situation tag */}
-                    <p
-                      style={{
-                        fontSize: "9px",
-                        color: "#1A1A28",
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                        marginTop: "5px",
-                        fontFamily: "system-ui, -apple-system, sans-serif",
-                      }}
-                    >
-                      {moment.title}
-                    </p>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </OverviewSection>
-      ) : null}
-
-      {/* ── Section 5: Who You Might Become ─────────────────── */}
-      <FutureSelfHomeSection futureSelves={futureSelves} />
-
-      {/* ── Section 6: Your Journey ──────────────────────────── */}
-      {latestNarrative ? (
-        <OverviewSection
-          label="Timeline"
-          title="Your journey"
-          viewAllHref="/timeline"
-          viewAllLabel="Full timeline →"
-        >
-          <div
-            style={{
-              backgroundColor: "#0C0C0C",
-              border: "1px solid #141414",
-              borderRadius: "16px",
-              overflow: "hidden",
-              transition: "border-color 0.2s",
-            }}
-            className="hover:border-[#222]"
-          >
-            {/* Top section */}
-            <div style={{ padding: "22px" }}>
-              {/* Period row */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  marginBottom: "16px",
-                }}
-              >
-                <div style={{ flex: 1, height: "1px", backgroundColor: "#131320" }} />
-                <span
-                  style={{
-                    fontSize: "10px",
-                    color: "#1E1E30",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                    whiteSpace: "nowrap",
-                    fontFamily: "system-ui, -apple-system, sans-serif",
-                  }}
-                >
-                  {latestNarrative.month}
-                </span>
-                <div style={{ flex: 1, height: "1px", backgroundColor: "#131320" }} />
-              </div>
-
-              {/* Summary */}
-              <p
-                style={{
-                  fontSize: "14px",
-                  color: "#404055",
-                  lineHeight: 1.7,
-                  marginBottom: "4px",
-                  fontFamily: "system-ui, -apple-system, sans-serif",
-                }}
-              >
-                {latestNarrative.headline}
-              </p>
-
-              {latestNarrative.openingBeginning ? (
+                {/* Summary */}
                 <p
                   style={{
-                    fontSize: "12px",
-                    color: "#252530",
-                    lineHeight: 1.6,
-                    marginBottom: "20px",
-                    fontFamily: "system-ui, -apple-system, sans-serif",
+                    fontSize: "15px",
+                    color: "#555",
+                    lineHeight: 1.7,
+                    marginBottom: "6px",
                   }}
                 >
-                  {toFirstSentence(latestNarrative.openingBeginning)}
+                  {latestNarrative.headline}
                 </p>
-              ) : (
-                <div style={{ marginBottom: "20px" }} />
-              )}
 
-              {/* Stats grid */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "8px",
-                }}
-              >
-                {[
-                  { num: latestNarrative.situationCount, label: "Situations", color: "#34D399" },
-                  { num: latestNarrative.checkInCount, label: "Check-ins", color: "#38BDF8" },
-                  { num: latestNarrative.reflectionCount, label: "Reflections", color: "#A78BFA" },
-                ].map(({ num, label, color }) => (
-                  <div
-                    key={label}
+                {latestNarrative.openingBeginning ? (
+                  <p
                     style={{
-                      backgroundColor: "#090909",
-                      border: "1px solid #0F0F0F",
-                      borderRadius: "12px",
-                      padding: "14px 16px",
+                      fontSize: "13px",
+                      color: "#aaa",
+                      lineHeight: 1.6,
+                      marginBottom: "24px",
                     }}
                   >
-                    <p
-                      style={{
-                        fontSize: "26px",
-                        fontWeight: 800,
-                        letterSpacing: "-0.6px",
-                        marginBottom: "4px",
-                        color,
-                        lineHeight: 1,
-                      }}
-                    >
-                      {num}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: "9px",
-                        color: "#161625",
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                        fontFamily: "system-ui, -apple-system, sans-serif",
-                      }}
-                    >
-                      {label}
-                    </p>
-                  </div>
-                ))}
+                    {toFirstSentence(latestNarrative.openingBeginning)}
+                  </p>
+                ) : (
+                  <div style={{ marginBottom: "24px" }} />
+                )}
+
+                {/* Stats row */}
+                <div
+                  style={{ display: "flex", gap: "28px", alignItems: "baseline" }}
+                >
+                  {[
+                    {
+                      num: latestNarrative.situationCount,
+                      label: "SITUATIONS",
+                      color: "#22c55e",
+                    },
+                    {
+                      num: latestNarrative.checkInCount,
+                      label: "CHECK-INS",
+                      color: "#60a5fa",
+                    },
+                    {
+                      num: latestNarrative.reflectionCount,
+                      label: "REFLECTIONS",
+                      color: "#8b7cf8",
+                    },
+                  ].map(({ num, label, color }) => (
+                    <div key={label}>
+                      <span
+                        style={{
+                          fontSize: "30px",
+                          fontWeight: 800,
+                          color,
+                          letterSpacing: "-0.8px",
+                          lineHeight: 1,
+                        }}
+                      >
+                        {num}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          color: "#ccc",
+                          letterSpacing: "0.08em",
+                          marginLeft: "6px",
+                        }}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Divider */}
-            <div style={{ height: "1px", backgroundColor: "#0D0D18" }} />
+              {/* Divider */}
+              <div style={{ height: "1px", background: "#e8e5dd" }} />
 
-            {/* Resolved section */}
-            <div style={{ padding: "18px 22px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "8px",
-                }}
-              >
-                <span
+              {/* Resolved section */}
+              <div style={{ padding: "20px 36px" }}>
+                <p
                   style={{
                     fontSize: "9px",
-                    color: "#161625",
+                    color: "#ccc",
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.1em",
-                    fontFamily: "system-ui, -apple-system, sans-serif",
+                    marginBottom: "12px",
                   }}
                 >
                   Resolved This Month
-                </span>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    color: "#34D399",
-                    fontWeight: 700,
-                    fontFamily: "system-ui, -apple-system, sans-serif",
-                  }}
-                >
-                  {currentMonthResolved.length} closed
-                </span>
-              </div>
+                </p>
 
-              {currentMonthResolved.length > 0 ? (
-                currentMonthResolved.map((moment, i) => (
-                  <Link
-                    key={moment.id}
-                    href={`/moments/${moment.id}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      padding: "10px 0",
-                      borderBottom:
-                        i < currentMonthResolved.length - 1 ? "1px solid #0D0D18" : "none",
-                      textDecoration: "none",
-                    }}
-                  >
-                    {/* Check circle */}
-                    <span
+                {currentMonthResolved.length > 0 ? (
+                  currentMonthResolved.map((moment, i) => (
+                    <Link
+                      key={moment.id}
+                      href={`/moments/${moment.id}`}
                       style={{
-                        width: "16px",
-                        height: "16px",
-                        borderRadius: "50%",
-                        backgroundColor: "#071512",
-                        border: "1px solid #0C2518",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        fontSize: "8px",
-                        color: "#34D399",
+                        gap: "10px",
+                        padding: "10px 0",
+                        borderBottom:
+                          i < currentMonthResolved.length - 1
+                            ? "1px solid #e8e5dd"
+                            : "none",
+                        textDecoration: "none",
                       }}
                     >
-                      ✓
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p
+                      {/* Check circle */}
+                      <span
                         style={{
-                          fontSize: "12px",
-                          color: "#1E1E28",
-                          fontWeight: 500,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          fontFamily: "system-ui, -apple-system, sans-serif",
+                          width: "17px",
+                          height: "17px",
+                          borderRadius: "50%",
+                          background: "#e6f4ed",
+                          border: "1px solid #9cd4b0",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          fontSize: "8px",
+                          color: "#22c55e",
                         }}
                       >
-                        {moment.title}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: "10px",
-                          color: "#141420",
-                          fontFamily: "system-ui, -apple-system, sans-serif",
-                        }}
-                      >
-                        {formatResolvedDate(moment.updated_at)}
-                      </p>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <p
+                        ✓
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p
+                          style={{
+                            fontSize: "13px",
+                            color: "#666",
+                            fontWeight: 500,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {moment.title}
+                        </p>
+                        <p
+                          style={{ fontSize: "11px", color: "#bbb" }}
+                        >
+                          {formatResolvedDate(moment.updated_at)}
+                        </p>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <p style={{ fontSize: "13px", color: "#bbb" }}>
+                    Nothing resolved this month yet
+                  </p>
+                )}
+
+                <Link
+                  href="/timeline"
                   style={{
-                    fontSize: "11px",
-                    color: "#1A1A28",
-                    fontFamily: "system-ui, -apple-system, sans-serif",
-                    paddingTop: "6px",
+                    display: "inline-block",
+                    marginTop: "14px",
+                    fontSize: "12px",
+                    color: "#bbb",
+                    textDecoration: "none",
                   }}
                 >
-                  Nothing resolved this month yet
-                </p>
-              )}
+                  View full timeline →
+                </Link>
+              </div>
             </div>
-          </div>
-        </OverviewSection>
-      ) : null}
-
-      {/* Bottom spacing */}
-      <div style={{ height: "48px" }} />
-
+          </OverviewSection>
+        ) : null}
+      </div>
     </OverviewPageShell>
   );
 }

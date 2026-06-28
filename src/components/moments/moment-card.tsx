@@ -29,14 +29,14 @@ function statusLabel(
   return "Checking in";
 }
 
-const DOT_COLORS = ["#F59E0B", "#34D399", "#38BDF8", "#A78BFA"];
+const DOT_COLORS = ["#f59e0b", "#60a5fa", "#22c55e", "#8b7cf8"];
 
 function statusBadgeStyle(status: string): { bg: string; text: string; border: string } {
   if (status === "Exploring options")
-    return { bg: "#060A10", text: "#38BDF8", border: "#0A1628" };
+    return { bg: "#e4edfb", text: "#1a58c0", border: "#9cc4f0" };
   if (status === "Forecast")
-    return { bg: "#1A0A2A", text: "#A78BFA", border: "#2E1048" };
-  return { bg: "#071210", text: "#34D399", border: "#0C2018" };
+    return { bg: "#ecebfc", text: "#6b54e0", border: "#c4bef8" };
+  return { bg: "#e6f4ed", text: "#1a8044", border: "#9cd4b0" };
 }
 
 export function MomentCard({
@@ -61,17 +61,18 @@ export function MomentCard({
           display: "flex",
           alignItems: "center",
           gap: "12px",
-          padding: "12px 18px",
+          padding: "14px 36px",
           textDecoration: "none",
+          borderBottom: "1px solid #e8e0f8",
           transition: "background-color 0.15s",
         }}
-        className="hover:bg-[#0E0E0E]"
+        className="hover:bg-[#ece8fc]"
       >
         {/* Dot */}
         <span
           style={{
-            width: "8px",
-            height: "8px",
+            width: "9px",
+            height: "9px",
             borderRadius: "50%",
             backgroundColor: dotColor,
             flexShrink: 0,
@@ -82,7 +83,7 @@ export function MomentCard({
         <span
           style={{
             fontSize: "13px",
-            color: "#555",
+            color: "#1e0e60",
             fontWeight: 500,
             flex: 1,
             minWidth: 0,
@@ -120,7 +121,7 @@ export function MomentCard({
             style={{
               fontSize: "10px",
               fontWeight: 700,
-              color: "#F59E0B",
+              color: "#f59e0b",
               marginLeft: "6px",
               flexShrink: 0,
               fontFamily: "system-ui, -apple-system, sans-serif",
