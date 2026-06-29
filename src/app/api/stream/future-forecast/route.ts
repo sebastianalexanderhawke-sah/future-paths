@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { runStreamingGeneration } from "@/lib/ai/stream";
 import { forecastOutputSchema } from "@/lib/ai/schemas/forecast";
+import { createArrayItemParser } from "@/lib/ai/parse-stream";
 import { buildSelectedPathSummary } from "@/components/home/decision-simulator-utils";
 import { toPathTitleInput } from "@/components/home/path-titles";
 import {
@@ -52,6 +53,8 @@ function buildSelectedPathText(selectedPath?: SelectedPath): string[] {
 function sseData(event: unknown): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }
+
+const FORECAST_SECTION_KEYS = ["active", "hidden", "blind_spots", "wild_card"] as const;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -113,10 +116,16 @@ export async function POST(request: Request) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      const enqueue = (event: unknown) =>
+      const enqueue = (event: unknown) => {
         controller.enqueue(encoder.encode(sseData(event)));
+        controller.enqueue(encoder.encode(": ping\n\n"));
+      };
 
       try {
+        const futureParser = createArrayItemParser([...FORECAST_SECTION_KEYS], (item, key) => {
+          enqueue({ type: "future", data: { ...(item as object), section: key } });
+        });
+
         const forecastGeneration = await runStreamingGeneration(
           {
             userId: user.id,
@@ -129,7 +138,7 @@ export async function POST(request: Request) {
               selectedPathTitle: selectedPath?.title,
             },
           },
-          (text) => enqueue({ type: "text", content: text }),
+          (text) => futureParser(text),
         );
 
         if (!forecastGeneration.ok) {
@@ -235,8 +244,9 @@ export async function POST(request: Request) {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }

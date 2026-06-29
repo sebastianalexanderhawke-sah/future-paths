@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { flushSync } from "react-dom";
 
 import {
   generateDiscoveryQuestionsAction,
@@ -37,13 +38,32 @@ import { Button } from "@/components/ui/button";
 import { CardShell } from "@/components/ui/card-shell";
 
 // ---------------------------------------------------------------------------
-// SSE stream reader — fetches a streaming endpoint and yields typed events.
+// Types for streamed preview items (before final DB-saved result arrives)
+// ---------------------------------------------------------------------------
+
+type StreamPathDraft = {
+  title: string;
+  description: string;
+  benefits: string[];
+  consequences: string[];
+  future_shift: string;
+};
+
+type StreamFutureDraft = {
+  title: string;
+  why: string;
+  impact: string;
+};
+
+// ---------------------------------------------------------------------------
+// SSE stream reader — fires onEvent for each intermediate event, returns T
+// when the final {type:"result"} event arrives.
 // ---------------------------------------------------------------------------
 
 async function readSSEStream<T>(
   url: string,
   body: unknown,
-  onText?: (chunk: string) => void,
+  onEvent?: (event: { type: string; [key: string]: unknown }) => void,
 ): Promise<T> {
   const response = await fetch(url, {
     method: "POST",
@@ -78,19 +98,19 @@ async function readSSEStream<T>(
         const jsonStr = line.slice(6).trim();
         if (!jsonStr) continue;
 
-        let event: { type: string; data?: unknown; error?: string; content?: string };
+        let event: { type: string; [key: string]: unknown };
         try {
           event = JSON.parse(jsonStr);
         } catch {
           continue;
         }
 
-        if (event.type === "text") {
-          onText?.(event.content as string);
-        } else if (event.type === "result") {
+        if (event.type === "result") {
           return event.data as T;
         } else if (event.type === "error") {
-          throw new Error(event.error ?? "Streaming error");
+          throw new Error((event.error as string) ?? "Streaming error");
+        } else {
+          onEvent?.(event);
         }
       }
     }
@@ -102,7 +122,7 @@ async function readSSEStream<T>(
 }
 
 // ---------------------------------------------------------------------------
-// Skeleton loading cards
+// Skeleton + preview cards
 // ---------------------------------------------------------------------------
 
 function PathSkeleton() {
@@ -122,6 +142,37 @@ function ForecastSkeleton() {
       <div className="mb-3 h-5 w-1/2 rounded bg-[var(--ink-tertiary)]/15" />
       <div className="mb-2 h-3 w-full rounded bg-[var(--ink-tertiary)]/10" />
       <div className="h-3 w-4/5 rounded bg-[var(--ink-tertiary)]/10" />
+    </div>
+  );
+}
+
+function StreamingPathCard({ path }: { path: StreamPathDraft }) {
+  return (
+    <CardShell variant="elevated" className="p-6">
+      <h4 className="text-body font-semibold text-ink-primary">{path.title}</h4>
+      {path.description ? (
+        <p className="mt-1 line-clamp-2 text-body-small text-ink-secondary">{path.description}</p>
+      ) : null}
+      {path.benefits.length > 0 ? (
+        <ul className="mt-3 flex flex-col gap-1">
+          {path.benefits.slice(0, 2).map((benefit, i) => (
+            <li key={i} className="text-body-small text-ink-secondary">
+              + {benefit}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </CardShell>
+  );
+}
+
+function StreamingFutureCard({ future }: { future: StreamFutureDraft }) {
+  return (
+    <div className="rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface-muted)] p-5">
+      <h4 className="text-body font-medium text-ink-primary">{future.title}</h4>
+      {future.why ? (
+        <p className="mt-2 text-body-small text-ink-secondary">{future.why}</p>
+      ) : null}
     </div>
   );
 }
@@ -169,16 +220,20 @@ export function SituationEntryFlow() {
   const [plannedQuestions, setPlannedQuestions] = useState<PlannedDiscoveryQuestion[]>([]);
   const [discoveryQuestionSource, setDiscoveryQuestionSource] =
     useState<DiscoveryQuestionsSource | null>(null);
-  // AI batches questions upfront; duplicate blocking only applies to rule-based fallback.
   const [duplicateQuestionsBlocked, setDuplicateQuestionsBlocked] = useState(0);
   const [questionsError, setQuestionsError] = useState<string | null>(null);
 
-  // Streaming state for each AI call (replaces a single isPending useTransition)
+  // Streaming state — booleans track in-progress, arrays hold previews
   const [isStreamingPaths, setIsStreamingPaths] = useState(false);
   const [isStreamingForecast, setIsStreamingForecast] = useState(false);
   const [isStreamingPathForecast, setIsStreamingPathForecast] = useState(false);
+  const [streamingPaths, setStreamingPaths] = useState<StreamPathDraft[]>([]);
+  const [streamingFutures, setStreamingFutures] = useState<StreamFutureDraft[]>([]);
+  const [streamingPathFutures, setStreamingPathFutures] = useState<StreamFutureDraft[]>([]);
 
-  const [isLoadingQuestions, startQuestionsTransition] = useTransition();
+  // Plain useState — NOT useTransition. Updates must commit immediately so Q1
+  // appears the moment it arrives, not after the full stream completes.
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [isSelectingPath, startSelectTransition] = useTransition();
 
   const hasSituation = situationText.trim().length > 0;
@@ -202,6 +257,9 @@ export function SituationEntryFlow() {
     setIsStreamingPaths(false);
     setIsStreamingForecast(false);
     setIsStreamingPathForecast(false);
+    setStreamingPaths([]);
+    setStreamingFutures([]);
+    setStreamingPathFutures([]);
 
     if (!hasSituation || !goal) {
       setQuestions([]);
@@ -209,27 +267,50 @@ export function SituationEntryFlow() {
       return;
     }
 
-    startQuestionsTransition(async () => {
+    // `active` prevents a stale effect (situation/goal changed while streaming)
+    // from writing into the new state after the cleanup has fired.
+    let active = true;
+    setIsLoadingQuestions(true);
+
+    void (async () => {
       try {
         const result = await readSSEStream<{
           questions: PlannedDiscoveryQuestion[];
           source: DiscoveryQuestionsSource;
-        }>("/api/stream/discovery-questions", {
-          situationText: situationText.trim(),
-          goal,
-          additionalContext: additionalContext.trim() || undefined,
-        });
+        }>(
+          "/api/stream/discovery-questions",
+          {
+            situationText: situationText.trim(),
+            goal,
+            additionalContext: additionalContext.trim() || undefined,
+          },
+          (event) => {
+            if (!active) return;
+            if (event.type === "question") {
+              const q = event.data as PlannedDiscoveryQuestion;
+              flushSync(() => {
+                setPlannedQuestions((prev) => [...prev, q]);
+                setQuestions((prev) => [...prev, toContextQuestion(q)]);
+              });
+            }
+          },
+        );
 
+        if (!active) return;
+        // Finalize: replace with the server's properly ordered/filtered set
         setPlannedQuestions(result.questions);
         setQuestions(selectQuestionsForGoal(result.questions.map(toContextQuestion), goal));
         setDiscoveryQuestionSource(result.source);
       } catch {
+        if (!active) return;
         // Network failure: fall back to server action
         const response = await generateDiscoveryQuestionsAction({
           situationText: situationText.trim(),
           goal,
           additionalContext: additionalContext.trim() || undefined,
         });
+
+        if (!active) return;
 
         if ("error" in response) {
           const fallback = planDiscoveryQuestionSession(
@@ -246,8 +327,14 @@ export function SituationEntryFlow() {
         setPlannedQuestions(response.questions);
         setQuestions(selectQuestionsForGoal(response.questions.map(toContextQuestion), goal));
         setDiscoveryQuestionSource(response.source);
+      } finally {
+        if (active) setIsLoadingQuestions(false);
       }
-    });
+    })();
+
+    return () => {
+      active = false;
+    };
   }, [situationText, goal, hasSituation, hasGoal]);
 
   const discoveryAudit = useMemo(
@@ -279,7 +366,9 @@ export function SituationEntryFlow() {
   }
 
   function handleContinueFromLast(): boolean {
-    return true;
+    // Block final submission until all questions have arrived so the user
+    // can't skip questions that haven't loaded yet.
+    return !isLoadingQuestions;
   }
 
   async function handleGenerateForecast() {
@@ -288,6 +377,7 @@ export function SituationEntryFlow() {
     }
 
     setForecastError(null);
+    setStreamingFutures([]);
     setIsStreamingForecast(true);
 
     try {
@@ -295,7 +385,22 @@ export function SituationEntryFlow() {
         "/api/stream/future-forecast",
         {
           situationText: situationText.trim(),
-          contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
+          contextSummary: buildContextSummary(
+            questions,
+            answers,
+            additionalContext.trim() || undefined,
+          ),
+        },
+        (event) => {
+          if (event.type === "future") {
+            const raw = event.data as { title?: string; why?: string; impact?: string };
+            flushSync(() => {
+              setStreamingFutures((prev) => [
+                ...prev,
+                { title: raw.title ?? "", why: raw.why ?? "", impact: raw.impact ?? "" },
+              ]);
+            });
+          }
         },
       );
       setForecastResult(result);
@@ -304,7 +409,11 @@ export function SituationEntryFlow() {
       try {
         const response = await runFutureForecastAction({
           situationText: situationText.trim(),
-          contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
+          contextSummary: buildContextSummary(
+            questions,
+            answers,
+            additionalContext.trim() || undefined,
+          ),
         });
         if (response.error) {
           setForecastError(response.error);
@@ -336,6 +445,7 @@ export function SituationEntryFlow() {
     }
 
     setSimulatorError(null);
+    setStreamingPaths([]);
     setIsStreamingPaths(true);
 
     try {
@@ -343,7 +453,34 @@ export function SituationEntryFlow() {
         "/api/stream/decision-simulator",
         {
           situationText: situationText.trim(),
-          contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
+          contextSummary: buildContextSummary(
+            questions,
+            answers,
+            additionalContext.trim() || undefined,
+          ),
+        },
+        (event) => {
+          if (event.type === "path") {
+            const raw = event.data as {
+              title?: string;
+              description?: string;
+              benefits?: string[];
+              consequences?: string[];
+              future_shift?: string;
+            };
+            flushSync(() => {
+              setStreamingPaths((prev) => [
+                ...prev,
+                {
+                  title: raw.title ?? "",
+                  description: raw.description ?? "",
+                  benefits: raw.benefits ?? [],
+                  consequences: raw.consequences ?? [],
+                  future_shift: raw.future_shift ?? "",
+                },
+              ]);
+            });
+          }
         },
       );
       setSimulatorResult(result);
@@ -352,7 +489,11 @@ export function SituationEntryFlow() {
       try {
         const response = await runDecisionSimulatorAction({
           situationText: situationText.trim(),
-          contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
+          contextSummary: buildContextSummary(
+            questions,
+            answers,
+            additionalContext.trim() || undefined,
+          ),
         });
         if (response.error) {
           setSimulatorError(response.error);
@@ -400,12 +541,17 @@ export function SituationEntryFlow() {
     }
 
     setPathForecastError(null);
+    setStreamingPathFutures([]);
     setIsStreamingPathForecast(true);
 
     const cleanedSelectedPath = toPathTitleInput(selectedPath);
     const forecastInput = {
       situationText: situationText.trim(),
-      contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
+      contextSummary: buildContextSummary(
+        questions,
+        answers,
+        additionalContext.trim() || undefined,
+      ),
       momentId: simulatorResult.momentId,
       selectedPath: {
         id: selectedPath.id,
@@ -422,6 +568,17 @@ export function SituationEntryFlow() {
       const result = await readSSEStream<ForecastResult>(
         "/api/stream/future-forecast",
         forecastInput,
+        (event) => {
+          if (event.type === "future") {
+            const raw = event.data as { title?: string; why?: string; impact?: string };
+            flushSync(() => {
+              setStreamingPathFutures((prev) => [
+                ...prev,
+                { title: raw.title ?? "", why: raw.why ?? "", impact: raw.impact ?? "" },
+              ]);
+            });
+          }
+        },
       );
       setPathForecastResult(result);
     } catch {
@@ -434,12 +591,25 @@ export function SituationEntryFlow() {
           setPathForecastResult(response.result);
         }
       } catch (err) {
-        setPathForecastError(err instanceof Error ? err.message : "Failed to generate forecast");
+        setPathForecastError(
+          err instanceof Error ? err.message : "Failed to generate forecast",
+        );
       }
     } finally {
       setIsStreamingPathForecast(false);
     }
   }
+
+  // Number of placeholder skeletons to show below arrived streaming items
+  const pathSkeletonCount = isStreamingPaths
+    ? Math.max(0, 3 - streamingPaths.length)
+    : 0;
+  const forecastSkeletonCount = isStreamingForecast
+    ? Math.max(0, 3 - streamingFutures.length)
+    : 0;
+  const pathForecastSkeletonCount = isStreamingPathForecast
+    ? Math.max(0, 3 - streamingPathFutures.length)
+    : 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -463,7 +633,10 @@ export function SituationEntryFlow() {
           rows={5}
           className="mt-4 w-full resize-y rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/25 bg-[var(--surface)] px-4 py-3 text-body text-ink-primary placeholder:text-ink-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)]"
         />
-        <label htmlFor="additional-context-input" className="mt-5 block text-body-small font-medium text-ink-secondary">
+        <label
+          htmlFor="additional-context-input"
+          className="mt-5 block text-body-small font-medium text-ink-secondary"
+        >
           Anything else that&apos;s relevant?
         </label>
         <textarea
@@ -523,14 +696,20 @@ export function SituationEntryFlow() {
       <FlowStep
         step={3}
         title={isDecisionMode ? "One quick question" : "Let's understand your situation"}
-        visible={hasSituation && hasGoal && !simulatorResult && !forecastResult && !pathForecastResult}
+        visible={
+          hasSituation &&
+          hasGoal &&
+          !simulatorResult &&
+          !forecastResult &&
+          !pathForecastResult
+        }
       >
         <p className="mb-5 text-body-small text-ink-secondary">
           {isDecisionMode
             ? "Your answer helps generate more accurate, relevant paths."
             : "One question at a time. Your answers shape what comes next."}
         </p>
-        {isLoadingQuestions ? (
+        {isLoadingQuestions && questions.length === 0 ? (
           <p className="animate-pulse text-body-small text-ink-secondary">
             Thinking about your situation…
           </p>
@@ -562,7 +741,7 @@ export function SituationEntryFlow() {
         {isDecisionMode ? (
           <>
             <p className="mb-5 text-body text-ink-secondary">
-              You're ready to explore possible decisions.
+              You&apos;re ready to explore possible decisions.
             </p>
             {simulatorError ? (
               <p className="mb-5 text-body-small text-[var(--state-contradiction-detected)]">
@@ -601,13 +780,17 @@ export function SituationEntryFlow() {
         )}
       </FlowStep>
 
-      {isStreamingPaths && isDecisionMode ? (
+      {/* ---- Progressive path cards (Decision Simulator) ---- */}
+      {isStreamingPaths && !simulatorResult ? (
         <div className="flex flex-col gap-3">
           <p className="animate-pulse text-label text-ink-tertiary">
             Exploring possible decisions…
           </p>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <PathSkeleton key={i} />
+          {streamingPaths.map((path, i) => (
+            <StreamingPathCard key={i} path={path} />
+          ))}
+          {[...Array(pathSkeletonCount)].map((_, i) => (
+            <PathSkeleton key={`sk-${i}`} />
           ))}
         </div>
       ) : null}
@@ -629,13 +812,17 @@ export function SituationEntryFlow() {
         />
       ) : null}
 
-      {isStreamingPathForecast && isDecisionMode && !pathForecastResult ? (
+      {/* ---- Progressive futures (path forecast, Decision mode) ---- */}
+      {isStreamingPathForecast && !pathForecastResult ? (
         <div className="flex flex-col gap-3">
           <p className="animate-pulse text-label text-ink-tertiary">
             Forecasting your futures…
           </p>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <ForecastSkeleton key={i} />
+          {streamingPathFutures.map((future, i) => (
+            <StreamingFutureCard key={i} future={future} />
+          ))}
+          {[...Array(pathForecastSkeletonCount)].map((_, i) => (
+            <ForecastSkeleton key={`sk-${i}`} />
           ))}
         </div>
       ) : null}
@@ -644,13 +831,17 @@ export function SituationEntryFlow() {
         <FutureForecastResultView forecast={pathForecastResult} />
       ) : null}
 
-      {isStreamingForecast && isForecastMode && !forecastResult ? (
+      {/* ---- Progressive futures (Forecast mode) ---- */}
+      {isStreamingForecast && !forecastResult ? (
         <div className="flex flex-col gap-3">
           <p className="animate-pulse text-label text-ink-tertiary">
             Forecasting your futures…
           </p>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <ForecastSkeleton key={i} />
+          {streamingFutures.map((future, i) => (
+            <StreamingFutureCard key={i} future={future} />
+          ))}
+          {[...Array(forecastSkeletonCount)].map((_, i) => (
+            <ForecastSkeleton key={`sk-${i}`} />
           ))}
         </div>
       ) : null}

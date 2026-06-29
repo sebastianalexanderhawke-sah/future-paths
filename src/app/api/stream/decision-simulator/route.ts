@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { runStreamingGeneration } from "@/lib/ai/stream";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
+import { createArrayItemParser } from "@/lib/ai/parse-stream";
 import { encodePathDescriptionWithNativeTitle } from "@/components/home/path-native-title";
 import { isAiAuditEnabled, toRawPathsAudit } from "@/lib/ai-audit";
 import type { ThemeName } from "@/types/enums";
@@ -64,10 +65,16 @@ export async function POST(request: Request) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      const enqueue = (event: unknown) =>
+      const enqueue = (event: unknown) => {
         controller.enqueue(encoder.encode(sseData(event)));
+        controller.enqueue(encoder.encode(": ping\n\n"));
+      };
 
       try {
+        const pathParser = createArrayItemParser(["paths"], (item) => {
+          enqueue({ type: "path", data: item });
+        });
+
         const generationResult = await runStreamingGeneration(
           {
             userId: user.id,
@@ -76,7 +83,7 @@ export async function POST(request: Request) {
             schema: crossroadOutputSchema,
             overrides: { momentId: moment.id },
           },
-          (text) => enqueue({ type: "text", content: text }),
+          (text) => pathParser(text),
         );
 
         if (!generationResult.ok) {
@@ -165,8 +172,9 @@ export async function POST(request: Request) {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }

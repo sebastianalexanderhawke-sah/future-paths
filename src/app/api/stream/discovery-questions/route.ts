@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { runStreamingGeneration } from "@/lib/ai/stream";
 import { discoveryQuestionOutputSchema } from "@/lib/ai/schemas/discovery-question";
+import { createArrayItemParser } from "@/lib/ai/parse-stream";
 import {
   MAX_DISCOVERY_QUESTIONS,
   planDiscoveryQuestionSession,
@@ -8,10 +9,11 @@ import {
   type SituationGoal,
 } from "@/lib/discovery-question-planner";
 
-function mapAiQuestions(
-  questions: { question: string; category: string; reason: string }[],
-): PlannedDiscoveryQuestion[] {
-  return questions.map((item, index) => ({
+function mapAiQuestion(
+  item: { question: string; category: string; reason: string },
+  index: number,
+): PlannedDiscoveryQuestion {
+  return {
     id: `ai-${index}-${item.category.toLowerCase()}`,
     question: item.question,
     prompt: item.question,
@@ -20,7 +22,13 @@ function mapAiQuestions(
     priority: 100 - index * 5,
     selectedBecause: item.reason,
     isGeneric: false,
-  }));
+  };
+}
+
+function mapAiQuestions(
+  questions: { question: string; category: string; reason: string }[],
+): PlannedDiscoveryQuestion[] {
+  return questions.map((item, index) => mapAiQuestion(item, index));
 }
 
 function buildFallback(situationText: string, goal: SituationGoal): PlannedDiscoveryQuestion[] {
@@ -58,10 +66,18 @@ export async function POST(request: Request) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      const enqueue = (event: unknown) =>
+      const enqueue = (event: unknown) => {
         controller.enqueue(encoder.encode(sseData(event)));
+        controller.enqueue(encoder.encode(": ping\n\n"));
+      };
 
       try {
+        let questionIndex = 0;
+        const questionParser = createArrayItemParser(["questions"], (item) => {
+          const raw = item as { question: string; category: string; reason: string };
+          enqueue({ type: "question", data: mapAiQuestion(raw, questionIndex++) });
+        });
+
         const generationResult = await runStreamingGeneration(
           {
             userId: user.id,
@@ -74,7 +90,7 @@ export async function POST(request: Request) {
               additionalContext: additionalContext?.trim() || undefined,
             },
           },
-          (text) => enqueue({ type: "text", content: text }),
+          (text) => questionParser(text),
         );
 
         if (!generationResult.ok || generationResult.data.questions.length < 5) {
@@ -102,8 +118,9 @@ export async function POST(request: Request) {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }
