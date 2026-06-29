@@ -37,7 +37,7 @@ export function OverviewHeader() {
 
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <Link
-          href="/situations/new"
+          href="/moments/new"
           style={{
             backgroundColor: "#fff",
             color: "#000",

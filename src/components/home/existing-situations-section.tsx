@@ -31,7 +31,7 @@ export function ExistingSituationsSection({
         <OverviewEmptyPanel>
           <div className="flex flex-col gap-4">
             <p>You don&apos;t have any saved situations yet.</p>
-            <Button href="/situations/new" variant="secondary" className="self-start">
+            <Button href="/moments/new" variant="secondary" className="self-start">
               Create Situation
             </Button>
           </div>

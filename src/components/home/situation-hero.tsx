@@ -12,7 +12,7 @@ export function SituationHero() {
         explore it.
       </p>
       <div>
-        <Button href="/situations/new" size="lg">
+        <Button href="/moments/new" size="lg">
           Create Situation
         </Button>
       </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { flushSync } from "react-dom";
+import { useRouter } from "next/navigation";
 
 import {
   generateDiscoveryQuestionsAction,
@@ -16,8 +17,6 @@ import { runFutureForecastAction } from "@/actions/future-forecast";
 import {
   areAllQuestionsAnswered,
   buildContextSummary,
-  buildDiscoveryQuestionAudit,
-  computeDiscoveryQuestionMetrics,
   MAX_DISCOVERY_QUESTIONS,
   planDiscoveryQuestionSession,
   selectQuestionsForGoal,
@@ -27,15 +26,14 @@ import {
   type SituationGoal,
 } from "@/components/home/context-questions";
 import { ContextQuestionsStage } from "@/components/home/context-questions-stage";
-import { DiscoveryQuestionAuditPanel } from "@/components/home/discovery-question-audit-panel";
 import { DecisionSimulatorResultView } from "@/components/home/decision-simulator-result";
 import { formatDecisionPaths } from "@/components/home/decision-simulator-utils";
 import { toPathTitleInput } from "@/components/home/path-titles";
 import type { ForecastResult } from "@/components/home/forecast-utils";
 import { FutureForecastResultView } from "@/components/home/future-forecast-result";
-import { SituationRotatingExamples } from "@/components/home/situation-rotating-examples";
-import { Button } from "@/components/ui/button";
 import { CardShell } from "@/components/ui/card-shell";
+import { SituationRotatingExamples } from "@/components/home/situation-rotating-examples";
+import { withJustChosenPathFlag } from "@/lib/forecast-visit-flag";
 
 // ---------------------------------------------------------------------------
 // Types for streamed preview items (before final DB-saved result arrives)
@@ -177,33 +175,10 @@ function StreamingFutureCard({ future }: { future: StreamFutureDraft }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-
-function FlowStep({
-  step,
-  title,
-  children,
-  visible = true,
-}: {
-  step: number;
-  title: string;
-  children: React.ReactNode;
-  visible?: boolean;
-}) {
-  if (!visible) {
-    return null;
-  }
-
-  return (
-    <CardShell variant="elevated" className="p-6 sm:p-8">
-      <p className="text-label text-ink-tertiary">Step {step}</p>
-      <h3 className="mt-2 text-h1 text-ink-primary">{title}</h3>
-      <div className="mt-5">{children}</div>
-    </CardShell>
-  );
-}
-
 export function SituationEntryFlow() {
+  const router = useRouter();
+  const hasNavigated = useRef(false);
+
   const [situationText, setSituationText] = useState("");
   const [additionalContext, setAdditionalContext] = useState("");
   const [goal, setGoal] = useState<SituationGoal | null>(null);
@@ -220,7 +195,6 @@ export function SituationEntryFlow() {
   const [plannedQuestions, setPlannedQuestions] = useState<PlannedDiscoveryQuestion[]>([]);
   const [discoveryQuestionSource, setDiscoveryQuestionSource] =
     useState<DiscoveryQuestionsSource | null>(null);
-  const [duplicateQuestionsBlocked, setDuplicateQuestionsBlocked] = useState(0);
   const [questionsError, setQuestionsError] = useState<string | null>(null);
 
   // Streaming state — booleans track in-progress, arrays hold previews
@@ -237,6 +211,7 @@ export function SituationEntryFlow() {
   const [isSelectingPath, startSelectTransition] = useTransition();
 
   const hasSituation = situationText.trim().length > 0;
+  const hasContext = additionalContext.trim().length > 0;
   const hasGoal = goal !== null;
   const isDecisionMode = goal === "decision";
   const isForecastMode = goal === "forecast";
@@ -251,7 +226,6 @@ export function SituationEntryFlow() {
     setForecastResult(null);
     setPathForecastResult(null);
     setPathForecastError(null);
-    setDuplicateQuestionsBlocked(0);
     setDiscoveryQuestionSource(null);
     setQuestionsError(null);
     setIsStreamingPaths(false);
@@ -337,18 +311,19 @@ export function SituationEntryFlow() {
     };
   }, [situationText, goal, hasSituation, hasGoal]);
 
-  const discoveryAudit = useMemo(
-    () => buildDiscoveryQuestionAudit(plannedQuestions),
-    [plannedQuestions],
-  );
-  const discoveryMetrics = useMemo(
-    () =>
-      computeDiscoveryQuestionMetrics({
-        plannedQuestions,
-        duplicateQuestionsBlocked,
-      }),
-    [plannedQuestions, duplicateQuestionsBlocked],
-  );
+  useEffect(() => {
+    if (forecastResult && !hasNavigated.current) {
+      hasNavigated.current = true;
+      router.push(withJustChosenPathFlag(`/moments/${forecastResult.momentId}`));
+    }
+  }, [forecastResult, router]);
+
+  useEffect(() => {
+    if (pathForecastResult && simulatorResult && !hasNavigated.current) {
+      hasNavigated.current = true;
+      router.push(withJustChosenPathFlag(`/moments/${simulatorResult.momentId}`));
+    }
+  }, [pathForecastResult, simulatorResult, router]);
 
   const allQuestionsAnswered = areAllQuestionsAnswered(questions, answers);
 
@@ -612,173 +587,143 @@ export function SituationEntryFlow() {
     : 0;
 
   return (
-    <div className="flex flex-col gap-5">
-      <FlowStep step={1} title="What's on your mind?">
-        <SituationRotatingExamples />
-        <label htmlFor="situation-input" className="sr-only">
-          Describe your situation
-        </label>
-        <textarea
-          id="situation-input"
-          value={situationText}
-          onChange={(event) => {
-            const nextValue = event.target.value;
-            setSituationText(nextValue);
-            if (nextValue.trim().length === 0) {
-              setGoal(null);
-              setAdditionalContext("");
+    <div className="flex flex-col gap-10">
+
+      {/* ── Step 1: Title ── */}
+      <div className="flex flex-col gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+            What should we call this situation?
+          </h1>
+          <p className="mt-2 text-sm text-zinc-500">
+            A short title that helps you recognize this situation later.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <SituationRotatingExamples />
+          <input
+            id="situation-input"
+            type="text"
+            value={situationText}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              setSituationText(nextValue);
+              if (nextValue.trim().length === 0) {
+                setGoal(null);
+                setAdditionalContext("");
+              }
+            }}
+            autoFocus
+            maxLength={120}
+            placeholder="Give this situation a short title…"
+            className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white transition-colors"
+          />
+        </div>
+      </div>
+
+      {/* ── Step 2: Context (appears when title has content) ── */}
+      {hasSituation ? (
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-900">
+              Tell Future Paths what&apos;s happening
+            </h2>
+            <p className="mt-2 text-sm text-zinc-500">
+              Describe your situation in as much detail as you&apos;d like. The more context you
+              provide, the more personalized your paths and forecasts become.
+            </p>
+          </div>
+          <textarea
+            id="additional-context-input"
+            value={additionalContext}
+            onChange={(event) => setAdditionalContext(event.target.value)}
+            placeholder="What's going on? Who's involved? What have you tried? What are the constraints?"
+            rows={6}
+            className="w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white transition-colors"
+          />
+        </div>
+      ) : null}
+
+      {/* ── Mode selector (appears when context has content) ── */}
+      {hasSituation && hasContext ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-medium text-zinc-700">What kind of help are you looking for?</p>
+          <div className="flex flex-col gap-2">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 transition-colors hover:border-zinc-300 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50">
+              <input
+                type="radio"
+                name="entry-goal"
+                value="decision"
+                checked={goal === "decision"}
+                onChange={() => setGoal("decision")}
+                className="mt-0.5"
+              />
+              <div>
+                <span className="block text-sm font-medium text-zinc-900">Explore a decision</span>
+                <span className="mt-0.5 block text-sm text-zinc-500">Help me think through what to do</span>
+              </div>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 transition-colors hover:border-zinc-300 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50">
+              <input
+                type="radio"
+                name="entry-goal"
+                value="forecast"
+                checked={goal === "forecast"}
+                onChange={() => setGoal("forecast")}
+                className="mt-0.5"
+              />
+              <div>
+                <span className="block text-sm font-medium text-zinc-900">Forecast the future</span>
+                <span className="mt-0.5 block text-sm text-zinc-500">Help me see what might happen next</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Discovery questions ── */}
+      {hasSituation && hasGoal && !simulatorResult && !forecastResult && !pathForecastResult ? (
+        <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-6">
+          {isLoadingQuestions && questions.length === 0 ? (
+            <p className="text-sm text-zinc-400">Preparing questions…</p>
+          ) : null}
+          {questionsError ? (
+            <p className="mb-4 text-sm text-red-500">{questionsError}</p>
+          ) : null}
+          {questions.length > 0 ? (
+            <ContextQuestionsStage
+              questions={questions}
+              answers={answers}
+              onAnswerChange={handleAnswerChange}
+              onComplete={() => setQuestionsComplete(true)}
+              onContinueFromLast={handleContinueFromLast}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* ── Action button ── */}
+      {showContinueStep ? (
+        <div className="flex flex-col gap-3">
+          {isDecisionMode && simulatorError ? (
+            <p className="text-sm text-red-500">{simulatorError}</p>
+          ) : null}
+          {isForecastMode && forecastError ? (
+            <p className="text-sm text-red-500">{forecastError}</p>
+          ) : null}
+          <button
+            type="button"
+            onClick={isDecisionMode ? handleContinueToDecisionSimulator : handleGenerateForecast}
+            disabled={!allQuestionsAnswered || (isDecisionMode ? isStreamingPaths : isStreamingForecast)}
+            className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-40"
+          >
+            {isDecisionMode
+              ? isStreamingPaths ? "Exploring…" : "Explore decisions"
+              : isStreamingForecast ? "Generating…" : "Generate forecast"
             }
-          }}
-          placeholder="Describe what's happening or what you're thinking about…"
-          rows={5}
-          className="mt-4 w-full resize-y rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/25 bg-[var(--surface)] px-4 py-3 text-body text-ink-primary placeholder:text-ink-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)]"
-        />
-        <label
-          htmlFor="additional-context-input"
-          className="mt-5 block text-body-small font-medium text-ink-secondary"
-        >
-          Anything else that&apos;s relevant?
-        </label>
-        <textarea
-          id="additional-context-input"
-          value={additionalContext}
-          onChange={(event) => setAdditionalContext(event.target.value)}
-          placeholder="Background, history, constraints, people involved — anything that gives more context…"
-          rows={4}
-          className="mt-2 w-full resize-y rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/25 bg-[var(--surface)] px-4 py-3 text-body text-ink-primary placeholder:text-ink-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)]"
-        />
-      </FlowStep>
-
-      <FlowStep step={2} title="What would you like help with?" visible={hasSituation}>
-        <fieldset className="flex flex-col gap-3">
-          <legend className="sr-only">Choose how you want to explore this situation</legend>
-
-          <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/20 bg-[var(--surface-muted)] px-4 py-3 has-[:checked]:border-[var(--action-fill)] has-[:checked]:bg-[var(--action-soft-fill)]">
-            <input
-              type="radio"
-              name="situation-goal"
-              value="decision"
-              checked={goal === "decision"}
-              onChange={() => setGoal("decision")}
-              className="mt-1"
-            />
-            <span>
-              <span className="block text-body font-medium text-ink-primary">
-                Explore a Decision
-              </span>
-              <span className="mt-1 block text-body-small text-ink-secondary">
-                What should I do?
-              </span>
-            </span>
-          </label>
-
-          <label className="flex cursor-pointer items-start gap-3 rounded-[var(--radius-whisper)] border border-[var(--ink-tertiary)]/20 bg-[var(--surface-muted)] px-4 py-3 has-[:checked]:border-[var(--action-fill)] has-[:checked]:bg-[var(--action-soft-fill)]">
-            <input
-              type="radio"
-              name="situation-goal"
-              value="forecast"
-              checked={goal === "forecast"}
-              onChange={() => setGoal("forecast")}
-              className="mt-1"
-            />
-            <span>
-              <span className="block text-body font-medium text-ink-primary">
-                Forecast the Future
-              </span>
-              <span className="mt-1 block text-body-small text-ink-secondary">
-                What might happen next?
-              </span>
-            </span>
-          </label>
-        </fieldset>
-      </FlowStep>
-
-      <FlowStep
-        step={3}
-        title={isDecisionMode ? "One quick question" : "Let's understand your situation"}
-        visible={
-          hasSituation &&
-          hasGoal &&
-          !simulatorResult &&
-          !forecastResult &&
-          !pathForecastResult
-        }
-      >
-        <p className="mb-5 text-body-small text-ink-secondary">
-          {isDecisionMode
-            ? "Your answer helps generate more accurate, relevant paths."
-            : "One question at a time. Your answers shape what comes next."}
-        </p>
-        {isLoadingQuestions && questions.length === 0 ? (
-          <p className="animate-pulse text-body-small text-ink-secondary">
-            Thinking about your situation…
-          </p>
-        ) : null}
-        {questionsError ? (
-          <p className="mb-5 text-body-small text-[var(--state-contradiction-detected)]">
-            {questionsError}
-          </p>
-        ) : null}
-        <ContextQuestionsStage
-          questions={questions}
-          answers={answers}
-          onAnswerChange={handleAnswerChange}
-          onComplete={() => setQuestionsComplete(true)}
-          onContinueFromLast={handleContinueFromLast}
-        />
-        <DiscoveryQuestionAuditPanel
-          audit={discoveryAudit}
-          metrics={discoveryMetrics}
-          source={discoveryQuestionSource}
-        />
-      </FlowStep>
-
-      <FlowStep
-        step={4}
-        title={isForecastMode ? "Generate Forecast" : "Decision Simulator"}
-        visible={showContinueStep}
-      >
-        {isDecisionMode ? (
-          <>
-            <p className="mb-5 text-body text-ink-secondary">
-              You&apos;re ready to explore possible decisions.
-            </p>
-            {simulatorError ? (
-              <p className="mb-5 text-body-small text-[var(--state-contradiction-detected)]">
-                {simulatorError}
-              </p>
-            ) : null}
-            <Button
-              type="button"
-              size="lg"
-              disabled={!allQuestionsAnswered || isStreamingPaths}
-              onClick={handleContinueToDecisionSimulator}
-            >
-              {isStreamingPaths ? "Generating decisions…" : "Continue to Decision Simulator"}
-            </Button>
-          </>
-        ) : (
-          <>
-            <p className="mb-5 text-body text-ink-secondary">
-              Your situation will be saved automatically, then Future Forecast will generate what
-              might happen next.
-            </p>
-            {forecastError ? (
-              <p className="mb-5 text-body-small text-[var(--state-contradiction-detected)]">
-                {forecastError}
-              </p>
-            ) : null}
-            <Button
-              type="button"
-              size="lg"
-              disabled={!allQuestionsAnswered || isStreamingForecast}
-              onClick={handleGenerateForecast}
-            >
-              {isStreamingForecast ? "Generating forecast…" : "Generate Forecast"}
-            </Button>
-          </>
-        )}
-      </FlowStep>
+          </button>
+        </div>
+      ) : null}
 
       {/* ---- Progressive path cards (Decision Simulator) ---- */}
       {isStreamingPaths && !simulatorResult ? (

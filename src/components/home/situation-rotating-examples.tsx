@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react";
 
 const ROTATING_EXAMPLES = [
-  "Should I reconnect with an old friend?",
-  "Should I ask a girl I like out?",
-  "Should I start a business?",
-  "Should I move to a new city?",
-  "Should I quit my job?",
-  "Should I take the opportunity?",
-  "Should I stay where I am?",
-  "Should I reach out again?",
+  "Should I move to Dallas?",
+  "I want to start a business",
+  "Should I ask her out?",
+  "I'm thinking about quitting my job",
+  "I lost my job",
+  "Should I relocate?",
 ] as const;
 
 const CYCLE_MS = 2600;
