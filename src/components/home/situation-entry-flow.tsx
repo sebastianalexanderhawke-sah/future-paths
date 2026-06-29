@@ -36,6 +36,98 @@ import { SituationRotatingExamples } from "@/components/home/situation-rotating-
 import { Button } from "@/components/ui/button";
 import { CardShell } from "@/components/ui/card-shell";
 
+// ---------------------------------------------------------------------------
+// SSE stream reader — fetches a streaming endpoint and yields typed events.
+// ---------------------------------------------------------------------------
+
+async function readSSEStream<T>(
+  url: string,
+  body: unknown,
+  onText?: (chunk: string) => void,
+): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`HTTP ${response.status}: ${text}`);
+  }
+
+  if (!response.body) {
+    throw new Error("No response body from server");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const jsonStr = line.slice(6).trim();
+        if (!jsonStr) continue;
+
+        let event: { type: string; data?: unknown; error?: string; content?: string };
+        try {
+          event = JSON.parse(jsonStr);
+        } catch {
+          continue;
+        }
+
+        if (event.type === "text") {
+          onText?.(event.content as string);
+        } else if (event.type === "result") {
+          return event.data as T;
+        } else if (event.type === "error") {
+          throw new Error(event.error ?? "Streaming error");
+        }
+      }
+    }
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+
+  throw new Error("Stream ended without a result event");
+}
+
+// ---------------------------------------------------------------------------
+// Skeleton loading cards
+// ---------------------------------------------------------------------------
+
+function PathSkeleton() {
+  return (
+    <div className="animate-pulse rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/10 bg-[var(--surface-muted)] p-6">
+      <div className="mb-4 h-5 w-3/4 rounded bg-[var(--ink-tertiary)]/15" />
+      <div className="mb-2 h-3 w-full rounded bg-[var(--ink-tertiary)]/10" />
+      <div className="mb-2 h-3 w-5/6 rounded bg-[var(--ink-tertiary)]/10" />
+      <div className="h-3 w-4/6 rounded bg-[var(--ink-tertiary)]/10" />
+    </div>
+  );
+}
+
+function ForecastSkeleton() {
+  return (
+    <div className="animate-pulse rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/10 bg-[var(--surface-muted)] p-5">
+      <div className="mb-3 h-5 w-1/2 rounded bg-[var(--ink-tertiary)]/15" />
+      <div className="mb-2 h-3 w-full rounded bg-[var(--ink-tertiary)]/10" />
+      <div className="h-3 w-4/5 rounded bg-[var(--ink-tertiary)]/10" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
 function FlowStep({
   step,
   title,
@@ -80,7 +172,12 @@ export function SituationEntryFlow() {
   // AI batches questions upfront; duplicate blocking only applies to rule-based fallback.
   const [duplicateQuestionsBlocked, setDuplicateQuestionsBlocked] = useState(0);
   const [questionsError, setQuestionsError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+
+  // Streaming state for each AI call (replaces a single isPending useTransition)
+  const [isStreamingPaths, setIsStreamingPaths] = useState(false);
+  const [isStreamingForecast, setIsStreamingForecast] = useState(false);
+  const [isStreamingPathForecast, setIsStreamingPathForecast] = useState(false);
+
   const [isLoadingQuestions, startQuestionsTransition] = useTransition();
   const [isSelectingPath, startSelectTransition] = useTransition();
 
@@ -102,6 +199,9 @@ export function SituationEntryFlow() {
     setDuplicateQuestionsBlocked(0);
     setDiscoveryQuestionSource(null);
     setQuestionsError(null);
+    setIsStreamingPaths(false);
+    setIsStreamingForecast(false);
+    setIsStreamingPathForecast(false);
 
     if (!hasSituation || !goal) {
       setQuestions([]);
@@ -110,30 +210,43 @@ export function SituationEntryFlow() {
     }
 
     startQuestionsTransition(async () => {
-      const response = await generateDiscoveryQuestionsAction({
-        situationText: situationText.trim(),
-        goal,
-        additionalContext: additionalContext.trim() || undefined,
-      });
+      try {
+        const result = await readSSEStream<{
+          questions: PlannedDiscoveryQuestion[];
+          source: DiscoveryQuestionsSource;
+        }>("/api/stream/discovery-questions", {
+          situationText: situationText.trim(),
+          goal,
+          additionalContext: additionalContext.trim() || undefined,
+        });
 
-      if ("error" in response) {
-        const fallback = planDiscoveryQuestionSession(
-          {
-            title: situationText.trim(),
-            goal,
-          },
-          MAX_DISCOVERY_QUESTIONS,
-        );
-        setPlannedQuestions(fallback);
-        setQuestions(selectQuestionsForGoal(fallback.map(toContextQuestion), goal));
-        setDiscoveryQuestionSource("fallback");
-        setQuestionsError(response.error);
-        return;
+        setPlannedQuestions(result.questions);
+        setQuestions(selectQuestionsForGoal(result.questions.map(toContextQuestion), goal));
+        setDiscoveryQuestionSource(result.source);
+      } catch {
+        // Network failure: fall back to server action
+        const response = await generateDiscoveryQuestionsAction({
+          situationText: situationText.trim(),
+          goal,
+          additionalContext: additionalContext.trim() || undefined,
+        });
+
+        if ("error" in response) {
+          const fallback = planDiscoveryQuestionSession(
+            { title: situationText.trim(), goal },
+            MAX_DISCOVERY_QUESTIONS,
+          );
+          setPlannedQuestions(fallback);
+          setQuestions(selectQuestionsForGoal(fallback.map(toContextQuestion), goal));
+          setDiscoveryQuestionSource("fallback");
+          setQuestionsError(response.error);
+          return;
+        }
+
+        setPlannedQuestions(response.questions);
+        setQuestions(selectQuestionsForGoal(response.questions.map(toContextQuestion), goal));
+        setDiscoveryQuestionSource(response.source);
       }
-
-      setPlannedQuestions(response.questions);
-      setQuestions(selectQuestionsForGoal(response.questions.map(toContextQuestion), goal));
-      setDiscoveryQuestionSource(response.source);
     });
   }, [situationText, goal, hasSituation, hasGoal]);
 
@@ -169,27 +282,41 @@ export function SituationEntryFlow() {
     return true;
   }
 
-  function handleGenerateForecast() {
+  async function handleGenerateForecast() {
     if (!isForecastMode || !allQuestionsAnswered) {
       return;
     }
 
     setForecastError(null);
+    setIsStreamingForecast(true);
 
-    startTransition(async () => {
-      const response = await runFutureForecastAction({
-        situationText: situationText.trim(),
-        contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
-      });
-
-      if (response.error) {
-        setForecastError(response.error);
-        setForecastResult(null);
-        return;
+    try {
+      const result = await readSSEStream<ForecastResult>(
+        "/api/stream/future-forecast",
+        {
+          situationText: situationText.trim(),
+          contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
+        },
+      );
+      setForecastResult(result);
+    } catch {
+      // Network failure: fall back to server action
+      try {
+        const response = await runFutureForecastAction({
+          situationText: situationText.trim(),
+          contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
+        });
+        if (response.error) {
+          setForecastError(response.error);
+        } else {
+          setForecastResult(response.result);
+        }
+      } catch (err) {
+        setForecastError(err instanceof Error ? err.message : "Failed to generate forecast");
       }
-
-      setForecastResult(response.result);
-    });
+    } finally {
+      setIsStreamingForecast(false);
+    }
   }
 
   const showContinueStep =
@@ -198,29 +325,46 @@ export function SituationEntryFlow() {
     questionsComplete &&
     !simulatorResult &&
     !forecastResult &&
-    !pathForecastResult;
+    !pathForecastResult &&
+    !isStreamingPaths &&
+    !isStreamingForecast &&
+    !isStreamingPathForecast;
 
-  function handleContinueToDecisionSimulator() {
+  async function handleContinueToDecisionSimulator() {
     if (!isDecisionMode || !allQuestionsAnswered) {
       return;
     }
 
     setSimulatorError(null);
+    setIsStreamingPaths(true);
 
-    startTransition(async () => {
-      const response = await runDecisionSimulatorAction({
-        situationText: situationText.trim(),
-        contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
-      });
-
-      if (response.error) {
-        setSimulatorError(response.error);
-        setSimulatorResult(null);
-        return;
+    try {
+      const result = await readSSEStream<DecisionSimulatorResult>(
+        "/api/stream/decision-simulator",
+        {
+          situationText: situationText.trim(),
+          contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
+        },
+      );
+      setSimulatorResult(result);
+    } catch {
+      // Network failure: fall back to server action
+      try {
+        const response = await runDecisionSimulatorAction({
+          situationText: situationText.trim(),
+          contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
+        });
+        if (response.error) {
+          setSimulatorError(response.error);
+        } else {
+          setSimulatorResult(response.result);
+        }
+      } catch (err) {
+        setSimulatorError(err instanceof Error ? err.message : "Failed to generate decisions");
       }
-
-      setSimulatorResult(response.result);
-    });
+    } finally {
+      setIsStreamingPaths(false);
+    }
   }
 
   function handleSelectPath(pathId: string) {
@@ -240,7 +384,7 @@ export function SituationEntryFlow() {
     });
   }
 
-  function handleForecastSelectedPath() {
+  async function handleForecastSelectedPath() {
     if (!simulatorResult || !selectedPathId) {
       return;
     }
@@ -256,33 +400,45 @@ export function SituationEntryFlow() {
     }
 
     setPathForecastError(null);
+    setIsStreamingPathForecast(true);
 
     const cleanedSelectedPath = toPathTitleInput(selectedPath);
+    const forecastInput = {
+      situationText: situationText.trim(),
+      contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
+      momentId: simulatorResult.momentId,
+      selectedPath: {
+        id: selectedPath.id,
+        title: formattedPath.title,
+        description: cleanedSelectedPath.description,
+        benefits: selectedPath.benefits,
+        consequences: selectedPath.consequences,
+        future_shift: selectedPath.future_shift,
+        themes: selectedPath.themes,
+      },
+    };
 
-    startTransition(async () => {
-      const response = await runFutureForecastAction({
-        situationText: situationText.trim(),
-        contextSummary: buildContextSummary(questions, answers, additionalContext.trim() || undefined),
-        momentId: simulatorResult.momentId,
-        selectedPath: {
-          id: selectedPath.id,
-          title: formattedPath.title,
-          description: cleanedSelectedPath.description,
-          benefits: selectedPath.benefits,
-          consequences: selectedPath.consequences,
-          future_shift: selectedPath.future_shift,
-          themes: selectedPath.themes,
-        },
-      });
-
-      if (response.error) {
-        setPathForecastError(response.error);
-        setPathForecastResult(null);
-        return;
+    try {
+      const result = await readSSEStream<ForecastResult>(
+        "/api/stream/future-forecast",
+        forecastInput,
+      );
+      setPathForecastResult(result);
+    } catch {
+      // Network failure: fall back to server action
+      try {
+        const response = await runFutureForecastAction(forecastInput);
+        if (response.error) {
+          setPathForecastError(response.error);
+        } else {
+          setPathForecastResult(response.result);
+        }
+      } catch (err) {
+        setPathForecastError(err instanceof Error ? err.message : "Failed to generate forecast");
       }
-
-      setPathForecastResult(response.result);
-    });
+    } finally {
+      setIsStreamingPathForecast(false);
+    }
   }
 
   return (
@@ -375,8 +531,8 @@ export function SituationEntryFlow() {
             : "One question at a time. Your answers shape what comes next."}
         </p>
         {isLoadingQuestions ? (
-          <p className="text-body-small text-ink-secondary">
-            Thinking of questions for your situation…
+          <p className="animate-pulse text-body-small text-ink-secondary">
+            Thinking about your situation…
           </p>
         ) : null}
         {questionsError ? (
@@ -416,10 +572,10 @@ export function SituationEntryFlow() {
             <Button
               type="button"
               size="lg"
-              disabled={!allQuestionsAnswered || isPending}
+              disabled={!allQuestionsAnswered || isStreamingPaths}
               onClick={handleContinueToDecisionSimulator}
             >
-              {isPending ? "Generating decisions…" : "Continue to Decision Simulator"}
+              {isStreamingPaths ? "Generating decisions…" : "Continue to Decision Simulator"}
             </Button>
           </>
         ) : (
@@ -436,14 +592,25 @@ export function SituationEntryFlow() {
             <Button
               type="button"
               size="lg"
-              disabled={!allQuestionsAnswered || isPending}
+              disabled={!allQuestionsAnswered || isStreamingForecast}
               onClick={handleGenerateForecast}
             >
-              {isPending ? "Generating forecast…" : "Generate Forecast"}
+              {isStreamingForecast ? "Generating forecast…" : "Generate Forecast"}
             </Button>
           </>
         )}
       </FlowStep>
+
+      {isStreamingPaths && isDecisionMode ? (
+        <div className="flex flex-col gap-3">
+          <p className="animate-pulse text-label text-ink-tertiary">
+            Exploring possible decisions…
+          </p>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <PathSkeleton key={i} />
+          ))}
+        </div>
+      ) : null}
 
       {simulatorResult && isDecisionMode ? (
         <DecisionSimulatorResultView
@@ -457,13 +624,35 @@ export function SituationEntryFlow() {
           isSelectingPath={isSelectingPath}
           showForecastBridge={!pathForecastResult}
           onForecastSelectedPath={handleForecastSelectedPath}
-          isForecastPending={isPending}
+          isForecastPending={isStreamingPathForecast}
           forecastBridgeError={pathForecastError}
         />
       ) : null}
 
+      {isStreamingPathForecast && isDecisionMode && !pathForecastResult ? (
+        <div className="flex flex-col gap-3">
+          <p className="animate-pulse text-label text-ink-tertiary">
+            Forecasting your futures…
+          </p>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <ForecastSkeleton key={i} />
+          ))}
+        </div>
+      ) : null}
+
       {pathForecastResult && isDecisionMode ? (
         <FutureForecastResultView forecast={pathForecastResult} />
+      ) : null}
+
+      {isStreamingForecast && isForecastMode && !forecastResult ? (
+        <div className="flex flex-col gap-3">
+          <p className="animate-pulse text-label text-ink-tertiary">
+            Forecasting your futures…
+          </p>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <ForecastSkeleton key={i} />
+          ))}
+        </div>
       ) : null}
 
       {forecastResult && isForecastMode ? (

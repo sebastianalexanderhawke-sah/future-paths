@@ -12,7 +12,7 @@ import {
   validateStructuredOutput,
   type IdentityAIProvider,
 } from "@/lib/ai/providers/types";
-import type { StructuredGenerationRequest } from "@/lib/ai/types";
+import type { GenerationResult, StructuredGenerationRequest } from "@/lib/ai/types";
 import type { PromptId } from "@/lib/ai/prompts/ids";
 
 function extractJson(text: string): unknown {
@@ -41,6 +41,71 @@ function extractJson(text: string): unknown {
     }
 
     throw new Error("Claude response did not contain JSON.");
+  }
+}
+
+export async function streamStructuredGeneration<T>(
+  request: StructuredGenerationRequest<T>,
+  onChunk: (text: string) => void,
+): Promise<GenerationResult<T>> {
+  const apiKey = getAnthropicApiKey();
+
+  if (!apiKey) {
+    return toGenerationFailure("ANTHROPIC_API_KEY is not configured.", true);
+  }
+
+  try {
+    const prompt = getPromptDefinition(request.promptId as PromptId);
+    const client = new Anthropic({ apiKey });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), getGenerationTimeoutMs());
+
+    let fullText = "";
+
+    try {
+      const stream = client.messages.stream(
+        {
+          model: getClaudeModel(),
+          max_tokens: request.options?.maxTokens ?? 4096,
+          temperature: request.options?.temperature ?? 0.4,
+          system: prompt.buildSystemPrompt(),
+          messages: [
+            {
+              role: "user",
+              content: prompt.buildUserPrompt(request.context),
+            },
+          ],
+        },
+        { signal: controller.signal },
+      );
+
+      for await (const chunk of stream) {
+        if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
+          fullText += chunk.delta.text;
+          onChunk(chunk.delta.text);
+        }
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!fullText) {
+      return toGenerationFailure("Claude returned an empty response.", true);
+    }
+
+    const raw = extractJson(fullText);
+    const parsed = prompt.parseOutput(raw);
+    const data = validateStructuredOutput(request.schema, parsed);
+
+    return toGenerationSuccess({
+      provider: "claude",
+      promptId: prompt.promptId,
+      promptVersion: prompt.promptVersion,
+      data,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Claude generation failed.";
+    return toGenerationFailure(message, true);
   }
 }
 
