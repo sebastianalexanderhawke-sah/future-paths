@@ -3,6 +3,8 @@ export const PROMPT_MIGRATION_ORDER = [
   "discovery_question.generate",
   "check_in.generate",
   "identity_update.generate",
+  // Deprecated: Phase 4 replaced AI discovery with deterministic identity recognition.
+  // Kept registered to avoid PromptId type cascade — no longer invoked.
   "future_self.discover",
   "forecast.generate",
   "current_self.generate",

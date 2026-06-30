@@ -398,7 +398,7 @@ export async function choosePath(
   // Choosing a path for a situation is itself predictive evidence — not just
   // a record of intent — so it regenerates Future Selves immediately, the
   // same way submitCheckIn() does for lived evidence.
-  await generateFutureSelves().catch(() => {});
+  await generateFutureSelves(momentId).catch(() => {});
 
   return { path: updatedPath };
 }

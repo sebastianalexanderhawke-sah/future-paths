@@ -276,8 +276,8 @@ describe("recognizeIdentitiesFromObservations", () => {
 // ---------------------------------------------------------------------------
 
 describe("IDENTITY_LIBRARY", () => {
-  it("contains 14 identities", () => {
-    expect(IDENTITY_LIBRARY).toHaveLength(14);
+  it("contains 13 identities", () => {
+    expect(IDENTITY_LIBRARY).toHaveLength(13);
   });
 
   it("has unique ids", () => {

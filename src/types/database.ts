@@ -125,6 +125,13 @@ export type FutureSelf = {
   status: FutureSelfStatus;
   created_at: string;
   updated_at: string;
+  // Identity Platform fields (null on legacy AI-discovered futures)
+  identity_id: string | null;
+  confidence: number | null;
+  dimension_breakdown: Record<string, unknown>[] | null;
+  supporting_observations: Record<string, unknown>[] | null;
+  supporting_situations: Record<string, unknown>[] | null;
+  opposing_observations: Record<string, unknown>[] | null;
 };
 
 export type FutureSelfEvent = {
@@ -389,6 +396,12 @@ export type FutureSelfInsert = Pick<
   themes?: ThemeName[];
   status?: FutureSelfStatus;
   why_emerging?: string;
+  identity_id?: string;
+  confidence?: number;
+  dimension_breakdown?: Record<string, unknown>[];
+  supporting_observations?: Record<string, unknown>[];
+  supporting_situations?: Record<string, unknown>[];
+  opposing_observations?: Record<string, unknown>[];
 };
 
 export type FutureSelfUpdate = Partial<
@@ -408,6 +421,12 @@ export type FutureSelfUpdate = Partial<
     | "status"
     | "updated_at"
     | "why_emerging"
+    | "identity_id"
+    | "confidence"
+    | "dimension_breakdown"
+    | "supporting_observations"
+    | "supporting_situations"
+    | "opposing_observations"
   >
 >;
 

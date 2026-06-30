@@ -345,7 +345,7 @@ export async function createCheckIn(
 
   // Check-ins are lived evidence — the strongest signal Future Selves
   // respond to — so every check-in always triggers a regeneration.
-  await generateFutureSelves().catch(() => {});
+  await generateFutureSelves(momentId).catch(() => {});
   await requestCurrentSelfRegeneration(auth.userId);
 
   revalidatePath(`/moments/${momentId}`);

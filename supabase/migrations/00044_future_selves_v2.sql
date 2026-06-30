@@ -12,9 +12,10 @@ ALTER TABLE public.future_selves
   ADD COLUMN IF NOT EXISTS why_emerging         text    NOT NULL DEFAULT '';
 
 -- Preserve existing data under the new field names.
+-- benefits and consequences are jsonb arrays; unpack them to text[].
 UPDATE public.future_selves SET
-  growth_opportunities = benefits,
-  blind_spots          = consequences,
+  growth_opportunities = ARRAY(SELECT jsonb_array_elements_text(benefits)),
+  blind_spots          = ARRAY(SELECT jsonb_array_elements_text(consequences)),
   likely_evolution     = prediction,
   why_emerging         = why_changed;
 
