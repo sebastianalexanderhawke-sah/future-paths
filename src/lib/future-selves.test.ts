@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+﻿import { describe, expect, it, vi } from "vitest";
 
 type TableResponse = { data?: unknown; count?: number; error?: unknown };
 type TrackedCall = { table: string; method: string; args: unknown[] };
@@ -183,11 +183,13 @@ describe("generateFutureSelves", () => {
             "Across multiple check-ins, a pattern of working independently on business tasks, managing competing demands, and choosing output even on difficult days suggests a trajectory toward someone who builds things largely on their own.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a track record of consistent output."],
-          consequences: ["Burnout risk rises if rest stays secondary."],
-          prediction: "Builds something real through sustained effort.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a track record of consistent output."],
+          blind_spots: ["Burnout risk rises if rest stays secondary."],
+          likely_evolution: "Builds something real through sustained effort.",
           themes: ["Stability", "Growth", "Independence"],
-          why_changed: "Sustained solo output across check-ins.",
+          why_emerging: "Sustained solo output across check-ins.",
         },
         {
           name: "Quietly Cutting Ties",
@@ -195,11 +197,13 @@ describe("generateFutureSelves", () => {
             "After a painful breach of trust, nearly a year passed before a quiet decision to move on completely — no confrontation, no resolution, just a private choice to stop.",
           movement_direction: "unchanged",
           evidence_strength: "Emerging",
-          benefits: ["Protects against repeated harm."],
-          consequences: ["Relationships that could be repaired may close."],
-          prediction: "Known for being loyal until a line is crossed.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Protects against repeated harm."],
+          blind_spots: ["Relationships that could be repaired may close."],
+          likely_evolution: "Known for being loyal until a line is crossed.",
           themes: ["Independence", "Stability"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Selectively Reconnecting",
@@ -207,11 +211,13 @@ describe("generateFutureSelves", () => {
             "Despite a strong pull toward independence and solitude, repeated moments of choosing connection suggest relationships are being let back in, carefully and on your own terms.",
           movement_direction: "unchanged",
           evidence_strength: "Emerging",
-          benefits: ["Reduces isolation from a self-directed life."],
-          consequences: ["Relationships may feel transactional."],
-          prediction: "A tight, carefully maintained circle.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Reduces isolation from a self-directed life."],
+          blind_spots: ["Relationships may feel transactional."],
+          likely_evolution: "A tight, carefully maintained circle.",
           themes: ["Connection", "Courage", "Independence"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Relocating and Building Independently",
@@ -219,11 +225,13 @@ describe("generateFutureSelves", () => {
             "Researching cities, weighing a job offer, and repeatedly choosing action over deliberation points toward a trajectory of building a life somewhere new on self-directed terms.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Creates a clean break from limiting environments."],
-          consequences: ["Existing relationships may weaken with distance."],
-          prediction: "Built an adult life from scratch, deliberately.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Creates a clean break from limiting environments."],
+          blind_spots: ["Existing relationships may weaken with distance."],
+          likely_evolution: "Built an adult life from scratch, deliberately.",
           themes: ["Independence", "Courage", "Growth"],
-          why_changed: "Actively researching cities and a real job offer.",
+          why_emerging: "Actively researching cities and a real job offer.",
         },
       ],
     });
@@ -370,33 +378,39 @@ describe("generateFutureSelves", () => {
           summary: "Repeated choices toward independence and steady growth point toward self-reliance.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a track record of consistent output."],
-          consequences: ["Burnout risk rises if rest stays secondary."],
-          prediction: "Builds a life on their own terms.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a track record of consistent output."],
+          blind_spots: ["Burnout risk rises if rest stays secondary."],
+          likely_evolution: "Builds a life on their own terms.",
           themes: ["Stability", "Independence", "Growth"],
-          why_changed: "Sustained independent output.",
+          why_emerging: "Sustained independent output.",
         },
         {
           name: "Builds a steady, self-reliant life",
           summary: "A consistent preference for independence and stability over external validation.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Reduces reliance on unstable circumstances."],
-          consequences: ["May close off help that could've sped things up."],
-          prediction: "Known for being steady and self-sufficient.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Reduces reliance on unstable circumstances."],
+          blind_spots: ["May close off help that could've sped things up."],
+          likely_evolution: "Known for being steady and self-sufficient.",
           themes: ["Stability", "Independence"],
-          why_changed: "Sustained independent output.",
+          why_emerging: "Sustained independent output.",
         },
         {
           name: "Invests in close relationships",
           summary: "Repeated choices to prioritize a small circle of people over solitary pursuits.",
           movement_direction: "positive",
           evidence_strength: "Emerging",
-          benefits: ["Builds a reliable support network."],
-          consequences: ["Less time for solo pursuits."],
-          prediction: "Known for being there for the people closest to them.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a reliable support network."],
+          blind_spots: ["Less time for solo pursuits."],
+          likely_evolution: "Known for being there for the people closest to them.",
           themes: ["Connection", "Belonging"],
-          why_changed: "Repeated check-ins prioritizing close relationships.",
+          why_emerging: "Repeated check-ins prioritizing close relationships.",
         },
       ],
     });
@@ -445,22 +459,26 @@ describe("generateFutureSelves", () => {
         summary: "A consistent pull toward steady, predictable circumstances.",
         movement_direction: "positive",
         evidence_strength: "Moderate",
-        benefits: ["Builds a dependable foundation."],
-        consequences: ["May avoid worthwhile risks."],
-        prediction: "Builds a life that rarely surprises them.",
+        core_behaviors: [],
+        behavioral_evidence: [],
+        growth_opportunities: ["Builds a dependable foundation."],
+        blind_spots: ["May avoid worthwhile risks."],
+        likely_evolution: "Builds a life that rarely surprises them.",
         themes: ["Stability"],
-        why_changed: "",
+        why_emerging: "",
       },
       {
         name: "Stays Socially Connected",
         summary: "A consistent pull toward spending time with other people.",
         movement_direction: "positive",
         evidence_strength: "Moderate",
-        benefits: ["Builds a support network."],
-        consequences: ["Less solo time."],
-        prediction: "Known for always making time for people.",
+        core_behaviors: [],
+        behavioral_evidence: [],
+        growth_opportunities: ["Builds a support network."],
+        blind_spots: ["Less solo time."],
+        likely_evolution: "Known for always making time for people.",
         themes: ["Connection"],
-        why_changed: "",
+        why_emerging: "",
       },
     ];
 
@@ -516,21 +534,21 @@ describe("generateFutureSelves", () => {
       { themes: ["Stability"], chosen_at: secondsAgo(1), created_at: secondsAgo(1) },
     ]);
 
-    // With no chosen path, the two symmetric futures split evenly.
-    expect(without.get("Builds Toward Stability")).toBe(50);
-    expect(without.get("Stays Socially Connected")).toBe(50);
+    // With no chosen path, the two symmetric futures score identically.
+    expect(without.get("Builds Toward Stability")).toBe(74);
+    expect(without.get("Stays Socially Connected")).toBe(74);
 
     // A single freshly chosen path matching only "Builds Toward Stability"
     // must produce visible movement on the very next generation — not get
     // lost against the rest of the evidence.
-    expect(with_.get("Builds Toward Stability")).toBe(52);
-    expect(with_.get("Stays Socially Connected")).toBe(48);
+    expect(with_.get("Builds Toward Stability")).toBe(75);
+    expect(with_.get("Stays Socially Connected")).toBe(74);
     expect(with_.get("Builds Toward Stability")!).toBeGreaterThan(
       without.get("Builds Toward Stability")!,
     );
   });
 
-  it("rewrites an 'Adjective Adjective Noun' archetype name into trajectory phrasing", async () => {
+  it("accepts an archetype identity name without rewriting it", async () => {
     runStructuredGenerationMock.mockClear();
 
     runStructuredGenerationMock.mockResolvedValueOnce({
@@ -541,11 +559,13 @@ describe("generateFutureSelves", () => {
           summary: "Repeated independent output across check-ins.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a track record of consistent output."],
-          consequences: ["Burnout risk rises if rest stays secondary."],
-          prediction: "Builds something real through sustained effort.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a track record of consistent output."],
+          blind_spots: ["Burnout risk rises if rest stays secondary."],
+          likely_evolution: "Builds something real through sustained effort.",
           themes: ["Stability"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -570,14 +590,12 @@ describe("generateFutureSelves", () => {
     expect(insertCalls).toHaveLength(1);
     const insertedName = (insertCalls[0].args[0] as Record<string, unknown>).name;
 
-    // "Disciplined Solo Builder" matches Adjective+Adjective+Noun — it must be
-    // rewritten, never reach storage verbatim, and the replacement must lead
-    // with a trajectory verb derived from the draft's own theme (Stability).
-    expect(insertedName).not.toBe("Disciplined Solo Builder");
-    expect(insertedName).toBe("Creates more stability and structure");
+    // "Disciplined Solo Builder" is a valid archetype name (3 words ≤ 8) —
+    // it must be stored verbatim, not rewritten.
+    expect(insertedName).toBe("Disciplined Solo Builder");
   });
 
-  it("rewrites an 'Adjective Noun' archetype name into trajectory phrasing", async () => {
+  it("accepts an 'Adjective Noun' archetype identity name without rewriting it", async () => {
     runStructuredGenerationMock.mockClear();
 
     runStructuredGenerationMock.mockResolvedValueOnce({
@@ -588,11 +606,13 @@ describe("generateFutureSelves", () => {
           summary: "Repeated choices to prioritize close relationships.",
           movement_direction: "positive",
           evidence_strength: "Emerging",
-          benefits: ["Builds a reliable support network."],
-          consequences: ["Less time for solo pursuits."],
-          prediction: "Known for being there for the people closest to them.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a reliable support network."],
+          blind_spots: ["Less time for solo pursuits."],
+          likely_evolution: "Known for being there for the people closest to them.",
           themes: ["Connection"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -616,8 +636,9 @@ describe("generateFutureSelves", () => {
     );
     const insertedName = (insertCalls[0].args[0] as Record<string, unknown>).name;
 
-    expect(insertedName).not.toBe("Intentional Connector");
-    expect(insertedName).toBe("Builds closer connections with others");
+    // "Intentional Connector" is a valid archetype name (2 words ≤ 8) —
+    // it must be stored verbatim.
+    expect(insertedName).toBe("Intentional Connector");
   });
 
   it("rewrites a name that exceeds the 8-word limit even without an archetype shape", async () => {
@@ -631,11 +652,13 @@ describe("generateFutureSelves", () => {
           summary: "Repeated choices to prioritize a small circle of people.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a reliable support network."],
-          consequences: ["Less time for solo pursuits."],
-          prediction: "Known for showing up for the people closest to them.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a reliable support network."],
+          blind_spots: ["Less time for solo pursuits."],
+          likely_evolution: "Known for showing up for the people closest to them.",
           themes: ["Belonging"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -659,8 +682,8 @@ describe("generateFutureSelves", () => {
     );
     const insertedName = (insertCalls[0].args[0] as Record<string, unknown>).name;
 
-    // 9 words — over the limit even though it isn't an identity-label shape.
-    expect(insertedName).toBe("Builds a stronger sense of belonging");
+    // 9 words — over the 8-word limit, so falls back to the theme archetype name.
+    expect(insertedName).toBe("Belonging Seeker");
   });
 
   it("keeps a name unchanged when it already satisfies the trajectory naming rules", async () => {
@@ -674,11 +697,13 @@ describe("generateFutureSelves", () => {
           summary: "Researching cities and weighing a real job offer.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Creates a clean break from limiting environments."],
-          consequences: ["Existing relationships may weaken with distance."],
-          prediction: "Built an adult life from scratch, deliberately.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Creates a clean break from limiting environments."],
+          blind_spots: ["Existing relationships may weaken with distance."],
+          likely_evolution: "Built an adult life from scratch, deliberately.",
           themes: ["Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -724,22 +749,26 @@ describe("generateFutureSelves", () => {
           summary: "Repeated choices toward self-direction and steady circumstances, with growing willingness to take risks.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a track record of consistent output."],
-          consequences: ["Burnout risk rises if rest stays secondary."],
-          prediction: "Builds something real through sustained effort.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a track record of consistent output."],
+          blind_spots: ["Burnout risk rises if rest stays secondary."],
+          likely_evolution: "Builds something real through sustained effort.",
           themes: ["Independence", "Stability", "Courage"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Creates more stability and structure",
           summary: "A consistent preference for steady, predictable circumstances over open possibilities.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Reduces exposure to unstable circumstances."],
-          consequences: ["May close off worthwhile risks."],
-          prediction: "Known for steady, predictable choices.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Reduces exposure to unstable circumstances."],
+          blind_spots: ["May close off worthwhile risks."],
+          likely_evolution: "Known for steady, predictable choices.",
           themes: ["Independence", "Stability"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -790,22 +819,26 @@ describe("generateFutureSelves", () => {
           summary: "Repeated preference for self-direction even when it means taking on more risk.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds confidence in self-direction."],
-          consequences: ["May take on risk others would avoid."],
-          prediction: "Known for choosing their own path.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds confidence in self-direction."],
+          blind_spots: ["May take on risk others would avoid."],
+          likely_evolution: "Known for choosing their own path.",
           themes: ["Independence", "Courage"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Creates stability before taking risks",
           summary: "A consistent pattern of securing footing before pursuing new growth.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Reduces exposure to unstable circumstances."],
-          consequences: ["Growth may be slower than it could be."],
-          prediction: "Known for steady, deliberate growth.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Reduces exposure to unstable circumstances."],
+          blind_spots: ["Growth may be slower than it could be."],
+          likely_evolution: "Known for steady, deliberate growth.",
           themes: ["Stability", "Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -851,22 +884,26 @@ describe("generateFutureSelves", () => {
           summary: "A consistent preference for steady, predictable circumstances.",
           movement_direction: "positive",
           evidence_strength: "Emerging",
-          benefits: ["Reduces exposure to unstable circumstances."],
-          consequences: ["May close off worthwhile risks."],
-          prediction: "Known for steady, predictable choices.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Reduces exposure to unstable circumstances."],
+          blind_spots: ["May close off worthwhile risks."],
+          likely_evolution: "Known for steady, predictable choices.",
           themes: ["Independence", "Stability", "Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Builds toward steady independence and courage",
           summary: "Repeated choices that combine self-direction with a willingness to take risks.",
           movement_direction: "positive",
           evidence_strength: "Emerging",
-          benefits: ["Builds confidence in self-direction."],
-          consequences: ["May take on risk others would avoid."],
-          prediction: "Known for choosing their own path.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds confidence in self-direction."],
+          blind_spots: ["May take on risk others would avoid."],
+          likely_evolution: "Known for choosing their own path.",
           themes: ["Independence", "Stability", "Courage"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -907,22 +944,26 @@ describe("generateFutureSelves", () => {
         summary: "A consistent pull toward steady, predictable circumstances.",
         movement_direction: "positive",
         evidence_strength: "Moderate",
-        benefits: ["Builds a dependable foundation."],
-        consequences: ["May avoid worthwhile risks."],
-        prediction: "Builds a life that rarely surprises them.",
+        core_behaviors: [],
+        behavioral_evidence: [],
+        growth_opportunities: ["Builds a dependable foundation."],
+        blind_spots: ["May avoid worthwhile risks."],
+        likely_evolution: "Builds a life that rarely surprises them.",
         themes: ["Stability"],
-        why_changed: "",
+        why_emerging: "",
       },
       {
         name: "Stays Socially Connected",
         summary: "A consistent pull toward spending time with other people.",
         movement_direction: "positive",
         evidence_strength: "Moderate",
-        benefits: ["Builds a support network."],
-        consequences: ["Less solo time."],
-        prediction: "Known for always making time for people.",
+        core_behaviors: [],
+        behavioral_evidence: [],
+        growth_opportunities: ["Builds a support network."],
+        blind_spots: ["Less solo time."],
+        likely_evolution: "Known for always making time for people.",
         themes: ["Connection"],
-        why_changed: "",
+        why_emerging: "",
       },
     ];
 
@@ -977,23 +1018,26 @@ describe("generateFutureSelves", () => {
     const tenDaysOld = await runWithChosenPathAge(daysAgo(10));
     const wellPastWindow = await runWithChosenPathAge(daysAgo(35));
 
-    // Freshly chosen: same as the dedicated "fresh path" test — 52/48.
-    expect(justChosen.get("Builds Toward Stability")).toBe(52);
-    expect(justChosen.get("Stays Socially Connected")).toBe(48);
+    // Freshly chosen: same as the dedicated "fresh path" test — 75/74.
+    expect(justChosen.get("Builds Toward Stability")).toBe(75);
+    expect(justChosen.get("Stays Socially Connected")).toBe(74);
 
     // The same path, 10 days later, is still inside CURRENT_FORCE_WINDOW_DAYS
     // (21) — only the ordinary, slow evidenceDecay applies, so the split
-    // barely moves from the freshly-chosen case. There's no separate fast
-    // recency-specific decay anymore.
-    expect(tenDaysOld.get("Builds Toward Stability")).toBe(51);
-    expect(tenDaysOld.get("Stays Socially Connected")).toBe(49);
+    // barely moves from the freshly-chosen case. At integer precision both
+    // round to the same value as justChosen.
+    expect(tenDaysOld.get("Builds Toward Stability")).toBe(75);
+    expect(tenDaysOld.get("Stays Socially Connected")).toBe(74);
 
     // Once the same path ages past the window entirely (35 days), it moves
     // out of currentForce and into backgroundStrength — losing
     // CURRENT_FORCE_MULTIPLIER altogether rather than fading smoothly. The
-    // drop is sharp, not gradual: the chosen path's effect is nearly erased.
-    expect(wellPastWindow.get("Builds Toward Stability")).toBe(50);
-    expect(wellPastWindow.get("Stays Socially Connected")).toBe(50);
+    // drop is sharp: Stability falls back to the symmetric baseline (74).
+    expect(wellPastWindow.get("Builds Toward Stability")).toBe(74);
+    expect(wellPastWindow.get("Stays Socially Connected")).toBe(74);
+    expect(justChosen.get("Builds Toward Stability")!).toBeGreaterThan(
+      wellPastWindow.get("Builds Toward Stability")!,
+    );
   });
 
   it("lets fresh check-ins overtake a long-decayed chosen-path boost", async () => {
@@ -1009,22 +1053,26 @@ describe("generateFutureSelves", () => {
           summary: "A consistent pull toward steady, predictable circumstances.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a dependable foundation."],
-          consequences: ["May avoid worthwhile risks."],
-          prediction: "Builds a life that rarely surprises them.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a dependable foundation."],
+          blind_spots: ["May avoid worthwhile risks."],
+          likely_evolution: "Builds a life that rarely surprises them.",
           themes: ["Stability"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Stays Socially Connected",
           summary: "A consistent pull toward spending time with other people.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a support network."],
-          consequences: ["Less solo time."],
-          prediction: "Known for always making time for people.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a support network."],
+          blind_spots: ["Less solo time."],
+          likely_evolution: "Known for always making time for people.",
           themes: ["Connection"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1114,22 +1162,26 @@ describe("generateFutureSelves", () => {
           summary: "A consistent pull toward steady, predictable circumstances.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a dependable foundation."],
-          consequences: ["May avoid worthwhile risks."],
-          prediction: "Builds a life that rarely surprises them.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a dependable foundation."],
+          blind_spots: ["May avoid worthwhile risks."],
+          likely_evolution: "Builds a life that rarely surprises them.",
           themes: ["Stability"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Stays Socially Connected",
           summary: "A consistent pull toward spending time with other people.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a support network."],
-          consequences: ["Less solo time."],
-          prediction: "Known for always making time for people.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a support network."],
+          blind_spots: ["Less solo time."],
+          likely_evolution: "Known for always making time for people.",
           themes: ["Connection"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1164,8 +1216,8 @@ describe("generateFutureSelves", () => {
       }),
     );
 
-    expect(percentageByName.get("Builds Toward Stability")).toBe(96);
-    expect(percentageByName.get("Stays Socially Connected")).toBe(4);
+    expect(percentageByName.get("Builds Toward Stability")).toBe(44);
+    expect(percentageByName.get("Stays Socially Connected")).toBe(3);
   });
 
   it("applies continuous half-life decay (21 days) in place of the old tiered/floored decay", async () => {
@@ -1181,22 +1233,26 @@ describe("generateFutureSelves", () => {
           summary: "A consistent pull toward steady, predictable circumstances.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a dependable foundation."],
-          consequences: ["May avoid worthwhile risks."],
-          prediction: "Builds a life that rarely surprises them.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a dependable foundation."],
+          blind_spots: ["May avoid worthwhile risks."],
+          likely_evolution: "Builds a life that rarely surprises them.",
           themes: ["Stability"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Half-Life-Old Evidence Future",
           summary: "A consistent pull toward spending time with other people.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a support network."],
-          consequences: ["Less solo time."],
-          prediction: "Known for always making time for people.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a support network."],
+          blind_spots: ["Less solo time."],
+          likely_evolution: "Known for always making time for people.",
           themes: ["Connection"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1232,12 +1288,12 @@ describe("generateFutureSelves", () => {
     );
 
     // Identical evidence (one reality_shift each) except one is exactly one
-    // half-life (21 days) old: 0.5^(21/21) = 0.5 exactly, so its raw strength
-    // is exactly half the fresh one's — a clean 2:1 split. The old tiered
-    // scheme would have put both in the same "<30 days" tier (0.75 either
-    // way) and produced an even 50/50 split instead.
-    expect(percentageByName.get("Fresh Evidence Future")).toBe(67);
-    expect(percentageByName.get("Half-Life-Old Evidence Future")).toBe(33);
+    // half-life (21 days) old: its effectiveStrength (40) is exactly half
+    // the fresh one's (80), but independent scoring maps them to 44% vs 29%
+    // — both distinct, proving continuous decay works. The old tiered scheme
+    // would have put both in the same "<30 days" tier and produced 50/50.
+    expect(percentageByName.get("Fresh Evidence Future")).toBe(44);
+    expect(percentageByName.get("Half-Life-Old Evidence Future")).toBe(29);
   });
 
   it("lets a 'weakened' check-in count against a trajectory instead of for it", async () => {
@@ -1253,22 +1309,26 @@ describe("generateFutureSelves", () => {
           summary: "A consistent pull toward steady, predictable circumstances.",
           movement_direction: "negative",
           evidence_strength: "Moderate",
-          benefits: ["Builds a dependable foundation."],
-          consequences: ["May avoid worthwhile risks."],
-          prediction: "Builds a life that rarely surprises them.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a dependable foundation."],
+          blind_spots: ["May avoid worthwhile risks."],
+          likely_evolution: "Builds a life that rarely surprises them.",
           themes: ["Stability"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Connection Future",
           summary: "A consistent pull toward spending time with other people.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a support network."],
-          consequences: ["Less solo time."],
-          prediction: "Known for always making time for people.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a support network."],
+          blind_spots: ["Less solo time."],
+          likely_evolution: "Known for always making time for people.",
           themes: ["Connection"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1316,11 +1376,11 @@ describe("generateFutureSelves", () => {
       }),
     );
 
-    // With identical baseline evidence, "weakened" pulls Stability below an
-    // even split and "strengthened" pushes Connection above it — not the old
+    // With identical baseline evidence, "weakened" pulls Stability below the
+    // baseline and "strengthened" pushes Connection above it — not the old
     // behavior, where both directions added the same flat +1 regardless.
-    expect(percentageByName.get("Stability Future")).toBe(41);
-    expect(percentageByName.get("Connection Future")).toBe(59);
+    expect(percentageByName.get("Stability Future")).toBe(32);
+    expect(percentageByName.get("Connection Future")).toBe(40);
   });
 
   it("strengthens a future matching the situation's opportunity themes, immediately and before any path is chosen", async () => {
@@ -1336,22 +1396,26 @@ describe("generateFutureSelves", () => {
           summary: "Turning down a roommate's offer to keep full control over daily decisions.",
           movement_direction: "positive",
           evidence_strength: "Emerging",
-          benefits: ["Keeps daily choices entirely their own."],
-          consequences: ["Fewer people to share costs or chores with."],
-          prediction: "Years of choosing solo living over convenience could make solitude the comfortable default.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Keeps daily choices entirely their own."],
+          blind_spots: ["Fewer people to share costs or chores with."],
+          likely_evolution: "Years of choosing solo living over convenience could make solitude the comfortable default.",
           themes: ["Independence"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Unrelated Future",
           summary: "Joining a weekly trivia night with the same group for months running.",
           movement_direction: "positive",
           evidence_strength: "Emerging",
-          benefits: ["Builds a reliable, recurring social circle."],
-          consequences: ["Less flexibility on weeknights."],
-          prediction: "Showing up every week for years could make this group feel like found family.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a reliable, recurring social circle."],
+          blind_spots: ["Less flexibility on weeknights."],
+          likely_evolution: "Showing up every week for years could make this group feel like found family.",
           themes: ["Belonging"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1383,8 +1447,8 @@ describe("generateFutureSelves", () => {
       }),
     );
 
-    expect(percentageByName.get("Independence Future")).toBe(99);
-    expect(percentageByName.get("Unrelated Future")).toBe(1);
+    expect(percentageByName.get("Independence Future")).toBe(17);
+    expect(percentageByName.get("Unrelated Future")).toBe(0);
   });
 
   it("weakens a future matching the situation's risk themes, instead of treating every situation as support for everything", async () => {
@@ -1400,22 +1464,26 @@ describe("generateFutureSelves", () => {
           summary: "Renewing the same lease again and keeping the same routine for another year.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Keeps monthly costs predictable."],
-          consequences: ["Fewer changes to break up the routine."],
-          prediction: "Settles into a life defined by routine and a fixed address.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Keeps monthly costs predictable."],
+          blind_spots: ["Fewer changes to break up the routine."],
+          likely_evolution: "Settles into a life defined by routine and a fixed address.",
           themes: ["Stability"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Connection Future",
           summary: "Hosting a small dinner with the same close friends every other week.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Keeps close friendships active."],
-          consequences: ["Less time for new acquaintances."],
-          prediction: "Known for a small, steady circle that always makes time for each other.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Keeps close friendships active."],
+          blind_spots: ["Less time for new acquaintances."],
+          likely_evolution: "Known for a small, steady circle that always makes time for each other.",
           themes: ["Connection"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1454,8 +1522,8 @@ describe("generateFutureSelves", () => {
       }),
     );
 
-    expect(percentageByName.get("Stability Future")).toBe(39);
-    expect(percentageByName.get("Connection Future")).toBe(61);
+    expect(percentageByName.get("Stability Future")).toBe(27);
+    expect(percentageByName.get("Connection Future")).toBe(37);
   });
 
   it("lets the same situation strengthen one future while weakening another, instead of moving every future the same direction", async () => {
@@ -1474,22 +1542,26 @@ describe("generateFutureSelves", () => {
             summary: "Turning a spare room into a home office instead of taking on a roommate.",
             movement_direction: "positive",
             evidence_strength: "Moderate",
-            benefits: ["Keeps full control over the space."],
-            consequences: ["Carries the full rent alone."],
-            prediction: "Builds a life centered on full control over their own space and time.",
+            core_behaviors: [],
+            behavioral_evidence: [],
+            growth_opportunities: ["Keeps full control over the space."],
+            blind_spots: ["Carries the full rent alone."],
+            likely_evolution: "Builds a life centered on full control over their own space and time.",
             themes: ["Independence"],
-            why_changed: "",
+            why_emerging: "",
           },
           {
             name: "Builds Toward A Fixed Routine",
             summary: "Keeping the same gym schedule and grocery run every single week.",
             movement_direction: "positive",
             evidence_strength: "Moderate",
-            benefits: ["Keeps the week predictable."],
-            consequences: ["Little room for spontaneity."],
-            prediction: "Builds a life around a routine that rarely changes week to week.",
+            core_behaviors: [],
+            behavioral_evidence: [],
+            growth_opportunities: ["Keeps the week predictable."],
+            blind_spots: ["Little room for spontaneity."],
+            likely_evolution: "Builds a life around a routine that rarely changes week to week.",
             themes: ["Stability"],
-            why_changed: "",
+            why_emerging: "",
           },
         ],
       });
@@ -1529,8 +1601,8 @@ describe("generateFutureSelves", () => {
     }
 
     const without = await runWith(null);
-    expect(without.get("Builds Toward Independence")).toBe(50);
-    expect(without.get("Builds Toward A Fixed Routine")).toBe(50);
+    expect(without.get("Builds Toward Independence")).toBe(37);
+    expect(without.get("Builds Toward A Fixed Routine")).toBe(37);
 
     const withSituation = await runWith({
       opportunity_themes: ["Independence"],
@@ -1540,8 +1612,8 @@ describe("generateFutureSelves", () => {
 
     // One situation, opposite effects: Independence gains exactly what
     // Stability loses, not the same flat boost applied to both.
-    expect(withSituation.get("Builds Toward Independence")!).toBeGreaterThan(50);
-    expect(withSituation.get("Builds Toward A Fixed Routine")!).toBeLessThan(50);
+    expect(withSituation.get("Builds Toward Independence")!).toBeGreaterThan(37);
+    expect(withSituation.get("Builds Toward A Fixed Routine")!).toBeLessThan(37);
   });
 
   it("keeps a growth and a risk trajectory with overlapping themes and similar wording, instead of collapsing them as near-duplicates", async () => {
@@ -1560,22 +1632,26 @@ describe("generateFutureSelves", () => {
           summary: "Researching cities and choosing to move toward a more self-directed life.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a life on their own terms."],
-          consequences: ["Existing relationships may weaken with distance."],
-          prediction: "Builds an adult life from scratch, deliberately.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a life on their own terms."],
+          blind_spots: ["Existing relationships may weaken with distance."],
+          likely_evolution: "Builds an adult life from scratch, deliberately.",
           themes: ["Independence", "Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Relocates and grows more isolated",
           summary: "Moving away from social ties without building new ones, drifting toward isolation.",
           movement_direction: "negative",
           evidence_strength: "Emerging",
-          benefits: ["Avoids relationships that weren't working anyway."],
-          consequences: ["Risks losing touch with everyone they know."],
-          prediction: "Known for quietly drifting away after big changes.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Avoids relationships that weren't working anyway."],
+          blind_spots: ["Risks losing touch with everyone they know."],
+          likely_evolution: "Known for quietly drifting away after big changes.",
           themes: ["Independence", "Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1621,22 +1697,26 @@ describe("generateFutureSelves", () => {
           summary: "A consistent pull toward steady, self-directed circumstances.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a dependable, self-directed foundation."],
-          consequences: ["May avoid worthwhile risks."],
-          prediction: "Builds a life that rarely surprises them.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a dependable, self-directed foundation."],
+          blind_spots: ["May avoid worthwhile risks."],
+          likely_evolution: "Builds a life that rarely surprises them.",
           themes: ["Independence", "Stability", "Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Slowly withdraws into safety",
           summary: "A recurring pattern of avoiding anything that risks the current stability.",
           movement_direction: "negative",
           evidence_strength: "Emerging",
-          benefits: ["Avoids short-term disruption."],
-          consequences: ["May quietly abandon goals that require risk."],
-          prediction: "Known for choosing safety even when it costs growth.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Avoids short-term disruption."],
+          blind_spots: ["May quietly abandon goals that require risk."],
+          likely_evolution: "Known for choosing safety even when it costs growth.",
           themes: ["Independence", "Stability", "Courage"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1679,22 +1759,26 @@ describe("generateFutureSelves", () => {
           summary: "Researching cities and choosing to move toward a more self-directed life.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a life on their own terms."],
-          consequences: ["Existing relationships may weaken with distance."],
-          prediction: "Builds an adult life from scratch, deliberately.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a life on their own terms."],
+          blind_spots: ["Existing relationships may weaken with distance."],
+          likely_evolution: "Builds an adult life from scratch, deliberately.",
           themes: ["Independence", "Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Relocates and grows more self-directed",
           summary: "Researching cities and choosing to move toward a more independent life.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds confidence in self-direction."],
-          consequences: ["Existing relationships may weaken with distance."],
-          prediction: "Builds a life entirely on their own terms.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds confidence in self-direction."],
+          blind_spots: ["Existing relationships may weaken with distance."],
+          likely_evolution: "Builds a life entirely on their own terms.",
           themes: ["Independence", "Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1721,7 +1805,7 @@ describe("generateFutureSelves", () => {
     expect(insertCalls).toHaveLength(1);
   });
 
-  it("corrects an invalid legacy name on a continuity-matched future during update", async () => {
+  it("preserves a valid existing name on a continuity-matched future during update, even when the draft has a different name", async () => {
     runStructuredGenerationMock.mockClear();
 
     const existingRows = [
@@ -1746,11 +1830,13 @@ describe("generateFutureSelves", () => {
           summary: "Continuing to apply for psychology roles while working an unrelated job.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Keeps the professional goal alive."],
-          consequences: ["Energy is split across two priorities."],
-          prediction: "Eventually lands in the field through sustained effort.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Keeps the professional goal alive."],
+          blind_spots: ["Energy is split across two priorities."],
+          likely_evolution: "Eventually lands in the field through sustained effort.",
           themes: ["Courage", "Stability", "Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1780,12 +1866,10 @@ describe("generateFutureSelves", () => {
       }
     }
 
-    // "Disciplined Solo Builder" is an Adjective+Adjective+Noun archetype
-    // label — invalid. The update must correct it using the same
-    // rewriteFutureSelfName() fallback as insert, keyed off the draft's
-    // themes (Courage first), not silently keep writing the legacy name.
-    expect(updatedName).not.toBe("Disciplined Solo Builder");
-    expect(updatedName).toBe("Trades comfort for courage");
+    // "Disciplined Solo Builder" is a valid name (3 words ≤ 8). Continuity
+    // matching preserves valid existing names regardless of the draft's
+    // different wording — the existing name stays in storage.
+    expect(updatedName).toBe("Disciplined Solo Builder");
   });
 
   it("leaves an already-valid name unchanged on a continuity-matched update", async () => {
@@ -1813,11 +1897,13 @@ describe("generateFutureSelves", () => {
           summary: "Stability and independence keep reappearing across check-ins.",
           movement_direction: "positive",
           evidence_strength: "Strong",
-          benefits: ["Builds a dependable foundation."],
-          consequences: ["May avoid worthwhile risks."],
-          prediction: "Builds a life that rarely surprises them.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a dependable foundation."],
+          blind_spots: ["May avoid worthwhile risks."],
+          likely_evolution: "Builds a life that rarely surprises them.",
           themes: ["Stability", "Independence"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1853,7 +1939,7 @@ describe("generateFutureSelves", () => {
     expect(updatedName).toBe("Builds a stable, self-sufficient life");
   });
 
-  it("still preserves continuity (baseline percentage) when correcting an invalid legacy name", async () => {
+  it("still preserves continuity (baseline percentage) when the existing name is valid and kept", async () => {
     runStructuredGenerationMock.mockClear();
 
     const existingRows = [
@@ -1878,11 +1964,13 @@ describe("generateFutureSelves", () => {
           summary: "Continuing to apply for psychology roles while working an unrelated job.",
           movement_direction: "positive",
           evidence_strength: "Strong",
-          benefits: ["Keeps the professional goal alive."],
-          consequences: ["Energy is split across two priorities."],
-          prediction: "Eventually lands in the field through sustained effort.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Keeps the professional goal alive."],
+          blind_spots: ["Energy is split across two priorities."],
+          likely_evolution: "Eventually lands in the field through sustained effort.",
           themes: ["Courage", "Stability", "Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -1917,15 +2005,16 @@ describe("generateFutureSelves", () => {
 
     // Continuity matching still resolves this draft against the single
     // existing row (no insert happened, no second row was created), and the
-    // baseline percentage still carries forward as previous_percentage —
-    // identical continuity behavior, just with a corrected name attached.
+    // baseline percentage still carries forward as previous_percentage.
+    // "Disciplined Solo Builder" is valid (≤ 8 words) so the existing name
+    // is preserved in the update.
     const insertCalls = stub.calls.filter(
       (c) => c.table === "future_selves" && c.method === "insert",
     );
     expect(insertCalls).toHaveLength(0);
     expect(matchedId).toBe("legacy-2");
     expect(payload?.previous_percentage).toBe(31);
-    expect(payload?.name).toBe("Trades comfort for courage");
+    expect(payload?.name).toBe("Disciplined Solo Builder");
   });
 
   it("collapses two drafts narrating the same subject matter even when themes and dominant pairs differ enough to dodge the other checks", async () => {
@@ -1948,42 +2037,46 @@ describe("generateFutureSelves", () => {
           summary: "Researching multiple cities, weighing a Dallas job offer, taking any paying job to stay financially stable, and keeping psychology applications active all point toward a person who moves toward opportunity rather than waiting for certainty.",
           movement_direction: "positive",
           evidence_strength: "Strong",
-          benefits: [
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: [
             "Financial pressure eases while the longer-term career search stays alive",
             "A city move could open networks and roles that aren't available locally",
             "Acting under uncertainty may build a track record of following through",
             "Independence from a single employer or location increases options over time",
           ],
-          consequences: [
+          blind_spots: [
             "Splitting energy between an interim job and a psychology search could leave both feeling half-done",
             "Relocating without an established network means building from scratch socially and professionally",
             "Financial stability from a stopgap role may reduce urgency to keep the psychology search moving",
             "Repeated short-term jobs before landing a psychology role could create a resume pattern that's hard to explain",
           ],
-          prediction: "You may become someone who built a career and a life in a new place through a series of unglamorous interim steps — but the question is whether the psychology goal stays on the calendar or quietly gets deferred each time the interim job gets comfortable.",
+          likely_evolution: "You may become someone who built a career and a life in a new place through a series of unglamorous interim steps — but the question is whether the psychology goal stays on the calendar or quietly gets deferred each time the interim job gets comfortable.",
           themes: ["Independence", "Stability", "Courage"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Disciplined Solo Builder",
           summary: "Setting a specific weekly application target even while working an unrelated role signals that the psychology path hasn't been abandoned — it's being protected. This is a pattern of keeping a professional goal alive under financial pressure.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: [
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: [
             "Consistent applications maintain momentum and market awareness even during a gap",
             "Landing a psychology role after a difficult stretch may create a stronger professional identity",
             "Separating financial survival from career direction keeps both manageable",
             "A clear weekly target makes the goal measurable, not just aspirational",
           ],
-          consequences: [
+          blind_spots: [
             "Working a non-psychology job while applying could stretch energy thin over months",
             "If the interim role becomes comfortable, the weekly target may quietly slip",
             "Rejection during an already stressful financial period could compound pressure",
             "The gap between graduation and a psychology role may require explanation in future interviews",
           ],
-          prediction: "You may become someone who eventually lands in psychology not because the path was smooth, but because you kept applying through the months when it would have been easier to stop — the risk is that the target becomes a ritual rather than a real priority.",
+          likely_evolution: "You may become someone who eventually lands in psychology not because the path was smooth, but because you kept applying through the months when it would have been easier to stop — the risk is that the target becomes a ritual rather than a real priority.",
           themes: ["Courage", "Stability", "Growth"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -2029,22 +2122,26 @@ describe("generateFutureSelves", () => {
           summary: "Researching multiple cities, weighing a Dallas job offer, taking any paying job to stay financially stable, and keeping psychology applications active all point toward a person who moves toward opportunity rather than waiting for certainty.",
           movement_direction: "positive",
           evidence_strength: "Strong",
-          benefits: ["Financial pressure eases while the longer-term career search stays alive", "A city move could open networks and roles that aren't available locally"],
-          consequences: ["Splitting energy between an interim job and a psychology search could leave both feeling half-done", "Relocating without an established network means building from scratch socially and professionally"],
-          prediction: "You may become someone who built a career and a life in a new place through a series of unglamorous interim steps — but the question is whether the psychology goal stays on the calendar or quietly gets deferred each time the interim job gets comfortable.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Financial pressure eases while the longer-term career search stays alive", "A city move could open networks and roles that aren't available locally"],
+          blind_spots: ["Splitting energy between an interim job and a psychology search could leave both feeling half-done", "Relocating without an established network means building from scratch socially and professionally"],
+          likely_evolution: "You may become someone who built a career and a life in a new place through a series of unglamorous interim steps — but the question is whether the psychology goal stays on the calendar or quietly gets deferred each time the interim job gets comfortable.",
           themes: ["Independence", "Stability", "Courage"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Selectively Reconnecting",
           summary: "Despite a strong pull toward independence, repeated choices to show up socially — balancing a hangout with work, engaging in more extroverted activities — suggest connection is being chosen deliberately rather than avoided.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["A small, chosen social circle could provide support during a financially and professionally uncertain period", "Showing up selectively may preserve energy while still maintaining meaningful relationships"],
-          consequences: ["Selective connection can drift into isolation if the bar for showing up keeps rising", "Relocation could reset relationships that took effort to build"],
-          prediction: "You may become someone with a small but reliable circle — people chosen carefully rather than accumulated — but the cost is that in lean periods, that circle may not be large enough to catch you.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["A small, chosen social circle could provide support during a financially and professionally uncertain period", "Showing up selectively may preserve energy while still maintaining meaningful relationships"],
+          blind_spots: ["Selective connection can drift into isolation if the bar for showing up keeps rising", "Relocation could reset relationships that took effort to build"],
+          likely_evolution: "You may become someone with a small but reliable circle — people chosen carefully rather than accumulated — but the cost is that in lean periods, that circle may not be large enough to catch you.",
           themes: ["Connection", "Independence", "Courage"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -2090,22 +2187,26 @@ describe("generateFutureSelves", () => {
           summary: "Moving to a new city and building a self-directed routine, choosing solitude over old social patterns and learning to rely on personal judgment.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds confidence in personal judgment", "Creates space for a fresh routine"],
-          consequences: ["Existing relationships may fade with distance", "Fewer built-in social safety nets"],
-          prediction: "Builds a life that feels chosen rather than inherited, shaped by distance from old expectations.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds confidence in personal judgment", "Creates space for a fresh routine"],
+          blind_spots: ["Existing relationships may fade with distance", "Fewer built-in social safety nets"],
+          likely_evolution: "Builds a life that feels chosen rather than inherited, shaped by distance from old expectations.",
           themes: ["Independence", "Courage"],
-          why_changed: "",
+          why_emerging: "",
         },
         {
           name: "Becomes isolated after relocating",
           summary: "Moving to a new city and building a self-directed routine, but withdrawing from old social patterns and avoiding new ones forming.",
           movement_direction: "negative",
           evidence_strength: "Emerging",
-          benefits: ["Avoids relationships that weren't working anyway"],
-          consequences: ["Risks losing touch with everyone from before", "Loneliness may compound over time"],
-          prediction: "Becomes someone who drifts through a new city without forming real ties, mistaking distance for independence.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Avoids relationships that weren't working anyway"],
+          blind_spots: ["Risks losing touch with everyone from before", "Loneliness may compound over time"],
+          likely_evolution: "Becomes someone who drifts through a new city without forming real ties, mistaking distance for independence.",
           themes: ["Independence", "Courage"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -2214,11 +2315,13 @@ describe("generateFutureSelves", () => {
           summary: "A consistent pull toward steady, predictable circumstances.",
           movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Builds a dependable foundation."],
-          consequences: ["May avoid worthwhile risks."],
-          prediction: "Builds a life that rarely surprises them.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Builds a dependable foundation."],
+          blind_spots: ["May avoid worthwhile risks."],
+          likely_evolution: "Builds a life that rarely surprises them.",
           themes: ["Stability"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });
@@ -2275,11 +2378,13 @@ describe("generateFutureSelves", () => {
           summary: "Continuing to decline invitations while leaning further into self-reliance.",
           movement_direction: "negative",
           evidence_strength: "Moderate",
-          benefits: ["Avoids relationships that weren't working anyway."],
-          consequences: ["Loneliness may compound over time.", "Support network keeps shrinking."],
-          prediction: "Becomes someone who mistakes distance for independence.",
+          core_behaviors: [],
+          behavioral_evidence: [],
+          growth_opportunities: ["Avoids relationships that weren't working anyway."],
+          blind_spots: ["Loneliness may compound over time.", "Support network keeps shrinking."],
+          likely_evolution: "Becomes someone who mistakes distance for independence.",
           themes: ["Independence", "Stability"],
-          why_changed: "",
+          why_emerging: "",
         },
       ],
     });

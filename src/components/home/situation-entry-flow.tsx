@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 
@@ -175,9 +175,20 @@ function StreamingFutureCard({ future }: { future: StreamFutureDraft }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Stage type
+// ---------------------------------------------------------------------------
+
+type Stage = "describe" | "questions" | "paths" | "forecast";
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
 export function SituationEntryFlow() {
   const router = useRouter();
-  const hasNavigated = useRef(false);
+
+  const [stage, setStage] = useState<Stage>("describe");
 
   const [situationText, setSituationText] = useState("");
   const [additionalContext, setAdditionalContext] = useState("");
@@ -216,6 +227,8 @@ export function SituationEntryFlow() {
   const isDecisionMode = goal === "decision";
   const isForecastMode = goal === "forecast";
 
+  // Questions start pre-loading as soon as title + goal are set, even while
+  // the user is still on Stage 1 filling in context.
   useEffect(() => {
     setAnswers({});
     setQuestionsComplete(false);
@@ -311,20 +324,6 @@ export function SituationEntryFlow() {
     };
   }, [situationText, goal, hasSituation, hasGoal]);
 
-  useEffect(() => {
-    if (forecastResult && !hasNavigated.current) {
-      hasNavigated.current = true;
-      router.push(withJustChosenPathFlag(`/moments/${forecastResult.momentId}`));
-    }
-  }, [forecastResult, router]);
-
-  useEffect(() => {
-    if (pathForecastResult && simulatorResult && !hasNavigated.current) {
-      hasNavigated.current = true;
-      router.push(withJustChosenPathFlag(`/moments/${simulatorResult.momentId}`));
-    }
-  }, [pathForecastResult, simulatorResult, router]);
-
   const allQuestionsAnswered = areAllQuestionsAnswered(questions, answers);
 
   useEffect(() => {
@@ -402,17 +401,6 @@ export function SituationEntryFlow() {
       setIsStreamingForecast(false);
     }
   }
-
-  const showContinueStep =
-    hasSituation &&
-    hasGoal &&
-    questionsComplete &&
-    !simulatorResult &&
-    !forecastResult &&
-    !pathForecastResult &&
-    !isStreamingPaths &&
-    !isStreamingForecast &&
-    !isStreamingPathForecast;
 
   async function handleContinueToDecisionSimulator() {
     if (!isDecisionMode || !allQuestionsAnswered) {
@@ -586,214 +574,339 @@ export function SituationEntryFlow() {
     ? Math.max(0, 3 - streamingPathFutures.length)
     : 0;
 
+  // ---------------------------------------------------------------------------
+  // Stage transition handlers
+  // ---------------------------------------------------------------------------
+
+  function handleContinueFromDescribe() {
+    setStage("questions");
+  }
+
+  function handleContinueFromQuestions() {
+    if (isDecisionMode) {
+      setStage("paths");
+      void handleContinueToDecisionSimulator();
+    } else {
+      setStage("forecast");
+      void handleGenerateForecast();
+    }
+  }
+
+  function handleContinueFromPaths() {
+    setStage("forecast");
+    void handleForecastSelectedPath();
+  }
+
+  function handleContinueFromForecast() {
+    // Decision mode with a chosen path creates a Future Self — set the notification badge.
+    if (isDecisionMode && selectedPathId) {
+      localStorage.setItem("fp:future-selves:new", "1");
+    }
+    const momentId =
+      pathForecastResult?.momentId ?? forecastResult?.momentId ?? simulatorResult?.momentId;
+    if (momentId) {
+      router.push(withJustChosenPathFlag(`/moments/${momentId}`));
+    }
+  }
+
+  const forecastDone =
+    (isDecisionMode && pathForecastResult !== null) ||
+    (isForecastMode && forecastResult !== null);
+  const forecastStreaming = isStreamingPathForecast || isStreamingForecast;
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   return (
     <div className="flex flex-col gap-10">
 
-      {/* ── Step 1: Title ── */}
-      <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            What should we call this situation?
-          </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            A short title that helps you recognize this situation later.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2">
-          <SituationRotatingExamples />
-          <input
-            id="situation-input"
-            type="text"
-            value={situationText}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              setSituationText(nextValue);
-              if (nextValue.trim().length === 0) {
-                setGoal(null);
-                setAdditionalContext("");
-              }
-            }}
-            autoFocus
-            maxLength={120}
-            placeholder="Give this situation a short title…"
-            className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white transition-colors"
-          />
-        </div>
-      </div>
+      {/* ── Stage 1: Describe your situation ── */}
+      {stage === "describe" ? (
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+                What should we call this situation?
+              </h1>
+              <p className="mt-2 text-sm text-zinc-500">
+                A short title that helps you recognize this situation later.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <SituationRotatingExamples />
+              <input
+                id="situation-input"
+                type="text"
+                value={situationText}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setSituationText(nextValue);
+                  if (nextValue.trim().length === 0) {
+                    setGoal(null);
+                    setAdditionalContext("");
+                  }
+                }}
+                autoFocus
+                maxLength={120}
+                placeholder="Give this situation a short title…"
+                className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white transition-colors"
+              />
+            </div>
+          </div>
 
-      {/* ── Step 2: Context (appears when title has content) ── */}
-      {hasSituation ? (
-        <div className="flex flex-col gap-4">
+          {hasSituation ? (
+            <div className="flex flex-col gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-zinc-900">
+                  Tell Future Paths what&apos;s happening
+                </h2>
+                <p className="mt-2 text-sm text-zinc-500">
+                  Describe your situation in as much detail as you&apos;d like. The more context you
+                  provide, the more personalized your paths and forecasts become.
+                </p>
+              </div>
+              <textarea
+                id="additional-context-input"
+                value={additionalContext}
+                onChange={(event) => setAdditionalContext(event.target.value)}
+                placeholder="What's going on? Who's involved? What have you tried? What are the constraints?"
+                rows={6}
+                className="w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white transition-colors"
+              />
+            </div>
+          ) : null}
+
+          {hasSituation && hasContext ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-medium text-zinc-700">
+                What kind of help are you looking for?
+              </p>
+              <div className="flex flex-col gap-2">
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 transition-colors hover:border-zinc-300 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50">
+                  <input
+                    type="radio"
+                    name="entry-goal"
+                    value="decision"
+                    checked={goal === "decision"}
+                    onChange={() => setGoal("decision")}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <span className="block text-sm font-medium text-zinc-900">
+                      Explore a decision
+                    </span>
+                    <span className="mt-0.5 block text-sm text-zinc-500">
+                      Help me think through what to do
+                    </span>
+                  </div>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 transition-colors hover:border-zinc-300 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50">
+                  <input
+                    type="radio"
+                    name="entry-goal"
+                    value="forecast"
+                    checked={goal === "forecast"}
+                    onChange={() => setGoal("forecast")}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <span className="block text-sm font-medium text-zinc-900">
+                      Forecast the future
+                    </span>
+                    <span className="mt-0.5 block text-sm text-zinc-500">
+                      Help me see what might happen next
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          ) : null}
+
+          {hasSituation && hasContext && hasGoal ? (
+            <button
+              type="button"
+              onClick={handleContinueFromDescribe}
+              className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+            >
+              Continue
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* ── Stage 2: Understand your situation ── */}
+      {stage === "questions" ? (
+        <div className="flex flex-col gap-8">
           <div>
             <h2 className="text-xl font-semibold text-zinc-900">
-              Tell Future Paths what&apos;s happening
+              Help us understand your situation
             </h2>
             <p className="mt-2 text-sm text-zinc-500">
-              Describe your situation in as much detail as you&apos;d like. The more context you
-              provide, the more personalized your paths and forecasts become.
+              Answer a few questions so we can tailor the analysis to your specific situation.
             </p>
           </div>
-          <textarea
-            id="additional-context-input"
-            value={additionalContext}
-            onChange={(event) => setAdditionalContext(event.target.value)}
-            placeholder="What's going on? Who's involved? What have you tried? What are the constraints?"
-            rows={6}
-            className="w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white transition-colors"
-          />
-        </div>
-      ) : null}
 
-      {/* ── Mode selector (appears when context has content) ── */}
-      {hasSituation && hasContext ? (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm font-medium text-zinc-700">What kind of help are you looking for?</p>
-          <div className="flex flex-col gap-2">
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 transition-colors hover:border-zinc-300 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50">
-              <input
-                type="radio"
-                name="entry-goal"
-                value="decision"
-                checked={goal === "decision"}
-                onChange={() => setGoal("decision")}
-                className="mt-0.5"
-              />
-              <div>
-                <span className="block text-sm font-medium text-zinc-900">Explore a decision</span>
-                <span className="mt-0.5 block text-sm text-zinc-500">Help me think through what to do</span>
-              </div>
-            </label>
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 transition-colors hover:border-zinc-300 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50">
-              <input
-                type="radio"
-                name="entry-goal"
-                value="forecast"
-                checked={goal === "forecast"}
-                onChange={() => setGoal("forecast")}
-                className="mt-0.5"
-              />
-              <div>
-                <span className="block text-sm font-medium text-zinc-900">Forecast the future</span>
-                <span className="mt-0.5 block text-sm text-zinc-500">Help me see what might happen next</span>
-              </div>
-            </label>
-          </div>
-        </div>
-      ) : null}
-
-      {/* ── Discovery questions ── */}
-      {hasSituation && hasGoal && !simulatorResult && !forecastResult && !pathForecastResult ? (
-        <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-6">
           {isLoadingQuestions && questions.length === 0 ? (
             <p className="text-sm text-zinc-400">Preparing questions…</p>
           ) : null}
+
           {questionsError ? (
-            <p className="mb-4 text-sm text-red-500">{questionsError}</p>
+            <p className="text-sm text-red-500">{questionsError}</p>
           ) : null}
+
           {questions.length > 0 ? (
-            <ContextQuestionsStage
-              questions={questions}
-              answers={answers}
-              onAnswerChange={handleAnswerChange}
-              onComplete={() => setQuestionsComplete(true)}
-              onContinueFromLast={handleContinueFromLast}
-            />
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-6">
+              <ContextQuestionsStage
+                questions={questions}
+                answers={answers}
+                onAnswerChange={handleAnswerChange}
+                onComplete={() => setQuestionsComplete(true)}
+                onContinueFromLast={handleContinueFromLast}
+              />
+            </div>
+          ) : null}
+
+          {questionsComplete ? (
+            <button
+              type="button"
+              onClick={handleContinueFromQuestions}
+              className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+            >
+              Continue
+            </button>
           ) : null}
         </div>
       ) : null}
 
-      {/* ── Action button ── */}
-      {showContinueStep ? (
-        <div className="flex flex-col gap-3">
-          {isDecisionMode && simulatorError ? (
+      {/* ── Stage 3: Explore possible paths (decision mode) ── */}
+      {stage === "paths" ? (
+        <div className="flex flex-col gap-8">
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-900">Explore possible paths</h2>
+            <p className="mt-2 text-sm text-zinc-500">
+              Here are the different decisions you could make. Select the one that resonates most.
+            </p>
+          </div>
+
+          {isStreamingPaths && !simulatorResult ? (
+            <div className="flex flex-col gap-3">
+              <p className="animate-pulse text-label text-ink-tertiary">
+                Exploring possible decisions…
+              </p>
+              {streamingPaths.map((path, i) => (
+                <StreamingPathCard key={i} path={path} />
+              ))}
+              {[...Array(pathSkeletonCount)].map((_, i) => (
+                <PathSkeleton key={`sk-${i}`} />
+              ))}
+            </div>
+          ) : null}
+
+          {simulatorError ? (
             <p className="text-sm text-red-500">{simulatorError}</p>
           ) : null}
-          {isForecastMode && forecastError ? (
-            <p className="text-sm text-red-500">{forecastError}</p>
+
+          {simulatorResult ? (
+            <DecisionSimulatorResultView
+              situationTitle={situationText.trim()}
+              currentUnderstanding={simulatorResult.currentUnderstanding}
+              momentId={simulatorResult.momentId}
+              paths={simulatorResult.paths}
+              audit={simulatorResult.audit}
+              selectedPathId={selectedPathId}
+              onSelectPath={handleSelectPath}
+              isSelectingPath={isSelectingPath}
+              showForecastBridge={false}
+            />
           ) : null}
-          <button
-            type="button"
-            onClick={isDecisionMode ? handleContinueToDecisionSimulator : handleGenerateForecast}
-            disabled={!allQuestionsAnswered || (isDecisionMode ? isStreamingPaths : isStreamingForecast)}
-            className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-40"
-          >
-            {isDecisionMode
-              ? isStreamingPaths ? "Exploring…" : "Explore decisions"
-              : isStreamingForecast ? "Generating…" : "Generate forecast"
-            }
-          </button>
+
+          {simulatorResult && selectedPathId && !isSelectingPath ? (
+            <button
+              type="button"
+              onClick={handleContinueFromPaths}
+              className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+            >
+              Continue
+            </button>
+          ) : null}
         </div>
       ) : null}
 
-      {/* ---- Progressive path cards (Decision Simulator) ---- */}
-      {isStreamingPaths && !simulatorResult ? (
-        <div className="flex flex-col gap-3">
-          <p className="animate-pulse text-label text-ink-tertiary">
-            Exploring possible decisions…
-          </p>
-          {streamingPaths.map((path, i) => (
-            <StreamingPathCard key={i} path={path} />
-          ))}
-          {[...Array(pathSkeletonCount)].map((_, i) => (
-            <PathSkeleton key={`sk-${i}`} />
-          ))}
+      {/* ── Stage 4: Look ahead ── */}
+      {stage === "forecast" ? (
+        <div className="flex flex-col gap-8">
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-900">Look ahead</h2>
+            <p className="mt-2 text-sm text-zinc-500">
+              Here&apos;s what might happen based on your situation.
+            </p>
+          </div>
+
+          {isDecisionMode ? (
+            <>
+              {isStreamingPathForecast && !pathForecastResult ? (
+                <div className="flex flex-col gap-3">
+                  <p className="animate-pulse text-label text-ink-tertiary">
+                    Forecasting your futures…
+                  </p>
+                  {streamingPathFutures.map((future, i) => (
+                    <StreamingFutureCard key={i} future={future} />
+                  ))}
+                  {[...Array(pathForecastSkeletonCount)].map((_, i) => (
+                    <ForecastSkeleton key={`sk-${i}`} />
+                  ))}
+                </div>
+              ) : null}
+
+              {pathForecastError ? (
+                <p className="text-sm text-red-500">{pathForecastError}</p>
+              ) : null}
+
+              {pathForecastResult ? (
+                <FutureForecastResultView forecast={pathForecastResult} />
+              ) : null}
+            </>
+          ) : null}
+
+          {isForecastMode ? (
+            <>
+              {isStreamingForecast && !forecastResult ? (
+                <div className="flex flex-col gap-3">
+                  <p className="animate-pulse text-label text-ink-tertiary">
+                    Forecasting your futures…
+                  </p>
+                  {streamingFutures.map((future, i) => (
+                    <StreamingFutureCard key={i} future={future} />
+                  ))}
+                  {[...Array(forecastSkeletonCount)].map((_, i) => (
+                    <ForecastSkeleton key={`sk-${i}`} />
+                  ))}
+                </div>
+              ) : null}
+
+              {forecastError ? (
+                <p className="text-sm text-red-500">{forecastError}</p>
+              ) : null}
+
+              {forecastResult ? (
+                <FutureForecastResultView forecast={forecastResult} />
+              ) : null}
+            </>
+          ) : null}
+
+          {forecastDone && !forecastStreaming ? (
+            <button
+              type="button"
+              onClick={handleContinueFromForecast}
+              className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+            >
+              Continue
+            </button>
+          ) : null}
         </div>
       ) : null}
 
-      {simulatorResult && isDecisionMode ? (
-        <DecisionSimulatorResultView
-          situationTitle={situationText.trim()}
-          currentUnderstanding={simulatorResult.currentUnderstanding}
-          momentId={simulatorResult.momentId}
-          paths={simulatorResult.paths}
-          audit={simulatorResult.audit}
-          selectedPathId={selectedPathId}
-          onSelectPath={handleSelectPath}
-          isSelectingPath={isSelectingPath}
-          showForecastBridge={!pathForecastResult}
-          onForecastSelectedPath={handleForecastSelectedPath}
-          isForecastPending={isStreamingPathForecast}
-          forecastBridgeError={pathForecastError}
-        />
-      ) : null}
-
-      {/* ---- Progressive futures (path forecast, Decision mode) ---- */}
-      {isStreamingPathForecast && !pathForecastResult ? (
-        <div className="flex flex-col gap-3">
-          <p className="animate-pulse text-label text-ink-tertiary">
-            Forecasting your futures…
-          </p>
-          {streamingPathFutures.map((future, i) => (
-            <StreamingFutureCard key={i} future={future} />
-          ))}
-          {[...Array(pathForecastSkeletonCount)].map((_, i) => (
-            <ForecastSkeleton key={`sk-${i}`} />
-          ))}
-        </div>
-      ) : null}
-
-      {pathForecastResult && isDecisionMode ? (
-        <FutureForecastResultView forecast={pathForecastResult} />
-      ) : null}
-
-      {/* ---- Progressive futures (Forecast mode) ---- */}
-      {isStreamingForecast && !forecastResult ? (
-        <div className="flex flex-col gap-3">
-          <p className="animate-pulse text-label text-ink-tertiary">
-            Forecasting your futures…
-          </p>
-          {streamingFutures.map((future, i) => (
-            <StreamingFutureCard key={i} future={future} />
-          ))}
-          {[...Array(forecastSkeletonCount)].map((_, i) => (
-            <ForecastSkeleton key={`sk-${i}`} />
-          ))}
-        </div>
-      ) : null}
-
-      {forecastResult && isForecastMode ? (
-        <FutureForecastResultView forecast={forecastResult} />
-      ) : null}
     </div>
   );
 }

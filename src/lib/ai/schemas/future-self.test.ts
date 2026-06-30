@@ -7,43 +7,58 @@ import {
 } from "@/lib/ai/schemas/future-self";
 
 const draftA = {
-  name: "Stays close to current work and routines",
+  name: "Steady Foundation Builder",
   summary: "Someone who keeps building steadily within familiar structures.",
   movement_direction: "positive" as const,
   evidence_strength: "Strong" as const,
-  benefits: [
+  core_behaviors: [
+    "Protects existing routines before considering new opportunities.",
+    "Anchors decisions to confirmed realities.",
+    "Moves slowly and deliberately when change is on the table.",
+  ],
+  behavioral_evidence: ["Turned down relocation offer to stay in current role."],
+  growth_opportunities: [
     "Stability compounds over time.",
     "Existing relationships deepen.",
     "Day-to-day life stays predictable.",
   ],
-  consequences: [
+  blind_spots: [
     "New opportunities outside the routine go unexplored.",
     "Growth slows without new challenge.",
     "The routine gets harder to leave the longer it continues.",
   ],
-  prediction: "Continues to favor consistency over novelty, with deep but narrow relationships.",
+  likely_evolution:
+    "Continues to favor consistency over novelty, with deep but narrow relationships.",
   themes: ["Stability"],
-  why_changed: "You turned down a relocation offer to stay in your current role. That keeps this steady, familiar path more likely.",
+  why_emerging:
+    "You turned down a relocation offer to stay in your current role. That keeps this steady, familiar path more likely.",
 };
 
 const draftB = {
-  name: "Relocates and rebuilds a social circle elsewhere",
+  name: "Self-Reliant Architect",
   summary: "Someone who follows new opportunities even when it means starting over.",
   movement_direction: "unchanged" as const,
   evidence_strength: "Moderate" as const,
-  benefits: [
+  core_behaviors: [
+    "Makes major decisions without seeking external approval.",
+    "Structures life to reduce dependency on any one place.",
+    "Declines help that would come with conditions attached.",
+  ],
+  behavioral_evidence: [],
+  growth_opportunities: [
     "New environments open new opportunities.",
     "Independence grows.",
     "Adaptability to change increases.",
   ],
-  consequences: [
+  blind_spots: [
     "Existing relationships strain under distance.",
     "Temporary loneliness while rebuilding.",
     "Roots take longer to form in each new place.",
   ],
-  prediction: "Becomes someone who treats relocation as routine, trading depth of roots for breadth of experience.",
+  likely_evolution:
+    "Becomes someone who treats relocation as routine, trading depth of roots for breadth of experience.",
   themes: ["Independence", "Growth"],
-  why_changed: "",
+  why_emerging: "",
 };
 
 describe("future self output", () => {
@@ -81,15 +96,15 @@ describe("future self output", () => {
     ).toThrow();
   });
 
-  it("allows an empty why_changed when there is nothing to explain", () => {
+  it("allows an empty why_emerging when there is nothing to explain", () => {
     const parsed = parseFutureSelfOutput([draftB]);
 
-    expect(parsed[0].why_changed).toBe("");
+    expect(parsed[0].why_emerging).toBe("");
   });
 
-  it("rejects a why_changed longer than the schema cap", () => {
+  it("rejects a why_emerging longer than the schema cap", () => {
     expect(() =>
-      futureSelfDraftSchema.parse({ ...draftA, why_changed: "a".repeat(401) }),
+      futureSelfDraftSchema.parse({ ...draftA, why_emerging: "a".repeat(401) }),
     ).toThrow();
   });
 });

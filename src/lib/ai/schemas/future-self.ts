@@ -5,7 +5,7 @@ import {
   type MockFutureSelfDraft,
 } from "@/lib/mock-future-self-generator";
 import {
-  benefitsConsequencesListSchema,
+  identityListSchema,
   futureSelfEvidenceStrengthSchema,
   tentativeTextSchema,
   themesSchema,
@@ -16,18 +16,20 @@ export const futureSelfMovementDirectionSchema = z.enum(FUTURE_SELF_MOVEMENT_DIR
 
 // Empty string is valid (and expected) when movement_direction is "unchanged"
 // — there is nothing to explain — so this skips tentativeTextSchema's min(1).
-export const futureSelfWhyChangedSchema = z.string().trim().max(400);
+export const futureSelfWhyEmergingSchema = z.string().trim().max(400);
 
 export const futureSelfDraftSchema = z.object({
   name: tentativeTextSchema,
   summary: tentativeTextSchema,
   movement_direction: futureSelfMovementDirectionSchema,
   evidence_strength: futureSelfEvidenceStrengthSchema,
-  benefits: benefitsConsequencesListSchema,
-  consequences: benefitsConsequencesListSchema,
-  prediction: tentativeTextSchema,
+  core_behaviors: identityListSchema,
+  behavioral_evidence: z.array(z.string().trim()).min(0).max(10),
+  growth_opportunities: identityListSchema,
+  blind_spots: identityListSchema,
+  likely_evolution: tentativeTextSchema,
   themes: themesSchema,
-  why_changed: futureSelfWhyChangedSchema,
+  why_emerging: futureSelfWhyEmergingSchema,
 }) satisfies z.ZodType<MockFutureSelfDraft>;
 
 export const futureSelfOutputSchema = z.array(futureSelfDraftSchema).min(1).max(5);

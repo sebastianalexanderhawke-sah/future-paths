@@ -28,19 +28,19 @@ export function getFutureSelfTrend(
 }
 
 const FALLBACK_INCREASE_EXPLANATION =
-  "This trajectory gained relative likelihood because recent evidence aligned more closely with this direction than with competing trajectories.";
+  "This identity gained strength in the most recent generation — recent patterns aligned more closely with this trajectory.";
 
 const FALLBACK_DECREASE_EXPLANATION =
-  "This trajectory did not gain new supporting evidence, but other trajectories strengthened more strongly, reducing its relative likelihood.";
+  "This identity did not pick up new behavioral evidence recently — it may regain strength as relevant patterns emerge.";
 
 /**
  * Any visible percentage change must have a disclosure. The AI-authored
- * `why_changed` is preferred when present; otherwise this derives a
+ * `why_emerging` is preferred when present; otherwise this derives a
  * deterministic, evidence-free explanation purely from delta direction —
  * never fabricating specifics the model didn't provide.
  */
 export function getFutureSelfExplanation(
-  futureSelf: Pick<FutureSelf, "percentage" | "previous_percentage" | "why_changed">,
+  futureSelf: Pick<FutureSelf, "percentage" | "previous_percentage" | "why_emerging">,
 ): string | null {
   const { delta } = getFutureSelfTrend(futureSelf);
 
@@ -48,8 +48,8 @@ export function getFutureSelfExplanation(
     return null;
   }
 
-  if (futureSelf.why_changed !== "") {
-    return futureSelf.why_changed;
+  if (futureSelf.why_emerging !== "") {
+    return futureSelf.why_emerging;
   }
 
   return delta > 0 ? FALLBACK_INCREASE_EXPLANATION : FALLBACK_DECREASE_EXPLANATION;

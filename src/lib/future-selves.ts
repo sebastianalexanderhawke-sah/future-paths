@@ -715,10 +715,10 @@ function enforceDominantThemePairDistinctness(
 const SUBJECT_MATTER_COSINE_THRESHOLD = 0.32;
 
 function combinedContentWords(
-  draft: Pick<MockFutureSelfDraft, "summary" | "prediction" | "benefits" | "consequences">,
+  draft: Pick<MockFutureSelfDraft, "summary" | "likely_evolution" | "growth_opportunities" | "blind_spots">,
 ): string[] {
   return tokenizeWords(
-    [draft.summary, draft.prediction, ...draft.benefits, ...draft.consequences].join(" "),
+    [draft.summary, draft.likely_evolution, ...draft.growth_opportunities, ...draft.blind_spots].join(" "),
   );
 }
 
@@ -803,95 +803,30 @@ function enforceSubjectMatterDistinctness(
   return drafts.filter((_, index) => !dropped[index]);
 }
 
-// Code-side enforcement for Future Self naming. The prompt already asks for
-// verb-led trajectory phrasing and bans personality/archetype labels, but
-// nothing previously stopped a label like "Disciplined Solo Builder" from
-// reaching storage. This validates structurally (word count, and the
-// "[Adjective(s)] [Identity Noun]" shape that's the actual signature of an
-// archetype label) rather than against a deny-list of literal phrases, so it
-// catches the pattern generally instead of only the prompt's own examples.
+// Identity names may now be archetype-style ("Self-Reliant Builder", "Community
+// Builder"). The only hard constraint is word count — names over 8 words are
+// too long to display cleanly and must be rewritten.
 const MAX_FUTURE_SELF_NAME_WORDS = 8;
-
-// Adjectives and nouns that recur in personality-type/archetype naming. Not
-// exhaustive — exhaustive is impossible for natural language — but covers
-// the shape the prompt explicitly warns against (e.g. "Disciplined Solo
-// Builder", "Intentional Connector", "Strategic Independent Thinker").
-const IDENTITY_LABEL_ADJECTIVES = new Set([
-  "disciplined", "intentional", "strategic", "independent", "determined",
-  "resilient", "focused", "bold", "decisive", "adaptive", "reflective",
-  "persistent", "driven", "grounded", "curious", "practical", "confident",
-  "patient", "loyal", "creative", "cautious", "restless", "quiet", "steady",
-  "ambitious", "deliberate", "solo", "thoughtful", "mindful", "purposeful",
-  "balanced", "authentic", "courageous", "fearless", "passionate",
-]);
-
-const IDENTITY_LABEL_NOUNS = new Set([
-  "builder", "builders", "connector", "connectors", "thinker", "thinkers",
-  "achiever", "achievers", "explorer", "explorers", "visionary", "visionaries",
-  "strategist", "strategists", "creator", "creators", "leader", "leaders",
-  "pioneer", "pioneers", "architect", "architects", "dreamer", "dreamers",
-  "wanderer", "wanderers", "seeker", "seekers", "adventurer", "adventurers",
-  "realist", "realists", "idealist", "idealists", "optimist", "optimists",
-  "pragmatist", "pragmatists", "communicator", "communicators",
-  "collaborator", "collaborators", "influencer", "influencers",
-  "innovator", "innovators", "specialist", "specialists", "individual",
-  "individuals",
-]);
-
-function normalizeWord(word: string): string {
-  return word.toLowerCase().replace(/[^a-z]/g, "");
-}
-
-/**
- * Matches the structural shape of a personality/archetype label: 2-3 words,
- * ending in a known identity noun, with every preceding word a known
- * identity adjective. This is the shared shape behind "Intentional
- * Connector" (adjective + noun) and "Disciplined Solo Builder" (adjective +
- * adjective + noun) — checking the shape generally, rather than denying
- * specific phrases, catches names the prompt's own ban list doesn't name.
- */
-function looksLikeIdentityLabel(name: string): boolean {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length < 2 || words.length > 3) {
-    return false;
-  }
-
-  const lastWord = normalizeWord(words[words.length - 1]);
-  if (!IDENTITY_LABEL_NOUNS.has(lastWord)) {
-    return false;
-  }
-
-  return words.slice(0, -1).every((word) => IDENTITY_LABEL_ADJECTIVES.has(normalizeWord(word)));
-}
 
 function isValidFutureSelfName(name: string): boolean {
   const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0 || words.length > MAX_FUTURE_SELF_NAME_WORDS) {
-    return false;
-  }
-
-  return !looksLikeIdentityLabel(name);
+  return words.length > 0 && words.length <= MAX_FUTURE_SELF_NAME_WORDS;
 }
 
-// Deterministic trajectory-style fallback per theme, used only when a
-// generated name fails validation. Each phrase leads with one of the
-// preferred trajectory verbs (Builds/Moves/Chooses/Lets/Learns/Creates/
-// Trades) and stays grounded in the theme that's already meant to ground the
-// draft's evidence, so the rewrite preserves the draft's meaning instead of
-// replacing it with something generic and unrelated. No new evidence is
-// invented — it's a safe restatement of the trajectory the draft already
-// represents.
+// Archetype-style fallback per theme — used only when a generated name is
+// empty or exceeds the word limit. Stays grounded in the theme that already
+// grounds the draft's evidence, so the rewrite preserves meaning.
 const THEME_TRAJECTORY_NAME: Record<ThemeName, string> = {
-  Connection: "Builds closer connections with others",
-  Independence: "Moves toward greater independence",
-  Curiosity: "Learns through curiosity and exploration",
-  Stability: "Creates more stability and structure",
-  Creativity: "Creates more room for creative work",
-  Growth: "Chooses growth over staying comfortable",
-  Belonging: "Builds a stronger sense of belonging",
-  Leadership: "Chooses to lead and take initiative",
-  Reflection: "Learns through ongoing reflection",
-  Courage: "Trades comfort for courage",
+  Connection: "Community Builder",
+  Independence: "Self-Reliant Architect",
+  Curiosity: "Curious Explorer",
+  Stability: "Steady Foundation Builder",
+  Creativity: "Creative Maker",
+  Growth: "Relentless Grower",
+  Belonging: "Belonging Seeker",
+  Leadership: "Natural Leader",
+  Reflection: "Reflective Practitioner",
+  Courage: "Courageous Risk-Taker",
 };
 
 const FALLBACK_TRAJECTORY_NAME = "Moves in a new direction";
@@ -927,23 +862,16 @@ function continuityEnforcedName(existing: FutureSelf, draft: MockFutureSelfDraft
   return isValidFutureSelfName(existing.name) ? existing.name : rewriteFutureSelfName(draft);
 }
 
-/** Proportionally rescales raw percentages to sum to 100, preserving ordering and relative differences. */
-function normalizeToHundred(rawValues: number[]): number[] {
-  const total = rawValues.reduce((sum, value) => sum + value, 0);
+// Maps a raw trajectory strength score to an independent 0-100 identity
+// likelihood using a harmonic function. Each Future Self is scored independently
+// — percentages do NOT sum to 100. The scale constant anchors the midpoint:
+// a score of IDENTITY_LIKELIHOOD_SCALE maps to 50%. Scores below zero (net
+// negative evidence) return 0, representing an identity that is fading or absent.
+const IDENTITY_LIKELIHOOD_SCALE = 100;
 
-  if (total <= 0) {
-    return rawValues.map(() => 0);
-  }
-
-  const scaled = rawValues.map((value) => Math.max(1, Math.round((value / total) * 100)));
-  const drift = 100 - scaled.reduce((sum, value) => sum + value, 0);
-  const largestIndex = scaled.reduce(
-    (best, value, index) => (value > scaled[best] ? index : best),
-    0,
-  );
-  scaled[largestIndex] += drift;
-
-  return scaled;
+function scoreToIdentityLikelihood(raw: number): number {
+  if (raw <= 0) return 0;
+  return Math.min(100, Math.max(1, Math.round(100 * raw / (raw + IDENTITY_LIKELIHOOD_SCALE))));
 }
 
 async function recordFutureSelfEvent(input: {
@@ -1043,17 +971,10 @@ export async function generateFutureSelves(): Promise<
     [...draftMatches.values()].map((existing) => existing.id),
   );
 
-  // Compute every draft's deterministic percentage before writing anything —
-  // normalization needs the full set of this run's values up front.
+  // Compute each draft's percentage independently — percentages do NOT sum to
+  // 100. Each reflects how much behavioral evidence supports this identity.
   const computed = drafts.map((draft, index) => {
     const existing = draftMatches.get(index);
-    // Not floored at 0: risk evidence can pull a draft's raw strength below
-    // zero, and normalizeToHundred needs that negative value intact to
-    // shrink the total and shift share toward the other drafts — clamping
-    // here would erase the asymmetry directional situation evidence exists
-    // to create. (The Math.max(0, ...) calls elsewhere stay: those compare
-    // candidates against each other within distinctness checks, not against
-    // normalizeToHundred.)
     const raw = computeTrajectoryStrength(draft.themes, input, now);
 
     // Naming enforcement happens last, after matching/dedup have already run
@@ -1062,14 +983,12 @@ export async function generateFutureSelves(): Promise<
     return { draft: { ...draft, name: ensureValidFutureSelfName(draft) }, existing, raw };
   });
 
-  const normalizedPercentages = normalizeToHundred(computed.map((entry) => entry.raw));
-
   // Only an evidence_strength/status transition marks Current Self stale — a
   // percentage tick alone (no strength change) is too noisy a signal on its own.
   let hasMeaningfulTransition = false;
 
-  for (const [index, { draft, existing }] of computed.entries()) {
-    const percentage = normalizedPercentages[index];
+  for (const { draft, existing, raw } of computed) {
+    const percentage = scoreToIdentityLikelihood(raw);
 
     if (!existing) {
       const { data: created, error: insertError } = await supabase
@@ -1080,11 +999,13 @@ export async function generateFutureSelves(): Promise<
           summary: draft.summary,
           percentage,
           evidence_strength: draft.evidence_strength,
-          benefits: draft.benefits,
-          consequences: draft.consequences,
-          prediction: draft.prediction,
+          core_behaviors: draft.core_behaviors,
+          behavioral_evidence: draft.behavioral_evidence,
+          growth_opportunities: draft.growth_opportunities,
+          blind_spots: draft.blind_spots,
+          likely_evolution: draft.likely_evolution,
           themes: draft.themes,
-          why_changed: draft.why_changed,
+          why_emerging: draft.why_emerging,
           status: "active",
         })
         .select("*")
@@ -1116,11 +1037,13 @@ export async function generateFutureSelves(): Promise<
           percentage,
           previous_percentage: existing.percentage,
           evidence_strength: draft.evidence_strength,
-          benefits: draft.benefits,
-          consequences: draft.consequences,
-          prediction: draft.prediction,
+          core_behaviors: draft.core_behaviors,
+          behavioral_evidence: draft.behavioral_evidence,
+          growth_opportunities: draft.growth_opportunities,
+          blind_spots: draft.blind_spots,
+          likely_evolution: draft.likely_evolution,
           themes: draft.themes,
-          why_changed: draft.why_changed,
+          why_emerging: draft.why_emerging,
           status: "active",
           updated_at: now,
         })
@@ -1158,11 +1081,13 @@ export async function generateFutureSelves(): Promise<
         percentage,
         previous_percentage: existing.percentage,
         evidence_strength: draft.evidence_strength,
-        benefits: draft.benefits,
-        consequences: draft.consequences,
-        prediction: draft.prediction,
+        core_behaviors: draft.core_behaviors,
+        behavioral_evidence: draft.behavioral_evidence,
+        growth_opportunities: draft.growth_opportunities,
+        blind_spots: draft.blind_spots,
+        likely_evolution: draft.likely_evolution,
         themes: draft.themes,
-        why_changed: draft.why_changed,
+        why_emerging: draft.why_emerging,
         updated_at: now,
       })
       .eq("id", existing.id)

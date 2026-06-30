@@ -115,11 +115,13 @@ export type FutureSelf = {
   percentage: number;
   previous_percentage: number | null;
   evidence_strength: FutureSelfEvidenceStrength;
-  benefits: string[];
-  consequences: string[];
-  prediction: string;
+  core_behaviors: string[];
+  behavioral_evidence: string[];
+  growth_opportunities: string[];
+  blind_spots: string[];
+  likely_evolution: string;
   themes: ThemeName[];
-  why_changed: string;
+  why_emerging: string;
   status: FutureSelfStatus;
   created_at: string;
   updated_at: string;
@@ -378,13 +380,15 @@ export type FutureSelfInsert = Pick<
   | "summary"
   | "percentage"
   | "evidence_strength"
-  | "benefits"
-  | "consequences"
-  | "prediction"
+  | "core_behaviors"
+  | "behavioral_evidence"
+  | "growth_opportunities"
+  | "blind_spots"
+  | "likely_evolution"
 > & {
   themes?: ThemeName[];
   status?: FutureSelfStatus;
-  why_changed?: string;
+  why_emerging?: string;
 };
 
 export type FutureSelfUpdate = Partial<
@@ -395,13 +399,15 @@ export type FutureSelfUpdate = Partial<
     | "percentage"
     | "previous_percentage"
     | "evidence_strength"
-    | "benefits"
-    | "consequences"
-    | "prediction"
+    | "core_behaviors"
+    | "behavioral_evidence"
+    | "growth_opportunities"
+    | "blind_spots"
+    | "likely_evolution"
     | "themes"
     | "status"
     | "updated_at"
-    | "why_changed"
+    | "why_emerging"
   >
 >;
 
@@ -597,9 +603,43 @@ export type TimelineEventInsert = Pick<
   occurred_at?: string;
 };
 
+export type BehaviorObservation = {
+  id: string;
+  user_id: string;
+  moment_id: string;
+  observation: string;
+  signals: string[];
+  source_type: string;
+  extracted_at: string;
+};
+
+export type BehaviorObservationInsert = Pick<
+  BehaviorObservation,
+  "user_id" | "moment_id" | "observation" | "signals" | "source_type"
+>;
+
 export type Database = {
   public: {
     Tables: {
+      behavior_observations: {
+        Row: BehaviorObservation;
+        Insert: BehaviorObservationInsert;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "behavior_observations_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "behavior_observations_moment_id_fkey";
+            columns: ["moment_id"];
+            referencedRelation: "moments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: Profile;
         Insert: ProfileInsert;

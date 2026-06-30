@@ -7,20 +7,20 @@ import { FUTURE_SELF_FORECAST_RULES } from "@/lib/ai/prompts/shared/forecast-gen
 
 export const futureSelfDiscoverV1 = createPromptModule({
   promptId: "future_self.discover",
-  promptVersion: "1",
-  taskInstructions: `Discover 2-5 future selves from recurring theme signals across this person's situations, chosen paths, check-ins, reflections, and identity updates.
+  promptVersion: "2",
+  taskInstructions: `Discover 2-5 emerging identity trajectories from this person's situations, chosen paths, check-ins, reflections, and identity updates.
 
-This output answers: "Based on my recent actions and choices, what kinds of people am I becoming, and what are the benefits and costs of each path?"
+This output answers: "Based on what I keep choosing and doing, what kind of person am I becoming?"
 
 ${FUTURE_SELF_FORECAST_RULES}
 
-Each draft needs name, summary, movement_direction, evidence_strength, benefits, consequences, prediction, themes, and why_changed.
+Each draft needs: name, summary, movement_direction, evidence_strength, core_behaviors, behavioral_evidence, growth_opportunities, blind_spots, likely_evolution, themes, and why_emerging.
 
 ${STRICT_FUTURE_SELF_EVIDENCE_STRENGTH_RULES}`,
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
-      `Produce JSON array of 2-5 future self drafts.
+      `Produce JSON array of 2-5 Future Self drafts.
 
 Each draft.movement_direction MUST be exactly one of: positive, negative, unchanged.
 
@@ -31,9 +31,9 @@ Never invent evidence_strength labels. Map any concept to the closest approved v
           ? `
 
 riskFocusThemes is present: ${context.riskFocusThemes.join(", ")}. Negative evidence on these themes (risk themes from recent situations, repeated weakened check-ins) is now materially present — at least one of this run's drafts MUST have movement_direction "negative" and be built around one or more of these themes.
-That draft's central thesis must BE the decline itself — drift, avoidance, stagnation, isolation, burnout, dependency, or abandoning a goal — not a positive trajectory that merely lists a risk among its consequences. It must describe a genuinely different direction the person's life could move toward, not the same direction as a positive draft with a worse outcome attached (e.g. "Builds a life in a new city" and "Builds a life in a new city but it goes badly" are the same trajectory and are not acceptable — the negative draft must stand on its own as a distinct path, such as becoming isolated, drifting without committing to any direction, or quietly abandoning the goal that the positive drafts are built around).
-Good: "Independence Becoming Isolation", "Running on Urgency", "Quietly Deferring the Psychology Path", "Building a Life That Doesn't Fit".
-Bad: "Builds a Life in a New City (but there are risks)".`
+That draft's central thesis must BE the decline itself — drift, avoidance, stagnation, isolation, burnout, dependency, or abandoning a goal — not a positive identity that merely lists a risk among its blind_spots. It must describe a genuinely different identity the person could be becoming, not the same identity as a positive draft with a worse outcome attached.
+Good: "Quietly Withdrawing", "Running on Urgency", "Deferring the Psychology Path", "Building a Life That Doesn't Fit".
+Bad: "Self-Reliant Builder (but there are risks)".`
           : ""
       }`,
     ),

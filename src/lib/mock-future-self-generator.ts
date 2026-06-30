@@ -9,191 +9,242 @@ export type MockFutureSelfDraft = {
   summary: string;
   movement_direction: FutureSelfMovementDirection;
   evidence_strength: FutureSelfEvidenceStrength;
-  benefits: string[];
-  consequences: string[];
-  prediction: string;
+  core_behaviors: string[];
+  behavioral_evidence: string[];
+  growth_opportunities: string[];
+  blind_spots: string[];
+  likely_evolution: string;
   themes: ThemeName[];
-  why_changed: string;
+  why_emerging: string;
 };
 
 type ThemeTrajectory = {
   name: string;
   summary: string;
-  benefits: string[];
-  consequences: string[];
-  prediction: string;
+  core_behaviors: string[];
+  growth_opportunities: string[];
+  blind_spots: string[];
+  likely_evolution: string;
 };
 
-// Concrete trajectory per theme — not an archetype/personality label, but a
-// description of what this person keeps choosing and what that costs.
 const THEME_TRAJECTORY: Record<ThemeName, ThemeTrajectory> = {
   Connection: {
-    name: "Increasingly prioritizes closeness with the people already in their life",
+    name: "Community Builder",
     summary:
-      "Someone who chooses ongoing connection over independence when the two pull in different directions.",
-    benefits: [
-      "Relationships deepen and become more reliable.",
-      "Support is available during difficult stretches.",
-      "Shared experiences accumulate faster.",
+      "Someone who consistently chooses connection over independence when the two pull in different directions.",
+    core_behaviors: [
+      "Prioritizes time with existing relationships over new opportunities.",
+      "Checks in on others during difficult stretches.",
+      "Organizes shared experiences rather than pursuing solo ones.",
     ],
-    consequences: [
+    growth_opportunities: [
+      "Relationships deepen and become more reliable over time.",
+      "Support is available during difficult stretches.",
+      "Shared experiences accumulate faster than they would alone.",
+    ],
+    blind_spots: [
       "Time and energy for solo pursuits shrinks.",
       "Decisions increasingly bend around other people's needs.",
-      "Independence muscles get less practice.",
+      "Independence muscles get less practice the longer this continues.",
     ],
-    prediction:
+    likely_evolution:
       "Becomes someone whose sense of identity is closely tied to the people around them, with fewer choices made in isolation.",
   },
   Independence: {
-    name: "Builds a life that depends less on any one relationship or place",
+    name: "Self-Reliant Architect",
     summary:
       "Someone who keeps choosing autonomy, even when it means stepping away from familiar support.",
-    benefits: [
+    core_behaviors: [
+      "Makes major decisions without seeking external approval.",
+      "Structures life to reduce dependency on any one relationship or place.",
+      "Declines help that would come with conditions attached.",
+    ],
+    growth_opportunities: [
       "Decisions become easier to make without needing approval.",
-      "Self-reliance grows.",
+      "Self-reliance and adaptability grow steadily.",
       "Major moves become easier to make on short notice.",
     ],
-    consequences: [
+    blind_spots: [
       "Close relationships may thin out from lack of ongoing investment.",
       "Support during hard moments may be harder to find.",
       "Fewer people end up with full context on the person's life.",
     ],
-    prediction:
+    likely_evolution:
       "Becomes someone increasingly comfortable making major decisions alone, with a smaller but more selective circle of close relationships.",
   },
   Curiosity: {
-    name: "Keeps choosing the unfamiliar option over the comfortable one",
+    name: "Curious Explorer",
     summary:
       "Someone who treats new information and new situations as worth pursuing, even at the cost of stability.",
-    benefits: [
-      "Exposure to more options and perspectives.",
+    core_behaviors: [
+      "Chooses the unfamiliar option over the comfortable one.",
+      "Follows questions into new domains without a clear destination.",
+      "Starts new things before finishing existing ones.",
+    ],
+    growth_opportunities: [
+      "Exposure to more options and perspectives than most people accumulate.",
       "Adaptability to new circumstances increases.",
       "New skills and interests keep entering the picture.",
     ],
-    consequences: [
-      "Commitments may be harder to sustain.",
+    blind_spots: [
+      "Commitments may be harder to sustain when something new appears.",
       "Less depth builds in any single pursuit.",
-      "Unfinished projects pile up over time.",
+      "Unfinished projects and half-explored paths accumulate over time.",
     ],
-    prediction:
+    likely_evolution:
       "Becomes someone defined by breadth of experience rather than mastery of one path, often mid-exploration rather than settled.",
   },
   Stability: {
-    name: "Protects existing routines and commitments over new opportunities",
+    name: "Steady Foundation Builder",
     summary:
       "Someone who weighs new options against the cost to current stability, and often chooses to stay the course.",
-    benefits: [
+    core_behaviors: [
+      "Protects existing routines before considering new opportunities.",
+      "Anchors decisions to confirmed realities rather than open possibilities.",
+      "Moves slowly and deliberately when change is on the table.",
+    ],
+    growth_opportunities: [
       "Day-to-day life remains predictable and manageable.",
       "Existing commitments stay intact.",
-      "Stress from uncertainty stays low.",
+      "Stress from uncertainty stays consistently low.",
     ],
-    consequences: [
+    blind_spots: [
       "Opportunities that require disruption go unexplored.",
-      "Growth may slow without new challenge.",
+      "Growth slows without new challenge.",
       "The comfortable routine gets harder to leave the longer it continues.",
     ],
-    prediction:
+    likely_evolution:
       "Becomes someone who is reliable and consistent, but increasingly risk-averse about anything that threatens the current routine.",
   },
   Creativity: {
-    name: "Channels decisions through self-expression rather than convention",
+    name: "Creative Maker",
     summary:
       "Someone who keeps choosing paths that let them make or shape something, even when a safer option is available.",
-    benefits: [
+    core_behaviors: [
+      "Channels decisions through self-expression rather than convention.",
+      "Chooses work that allows making or shaping something original.",
+      "Invests personal meaning into output in ways others don't.",
+    ],
+    growth_opportunities: [
       "Original work or expression accumulates over time.",
       "A distinct point of view becomes more defined.",
-      "Work feels more personally meaningful.",
+      "Work feels more personally meaningful than conventional paths.",
     ],
-    consequences: [
+    blind_spots: [
       "Financial or schedule stability may suffer for the sake of the work.",
-      "Conventional paths get deprioritized.",
+      "Conventional paths that would have been useful get deprioritized.",
       "Feedback and rejection land harder when the work is personal.",
     ],
-    prediction:
+    likely_evolution:
       "Becomes someone whose identity is tied to what they make, increasingly uncomfortable in roles that don't allow for it.",
   },
   Growth: {
-    name: "Keeps taking on harder versions of the same challenge",
+    name: "Relentless Grower",
     summary: "Someone who treats discomfort as a signal to keep going rather than to stop.",
-    benefits: [
-      "Skills and capability compound steadily.",
-      "Confidence builds from repeated effort.",
-      "Harder goals start to feel reachable.",
+    core_behaviors: [
+      "Takes on harder versions of the same challenge rather than consolidating.",
+      "Treats plateaus as problems to be solved.",
+      "Measures progress continuously and adjusts accordingly.",
     ],
-    consequences: [
-      "Rest and satisfaction with \"good enough\" become harder to access.",
+    growth_opportunities: [
+      "Skills and capability compound steadily over time.",
+      "Confidence builds from repeated effort and visible progress.",
+      "Harder goals start to feel reachable that once seemed impossible.",
+    ],
+    blind_spots: [
+      "Rest and satisfaction with 'good enough' become harder to access.",
       "Other areas of life may be neglected in favor of the effort.",
-      "Burnout risk builds quietly over time.",
+      "Burnout risk builds quietly behind the scenes.",
     ],
-    prediction:
+    likely_evolution:
       "Becomes someone who measures their life largely by progress and improvement, often restless when things plateau.",
   },
   Belonging: {
-    name: "Orients major decisions around being part of a group or place",
+    name: "Belonging Seeker",
     summary:
       "Someone who keeps choosing the option that keeps them embedded in a community rather than apart from one.",
-    benefits: [
+    core_behaviors: [
+      "Orients major decisions around being part of a group or place.",
+      "Prioritizes fitting into a community over standing apart from one.",
+      "Stays in situations longer than optimal to maintain group membership.",
+    ],
+    growth_opportunities: [
       "A stable sense of identity tied to a community forms.",
       "Access to support and shared resources increases.",
-      "A sense of belonging shows up in daily life.",
+      "A sense of belonging shows up in daily life rather than being searched for.",
     ],
-    consequences: [
+    blind_spots: [
       "Decisions that would separate them from the group become harder to make.",
       "Individual preferences may get deprioritized for the sake of fitting in.",
       "Leaving or disagreeing with the group gets costlier over time.",
     ],
-    prediction:
+    likely_evolution:
       "Becomes someone whose choices are increasingly shaped by what keeps them inside a group, with identity and group membership closely linked.",
   },
   Leadership: {
-    name: "Keeps stepping into the role of organizing or guiding others",
+    name: "Natural Leader",
     summary:
       "Someone who, given the option, takes on responsibility for others' outcomes rather than only their own.",
-    benefits: [
+    core_behaviors: [
+      "Steps into the role of organizing or guiding others when it's available.",
+      "Takes on responsibility for group outcomes beyond their own.",
+      "Invests in others' development even when it costs personal time.",
+    ],
+    growth_opportunities: [
       "Influence over outcomes and direction increases.",
       "Others increasingly rely on and trust their judgment.",
       "More say in decisions that affect the group.",
     ],
-    consequences: [
+    blind_spots: [
       "Personal needs may get deprioritized behind the group's.",
       "Visibility increases the cost of mistakes.",
       "Free time shrinks as more people depend on them.",
     ],
-    prediction:
+    likely_evolution:
       "Becomes someone others look to first, with identity increasingly tied to being responsible for a group's direction.",
   },
   Reflection: {
-    name: "Pauses to examine decisions before acting on them",
+    name: "Reflective Practitioner",
     summary:
       "Someone who keeps choosing to slow down and make sense of a situation before committing to a direction.",
-    benefits: [
-      "Decisions are made with more self-awareness.",
+    core_behaviors: [
+      "Pauses to examine decisions before acting on them.",
+      "Revisits past choices to extract patterns and lessons.",
+      "Slows down when others speed up.",
+    ],
+    growth_opportunities: [
+      "Decisions are made with more self-awareness than most.",
       "Patterns are more likely to be recognized before they repeat.",
       "Fewer impulsive choices that need walking back later.",
     ],
-    consequences: [
+    blind_spots: [
       "Action may be delayed past the point it was useful.",
       "Overthinking may substitute for actually deciding.",
       "Opportunities with short windows may close while still weighing options.",
     ],
-    prediction:
+    likely_evolution:
       "Becomes someone who trusts their own analysis more than impulse, sometimes at the cost of momentum.",
   },
   Courage: {
-    name: "Keeps choosing the harder, riskier option when it matters",
+    name: "Courageous Risk-Taker",
     summary:
       "Someone who treats discomfort and uncertainty as a cost worth paying for the outcome on the other side.",
-    benefits: [
+    core_behaviors: [
+      "Chooses the harder, riskier option when it matters.",
+      "Acts before certainty is available.",
+      "Returns to difficult situations rather than avoiding them.",
+    ],
+    growth_opportunities: [
       "New opportunities that require risk become available.",
       "Confidence builds from having faced difficulty directly.",
       "Fewer regrets about chances not taken.",
     ],
-    consequences: [
+    blind_spots: [
       "Some risks taken will not pay off.",
       "Stability is repeatedly put at stake for the sake of the attempt.",
       "Recovery time after a bad outcome can be significant.",
     ],
-    prediction:
+    likely_evolution:
       "Becomes someone defined by a willingness to act despite uncertainty, with a track record that includes both gains and real losses.",
   },
 };
@@ -280,11 +331,13 @@ export function generateMockFutureSelves(input: {
       summary: trajectory.summary,
       movement_direction: "positive" as const,
       evidence_strength: evidenceStrengthFromSources(sources),
-      benefits: trajectory.benefits,
-      consequences: trajectory.consequences,
-      prediction: trajectory.prediction,
+      core_behaviors: trajectory.core_behaviors,
+      behavioral_evidence: [],
+      growth_opportunities: trajectory.growth_opportunities,
+      blind_spots: trajectory.blind_spots,
+      likely_evolution: trajectory.likely_evolution,
       themes: [theme],
-      why_changed: "",
+      why_emerging: "",
     };
   });
 }

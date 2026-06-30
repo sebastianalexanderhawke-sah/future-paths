@@ -35,33 +35,33 @@ describe("getFutureSelfTrend", () => {
 describe("getFutureSelfExplanation", () => {
   it("returns null when there is no percentage change", () => {
     expect(
-      getFutureSelfExplanation({ percentage: 30, previous_percentage: 30, why_changed: "" }),
+      getFutureSelfExplanation({ percentage: 30, previous_percentage: 30, why_emerging: "" }),
     ).toBeNull();
   });
 
-  it("prefers the AI-authored why_changed when present, regardless of direction", () => {
+  it("prefers the AI-authored why_emerging when present, regardless of direction", () => {
     expect(
       getFutureSelfExplanation({
         percentage: 28,
         previous_percentage: 31,
-        why_changed: "A check-in surfaced new evidence for a competing trajectory.",
+        why_emerging: "A check-in surfaced new evidence for a competing trajectory.",
       }),
     ).toBe("A check-in surfaced new evidence for a competing trajectory.");
   });
 
-  it("falls back to a deterministic decrease explanation when why_changed is empty", () => {
+  it("falls back to a deterministic decrease explanation when why_emerging is empty", () => {
     expect(
-      getFutureSelfExplanation({ percentage: 28, previous_percentage: 31, why_changed: "" }),
+      getFutureSelfExplanation({ percentage: 28, previous_percentage: 31, why_emerging: "" }),
     ).toBe(
-      "This trajectory did not gain new supporting evidence, but other trajectories strengthened more strongly, reducing its relative likelihood.",
+      "This identity did not pick up new behavioral evidence recently — it may regain strength as relevant patterns emerge.",
     );
   });
 
-  it("falls back to a deterministic increase explanation when why_changed is empty", () => {
+  it("falls back to a deterministic increase explanation when why_emerging is empty", () => {
     expect(
-      getFutureSelfExplanation({ percentage: 38, previous_percentage: 34, why_changed: "" }),
+      getFutureSelfExplanation({ percentage: 38, previous_percentage: 34, why_emerging: "" }),
     ).toBe(
-      "This trajectory gained relative likelihood because recent evidence aligned more closely with this direction than with competing trajectories.",
+      "This identity gained strength in the most recent generation — recent patterns aligned more closely with this trajectory.",
     );
   });
 });

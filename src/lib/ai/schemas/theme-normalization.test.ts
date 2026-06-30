@@ -266,19 +266,25 @@ describe("theme normalization", () => {
         summary: "Someone who treats discomfort as a signal to keep going rather than to stop.",
         movement_direction: "positive",
         evidence_strength: "high",
-        benefits: [
+        core_behaviors: [
+          "Takes on harder challenges rather than consolidating.",
+          "Treats plateaus as problems to be solved.",
+          "Measures progress continuously and adjusts.",
+        ],
+        behavioral_evidence: [],
+        growth_opportunities: [
           "Skills compound steadily.",
           "Confidence builds from repeated effort.",
           "Harder goals start to feel reachable.",
         ],
-        consequences: [
+        blind_spots: [
           "Rest becomes harder to access.",
           "Other areas may be neglected.",
           "Burnout risk builds quietly.",
         ],
-        prediction: "Becomes someone who measures their life largely by progress.",
+        likely_evolution: "Becomes someone who measures their life largely by progress.",
         themes: ["Growth"],
-        why_changed: "You kept taking on harder workouts instead of easing off. That makes a growth-driven future feel more likely.",
+        why_emerging: "You kept taking on harder workouts instead of easing off. That makes a growth-driven future feel more likely.",
       },
     ]);
 

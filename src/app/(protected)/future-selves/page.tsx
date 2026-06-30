@@ -3,6 +3,7 @@ import Link from "next/link";
 import { generateFutureSelvesAction } from "@/actions/future-selves";
 import { signOut } from "@/actions/auth";
 import { FutureCard } from "@/components/futures/future-card";
+import { FutureSelvesVisitClear } from "@/components/futures/future-selves-visit-clear";
 import { listFutureSelves } from "@/lib/future-selves";
 
 type FutureSelvesPageProps = {
@@ -30,6 +31,7 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
+      <FutureSelvesVisitClear />
       <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
         <div>
           <Link href="/overview" className="text-sm text-zinc-500 hover:text-zinc-700">

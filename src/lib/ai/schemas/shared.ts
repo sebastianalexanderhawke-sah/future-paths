@@ -121,7 +121,7 @@ export const identityPromptTypeSchema = z.enum(IDENTITY_PROMPT_TYPES);
 export const contradictionTypeSchema = z.enum(CONTRADICTION_TYPES);
 export const lifeChapterEvidenceTypeSchema = z.enum(LIFE_CHAPTER_EVIDENCE_TYPES);
 
-export const benefitsConsequencesListSchema = z.array(tentativeTextSchema).min(3).max(5);
+export const identityListSchema = z.array(tentativeTextSchema).min(3).max(5);
 
 export function assertTentativeLanguage(value: string): string {
   return tentativeTextSchema.parse(value);

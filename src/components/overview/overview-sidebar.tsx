@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+const FUTURE_SELVES_NEW_KEY = "fp:future-selves:new";
+
 const NAV_LINKS = [
   { label: "Overview", anchor: "top" },
   { label: "Current Self", anchor: "self" },
@@ -13,6 +15,11 @@ const NAV_LINKS = [
 
 export function OverviewSidebar() {
   const [active, setActive] = useState("top");
+  const [futureSelvesBadge, setFutureSelvesBadge] = useState(false);
+
+  useEffect(() => {
+    setFutureSelvesBadge(localStorage.getItem(FUTURE_SELVES_NEW_KEY) === "1");
+  }, []);
 
   useEffect(() => {
     const ids = NAV_LINKS.map((l) => l.anchor).filter(Boolean);
@@ -26,6 +33,12 @@ export function OverviewSidebar() {
         }
       }
       setActive(current);
+
+      // Clear the Future Selves badge when the user scrolls into that section.
+      if (current === "future-selves") {
+        localStorage.removeItem(FUTURE_SELVES_NEW_KEY);
+        setFutureSelvesBadge(false);
+      }
     }
 
     window.addEventListener("scroll", update, { passive: true });
@@ -52,6 +65,7 @@ export function OverviewSidebar() {
     >
       {NAV_LINKS.map((link, i) => {
         const isActive = active === link.anchor;
+        const isFutureSelves = link.anchor === "future-selves";
         return (
           <div key={link.label}>
             <a
@@ -91,6 +105,18 @@ export function OverviewSidebar() {
               <span style={{ fontSize: "13px", fontWeight: 500 }}>
                 {link.label}
               </span>
+              {isFutureSelves && futureSelvesBadge ? (
+                <span
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    background: "#8b7cf8",
+                    flexShrink: 0,
+                    boxShadow: "0 0 4px rgba(139,124,248,0.6)",
+                  }}
+                />
+              ) : null}
             </a>
             {i < NAV_LINKS.length - 1 && (
               <div
