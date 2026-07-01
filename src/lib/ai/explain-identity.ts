@@ -14,6 +14,7 @@ import type {
   ObservationContribution,
   SituationContribution,
 } from "@/lib/identity-recognition";
+import type { FutureSelfEvidenceStrength } from "@/types/enums";
 
 export type IdentityExplanation = {
   why_emerging: string;
@@ -47,7 +48,25 @@ const batchResponseSchema = z.object({
 // Fallback
 // ---------------------------------------------------------------------------
 
-export function fallbackExplanation(): IdentityExplanation {
+export function fallbackExplanation(
+  evidenceStrength?: FutureSelfEvidenceStrength,
+): IdentityExplanation {
+  if (evidenceStrength === "Emerging") {
+    return {
+      why_emerging:
+        "This identity is beginning to emerge from a small number of specific behavioral choices. The pattern is real, but it has not yet repeated across enough situations to call it established.",
+      growth_opportunities: [
+        "Seek out situations that would let this pattern show up again.",
+        "Notice when a choice lines up with this identity and what made it possible.",
+      ],
+      blind_spots: [
+        "Watch for situations that pull toward a different pattern before this one takes hold.",
+      ],
+      likely_evolution:
+        "If similar choices repeat across new situations, this identity will strengthen. Repeated patterns, not any single decision, will determine where it goes next.",
+    };
+  }
+
   return {
     why_emerging:
       "This identity pattern is appearing across your recent situations and behavioral choices.",
@@ -66,7 +85,7 @@ function fallbackResults(
 ): IdentityExplanationResult[] {
   return entries.map(({ match }) => ({
     identityId: match.identityId,
-    explanation: fallbackExplanation(),
+    explanation: fallbackExplanation(match.evidenceStrength),
   }));
 }
 
@@ -118,6 +137,8 @@ Rules for each field:
 - growth_opportunities: 2-4 strings. Each is a concrete behavior (8-20 words). Start each with a verb: Start, Practice, Seek, Build, Create, Take, Develop, Invest, Pursue.
 - blind_spots: 2-4 strings. Ground each specifically in what the opposing evidence shows. Start each with a noun or present-tense verb.
 - likely_evolution: 2-3 sentences. Use grounded forward-looking language: "If these patterns continue...", "The trajectory suggests...", "Over time, this pattern could..."
+
+When an identity's evidence strength is "Emerging", frame why_emerging and likely_evolution around an identity beginning to emerge, not an established one: acknowledge that the evidence so far is limited, note that more situations may strengthen or change this identity, and make clear that repeated patterns matter more than any single decision. Keep the tone confident and observational — never hedging or apologetic ("might", "possibly", "hard to say", "not sure yet"). This is a distinct framing from Moderate or Strong identities, not a weaker version of the same explanation.
 
 Include one entry per identity provided — do not add or omit any. Do not use generic coaching language. Be specific to the evidence provided. Do not add fields beyond those specified.`;
 }
@@ -254,6 +275,10 @@ export async function explainIdentities(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), getGenerationTimeoutMs());
 
+    const __aiWaitT0 = Date.now();
+    console.log(
+      `[PROFILE] explainIdentities AI_WAIT | start=${new Date(__aiWaitT0).toISOString()} entryCount=${entries.length}`,
+    );
     const response = await client.messages.create(
       {
         model: getClaudeModel(),
@@ -263,6 +288,9 @@ export async function explainIdentities(
         messages: [{ role: "user", content: buildUserPrompt(entries) }],
       },
       { signal: controller.signal },
+    );
+    console.log(
+      `[PROFILE] explainIdentities AI_WAIT | end=${new Date().toISOString()} durationMs=${Date.now() - __aiWaitT0}`,
     );
 
     clearTimeout(timeout);
@@ -277,8 +305,13 @@ export async function explainIdentities(
       return fallbackResults(entries);
     }
 
+    const __parseT0 = Date.now();
+    console.log(`[PROFILE] explainIdentities PARSE | start=${new Date(__parseT0).toISOString()}`);
     const raw = extractJson(text);
     const parsed = batchResponseSchema.parse(raw);
+    console.log(
+      `[PROFILE] explainIdentities PARSE | end=${new Date().toISOString()} durationMs=${Date.now() - __parseT0}`,
+    );
 
     // Index by identity_id so we can merge back in input order.
     // Any identity the model omitted gets a fallback — partial failures
@@ -297,7 +330,7 @@ export async function explainIdentities(
 
     return entries.map(({ match }) => ({
       identityId: match.identityId,
-      explanation: byIdentityId.get(match.identityId) ?? fallbackExplanation(),
+      explanation: byIdentityId.get(match.identityId) ?? fallbackExplanation(match.evidenceStrength),
     }));
   } catch {
     return fallbackResults(entries);

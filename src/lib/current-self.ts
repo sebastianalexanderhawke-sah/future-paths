@@ -153,6 +153,10 @@ export async function generateCurrentSelf(
     return { error: CURRENT_SELF_PREREQUISITE_ERROR };
   }
 
+  const __aiT0 = Date.now();
+  console.log(
+    `[PROFILE] generateCurrentSelf STAGE=current_self.generate AI call | start=${new Date(__aiT0).toISOString()}`,
+  );
   const generationResult = await runStructuredGeneration({
     userId: auth.userId,
     profile: "current_self",
@@ -162,6 +166,9 @@ export async function generateCurrentSelf(
       ? { reflectionQA: reflectionInput.reflection }
       : undefined,
   });
+  console.log(
+    `[PROFILE] generateCurrentSelf STAGE=current_self.generate AI call | end=${new Date().toISOString()} durationMs=${Date.now() - __aiT0} ok=${generationResult.ok}`,
+  );
 
   if (!generationResult.ok) {
     return { error: generationResult.error };
@@ -307,12 +314,22 @@ export async function requestCurrentSelfRegeneration(
   userId: string,
   options?: { immediate?: boolean; reflectionInput?: GenerateCurrentSelfInput },
 ): Promise<void> {
+  const __t0 = Date.now();
+  console.log(
+    `[PROFILE] requestCurrentSelfRegeneration | start=${new Date(__t0).toISOString()} immediate=${Boolean(options?.immediate)}`,
+  );
   if (!options?.immediate) {
     const updatedAt = await getCurrentSelfUpdatedAt(userId);
     if (updatedAt && Date.now() - new Date(updatedAt).getTime() < REGENERATION_DEBOUNCE_MS) {
+      console.log(
+        `[PROFILE] requestCurrentSelfRegeneration | SKIPPED (debounced) end=${new Date().toISOString()} durationMs=${Date.now() - __t0}`,
+      );
       return;
     }
   }
 
   await generateCurrentSelf(options?.reflectionInput).catch(() => {});
+  console.log(
+    `[PROFILE] requestCurrentSelfRegeneration | end=${new Date().toISOString()} durationMs=${Date.now() - __t0}`,
+  );
 }

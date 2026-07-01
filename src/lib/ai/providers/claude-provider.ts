@@ -143,7 +143,11 @@ export const claudeProvider: IdentityAIProvider = {
       const timeout = setTimeout(() => controller.abort(), getGenerationTimeoutMs());
 
       console.log("MODEL USED:", getClaudeModel());
-      
+
+      const __aiWaitT0 = Date.now();
+      console.log(
+        `[PROFILE] claudeProvider.completeStructured AI_WAIT promptId=${request.promptId} | start=${new Date(__aiWaitT0).toISOString()}`,
+      );
       const response = await client.messages.create(
         {
           model: getClaudeModel(),
@@ -159,6 +163,9 @@ export const claudeProvider: IdentityAIProvider = {
         },
         { signal: controller.signal },
       );
+      console.log(
+        `[PROFILE] claudeProvider.completeStructured AI_WAIT promptId=${request.promptId} | end=${new Date().toISOString()} durationMs=${Date.now() - __aiWaitT0}`,
+      );
 
       clearTimeout(timeout);
 
@@ -172,15 +179,22 @@ export const claudeProvider: IdentityAIProvider = {
         return toGenerationFailure("Claude returned an empty response.", true);
       }
 
+      const __parseT0 = Date.now();
+      console.log(
+        `[PROFILE] claudeProvider.completeStructured PARSE promptId=${request.promptId} | start=${new Date(__parseT0).toISOString()}`,
+      );
       const raw = extractJson(text);
 
       console.log(
         "CURRENT_SELF RAW OUTPUT:",
         JSON.stringify(raw, null, 2),
       );
-      
+
       const parsed = prompt.parseOutput(raw);
       const data = validateStructuredOutput(request.schema, parsed);
+      console.log(
+        `[PROFILE] claudeProvider.completeStructured PARSE promptId=${request.promptId} | end=${new Date().toISOString()} durationMs=${Date.now() - __parseT0}`,
+      );
 
       return toGenerationSuccess({
         provider: "claude",

@@ -49,13 +49,14 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => getActiveStub()!.client),
 }));
 
-const { generateFutureSelves, loadFutureSelfImpactByPath } = await import("@/lib/future-selves");
+const { generateFutureSelves, queueFutureSelvesGeneration, loadFutureSelfImpactByPath } =
+  await import("@/lib/future-selves");
 
 // ---------------------------------------------------------------------------
 // Stub helpers
 // ---------------------------------------------------------------------------
 
-function createSupabaseStub(tableConfigs: Record<string, TableConfig>) {
+function createSupabaseStub(tableConfigs: Record<string, TableConfig>, userId = "user-1") {
   const calls: TrackedCall[] = [];
   const counters: Record<string, number> = {};
 
@@ -69,7 +70,7 @@ function createSupabaseStub(tableConfigs: Record<string, TableConfig>) {
 
   function makeBuilder(table: string) {
     const builder: Record<string, (...args: unknown[]) => unknown> = {};
-    const chainable = ["select", "eq", "order", "limit", "in", "neq"] as const;
+    const chainable = ["select", "eq", "order", "limit", "in", "neq", "not"] as const;
 
     for (const method of chainable) {
       builder[method] = (...args: unknown[]) => {
@@ -98,7 +99,7 @@ function createSupabaseStub(tableConfigs: Record<string, TableConfig>) {
   const client = {
     from: (table: string) => makeBuilder(table),
     auth: {
-      getUser: async () => ({ data: { user: { id: "user-1" } }, error: null }),
+      getUser: async () => ({ data: { user: { id: userId } }, error: null }),
     },
   };
 
@@ -197,28 +198,78 @@ describe("generateFutureSelves", () => {
     expect(writes).toHaveLength(0);
   });
 
-  it("returns existing active futures unchanged when identity recognition produces no matches", async () => {
-    const existingFuture = {
-      id: "fs-1",
+  it("uses the highest-ranked identity as an Emerging fallback when nothing passes the normal threshold", async () => {
+    const fallbackMatch = {
+      ...MATCH,
+      score: 3,
+      likelihood: 8,
+      evidenceStrength: "Emerging" as const,
+    };
+    // The normal (thresholded) call returns nothing; only the explicit
+    // minLikelihood: 0 / maxResults: 1 fallback call returns the best match.
+    // This proves the fallback never lowers or bypasses the real threshold —
+    // it just asks the same, unmodified engine for its single top pick.
+    recognizeMock.mockImplementation((..._args: unknown[]) => {
+      const options = _args[1] as { minLikelihood?: number; maxResults?: number } | undefined;
+      return options?.minLikelihood === 0 ? [fallbackMatch] : [];
+    });
+    getIdentityByIdMock.mockReturnValue(PROFILE);
+
+    const createdRow = {
+      id: "fs-new",
       user_id: "user-1",
       name: "Self-Reliant Builder",
       status: "active",
-      percentage: 55,
+      percentage: 8,
+      evidence_strength: "Emerging",
+      identity_id: "self-reliant-builder",
     };
     const stub = createSupabaseStub({
       behavior_observations: OBSERVATIONS_RESPONSE,
-      future_selves: { data: [existingFuture], error: null },
+      future_selves: [
+        { data: [], error: null }, // load all existing
+        { data: createdRow, error: null }, // INSERT.select().single()
+        { data: [createdRow], error: null }, // listFutureSelves
+      ],
+      future_self_events: { error: null },
     });
     setActiveStub(stub);
 
-    // recognizeMock already returns [] from beforeEach
     const result = await generateFutureSelves();
 
     expect("error" in result).toBe(false);
-    const writes = stub.calls.filter(
-      (c) => c.table === "future_selves" && (c.method === "insert" || c.method === "update"),
+    expect(recognizeMock).toHaveBeenLastCalledWith(expect.anything(), {
+      minLikelihood: 0,
+      maxResults: 1,
+    });
+
+    const inserts = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
     );
-    expect(writes).toHaveLength(0);
+    expect(inserts).toHaveLength(1);
+    const payload = inserts[0].args[0] as Record<string, unknown>;
+    expect(payload.identity_id).toBe("self-reliant-builder");
+    expect(payload.evidence_strength).toBe("Emerging");
+    expect(payload.percentage).toBe(8);
+  });
+
+  it("never surfaces legacy (non-identity-linked) rows from listFutureSelves", async () => {
+    const stub = createSupabaseStub({
+      behavior_observations: { data: [], error: null },
+      future_selves: { data: [], error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    const reads = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "not",
+    );
+    expect(reads).toContainEqual({
+      table: "future_selves",
+      method: "not",
+      args: ["identity_id", "is", null],
+    });
   });
 
   it("inserts a new future self and records an emerged event when an identity is recognized for the first time", async () => {
@@ -556,6 +607,151 @@ describe("generateFutureSelves", () => {
       (c) => c.table === "future_selves" && c.method === "insert",
     );
     expect(inserts).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// queueFutureSelvesGeneration
+// ---------------------------------------------------------------------------
+
+describe("queueFutureSelvesGeneration", () => {
+  beforeEach(() => {
+    recognizeMock.mockReset();
+    recognizeMock.mockReturnValue([MATCH]);
+    getIdentityByIdMock.mockReset();
+    getIdentityByIdMock.mockReturnValue(PROFILE);
+    extractAndPersistMock.mockReset();
+    explainIdentitiesMock.mockReset();
+  });
+
+  it("serializes calls for the same user — the second does not start until the first resolves", async () => {
+    const callOrder: string[] = [];
+    let releaseFirst: () => void = () => {};
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+
+    explainIdentitiesMock.mockImplementation(
+      async (entries: Array<{ match: { identityId: string } }>) => {
+        const callNumber = explainIdentitiesMock.mock.calls.length;
+        callOrder.push(`start-${callNumber}`);
+        if (callNumber === 1) {
+          await firstGate;
+        }
+        callOrder.push(`end-${callNumber}`);
+        return entries.map(({ match }) => ({
+          identityId: match.identityId,
+          explanation: FALLBACK_EXPLANATION,
+        }));
+      },
+    );
+
+    const stub = createSupabaseStub({
+      behavior_observations: OBSERVATIONS_RESPONSE,
+      future_selves: { data: [], error: null },
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    const firstPromise = queueFutureSelvesGeneration();
+    await new Promise((r) => setTimeout(r, 0));
+    const secondPromise = queueFutureSelvesGeneration();
+    await new Promise((r) => setTimeout(r, 0));
+
+    // The second call must be queued behind the first — it should not have
+    // reached explainIdentities yet, since the first hasn't resolved.
+    expect(explainIdentitiesMock).toHaveBeenCalledTimes(1);
+
+    releaseFirst();
+    await firstPromise;
+    await secondPromise;
+
+    expect(explainIdentitiesMock).toHaveBeenCalledTimes(2);
+    expect(callOrder).toEqual(["start-1", "end-1", "start-2", "end-2"]);
+  });
+
+  it("does not serialize calls for different users against each other", async () => {
+    explainIdentitiesMock.mockImplementation(
+      async (entries: Array<{ match: { identityId: string } }>) =>
+        entries.map(({ match }) => ({
+          identityId: match.identityId,
+          explanation: FALLBACK_EXPLANATION,
+        })),
+    );
+
+    const calls: TrackedCall[] = [];
+    let getUserCallCount = 0;
+
+    function makeBuilder(table: string) {
+      const builder: Record<string, (...args: unknown[]) => unknown> = {};
+      const chainable = ["select", "eq", "order", "limit", "in", "neq", "not"] as const;
+      for (const method of chainable) {
+        builder[method] = (...args: unknown[]) => {
+          calls.push({ table, method, args });
+          return builder;
+        };
+      }
+      builder.insert = (...args: unknown[]) => {
+        calls.push({ table, method: "insert", args });
+        return builder;
+      };
+      builder.update = (...args: unknown[]) => {
+        calls.push({ table, method: "update", args });
+        return builder;
+      };
+      const response =
+        table === "behavior_observations" ? OBSERVATIONS_RESPONSE : { data: [], error: null };
+      builder.single = () => Promise.resolve(response);
+      builder.maybeSingle = () => Promise.resolve(response);
+      builder.then = (resolve: (v: unknown) => unknown, reject?: (r: unknown) => unknown) =>
+        Promise.resolve(response).then(resolve, reject);
+      return builder;
+    }
+
+    const client = {
+      from: (table: string) => makeBuilder(table),
+      auth: {
+        getUser: async () => {
+          getUserCallCount += 1;
+          const id = getUserCallCount === 1 ? "user-A" : "user-B";
+          return { data: { user: { id } }, error: null };
+        },
+      },
+    };
+    setActiveStub({ client, calls });
+
+    // Gate user-A's explainIdentities call so it never resolves on its own —
+    // if user-B's call were (incorrectly) queued behind user-A's, it would
+    // never complete either, and this test would time out.
+    let releaseA: () => void = () => {};
+    const gateA = new Promise<void>((resolve) => {
+      releaseA = resolve;
+    });
+    let sawB = false;
+    explainIdentitiesMock.mockImplementation(
+      async (entries: Array<{ match: { identityId: string } }>) => {
+        if (explainIdentitiesMock.mock.calls.length === 1) {
+          await gateA;
+        } else {
+          sawB = true;
+        }
+        return entries.map(({ match }) => ({
+          identityId: match.identityId,
+          explanation: FALLBACK_EXPLANATION,
+        }));
+      },
+    );
+
+    const userAPromise = queueFutureSelvesGeneration();
+    await Promise.resolve();
+    await Promise.resolve();
+    const userBPromise = await queueFutureSelvesGeneration();
+
+    expect("error" in userBPromise).toBe(false);
+    expect(sawB).toBe(true);
+
+    releaseA();
+    await userAPromise;
   });
 });
 

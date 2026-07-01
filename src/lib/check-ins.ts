@@ -9,7 +9,7 @@ import {
 } from "@/components/home/forecast-utils";
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { hasForecastForMomentAndPath, saveForecast } from "@/lib/forecasts";
-import { generateFutureSelves } from "@/lib/future-selves";
+import { queueFutureSelvesGeneration } from "@/lib/future-selves";
 import { createIdentityUpdateIfMeaningful } from "@/lib/identity-updates";
 import { evaluateReflectionQuestion } from "@/lib/reflection-question";
 import { createClient } from "@/lib/supabase/server";
@@ -345,7 +345,7 @@ export async function createCheckIn(
 
   // Check-ins are lived evidence — the strongest signal Future Selves
   // respond to — so every check-in always triggers a regeneration.
-  await generateFutureSelves(momentId).catch(() => {});
+  await queueFutureSelvesGeneration(momentId).catch(() => {});
   await requestCurrentSelfRegeneration(auth.userId);
 
   revalidatePath(`/moments/${momentId}`);

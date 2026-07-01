@@ -52,6 +52,10 @@ export async function extractBehaviorObservations(
     return { ok: false, error: "ANTHROPIC_API_KEY is not configured." };
   }
 
+  const __aiT0 = Date.now();
+  console.log(
+    `[PROFILE] extractBehaviorObservations STAGE=Anthropic API call | start=${new Date(__aiT0).toISOString()}`,
+  );
   try {
     const client = new Anthropic({ apiKey });
     const controller = new AbortController();
@@ -69,6 +73,9 @@ export async function extractBehaviorObservations(
     );
 
     clearTimeout(timeout);
+    console.log(
+      `[PROFILE] extractBehaviorObservations STAGE=Anthropic API call | end=${new Date().toISOString()} durationMs=${Date.now() - __aiT0}`,
+    );
 
     const text = response.content
       .filter((block) => block.type === "text")
@@ -85,6 +92,9 @@ export async function extractBehaviorObservations(
 
     return { ok: true, data };
   } catch (error) {
+    console.log(
+      `[PROFILE] extractBehaviorObservations STAGE=Anthropic API call | THREW at ${new Date().toISOString()} durationMs=${Date.now() - __aiT0}`,
+    );
     const message =
       error instanceof Error ? error.message : "Behavior extraction failed.";
     return { ok: false, error: message };
@@ -101,6 +111,10 @@ export async function extractAndPersistBehaviorObservations(
   userId: string,
   momentId: string,
 ): Promise<PersistResult> {
+  const __t0 = Date.now();
+  console.log(
+    `[PROFILE] extractAndPersistBehaviorObservations TOTAL | start=${new Date(__t0).toISOString()} momentId=${momentId}`,
+  );
   const supabase = await createClient();
 
   const [momentResult, pathResult, checkInResult] = await Promise.all([
@@ -152,12 +166,18 @@ export async function extractAndPersistBehaviorObservations(
   const result = await extractBehaviorObservations(input);
 
   if (!result.ok) {
+    console.log(
+      `[PROFILE] extractAndPersistBehaviorObservations TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __t0} (extraction failed)`,
+    );
     return { ok: false, inserted: 0, error: result.error };
   }
 
   const { observations } = result.data;
 
   if (observations.length === 0) {
+    console.log(
+      `[PROFILE] extractAndPersistBehaviorObservations TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __t0} (0 observations)`,
+    );
     return { ok: true, inserted: 0 };
   }
 
@@ -174,8 +194,14 @@ export async function extractAndPersistBehaviorObservations(
     .insert(rows);
 
   if (insertError) {
+    console.log(
+      `[PROFILE] extractAndPersistBehaviorObservations TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __t0} (insert failed)`,
+    );
     return { ok: false, inserted: 0, error: insertError.message };
   }
 
+  console.log(
+    `[PROFILE] extractAndPersistBehaviorObservations TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __t0} inserted=${rows.length}`,
+  );
   return { ok: true, inserted: rows.length };
 }

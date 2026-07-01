@@ -3,10 +3,18 @@ import { describe, expect, it, vi } from "vitest";
 type TableResponse = { data?: unknown; count?: number; error?: unknown };
 type TrackedCall = { table: string; method: string; args: unknown[] };
 
-const { generateFutureSelvesMock, getActiveStub, setActiveStub } = vi.hoisted(() => {
+const { queueFutureSelvesGenerationMock, afterMock, getActiveStub, setActiveStub } = vi.hoisted(() => {
   let stub: { client: unknown; calls: TrackedCall[] } | null = null;
   return {
-    generateFutureSelvesMock: vi.fn(async () => ({ futureSelves: [] })),
+    queueFutureSelvesGenerationMock: vi.fn(async () => ({ futureSelves: [] })),
+    // Mirrors next/server's after(): in the real app it defers the callback
+    // until the response is sent. In tests there is no request lifecycle to
+    // defer to, so it just awaits the callback immediately — this lets tests
+    // assert on the scheduled work without depending on Next's request
+    // context machinery.
+    afterMock: vi.fn((callback: () => unknown) => {
+      void callback();
+    }),
     getActiveStub: () => stub,
     setActiveStub: (value: { client: unknown; calls: TrackedCall[] }) => {
       stub = value;
@@ -15,7 +23,11 @@ const { generateFutureSelvesMock, getActiveStub, setActiveStub } = vi.hoisted(()
 });
 
 vi.mock("@/lib/future-selves", () => ({
-  generateFutureSelves: generateFutureSelvesMock,
+  queueFutureSelvesGeneration: queueFutureSelvesGenerationMock,
+}));
+
+vi.mock("next/server", () => ({
+  after: afterMock,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -85,7 +97,8 @@ function createSupabaseStub(tableResponseQueues: Record<string, TableResponse[]>
 
 describe("choosePath", () => {
   it("triggers a Future Selves regeneration when a path is chosen", async () => {
-    generateFutureSelvesMock.mockClear();
+    queueFutureSelvesGenerationMock.mockClear();
+    afterMock.mockClear();
 
     const stub = createSupabaseStub({
       moments: [{ data: { id: "moment-1", title: "A situation" }, error: null }],
@@ -120,11 +133,17 @@ describe("choosePath", () => {
     const result = await choosePath("moment-1", "path-1");
 
     expect("error" in result).toBe(false);
-    expect(generateFutureSelvesMock).toHaveBeenCalledTimes(1);
+    // Regeneration is scheduled via after() rather than awaited before the
+    // response — this asserts it was scheduled (and, since the test's after()
+    // mock runs the callback immediately, that it actually ran).
+    expect(afterMock).toHaveBeenCalledTimes(1);
+    expect(queueFutureSelvesGenerationMock).toHaveBeenCalledTimes(1);
+    expect(queueFutureSelvesGenerationMock).toHaveBeenCalledWith("moment-1");
   });
 
   it("does not regenerate Future Selves if choosing the path fails", async () => {
-    generateFutureSelvesMock.mockClear();
+    queueFutureSelvesGenerationMock.mockClear();
+    afterMock.mockClear();
 
     const stub = createSupabaseStub({
       moments: [{ data: { id: "moment-1", title: "A situation" }, error: null }],
@@ -137,6 +156,7 @@ describe("choosePath", () => {
     const result = await choosePath("moment-1", "path-1");
 
     expect("error" in result).toBe(true);
-    expect(generateFutureSelvesMock).not.toHaveBeenCalled();
+    expect(afterMock).not.toHaveBeenCalled();
+    expect(queueFutureSelvesGenerationMock).not.toHaveBeenCalled();
   });
 });

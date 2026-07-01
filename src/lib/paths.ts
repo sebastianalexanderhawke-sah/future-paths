@@ -1,10 +1,12 @@
+import { after } from "next/server";
+
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import {
   decodeNativePathFields,
   encodePathDescriptionWithNativeTitle,
 } from "@/components/home/path-native-title";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
-import { generateFutureSelves } from "@/lib/future-selves";
+import { queueFutureSelvesGeneration } from "@/lib/future-selves";
 import { createClient } from "@/lib/supabase/server";
 import type { Path } from "@/types/database";
 import type { ThemeName } from "@/types/enums";
@@ -92,6 +94,9 @@ export async function listPathsForMoment(
 export async function generatePaths(
   momentId: string,
 ): Promise<{ paths: Path[] } | { error: string }> {
+  const __t0 = Date.now();
+  console.log(`[PROFILE] generatePaths TOTAL | start=${new Date(__t0).toISOString()} momentId=${momentId}`);
+
   const auth = await requireUser();
   if ("error" in auth) {
     return auth;
@@ -130,6 +135,10 @@ export async function generatePaths(
     return { error: "Paths have already been generated for this moment." };
   }
 
+  const __t1 = Date.now();
+  console.log(
+    `[PROFILE] generatePaths STAGE=situation+path generation (crossroad.generate, single combined AI call) | start=${new Date(__t1).toISOString()}`,
+  );
   const generationResult = await runStructuredGeneration({
     userId: auth.userId,
     profile: "crossroad",
@@ -139,12 +148,18 @@ export async function generatePaths(
       momentId,
     },
   });
+  console.log(
+    `[PROFILE] generatePaths STAGE=situation+path generation | end=${new Date().toISOString()} durationMs=${Date.now() - __t1} ok=${generationResult.ok}`,
+  );
 
   if (!generationResult.ok) {
     return { error: generationResult.error };
   }
 
   const generated = generationResult.data;
+
+  const __t2 = Date.now();
+  console.log(`[PROFILE] generatePaths STAGE=database save | start=${new Date(__t2).toISOString()}`);
 
   const { error: updateError } = await supabase
     .from("moments")
@@ -218,6 +233,13 @@ export async function generatePaths(
     return { error: timelineError.message };
   }
 
+  console.log(
+    `[PROFILE] generatePaths STAGE=database save | end=${new Date().toISOString()} durationMs=${Date.now() - __t2}`,
+  );
+  console.log(
+    `[PROFILE] generatePaths TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __t0}`,
+  );
+
   return { paths: insertedPaths };
 }
 
@@ -290,6 +312,11 @@ export async function choosePath(
   momentId: string,
   pathId: string,
 ): Promise<{ path: Path } | { error: string }> {
+  const __choosePathT0 = Date.now();
+  console.log(
+    `[PROFILE] choosePath TOTAL | start=${new Date(__choosePathT0).toISOString()} momentId=${momentId} pathId=${pathId}`,
+  );
+
   const auth = await requireUser();
   if ("error" in auth) {
     return auth;
@@ -396,9 +423,29 @@ export async function choosePath(
   }
 
   // Choosing a path for a situation is itself predictive evidence — not just
-  // a record of intent — so it regenerates Future Selves immediately, the
-  // same way submitCheckIn() does for lived evidence.
-  await generateFutureSelves(momentId).catch(() => {});
+  // a record of intent — so it regenerates Future Selves, the same way
+  // submitCheckIn() does for lived evidence. Phase 5C: this used to be
+  // awaited here, blocking the response. It now runs via after(), scheduled
+  // to execute once the response has been sent — the pipeline itself
+  // (extraction → recognition → explanation → persistence → current self
+  // regeneration) is unchanged, only WHEN it runs has moved.
+  console.log(
+    `[PROFILE] choosePath STAGE=queueFutureSelvesGeneration | SCHEDULED via after() (background, not awaited before response) at ${new Date().toISOString()}`,
+  );
+  after(async () => {
+    const __gfsT0 = Date.now();
+    console.log(
+      `[PROFILE] choosePath STAGE=queueFutureSelvesGeneration (BACKGROUND, after response) | start=${new Date(__gfsT0).toISOString()}`,
+    );
+    await queueFutureSelvesGeneration(momentId).catch(() => {});
+    console.log(
+      `[PROFILE] choosePath STAGE=queueFutureSelvesGeneration (BACKGROUND) | end=${new Date().toISOString()} durationMs=${Date.now() - __gfsT0}`,
+    );
+  });
+
+  console.log(
+    `[PROFILE] choosePath TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __choosePathT0}`,
+  );
 
   return { path: updatedPath };
 }
