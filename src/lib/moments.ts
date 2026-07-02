@@ -3,7 +3,6 @@ import type { Moment } from "@/types/database";
 import type { MomentStatus } from "@/types/enums";
 
 const TITLE_MAX_LENGTH = 200;
-const DESCRIPTION_MAX_LENGTH = 2000;
 
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
@@ -31,18 +30,6 @@ function validateTitle(title: string): string | null {
 
   if (trimmed.length > TITLE_MAX_LENGTH) {
     return `Title must be ${TITLE_MAX_LENGTH} characters or fewer.`;
-  }
-
-  return null;
-}
-
-function validateDescription(description: string | null | undefined): string | null {
-  if (description == null || description.trim() === "") {
-    return null;
-  }
-
-  if (description.trim().length > DESCRIPTION_MAX_LENGTH) {
-    return `Description must be ${DESCRIPTION_MAX_LENGTH} characters or fewer.`;
   }
 
   return null;
@@ -138,11 +125,6 @@ export async function createMoment(input: {
   const description =
     input.description?.trim() === "" ? null : (input.description?.trim() ?? null);
 
-  const descriptionError = validateDescription(description);
-  if (descriptionError) {
-    return { error: descriptionError };
-  }
-
   const title = input.title.trim();
   const supabase = await createClient();
 
@@ -213,10 +195,6 @@ export async function updateMoment(
   if (input.description !== undefined) {
     const description =
       input.description?.trim() === "" ? null : (input.description?.trim() ?? null);
-    const descriptionError = validateDescription(description);
-    if (descriptionError) {
-      return { error: descriptionError };
-    }
     updates.description = description;
   }
 
