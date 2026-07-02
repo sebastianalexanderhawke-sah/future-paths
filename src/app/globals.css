@@ -6,6 +6,35 @@
   100% { transform: translateX(-50%) translateY(8px); opacity: 0; }
 }
 
+/* Future Self deep-dive modal: calm scale/fade in, quick shrink away. */
+@keyframes futureModalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes futureModalOut {
+  to { opacity: 0; transform: scale(0.97); }
+}
+
+@keyframes futureBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-in { animation: futureModalIn 0.22s ease-out backwards; }
+.modal-out { animation: futureModalOut 0.15s ease-in forwards; }
+.modal-backdrop-in { animation: futureBackdropIn 0.2s ease-out backwards; }
+.modal-backdrop-out { animation: futureModalOut 0.15s ease-in forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-in,
+  .modal-out,
+  .modal-backdrop-in,
+  .modal-backdrop-out {
+    animation: none;
+  }
+}
+
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;

@@ -1,5 +1,5 @@
 import { extractAndPersistBehaviorObservations } from "@/lib/behavior-extraction";
-import { explainIdentities } from "@/lib/ai/explain-identity";
+import { explainIdentities, needsExplanationRegeneration } from "@/lib/ai/explain-identity";
 import { getIdentityById } from "@/lib/identity-library";
 import {
   recognizeIdentitiesWithAttribution,
@@ -329,19 +329,38 @@ export async function generateFutureSelves(
 
   const allExisting = existingRows ?? [];
 
-  // Step 6: Resolve identity profiles for all recognized identities.
+  // Step 6: Resolve identity profiles for all recognized identities, and pair
+  // each with its existing row (if any) so the regeneration decision below
+  // can see whether this identity has ever been persisted before the AI call
+  // goes out.
   const entries = topIdentities.flatMap((match) => {
     const profile = getIdentityById(match.identityId);
-    return profile ? [{ match, profile }] : [];
+    if (!profile) return [];
+
+    // Match first by identity_id (new-pipeline rows), then by canonical name
+    // (legacy rows that happen to share a name with this identity).
+    const existing =
+      allExisting.find((r) => r.identity_id === match.identityId) ??
+      allExisting.find((r) => !r.identity_id && r.name === profile.canonical_name);
+
+    return [{ match, profile, existing, decision: needsExplanationRegeneration(existing) }];
   });
 
-  // Step 6b: Single AI request explains all recognized identities together.
-  //          AI never selects or names identities — only explains them.
+  // Step 6b: Future Self narratives are stable archetype descriptions, not
+  // per-situation output (Phase 6C) — the AI is only invoked for identities
+  // with no existing row at all. Every other identity (evidence tier moved,
+  // reactivated from faded, percentage moved) keeps its existing
+  // why_emerging / growth_opportunities / blind_spots / likely_evolution —
+  // only percentage, evidence, and supporting data update below regardless
+  // of this decision.
+  const entriesNeedingRegeneration = entries.filter((e) => e.decision.regenerate);
   const __step7T0 = Date.now();
   console.log(
-    `[PROFILE] generateFutureSelves STAGE=7 AI explanation (explainIdentities) | start=${new Date(__step7T0).toISOString()} entryCount=${entries.length}`,
+    `[PROFILE] generateFutureSelves STAGE=7 AI explanation (explainIdentities) | start=${new Date(__step7T0).toISOString()} entryCount=${entries.length} regenerating=${entriesNeedingRegeneration.length} skipped=${entries.length - entriesNeedingRegeneration.length}`,
   );
-  const explanationResults = await explainIdentities(entries);
+  const explanationResults = await explainIdentities(
+    entriesNeedingRegeneration.map(({ match, profile }) => ({ match, profile })),
+  );
   console.log(
     `[PROFILE] generateFutureSelves STAGE=7 AI explanation | end=${new Date().toISOString()} durationMs=${Date.now() - __step7T0}`,
   );
@@ -358,8 +377,18 @@ export async function generateFutureSelves(
   let hasMeaningfulTransition = false;
 
   // Step 7: Persist each identity.
-  for (const { match, profile } of entries) {
-    const explanation = explanationById.get(match.identityId)!;
+  for (const { match, profile, existing, decision } of entries) {
+    // Regenerated identities use the fresh AI explanation; unchanged ones
+    // keep their existing narrative fields untouched — only percentage,
+    // evidence, and supporting data are refreshed below regardless.
+    const explanation = decision.regenerate
+      ? explanationById.get(match.identityId)!
+      : {
+          why_emerging: existing!.why_emerging,
+          growth_opportunities: existing!.growth_opportunities,
+          blind_spots: existing!.blind_spots,
+          likely_evolution: existing!.likely_evolution,
+        };
 
     const percentage = match.likelihood;
     const evidenceStrength = match.evidenceStrength;
@@ -385,14 +414,10 @@ export async function generateFutureSelves(
       blind_spots: explanation.blind_spots,
       likely_evolution: explanation.likely_evolution,
       why_emerging: explanation.why_emerging,
-      themes: [] as string[],
+      // Untyped empty literal — infers never[], which satisfies ThemeName[]
+      // (the old `as string[]` assertion failed the build's type check).
+      themes: [],
     };
-
-    // Match first by identity_id (new-pipeline rows), then by canonical name
-    // (legacy rows that happen to share a name with this identity).
-    const existing =
-      allExisting.find((r) => r.identity_id === match.identityId) ??
-      allExisting.find((r) => !r.identity_id && r.name === profile.canonical_name);
 
     if (!existing) {
       const { data: created, error: insertError } = await supabase

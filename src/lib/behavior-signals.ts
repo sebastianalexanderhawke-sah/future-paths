@@ -21,6 +21,7 @@ export const SIGNAL_SLUGS = [
   "resists_change",
   "maintains_commitment",
   "opens_up_about_weakness",
+  "engages_conflict_directly",
 ] as const;
 
 export type SignalSlug = (typeof SIGNAL_SLUGS)[number];
@@ -180,6 +181,17 @@ export const SIGNAL_DEFINITIONS: Record<SignalSlug, SignalDefinition> = {
     label: "Opens up about weakness",
     description: "Named or acknowledged a limitation, fear, or area of struggle openly.",
     dimensions: [{ dimension: "Vulnerability", weight: 2 }],
+  },
+  // Phase 8H: previously Conflict Tolerance could only be lowered
+  // (avoids_conflict at -1) and never raised — the dimension was dead on the
+  // positive side, leaving every identity that weights it starved. This is
+  // the minimum signal that lets healthy conflict engagement register.
+  engages_conflict_directly: {
+    slug: "engages_conflict_directly",
+    label: "Engages conflict directly",
+    description:
+      "Addressed a disagreement, confrontation, or unpopular position head-on rather than deferring or withdrawing.",
+    dimensions: [{ dimension: "Conflict Tolerance", weight: 2 }],
   },
 };
 

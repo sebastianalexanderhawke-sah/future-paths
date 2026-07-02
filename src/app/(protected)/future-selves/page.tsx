@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { generateFutureSelvesAction } from "@/actions/future-selves";
 import { signOut } from "@/actions/auth";
-import { FutureCard } from "@/components/futures/future-card";
+import { FutureSelvesExplorer } from "@/components/futures/future-selves-explorer";
 import { FutureSelvesVisitClear } from "@/components/futures/future-selves-visit-clear";
 import { listFutureSelves } from "@/lib/future-selves";
 
@@ -21,13 +21,6 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
       </div>
     );
   }
-
-  const activeFutures = result.futureSelves.filter(
-    (futureSelf) => futureSelf.status === "active",
-  );
-  const fadedFutures = result.futureSelves.filter(
-    (futureSelf) => futureSelf.status === "faded",
-  );
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50">
@@ -59,56 +52,14 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-6 py-6">
         {error ? (
           <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </p>
         ) : null}
 
-        <section className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-sm font-medium text-zinc-900">Active futures</h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Identity trajectories that may be emerging from your patterns.
-            </p>
-          </div>
-
-          {activeFutures.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-8 text-center text-sm text-zinc-600">
-              No Future Selves yet. Capture moments and check in, then refresh to
-              discover emerging trajectories.
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {activeFutures.map((futureSelf) => (
-                <FutureCard key={futureSelf.id} futureSelf={futureSelf} />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {fadedFutures.length > 0 ? (
-          <section className="flex flex-col gap-4">
-            <details className="group">
-              <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-zinc-900 [&::-webkit-details-marker]:hidden">
-                <span aria-hidden="true" className="text-zinc-400">
-                  <span className="group-open:hidden">▶</span>
-                  <span className="hidden group-open:inline">▼</span>
-                </span>
-                Faded Futures ({fadedFutures.length})
-              </summary>
-              <p className="mt-1 text-sm text-zinc-500">
-                Trajectories that may have quieted for now.
-              </p>
-              <div className="mt-4 flex flex-col gap-3">
-                {fadedFutures.map((futureSelf) => (
-                  <FutureCard key={futureSelf.id} futureSelf={futureSelf} />
-                ))}
-              </div>
-            </details>
-          </section>
-        ) : null}
+        <FutureSelvesExplorer futureSelves={result.futureSelves} />
       </main>
     </div>
   );

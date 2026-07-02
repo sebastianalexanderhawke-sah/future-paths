@@ -135,11 +135,12 @@ describe("recognizeIdentities — connection-dominant user", () => {
   });
 
   it("computes expected raw score for Community Weaver", () => {
-    // Connection(1.0)×24 + Vulnerability(0.7)×14 + ConflictTolerance(0.6)×10
-    // + Consistency(0.4)×8 = 24 + 9.8 + 6 + 3.2 = 43
+    // Phase 8H weights: Connection(1.0)×24 + Vulnerability(0.7)×14
+    // + ConflictTolerance(0.6)×10 = 24 + 9.8 + 6 = 39.8
+    // (Consistency no longer contributes; Initiative is 0 for this user.)
     const matches = recognizeIdentities(connectionUser);
     const cw = matches.find((m) => m.identityId === "community-weaver")!;
-    expect(cw.score).toBeCloseTo(43, 1);
+    expect(cw.score).toBeCloseTo(39.8, 1);
   });
 
   it("correctly excludes Self-Reliant Builder (penalised by Connection -0.3)", () => {
@@ -277,7 +278,7 @@ describe("recognizeIdentitiesFromObservations", () => {
 
 describe("IDENTITY_LIBRARY", () => {
   it("contains 13 identities", () => {
-    expect(IDENTITY_LIBRARY).toHaveLength(13);
+    expect(IDENTITY_LIBRARY).toHaveLength(12);
   });
 
   it("has unique ids", () => {

@@ -29,6 +29,45 @@ export type IdentityExplanationResult = {
 };
 
 // ---------------------------------------------------------------------------
+// Regeneration decision
+// ---------------------------------------------------------------------------
+
+export type ExplanationRegenerationReason = "new" | "stable";
+
+export type ExplanationRegenerationDecision = {
+  regenerate: boolean;
+  reason: ExplanationRegenerationReason;
+};
+
+/**
+ * Decides whether an identity's Layer 2 narrative (why_emerging,
+ * growth_opportunities, blind_spots, likely_evolution) needs to be
+ * generated this run, or whether the existing narrative stays as-is.
+ *
+ * Layer 1 (percentage, confidence, dimension_breakdown, supporting
+ * observations/situations, evidence_strength, trend) is recomputed by the
+ * recognition engine and persisted every run regardless of this decision —
+ * see generateFutureSelves.
+ *
+ * Phase 6C: Future Selves are archetypes, not per-situation output. The
+ * narrative is written once, when the identity first has no row at all, and
+ * is otherwise left untouched by ordinary situations — including evidence
+ * tier changes and reactivation after fading. It changes only when
+ * something outside the ordinary recognition loop decides it's time: an
+ * explicit user-triggered "regenerate this archetype" action, or a future
+ * scheduled/periodic regeneration policy (see the module doc below for the
+ * intended extension point). Neither is implemented here.
+ */
+export function needsExplanationRegeneration(
+  existing: { id: string } | undefined,
+): ExplanationRegenerationDecision {
+  if (!existing) {
+    return { regenerate: true, reason: "new" };
+  }
+  return { regenerate: false, reason: "stable" };
+}
+
+// ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
 
@@ -36,8 +75,11 @@ const explanationItemSchema = z.object({
   identity_id: z.string().trim().min(1),
   why_emerging: z.string().trim().min(1).max(1000),
   growth_opportunities: z.array(z.string().trim().min(1).max(200)).min(1).max(4),
-  blind_spots: z.array(z.string().trim().min(1).max(200)).min(1).max(4),
-  likely_evolution: z.string().trim().min(1).max(600),
+  // Trade-offs and predictions: the prompt asks for ≤180/≤550 chars, but the
+  // model overshoots in large batches — the caps below are headroom, not
+  // targets, so a few long sentences don't discard an otherwise valid batch.
+  blind_spots: z.array(z.string().trim().min(1).max(300)).min(1).max(4),
+  likely_evolution: z.string().trim().min(1).max(900),
 });
 
 const batchResponseSchema = z.object({
@@ -60,10 +102,12 @@ export function fallbackExplanation(
         "Notice when a choice lines up with this identity and what made it possible.",
       ],
       blind_spots: [
-        "Watch for situations that pull toward a different pattern before this one takes hold.",
+        "Mistaking a moment for a direction",
+        "Crowding out other ways of being before they get room",
+        "Building on a pattern that hasn't been tested yet",
       ],
       likely_evolution:
-        "If similar choices repeat across new situations, this identity will strengthen. Repeated patterns, not any single decision, will determine where it goes next.",
+        "A person shaped by this becomes someone whose days, relationships, and decisions gradually reorganize around it — quietly at first, in small choices that begin to point the same way.",
     };
   }
 
@@ -74,9 +118,13 @@ export function fallbackExplanation(
       "Engage deliberately in situations that call for this pattern.",
       "Notice when this identity is active and what enables it.",
     ],
-    blind_spots: ["Watch for moments when this pattern creates friction with other values."],
+    blind_spots: [
+      "Losing what this strength displaces",
+      "A narrowing range of who you can be",
+      "People outside this pattern receiving less of you",
+    ],
     likely_evolution:
-      "If these patterns continue, this identity may become more consistent across a wider range of situations.",
+      "A person defined by this becomes recognizable for it — it shapes what they take on, how they decide, and what the people around them come to rely on them for.",
   };
 }
 
@@ -156,7 +204,7 @@ function buildSystemPrompt(): string {
 
 These patterns were identified deterministically from the user's behavioral data. Your role is strictly interpretive — explain existing evidence. You must never invent identities, rename them, or adjust any numerical values.
 
-Multiple identities coexisting in one person is normal. They may reinforce each other or represent different dimensions of how this person operates. Each explanation should feel aware of the broader identity profile — avoid repeating identical wording across explanations.
+Multiple identities coexisting in one person is normal. They may reinforce each other or represent different dimensions of how this person operates. Each explanation should feel aware of the broader identity profile. Distinctness is a hard requirement: no sentence you write should be transplantable to another identity in this response. Vary sentence openers across identities — if two explanations begin the same way, rewrite one.
 
 Return a JSON object with exactly this shape:
 
@@ -166,8 +214,8 @@ Return a JSON object with exactly this shape:
       "identity_id": "<exactly as provided — no changes>",
       "why_emerging": "<2-4 sentences>",
       "growth_opportunities": ["<2-4 strings>"],
-      "blind_spots": ["<2-4 strings>"],
-      "likely_evolution": "<2-3 sentences>"
+      "blind_spots": ["<exactly 3 short risks>"],
+      "likely_evolution": "<2-4 sentences>"
     }
   ]
 }
@@ -176,10 +224,10 @@ Rules for each field:
 - identity_id: copy exactly from the input. Any change makes the result unusable.
 - why_emerging: 2-4 sentences. Reference specific situations and observation types. Begin with what the evidence shows: "Across several situations...", "The evidence shows...", "In multiple contexts..."
 - growth_opportunities: 2-4 strings. Each is a concrete behavior (8-20 words). Start each with a verb: Start, Practice, Seek, Build, Create, Take, Develop, Invest, Pursue.
-- blind_spots: 2-4 strings. Ground each specifically in what the opposing evidence shows. Start each with a noun or present-tense verb.
-- likely_evolution: 2-3 sentences. Use grounded forward-looking language: "If these patterns continue...", "The trajectory suggests...", "Over time, this pattern could..."
+- blind_spots: exactly 3 strings, rendered to the user under the heading "What You Risk". Each is a short, emotionally recognizable risk (2-8 words, noun phrase preferred) that emerges if this identity becomes dominant — the register of "Burnout", "Isolation", "Never feeling settled", "Carrying everything alone". Each must be a direct consequence of THIS archetype, felt from inside the life, not observed from outside it. No advice, no mechanisms, no explanations, no moral judgments, no full sentences of analysis ("watch for", "can make it harder to", "means that" are banned). If a risk could appear under a different identity in this response, replace it.
+- likely_evolution: 2-4 sentences. This is a prediction, and it must answer: if this identity became one of the defining patterns of this person's life, who would they gradually become? Before writing, decide what KIND of future this archetype most naturally produces — a career trajectory, a relationship trajectory, a reputation, a lifestyle, an inner life, a leadership arc, a craft, a community role — and write that kind, chosen from where this identity's consequences actually concentrate. Different identities in the same response must not all describe the same kind of future. Ground the future in this user's actual evidence: project their specific situations and behaviors forward, so that another person with the same archetype but different evidence would get a visibly different future. It should read as "this is MY version of this identity", never a generic description of the archetype. Write about the person, never the pattern: any sentence about patterns continuing, identities strengthening, evidence accumulating, or repetition of choices is a system mechanic and is banned ("If these patterns continue", "this identity will strengthen", "if similar choices repeat" must not appear). Never mention the measurement machinery: the words "score", "dimension", "percentage", "likelihood", and "evidence strength" must not appear — the user sees the life, never the instrument. Do not open more than one prediction in this response with the same construction (e.g. "This person becomes..."). At most 550 characters.
 
-When an identity's evidence strength is "Emerging", frame why_emerging and likely_evolution around an identity beginning to emerge, not an established one: acknowledge that the evidence so far is limited, note that more situations may strengthen or change this identity, and make clear that repeated patterns matter more than any single decision. Keep the tone confident and observational — never hedging or apologetic ("might", "possibly", "hard to say", "not sure yet"). This is a distinct framing from Moderate or Strong identities, not a weaker version of the same explanation.
+When an identity's evidence strength is "Emerging", frame why_emerging around an identity beginning to emerge, not an established one: acknowledge that the evidence so far is limited. likely_evolution stays a person-level prediction even for Emerging identities — temper it by describing a quieter or earlier version of the future person, never by discussing evidence quantity or pattern mechanics. Keep the tone confident and observational — never hedging or apologetic ("might", "possibly", "hard to say", "not sure yet"). This is a distinct framing from Moderate or Strong identities, not a weaker version of the same explanation.
 
 Include one entry per identity provided — do not add or omit any. Do not use generic coaching language. Be specific to the evidence provided. Do not add fields beyond those specified.`;
 }
@@ -336,7 +384,9 @@ export async function explainIdentities(
     const response = await client.messages.create(
       {
         model,
-        max_tokens: 2048,
+        // Sized for a 5-identity batch of Phase 7B narratives (3-4 trade-offs
+        // and person-level predictions per identity) — 2048 truncated these.
+        max_tokens: 8192,
         temperature: 0.3,
         system: buildSystemPrompt(),
         messages: [{ role: "user", content: buildUserPrompt(entries) }],

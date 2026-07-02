@@ -37,9 +37,13 @@ vi.mock("@/lib/identity-library", () => ({
   getIdentityById: getIdentityByIdMock,
 }));
 
-vi.mock("@/lib/ai/explain-identity", () => ({
-  explainIdentities: explainIdentitiesMock,
-}));
+vi.mock("@/lib/ai/explain-identity", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/ai/explain-identity")>();
+  return {
+    ...actual,
+    explainIdentities: explainIdentitiesMock,
+  };
+});
 
 vi.mock("@/lib/current-self", () => ({
   requestCurrentSelfRegeneration: vi.fn(),
@@ -397,6 +401,650 @@ describe("generateFutureSelves", () => {
       (c) => c.table === "future_self_events" && c.method === "insert",
     );
     expect(events).toHaveLength(0);
+  });
+
+  it("does not call the AI and keeps the existing narrative when evidence_strength tier is unchanged (Phase 6A)", async () => {
+    // 22% -> 24%: both fall in the "Emerging" tier (< 30), so no regeneration
+    // should occur even though the percentage moved.
+    recognizeMock.mockReturnValueOnce([{ ...MATCH, likelihood: 24, evidenceStrength: "Emerging" }]);
+    getIdentityByIdMock.mockReturnValueOnce(PROFILE);
+
+    const existingRow = {
+      id: "fs-1",
+      user_id: "user-1",
+      name: "Self-Reliant Builder",
+      status: "active",
+      percentage: 22,
+      evidence_strength: "Emerging",
+      identity_id: "self-reliant-builder",
+      why_emerging: "Existing why_emerging text.",
+      growth_opportunities: ["Existing growth opportunity."],
+      blind_spots: ["Existing blind spot."],
+      likely_evolution: "Existing likely evolution text.",
+    };
+    const stub = createSupabaseStub({
+      behavior_observations: OBSERVATIONS_RESPONSE,
+      future_selves: [
+        { data: [existingRow], error: null },
+        { error: null },
+        { data: [existingRow], error: null },
+      ],
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    // The AI is invoked with an empty list — no identity needed regeneration.
+    expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+
+    const updates = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "update",
+    );
+    expect(updates).toHaveLength(1);
+    const payload = updates[0].args[0] as Record<string, unknown>;
+    expect(payload.percentage).toBe(24);
+    expect(payload.previous_percentage).toBe(22);
+    // Narrative fields are carried over unchanged from the existing row.
+    expect(payload.why_emerging).toBe("Existing why_emerging text.");
+    expect(payload.growth_opportunities).toEqual(["Existing growth opportunity."]);
+    expect(payload.blind_spots).toEqual(["Existing blind spot."]);
+    expect(payload.likely_evolution).toBe("Existing likely evolution text.");
+  });
+
+  it("does not call the AI even when evidence_strength crosses a tier boundary (Phase 6C: narratives are stable archetypes, not per-situation output)", async () => {
+    // 24% (Emerging) -> 42% (Moderate): a tier change, but Phase 6C no longer
+    // treats this as a narrative-changing event — only a brand-new identity does.
+    recognizeMock.mockReturnValueOnce([{ ...MATCH, likelihood: 42, evidenceStrength: "Moderate" }]);
+    getIdentityByIdMock.mockReturnValueOnce(PROFILE);
+
+    const existingRow = {
+      id: "fs-1",
+      user_id: "user-1",
+      name: "Self-Reliant Builder",
+      status: "active",
+      percentage: 24,
+      evidence_strength: "Emerging",
+      identity_id: "self-reliant-builder",
+      why_emerging: "Stable why_emerging text.",
+      growth_opportunities: ["Stable growth opportunity."],
+      blind_spots: ["Stable blind spot."],
+      likely_evolution: "Stable likely evolution text.",
+    };
+    const stub = createSupabaseStub({
+      behavior_observations: OBSERVATIONS_RESPONSE,
+      future_selves: [
+        { data: [existingRow], error: null },
+        { error: null },
+        { data: [existingRow], error: null },
+      ],
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+
+    const updates = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "update",
+    );
+    const payload = updates[0].args[0] as Record<string, unknown>;
+    expect(payload.percentage).toBe(42);
+    expect(payload.evidence_strength).toBe("Moderate");
+    // Layer 1 (evidence_strength) updated; Layer 2 narrative stayed put.
+    expect(payload.why_emerging).toBe("Stable why_emerging text.");
+    expect(payload.growth_opportunities).toEqual(["Stable growth opportunity."]);
+  });
+
+  describe("Phase 6C — Explorer walkthrough", () => {
+    const EXPLORER_PROFILE = {
+      ...PROFILE,
+      id: "explorer",
+      canonical_name: "Explorer",
+    };
+
+    it("Example 1: 22% -> 23%, supporting evidence slightly stronger — percentage updates, narrative unchanged", async () => {
+      recognizeMock.mockReturnValueOnce([
+        { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 23, evidenceStrength: "Emerging" },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
+
+      const existingRow = {
+        id: "fs-explorer",
+        user_id: "user-1",
+        name: "Explorer",
+        status: "active",
+        percentage: 22,
+        evidence_strength: "Emerging",
+        identity_id: "explorer",
+        why_emerging: "Explorer's existing why_emerging.",
+        growth_opportunities: ["Explorer's existing growth opportunity."],
+        blind_spots: ["Explorer's existing blind spot."],
+        likely_evolution: "Explorer's existing likely evolution.",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [existingRow], error: null },
+          { error: null },
+          { data: [existingRow], error: null },
+        ],
+        future_self_events: { error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+
+      const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
+      const payload = updates[0].args[0] as Record<string, unknown>;
+      expect(payload.percentage).toBe(23);
+      expect(payload.why_emerging).toBe("Explorer's existing why_emerging.");
+      expect(payload.growth_opportunities).toEqual(["Explorer's existing growth opportunity."]);
+    });
+
+    it("Example 2: 22% -> 39%, several new behaviors consistently reinforce the identity — percentage updates, narrative still unchanged (Phase 6C: only a brand-new identity generates a narrative)", async () => {
+      recognizeMock.mockReturnValueOnce([
+        { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 39, evidenceStrength: "Moderate" },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
+
+      const existingRow = {
+        id: "fs-explorer",
+        user_id: "user-1",
+        name: "Explorer",
+        status: "active",
+        percentage: 22,
+        evidence_strength: "Emerging",
+        identity_id: "explorer",
+        why_emerging: "Explorer's existing why_emerging.",
+        growth_opportunities: ["Explorer's existing growth opportunity."],
+        blind_spots: ["Explorer's existing blind spot."],
+        likely_evolution: "Explorer's existing likely evolution.",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [existingRow], error: null },
+          { error: null },
+          { data: [existingRow], error: null },
+        ],
+        future_self_events: { error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+
+      const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
+      const payload = updates[0].args[0] as Record<string, unknown>;
+      expect(payload.percentage).toBe(39);
+      expect(payload.evidence_strength).toBe("Moderate");
+      expect(payload.why_emerging).toBe("Explorer's existing why_emerging.");
+    });
+
+    it("Example 3: Explorer disappears — fades using existing behavior, no AI call", async () => {
+      // A different identity is recognized this run; Explorer isn't, so it fades.
+      recognizeMock.mockReturnValueOnce([{ ...MATCH, identityId: "other", canonicalName: "Other" }]);
+      getIdentityByIdMock.mockReturnValueOnce({ ...PROFILE, id: "other", canonical_name: "Other" });
+
+      const explorerRow = {
+        id: "fs-explorer",
+        user_id: "user-1",
+        name: "Explorer",
+        status: "active",
+        percentage: 39,
+        evidence_strength: "Moderate",
+        identity_id: "explorer",
+        why_emerging: "Explorer's existing why_emerging.",
+      };
+      const newRow = {
+        id: "fs-other",
+        user_id: "user-1",
+        name: "Other",
+        status: "active",
+        percentage: 60,
+        identity_id: "other",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [explorerRow], error: null },
+          { data: newRow, error: null },
+          { error: null },
+          { data: [newRow], error: null },
+        ],
+        future_self_events: [{ error: null }, { error: null }],
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      // Explorer was never a candidate for regeneration — it's not in this
+      // run's recognized identities at all, so no AI call references it.
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([
+        expect.objectContaining({ match: expect.objectContaining({ identityId: "other" }) }),
+      ]);
+
+      const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
+      const fadePayload = updates[0].args[0] as Record<string, unknown>;
+      expect(fadePayload.status).toBe("faded");
+      expect(fadePayload.percentage).toBe(0);
+      // Fade never touches the narrative fields — they aren't in the update payload.
+      expect(fadePayload.why_emerging).toBeUndefined();
+    });
+
+    it("Example 4: Explorer returns months later — reactivates using its existing archetype narrative, no AI call (Phase 6C)", async () => {
+      recognizeMock.mockReturnValueOnce([
+        { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 35, evidenceStrength: "Moderate" },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
+
+      const fadedRow = {
+        id: "fs-explorer",
+        user_id: "user-1",
+        name: "Explorer",
+        status: "faded",
+        percentage: 0,
+        evidence_strength: "Moderate",
+        identity_id: "explorer",
+        why_emerging: "Explorer's pre-fade why_emerging.",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [fadedRow], error: null },
+          { error: null },
+          { data: [{ ...fadedRow, status: "active", percentage: 35 }], error: null },
+        ],
+        future_self_events: { error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+
+      const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
+      const payload = updates[0].args[0] as Record<string, unknown>;
+      expect(payload.status).toBe("active");
+      expect(payload.why_emerging).toBe("Explorer's pre-fade why_emerging.");
+
+      const events = stub.calls.filter((c) => c.table === "future_self_events" && c.method === "insert");
+      expect(events.map((e) => (e.args[0] as Record<string, unknown>).event_type)).toContain("returned");
+    });
+  });
+
+  describe("Phase 6D — Explorer verify (created, 22% -> 28% -> 41%)", () => {
+    const EXPLORER_PROFILE = {
+      ...PROFILE,
+      id: "explorer",
+      canonical_name: "Explorer",
+    };
+
+    it("Situation 1: Explorer created for the first time — AI generates the narrative", async () => {
+      recognizeMock.mockReturnValueOnce([
+        { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 22, evidenceStrength: "Emerging" },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
+
+      const createdRow = {
+        id: "fs-explorer",
+        user_id: "user-1",
+        name: "Explorer",
+        status: "active",
+        percentage: 22,
+        identity_id: "explorer",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [], error: null }, // no existing row — Explorer has never appeared
+          { data: createdRow, error: null }, // INSERT.select().single()
+          { data: [createdRow], error: null }, // listFutureSelves
+        ],
+        future_self_events: { error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([
+        expect.objectContaining({ match: expect.objectContaining({ identityId: "explorer" }) }),
+      ]);
+
+      const inserts = stub.calls.filter((c) => c.table === "future_selves" && c.method === "insert");
+      expect(inserts).toHaveLength(1);
+      const payload = inserts[0].args[0] as Record<string, unknown>;
+      expect(payload.why_emerging).toBe(FALLBACK_EXPLANATION.why_emerging);
+
+      const events = stub.calls.filter((c) => c.table === "future_self_events" && c.method === "insert");
+      expect(events.map((e) => (e.args[0] as Record<string, unknown>).event_type)).toContain("emerged");
+    });
+
+    it("Situation 2: Explorer goes from 22% -> 28% — percentage updates, narrative unchanged, no AI call", async () => {
+      recognizeMock.mockReturnValueOnce([
+        { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 28, evidenceStrength: "Emerging" },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
+
+      const existingRow = {
+        id: "fs-explorer",
+        user_id: "user-1",
+        name: "Explorer",
+        status: "active",
+        percentage: 22,
+        evidence_strength: "Emerging",
+        identity_id: "explorer",
+        why_emerging: "Explorer's archetype narrative.",
+        growth_opportunities: ["Explorer's archetype growth opportunity."],
+        blind_spots: ["Explorer's archetype blind spot."],
+        likely_evolution: "Explorer's archetype likely evolution.",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [existingRow], error: null },
+          { error: null },
+          { data: [existingRow], error: null },
+        ],
+        future_self_events: { error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+
+      const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
+      const payload = updates[0].args[0] as Record<string, unknown>;
+      expect(payload.percentage).toBe(28);
+      expect(payload.why_emerging).toBe("Explorer's archetype narrative.");
+      expect(payload.growth_opportunities).toEqual(["Explorer's archetype growth opportunity."]);
+    });
+
+    it("Situation 3: Explorer goes from 28% -> 41% (an evidence-strength tier crossing) — percentage updates, narrative unchanged, no AI call", async () => {
+      recognizeMock.mockReturnValueOnce([
+        { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 41, evidenceStrength: "Moderate" },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
+
+      const existingRow = {
+        id: "fs-explorer",
+        user_id: "user-1",
+        name: "Explorer",
+        status: "active",
+        percentage: 28,
+        evidence_strength: "Emerging",
+        identity_id: "explorer",
+        why_emerging: "Explorer's archetype narrative.",
+        growth_opportunities: ["Explorer's archetype growth opportunity."],
+        blind_spots: ["Explorer's archetype blind spot."],
+        likely_evolution: "Explorer's archetype likely evolution.",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [existingRow], error: null },
+          { error: null },
+          { data: [existingRow], error: null },
+        ],
+        future_self_events: { error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      // Even though evidence_strength moved Emerging -> Moderate, the AI is
+      // never invoked once the identity already has a row.
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+
+      const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
+      const payload = updates[0].args[0] as Record<string, unknown>;
+      expect(payload.percentage).toBe(41);
+      expect(payload.evidence_strength).toBe("Moderate");
+      expect(payload.why_emerging).toBe("Explorer's archetype narrative.");
+    });
+  });
+
+  describe("Phase 6E — Adaptive Explorer verify (appears, 22% -> 28% -> 46%, fades, returns)", () => {
+    const ADAPTIVE_EXPLORER_PROFILE = {
+      ...PROFILE,
+      id: "adaptive-explorer",
+      canonical_name: "Adaptive Explorer",
+    };
+
+    it("Situation 1: Adaptive Explorer appears for the first time — AI generates the narrative once", async () => {
+      recognizeMock.mockReturnValueOnce([
+        {
+          ...MATCH,
+          identityId: "adaptive-explorer",
+          canonicalName: "Adaptive Explorer",
+          likelihood: 22,
+          evidenceStrength: "Emerging",
+        },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce(ADAPTIVE_EXPLORER_PROFILE);
+
+      const createdRow = {
+        id: "fs-adaptive-explorer",
+        user_id: "user-1",
+        name: "Adaptive Explorer",
+        status: "active",
+        percentage: 22,
+        identity_id: "adaptive-explorer",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [], error: null },
+          { data: createdRow, error: null },
+          { data: [createdRow], error: null },
+        ],
+        future_self_events: { error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([
+        expect.objectContaining({ match: expect.objectContaining({ identityId: "adaptive-explorer" }) }),
+      ]);
+      const inserts = stub.calls.filter((c) => c.table === "future_selves" && c.method === "insert");
+      expect((inserts[0].args[0] as Record<string, unknown>).why_emerging).toBe(
+        FALLBACK_EXPLANATION.why_emerging,
+      );
+    });
+
+    it("Situation 2: 22% -> 28% — only dynamic fields update, no AI call", async () => {
+      recognizeMock.mockReturnValueOnce([
+        {
+          ...MATCH,
+          identityId: "adaptive-explorer",
+          canonicalName: "Adaptive Explorer",
+          likelihood: 28,
+          evidenceStrength: "Emerging",
+        },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce(ADAPTIVE_EXPLORER_PROFILE);
+
+      const existingRow = {
+        id: "fs-adaptive-explorer",
+        user_id: "user-1",
+        name: "Adaptive Explorer",
+        status: "active",
+        percentage: 22,
+        evidence_strength: "Emerging",
+        identity_id: "adaptive-explorer",
+        why_emerging: "Adaptive Explorer's archetype narrative.",
+        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
+        blind_spots: ["Adaptive Explorer's archetype blind spot."],
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [existingRow], error: null },
+          { error: null },
+          { data: [existingRow], error: null },
+        ],
+        future_self_events: { error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+      const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
+      const payload = updates[0].args[0] as Record<string, unknown>;
+      expect(payload.percentage).toBe(28);
+      expect(payload.why_emerging).toBe("Adaptive Explorer's archetype narrative.");
+    });
+
+    it("Situation 3: 28% -> 46% (Emerging -> Moderate) — only dynamic fields update, no AI call", async () => {
+      recognizeMock.mockReturnValueOnce([
+        {
+          ...MATCH,
+          identityId: "adaptive-explorer",
+          canonicalName: "Adaptive Explorer",
+          likelihood: 46,
+          evidenceStrength: "Moderate",
+        },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce(ADAPTIVE_EXPLORER_PROFILE);
+
+      const existingRow = {
+        id: "fs-adaptive-explorer",
+        user_id: "user-1",
+        name: "Adaptive Explorer",
+        status: "active",
+        percentage: 28,
+        evidence_strength: "Emerging",
+        identity_id: "adaptive-explorer",
+        why_emerging: "Adaptive Explorer's archetype narrative.",
+        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
+        blind_spots: ["Adaptive Explorer's archetype blind spot."],
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [existingRow], error: null },
+          { error: null },
+          { data: [existingRow], error: null },
+        ],
+        future_self_events: { error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+      const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
+      const payload = updates[0].args[0] as Record<string, unknown>;
+      expect(payload.percentage).toBe(46);
+      expect(payload.evidence_strength).toBe("Moderate");
+      expect(payload.why_emerging).toBe("Adaptive Explorer's archetype narrative.");
+    });
+
+    it("Situation 4: Adaptive Explorer fades — percentage/status/evidence change, narrative unchanged (never written to the fade payload)", async () => {
+      recognizeMock.mockReturnValueOnce([
+        { ...MATCH, identityId: "other", canonicalName: "Other" },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce({ ...PROFILE, id: "other", canonical_name: "Other" });
+
+      const explorerRow = {
+        id: "fs-adaptive-explorer",
+        user_id: "user-1",
+        name: "Adaptive Explorer",
+        status: "active",
+        percentage: 46,
+        evidence_strength: "Moderate",
+        identity_id: "adaptive-explorer",
+        why_emerging: "Adaptive Explorer's archetype narrative.",
+      };
+      const newRow = {
+        id: "fs-other",
+        user_id: "user-1",
+        name: "Other",
+        status: "active",
+        percentage: 60,
+        identity_id: "other",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [explorerRow], error: null },
+          { data: newRow, error: null },
+          { error: null },
+          { data: [newRow], error: null },
+        ],
+        future_self_events: [{ error: null }, { error: null }],
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([
+        expect.objectContaining({ match: expect.objectContaining({ identityId: "other" }) }),
+      ]);
+      const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
+      const fadePayload = updates[0].args[0] as Record<string, unknown>;
+      expect(fadePayload.status).toBe("faded");
+      expect(fadePayload.percentage).toBe(0);
+      expect(fadePayload.why_emerging).toBeUndefined();
+    });
+
+    it("Situation 5: Adaptive Explorer returns — reuses the existing narrative, no AI call", async () => {
+      recognizeMock.mockReturnValueOnce([
+        {
+          ...MATCH,
+          identityId: "adaptive-explorer",
+          canonicalName: "Adaptive Explorer",
+          likelihood: 30,
+          evidenceStrength: "Moderate",
+        },
+      ]);
+      getIdentityByIdMock.mockReturnValueOnce(ADAPTIVE_EXPLORER_PROFILE);
+
+      const fadedRow = {
+        id: "fs-adaptive-explorer",
+        user_id: "user-1",
+        name: "Adaptive Explorer",
+        status: "faded",
+        percentage: 0,
+        evidence_strength: "Moderate",
+        identity_id: "adaptive-explorer",
+        why_emerging: "Adaptive Explorer's archetype narrative.",
+        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
+        blind_spots: ["Adaptive Explorer's archetype blind spot."],
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.",
+      };
+      const stub = createSupabaseStub({
+        behavior_observations: OBSERVATIONS_RESPONSE,
+        future_selves: [
+          { data: [fadedRow], error: null },
+          { error: null },
+          { data: [{ ...fadedRow, status: "active", percentage: 30 }], error: null },
+        ],
+        future_self_events: { error: null },
+      });
+      setActiveStub(stub);
+
+      await generateFutureSelves();
+
+      expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+      const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
+      const payload = updates[0].args[0] as Record<string, unknown>;
+      expect(payload.status).toBe("active");
+      expect(payload.why_emerging).toBe("Adaptive Explorer's archetype narrative.");
+
+      const events = stub.calls.filter((c) => c.table === "future_self_events" && c.method === "insert");
+      expect(events.map((e) => (e.args[0] as Record<string, unknown>).event_type)).toContain("returned");
+    });
   });
 
   it("restores a faded future to active and records a returned event when the identity is recognized again", async () => {

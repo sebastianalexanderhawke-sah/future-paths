@@ -14,8 +14,11 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "self-reliant-builder",
     canonical_name: "Self-Reliant Builder",
+    // Phase 8F boundary vs Long-Haul Finisher: the Builder persists to stay
+    // free of anyone else's control; the Finisher persists to complete what
+    // was chosen, comfortably inside structures. Autonomy vs completion.
     short_description:
-      "Builds capability and makes decisions independently, figuring things out through action rather than deliberation.",
+      "Builds a life that doesn't require anyone's permission — capability, systems, and decisions all self-made, because depending on others feels like the real risk.",
     dimension_weights: {
       Independence: 1.0,
       Initiative: 0.8,
@@ -25,9 +28,9 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
       Reflection: -0.3,
     },
     typical_behaviors: [
-      "Starts projects or changes without waiting for external validation",
+      "Starts projects or changes without waiting for permission or validation",
       "Creates systems or routines that reduce dependence on specific people or places",
-      "Makes major decisions using self-generated criteria rather than others' input",
+      "Turns down good opportunities when they come with someone else holding the reins",
       "Solves problems independently before considering asking for help",
       "Figures things out by doing rather than planning or deliberating at length",
     ],
@@ -41,8 +44,12 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
       Connection: 1.0,
       Vulnerability: 0.7,
       "Conflict Tolerance": 0.6,
-      Consistency: 0.4,
-      Initiative: 0.6,
+      // Phase 8H: Consistency removed and Initiative reduced from 0.6 — the
+      // validation showed CW acting as a generic "good adult" detector (#1
+      // for 11 of 20 personas, including an Army officer and an Olympic
+      // hurdler). Weaving is organized around creating belonging; ordinary
+      // reliability and initiative are not what makes someone a Weaver.
+      Initiative: 0.3,
       Independence: -0.4,
     },
     typical_behaviors: [
@@ -60,11 +67,20 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
       "Treats plateaus as problems and discomfort as a signal to push further, adapting method to pursue harder challenges.",
     dimension_weights: {
       Initiative: 1.0,
-      Consistency: 0.7,
+      // Phase 8D: reduced from 0.7 — the Grower escalates rather than
+      // consolidates ("takes on harder versions rather than consolidating"),
+      // so routine-keeping should barely feed it. Persistence lives in
+      // Initiative + Risk Tolerance.
+      Consistency: 0.2,
       "Risk Tolerance": 0.7,
       Adaptability: 0.4,
-      Reflection: -0.3,
-      Vulnerability: -0.3,
+      // Phase 8H: reduced from -0.3 each — the old penalties encoded a
+      // grinder-who-never-feels stereotype. The validation's Olympic athlete
+      // (journals, sports psychologist, admits fear) had no Grower in her top
+      // five despite a life of pure escalation. Growth doesn't require
+      // emotional suppression.
+      Reflection: -0.1,
+      Vulnerability: -0.1,
     },
     typical_behaviors: [
       "Takes on harder versions of the same challenge rather than consolidating",
@@ -103,7 +119,10 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
     dimension_weights: {
       Adaptability: 1.0,
       Curiosity: 0.9,
-      "Risk Tolerance": 0.6,
+      // Phase 8D: reduced from 0.6 — exploration is moving toward the
+      // interesting, not through the frightening. High Risk weight was
+      // borrowed from Threshold Crosser's core and made the pair co-fire.
+      "Risk Tolerance": 0.3,
       Initiative: 0.3,
       Vulnerability: 0.3,
       Consistency: -0.6,
@@ -124,23 +143,33 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
     dimension_weights: {
       "Risk Tolerance": 1.0,
       Initiative: 0.7,
-      Adaptability: 0.5,
-      Consistency: -0.4,
+      // Phase 8D: reduced from 0.5 — the Crosser's core is committing despite
+      // uncertainty, not changing direction. High Adaptability was borrowed
+      // from Adaptive Explorer's core and made the pair co-fire.
+      Adaptability: 0.2,
+      // Phase 8H: reduced from -0.4 — the engine's Consistency signals measure
+      // honoring commitments, not preferring stability. The old weight made
+      // reliable risk-takers (validation: the founder, the flight-nurse
+      // applicant) unrecognizable as Crossers.
+      Consistency: -0.1,
       "Conflict Tolerance": -0.2,
     },
     typical_behaviors: [
       "Makes high-stakes decisions with incomplete information rather than waiting",
       "Pursues options that require giving up current stability",
       "Accepts visible risk of failure rather than choosing the safer path",
-      "Returns to difficult situations after bad outcomes rather than avoiding them",
+      "Re-enters high-stakes territory soon after a loss rather than retreating to safety",
       "Acts before others consider readiness confirmed",
     ],
   },
   {
     id: "quiet-supporter",
     canonical_name: "Quiet Supporter",
+    // Phase 8F boundary vs Steady Foundation Builder: the Supporter's
+    // steadiness exists FOR specific people; the Foundation Builder's exists
+    // FOR the built structure. Loyalty to persons vs loyalty to arrangements.
     short_description:
-      "Shows up reliably for others without needing to lead or initiate, maintaining consistent presence across time.",
+      "Steadfast for specific people — the one who answers when called, stays through hard seasons, and asks for almost nothing back.",
     dimension_weights: {
       Consistency: 1.0,
       Connection: 0.7,
@@ -153,14 +182,16 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
       "Responds when people reach out rather than initiating contact first",
       "Maintains relationships through steady low-key contact over long periods",
       "Supports others during difficulty without taking charge of the situation",
-      "Stays in circumstances that are good enough rather than seeking better ones",
+      "Puts someone else's hard week ahead of their own plans without mentioning it",
     ],
   },
   {
     id: "steady-foundation-builder",
     canonical_name: "Steady Foundation Builder",
+    // Phase 8F boundary vs Quiet Supporter: this steadiness protects the
+    // built structure — house, routine, arrangement — not a specific person.
     short_description:
-      "Anchors decisions to protecting what already works, moving deliberately and treating stability as the measure of success.",
+      "Anchors every decision to protecting what has been built — the home, the routine, the proven arrangement — because nothing matters more than nothing collapsing.",
     dimension_weights: {
       Consistency: 1.0,
       "Risk Tolerance": -0.8,
@@ -200,50 +231,68 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "vulnerable-leader",
     canonical_name: "Vulnerable Leader",
+    // Phase 8F: rewritten out of corporate leadership-training language into
+    // ordinary human terms — the person who steps forward without pretending
+    // certainty. Same psychology, same weights.
     short_description:
-      "Initiates and takes on accountability for others while sharing personal difficulty openly, naming uncertainty in situations where others are watching.",
+      "Steps forward when something needs doing and says out loud what they don't know — people follow because nothing is being hidden from them.",
     dimension_weights: {
       Initiative: 1.0,
       Vulnerability: 0.6,
       Connection: 0.6,
       "Conflict Tolerance": 0.5,
       Independence: 0.4,
-      Consistency: -0.4,
+      // Phase 8I: reduced from -0.4 — Consistency signals measure keeping
+      // promises and staying accountable, which strengthen leadership rather
+      // than oppose it. Same reasoning as Threshold Crosser in 8H; the
+      // benchmark showed this penalty was most of why the literal
+      // vulnerable-leader persona could never lead his own board.
+      Consistency: -0.1,
     },
     typical_behaviors: [
-      "Takes on visible accountability for group outcomes while acknowledging own limitations",
-      "Initiates difficult conversations that others in the group are avoiding",
-      "Names personal difficulty or uncertainty in situations where others are watching",
-      "Starts new group initiatives while being open about what is uncertain",
-      "Stays in difficult conversations rather than deferring or delegating them",
+      "Steps up to handle hard situations without pretending to be certain",
+      "Starts the conversation everyone else is avoiding",
+      "Admits fear, doubt, or a mistake in front of people who are watching them lead",
+      "Takes responsibility when things go wrong instead of finding someone to blame",
+      "Stays in a hard conversation to the end rather than handing it to someone else",
     ],
   },
   {
+    // Phase 8F: renamed from "Committed Achiever" — everyone believes they
+    // are a committed achiever, so the old name confronted no one. The id is
+    // deliberately unchanged: existing future_selves rows match by identity_id
+    // and pick up the new display name on their next generation run.
     id: "committed-achiever",
-    canonical_name: "Committed Achiever",
+    canonical_name: "Long-Haul Finisher",
     short_description:
-      "Sets direction deliberately and executes over long timescales, maintaining focus without being pulled off course.",
+      "Stays with chosen commitments long after the excitement is gone, refusing pivots that would restart the clock — effort compounds because it is never scattered.",
     dimension_weights: {
       Consistency: 0.9,
       Initiative: 0.8,
       Independence: 0.5,
-      "Risk Tolerance": 0.3,
+      // Phase 8D: Risk Tolerance removed — achievement is persistence toward
+      // long-term goals, not risk appetite. Its former 0.3 weight let risky
+      // decisions inflate this identity (the 25/25/25 tie in the 8A audit).
       Adaptability: -0.4,
       Vulnerability: -0.3,
     },
     typical_behaviors: [
-      "Sets goals at the start of a period and returns to them consistently",
-      "Continues toward a target when momentum is low or progress is unclear",
-      "Resists requests to redirect effort toward new priorities",
-      "Tracks progress and uses it to sustain focus rather than to celebrate",
-      "Completes what was started before opening new commitments",
+      "Keeps a small number of long-term commitments and returns to them season after season",
+      "Works through the long unglamorous middle of a pursuit, when progress is invisible",
+      "Refuses attractive pivots that would restart the clock on years of accumulated effort",
+      "Tracks progress to stay honest about the pace, not to celebrate",
+      "Finishes ambitious work at full standard even after the initial excitement is gone",
     ],
   },
   {
     id: "resilient-adapter",
     canonical_name: "Resilient Adapter",
+    // Phase 8F: rewritten from "survives things" to chosen steadiness — this
+    // person deliberately becomes the stable force others hold onto during
+    // uncertainty. Absorbs Grounded Realist's clear-sightedness (naming
+    // difficulty exactly as it is). Weights unchanged.
     short_description:
-      "Maintains core commitments while adjusting approach as circumstances change, naming difficulty without being derailed by it.",
+      "Deliberately becomes the steady one when circumstances shake — keeping commitments intact through disruption and naming hard truths plainly, so others have something solid to hold onto.",
     dimension_weights: {
       Adaptability: 0.9,
       Consistency: 0.7,
@@ -252,32 +301,11 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
       "Risk Tolerance": -0.2,
     },
     typical_behaviors: [
-      "Adjusts plans when conditions change without losing sight of the goal",
-      "Acknowledges setbacks directly rather than minimizing or hiding them",
-      "Finds a workable path in circumstances that seem restrictive",
-      "Maintains commitments while changing methods as the situation evolves",
-      "Recovers from disruption without extended avoidance or withdrawal",
-    ],
-  },
-  {
-    id: "grounded-realist",
-    canonical_name: "Grounded Realist",
-    short_description:
-      "Assesses situations honestly before acting and adjusts to what is actually happening, staying present in difficulty without catastrophizing.",
-    dimension_weights: {
-      "Conflict Tolerance": 0.8,
-      Adaptability: 0.7,
-      Reflection: 0.7,
-      "Risk Tolerance": -0.2,
-      Initiative: -0.3,
-      Consistency: -0.2,
-    },
-    typical_behaviors: [
-      "Names what is difficult about a situation accurately, without softening or amplifying",
-      "Stays present in difficult conversations without shutting down or escalating",
-      "Adjusts expectations based on what is actually happening rather than what was hoped",
-      "Gathers information before committing, but acts once enough is known",
-      "Accepts unwanted circumstances without either denying them or being immobilized",
+      "Steps into the steady role when everyone around them is rattled — by choice, not by default",
+      "Keeps promises intact through disruption by changing the method, never the commitment",
+      "Names exactly how bad a situation is, without softening it or catastrophizing",
+      "Becomes the first call for others when their lives destabilize",
+      "Rebuilds routines quickly after upheaval so the people around them have solid ground again",
     ],
   },
 ];
