@@ -82,10 +82,10 @@ export function NeedsAttentionCard({ items, hiddenCount }: NeedsAttentionCardPro
       )}
 
       <Link
-        href="/moments"
+        href="/reflections"
         className="mt-auto pt-4 text-[13px] font-medium text-[#888888] transition-colors duration-150 hover:text-[#6366f1]"
       >
-        View all{hiddenCount > 0 ? ` (${hiddenCount} more)` : ""} →
+        Open Workspace{hiddenCount > 0 ? ` (${hiddenCount} more)` : ""} →
       </Link>
     </OverviewCard>
   );

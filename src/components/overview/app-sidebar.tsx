@@ -2,13 +2,15 @@ import Link from "next/link";
 
 import { signOut } from "@/actions/auth";
 
+// Finalized IA. Workspace is the entry point for reflections and check-ins;
+// it points at the reflections route until a dedicated /workspace ships.
 const NAV_ITEMS = [
   { label: "Overview", href: "/overview", icon: "⌂" },
   { label: "Current Self", href: "/current-self", icon: "◈" },
   { label: "Situations", href: "/moments", icon: "◧" },
-  { label: "Future Selves", href: "/future-selves", icon: "✦" },
+  { label: "Workspace", href: "/reflections", icon: "✎" },
   { label: "Timeline", href: "/timeline", icon: "◷" },
-  { label: "Reflections", href: "/reflections", icon: "✎" },
+  { label: "Settings", href: "/settings", icon: "⚙" },
 ];
 
 type AppSidebarProps = {
@@ -74,7 +76,7 @@ export function AppSidebar({
             ✦
           </div>
           <p className="text-[11px] font-medium text-[#888888]">
-            Needs your input
+            Today&apos;s Focus
           </p>
           {unansweredReflections > 0 ? (
             <>
@@ -82,8 +84,7 @@ export function AppSidebar({
                 {unansweredReflections}
               </p>
               <p className="mb-2.5 text-[11px] text-[#888888]">
-                reflection{unansweredReflections !== 1 ? "s" : ""} waiting for
-                you
+                action{unansweredReflections !== 1 ? "s" : ""} waiting
               </p>
               <Link
                 href="/reflections"

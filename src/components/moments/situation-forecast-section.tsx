@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CheckInCard } from "@/components/check-ins/check-in-card";
 import { CheckInForm } from "@/components/check-ins/check-in-form";
+import { OverviewCard } from "@/components/overview/overview-card";
 import { ReflectionAnswerForm } from "@/components/reflections/reflection-answer-form";
 import { CurrentForecastFutureCard } from "@/components/home/forecast-simplification-cards";
 import type { ForecastSections } from "@/components/home/forecast-utils";
@@ -155,117 +156,125 @@ export function SituationForecastSection({
   }, [transitioning, diff, previousSections]);
 
   // In Phase 4, the most recent check-in is shown prominently below the form.
-  // Here we only show history (everything after the first).
-  const historyCheckIns = checkInFirst ? checkIns.slice(1) : checkIns;
+  // Here we only show history (everything after the first), oldest first so
+  // it reads chronologically.
+  const historyCheckIns = [
+    ...(checkInFirst ? checkIns.slice(1) : checkIns),
+  ].reverse();
 
   const mostRecentCheckIn = checkInFirst ? (checkIns[0] ?? null) : null;
 
   const checkInSection = hasChosenPath && showCheckIn ? (
-    <section id="check-in" className="rounded-xl border border-zinc-200 bg-white p-6">
-      {checkInFirst ? (
-        <>
-          <h2 className="text-sm font-semibold text-zinc-900">What has actually happened?</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Describe what you&apos;ve lived since you last checked in.
-          </p>
-        </>
-      ) : (
-        <>
-          <h2 className="text-sm font-semibold text-zinc-900">Check in</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            What actually happened? Reality carries more weight than prediction.
-          </p>
-        </>
-      )}
+    <section id="check-in" className="scroll-mt-6">
+      <OverviewCard className="px-9 py-7">
+        {checkInFirst ? (
+          <>
+            <h2 className="text-[17px] font-bold text-[#111]">Check-in</h2>
+            <p className="mt-[3px] text-[13px] text-[#888888]">
+              What has actually happened? Describe what you&apos;ve lived since
+              you last checked in.
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 className="text-[17px] font-bold text-[#111]">Check-in</h2>
+            <p className="mt-[3px] text-[13px] text-[#888888]">
+              What actually happened? Reality carries more weight than
+              prediction.
+            </p>
+          </>
+        )}
 
-      <div className="mt-5">
-        <CheckInForm momentId={momentId} onBeforeSubmit={handleBeforeSubmit} />
-      </div>
+        <div className="mt-5">
+          <CheckInForm momentId={momentId} onBeforeSubmit={handleBeforeSubmit} />
+        </div>
 
-      {/* Pending reflection question — inline, directly after the form */}
-      {pendingReflection?.reflection_question ? (
-        <div className="mt-6 rounded-lg border border-zinc-100 bg-zinc-50 p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-            A question worth sitting with
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-900">
-            {pendingReflection.reflection_question}
-          </p>
-          <p className="mt-1 text-xs text-zinc-500">
-            This question is about how you operate, not just this situation.
-          </p>
-          <div className="mt-4">
-            <ReflectionAnswerForm
-              checkInId={pendingReflection.id}
-              submitLabel="Answer this question"
-            />
+        {/* Pending reflection question — inline, directly after the form */}
+        {pendingReflection?.reflection_question ? (
+          <div className="mt-7 rounded-xl bg-[#f8f7ff] px-5 py-4">
+            <p className="text-[12px] font-semibold text-[#6366f1]">
+              A question worth sitting with
+            </p>
+            <p className="mt-2 text-[14px] leading-[1.7] text-[#111]">
+              {pendingReflection.reflection_question}
+            </p>
+            <p className="mt-1 text-[12px] text-[#999999]">
+              This question is about how you operate, not just this situation.
+            </p>
+            <div className="mt-4">
+              <ReflectionAnswerForm
+                checkInId={pendingReflection.id}
+                submitLabel="Answer this question"
+              />
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {mostRecentCheckIn ? (
-        <div className="mt-6">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-            Most recent check-in
-          </p>
-          <div className="mt-3">
-            <CheckInCard
-              checkIn={mostRecentCheckIn}
-              identityUpdateSummary={checkInIdentitySummaries?.[mostRecentCheckIn.id] ?? null}
-              variant="prominent"
-            />
+        {mostRecentCheckIn ? (
+          <div className="mt-7">
+            <p className="text-[12px] font-semibold text-[#999999]">
+              Most recent check-in
+            </p>
+            <div className="mt-3">
+              <CheckInCard
+                checkIn={mostRecentCheckIn}
+                identityUpdateSummary={checkInIdentitySummaries?.[mostRecentCheckIn.id] ?? null}
+                variant="prominent"
+              />
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {historyCheckIns.length > 0 ? (
-        <div className="mt-8 flex flex-col gap-3">
-          <h3 className="text-sm font-medium text-zinc-500">Earlier check-ins</h3>
-          {historyCheckIns.map((checkIn) => (
-            <CheckInCard
-              key={checkIn.id}
-              checkIn={checkIn}
-              identityUpdateSummary={checkInIdentitySummaries?.[checkIn.id] ?? null}
-            />
-          ))}
-        </div>
-      ) : null}
+        {historyCheckIns.length > 0 ? (
+          <div className="mt-8 flex flex-col gap-3">
+            <p className="text-[12px] font-semibold text-[#999999]">
+              Earlier check-ins
+            </p>
+            {historyCheckIns.map((checkIn) => (
+              <CheckInCard
+                key={checkIn.id}
+                checkIn={checkIn}
+                identityUpdateSummary={checkInIdentitySummaries?.[checkIn.id] ?? null}
+              />
+            ))}
+          </div>
+        ) : null}
+      </OverviewCard>
     </section>
   ) : null;
 
   const forecastSection = sections ? (
-    <section className="rounded-xl border border-zinc-200 bg-white p-6">
+    <OverviewCard className="px-9 py-7">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900">What might happen next?</h2>
-          {checkInFirst && isRegenerated ? (
-            generatedAt ? (
-              <p className="mt-1 text-xs text-zinc-500">
-                Updated after your check-in on{" "}
-                {new Date(generatedAt).toLocaleDateString()}
-              </p>
-            ) : null
-          ) : (
-            <p className="mt-1 text-xs text-zinc-500">
-              A forecast based on your chosen path. This will update as you check in.
+          <h2 className="text-[17px] font-bold text-[#111]">
+            Possible Futures
+          </h2>
+          <p className="mt-[3px] text-[13px] text-[#888888]">
+            How this situation could unfold.
+          </p>
+          {checkInFirst && isRegenerated && generatedAt ? (
+            <p className="mt-1 text-[12px] text-[#bbbbbb]">
+              Updated after your check-in on{" "}
+              {new Date(generatedAt).toLocaleDateString()}
             </p>
-          )}
+          ) : null}
         </div>
         {transitioning ? (
           <button
             type="button"
             onClick={dismissTransition}
-            className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-600 hover:bg-zinc-200"
+            className="shrink-0 cursor-pointer rounded-full bg-[#f4f4f6] px-3 py-1 text-[12px] font-medium text-[#666666] transition-colors duration-150 hover:bg-[#ececf0]"
           >
             Done
           </button>
         ) : null}
       </div>
 
-      <div className="mt-5 flex flex-col gap-3">
+      <div className="mt-6 flex flex-col gap-4">
         {transitioning && disappearedFutures.length > 0 ? (
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+            <p className="text-[12px] font-semibold text-[#999999]">
               No longer likely
             </p>
             {disappearedFutures.map((future) => (
@@ -295,13 +304,13 @@ export function SituationForecastSection({
 
         {remainingFutures.length > 0 ? (
           <details className="group">
-            <summary className="cursor-pointer list-none rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500 hover:bg-zinc-50 [&::-webkit-details-marker]:hidden">
+            <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1] [&::-webkit-details-marker]:hidden">
               <span className="group-open:hidden">
-                See all futures ({remainingFutures.length} more)
+                ▼ See all futures ({remainingFutures.length} more)
               </span>
-              <span className="hidden group-open:inline">Hide</span>
+              <span className="hidden group-open:inline">▲ Hide</span>
             </summary>
-            <div className="mt-2 flex flex-col gap-3">
+            <div className="mt-3 flex flex-col gap-4">
               {remainingFutures.map((future) => {
                 const rendering = toCurrentFutureRendering(future);
                 const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
@@ -324,7 +333,7 @@ export function SituationForecastSection({
           </details>
         ) : null}
       </div>
-    </section>
+    </OverviewCard>
   ) : null;
 
   return (
