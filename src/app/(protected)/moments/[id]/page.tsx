@@ -136,19 +136,19 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
       </div>
       <ChosenPathPanel path={chosenPath} />
       {!isArchived && unchosePaths.length > 0 ? (
-        <details className="group mt-6">
-          <summary className="cursor-pointer list-none text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1] [&::-webkit-details-marker]:hidden">
-            <span className="group-open:hidden">
-              ▼ See other paths considered ({unchosePaths.length})
-            </span>
-            <span className="hidden group-open:inline">▲ Hide other paths</span>
-          </summary>
-          <div className="mt-4 flex flex-col gap-3">
+        <div className="mt-9 border-t border-[#f5f5f5] pt-7">
+          <h3 className="text-[15px] font-semibold text-[#111]">
+            Alternative Paths
+          </h3>
+          <p className="mt-[3px] text-[13px] text-[#999999]">
+            Directions you considered but didn&apos;t take
+          </p>
+          <div className="mt-5 flex flex-col gap-4">
             {unchosePaths.map((path, i) => (
               <OtherPathCard key={path.id} path={path} index={i} />
             ))}
           </div>
-        </details>
+        </div>
       ) : null}
     </OverviewCard>
   ) : null;

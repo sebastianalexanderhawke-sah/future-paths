@@ -1,5 +1,6 @@
 import type { CurrentFutureRendering, SimplifiedFutureRendering } from "@/lib/forecast-simplification-experiment";
 import type { FutureMovement } from "@/lib/forecast-diff";
+import { toFirstSentence } from "@/components/home/output-refinement";
 import { CardShell } from "@/components/ui/card-shell";
 import type { CardShellVariant } from "@/lib/design/tokens";
 
@@ -61,6 +62,7 @@ export function CurrentForecastFutureCard({
 }: CurrentForecastFutureCardProps) {
   const timeframeLabel = future.timeframe ? TIMEFRAME_LABELS[future.timeframe] : undefined;
   const indicator = movement ? MOVEMENT_INDICATOR[movement] : null;
+  const preview = toFirstSentence(future.whyItMightHappen ?? "", 140);
 
   return (
     <CardShell variant={cardVariant} className="overflow-hidden">
@@ -72,7 +74,12 @@ export function CurrentForecastFutureCard({
 
       <details className="group">
         <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 hover:bg-[var(--surface-muted)] sm:px-5 [&::-webkit-details-marker]:hidden">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2">
+            {timeframeLabel ? (
+              <span className="self-start rounded-full bg-[var(--state-emerging)]/15 px-2.5 py-0.5 text-label font-semibold text-[var(--state-emerging)]">
+                {timeframeLabel}
+              </span>
+            ) : null}
             <div className="flex items-baseline gap-1.5">
               <h4 className="text-h2 text-ink-primary">{future.title}</h4>
               {indicator ? (
@@ -84,10 +91,10 @@ export function CurrentForecastFutureCard({
                 </span>
               ) : null}
             </div>
-            {timeframeLabel ? (
-              <span className="self-start rounded-full bg-[var(--state-emerging)]/15 px-2.5 py-0.5 text-label text-[var(--state-emerging)]">
-                {timeframeLabel}
-              </span>
+            {preview ? (
+              <p className="text-body-small text-ink-tertiary group-open:hidden">
+                {preview}
+              </p>
             ) : null}
           </div>
           <span aria-hidden="true" className="mt-0.5 shrink-0 text-sm text-ink-tertiary">

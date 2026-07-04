@@ -1,0 +1,160 @@
+-- Atomic multi-step write operations.
+--
+-- These workflows previously performed several separate writes from the
+-- application and unwound partial failures with hand-rolled rollback chains
+-- (delete-the-moment, revert-is_chosen, delete-the-paths). Each is now a single
+-- database function that runs in one implicit transaction, so either every
+-- write lands or none does — no partial state, no compensation logic.
+--
+-- All functions are SECURITY INVOKER: they run as the calling user, so the
+-- existing Row Level Security policies still apply to every statement and
+-- ownership enforcement is unchanged. user_id is always derived from auth.uid()
+-- inside the function, never trusted from the caller.
+
+-- ---------------------------------------------------------------------------
+-- createMoment: insert the moment and its "moment_created" timeline event.
+-- ---------------------------------------------------------------------------
+create or replace function public.create_moment_with_event(
+  p_title text,
+  p_description text
+)
+returns public.moments
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_moment public.moments;
+begin
+  insert into public.moments (user_id, title, description)
+  values (v_uid, p_title, p_description)
+  returning * into v_moment;
+
+  insert into public.timeline_events (
+    user_id, event_type, reference_type, reference_id, title, summary, metadata
+  )
+  values (
+    v_uid, 'moment_created', 'moment', v_moment.id, 'Captured a moment', p_description,
+    jsonb_build_object('moment_id', v_moment.id, 'moment_title', p_title)
+  );
+
+  return v_moment;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- choosePath: mark the path chosen and record the "path_chosen" timeline event.
+-- Ownership / already-chosen / lock guards remain in application code; this
+-- function performs only the atomic commit of the two coupled writes.
+-- ---------------------------------------------------------------------------
+create or replace function public.commit_path_choice(
+  p_path_id uuid,
+  p_moment_id uuid,
+  p_chosen_at timestamptz,
+  p_summary text,
+  p_themes jsonb
+)
+returns public.paths
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_path public.paths;
+begin
+  update public.paths
+     set is_chosen = true,
+         chosen_at = p_chosen_at
+   where id = p_path_id
+     and user_id = v_uid
+  returning * into v_path;
+
+  if v_path.id is null then
+    raise exception 'path_not_updatable';
+  end if;
+
+  insert into public.timeline_events (
+    user_id, event_type, reference_type, reference_id, title, summary, metadata
+  )
+  values (
+    v_uid, 'path_chosen', 'path', p_path_id, 'Path chosen', p_summary,
+    jsonb_build_object(
+      'moment_id', p_moment_id,
+      'path_id', p_path_id,
+      'path_description', p_summary,
+      'themes', p_themes
+    )
+  );
+
+  return v_path;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- generatePaths: update the moment's understanding/themes, insert the full
+-- generated path set, and record the "paths_generated" timeline event. The
+-- unique index paths_moment_id_sort_order_idx guarantees that two concurrent
+-- generations cannot both commit — the loser's insert raises a unique
+-- violation and this whole function rolls back.
+-- ---------------------------------------------------------------------------
+create or replace function public.commit_generated_paths(
+  p_moment_id uuid,
+  p_current_understanding text,
+  p_opportunity_themes jsonb,
+  p_risk_themes jsonb,
+  p_paths jsonb,
+  p_timeline_summary text,
+  p_timeline_metadata jsonb
+)
+returns setof public.paths
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  update public.moments
+     set current_understanding = p_current_understanding,
+         opportunity_themes = p_opportunity_themes,
+         risk_themes = p_risk_themes
+   where id = p_moment_id
+     and user_id = v_uid;
+
+  insert into public.paths (
+    moment_id, user_id, description, benefits, consequences,
+    future_shift, themes, sort_order
+  )
+  select
+    p_moment_id,
+    v_uid,
+    (elem ->> 'description'),
+    coalesce(elem -> 'benefits', '[]'::jsonb),
+    coalesce(elem -> 'consequences', '[]'::jsonb),
+    (elem ->> 'future_shift'),
+    coalesce(elem -> 'themes', '[]'::jsonb),
+    (elem ->> 'sort_order')::smallint
+  from jsonb_array_elements(p_paths) as elem;
+
+  insert into public.timeline_events (
+    user_id, event_type, reference_type, reference_id, title, summary, metadata
+  )
+  values (
+    v_uid, 'paths_generated', 'moment', p_moment_id, 'Paths explored',
+    p_timeline_summary, p_timeline_metadata
+  );
+
+  return query
+    select *
+      from public.paths
+     where moment_id = p_moment_id
+       and user_id = v_uid
+     order by sort_order asc;
+end;
+$$;
+
+grant execute on function public.create_moment_with_event(text, text) to authenticated;
+grant execute on function public.commit_path_choice(uuid, uuid, timestamptz, text, jsonb) to authenticated;
+grant execute on function public.commit_generated_paths(uuid, text, jsonb, jsonb, jsonb, text, jsonb) to authenticated;

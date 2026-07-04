@@ -108,6 +108,44 @@ export async function getMoment(
   return { moment: data };
 }
 
+/**
+ * Deletes a moment owned by the current user. Used to clean up a situation that
+ * was created at the start of an AI generation request when that generation
+ * fails before completion, so a failed request never leaves an orphaned,
+ * empty situation behind. Scoped by user_id, so it can only ever remove the
+ * caller's own moment. paths and forecasts are removed via ON DELETE CASCADE;
+ * timeline_events reference a moment without an FK, so they are removed here.
+ */
+export async function deleteMoment(
+  id: string,
+): Promise<{ ok: true } | { error: string }> {
+  const auth = await requireUser();
+  if ("error" in auth) {
+    return auth;
+  }
+
+  const supabase = await createClient();
+
+  await supabase
+    .from("timeline_events")
+    .delete()
+    .eq("user_id", auth.userId)
+    .eq("reference_type", "moment")
+    .eq("reference_id", id);
+
+  const { error } = await supabase
+    .from("moments")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", auth.userId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { ok: true };
+}
+
 export async function createMoment(input: {
   title: string;
   description?: string | null;
@@ -128,36 +166,19 @@ export async function createMoment(input: {
   const title = input.title.trim();
   const supabase = await createClient();
 
-  const { data: moment, error: momentError } = await supabase
-    .from("moments")
-    .insert({
-      user_id: auth.userId,
-      title,
-      description,
-    })
-    .select("*")
-    .single();
+  // Atomic: the moment row and its "moment_created" timeline event are written
+  // in a single transaction inside create_moment_with_event, so a failure can
+  // never leave a moment without its event (or require a manual delete-rollback).
+  const { data: moment, error: momentError } = await supabase.rpc(
+    "create_moment_with_event",
+    {
+      p_title: title,
+      p_description: description,
+    },
+  );
 
   if (momentError || !moment) {
     return { error: momentError?.message ?? "Failed to create moment." };
-  }
-
-  const { error: timelineError } = await supabase.from("timeline_events").insert({
-    user_id: auth.userId,
-    event_type: "moment_created",
-    reference_type: "moment",
-    reference_id: moment.id,
-    title: "Captured a moment",
-    summary: description,
-    metadata: {
-      moment_id: moment.id,
-      moment_title: title,
-    },
-  });
-
-  if (timelineError) {
-    await supabase.from("moments").delete().eq("id", moment.id);
-    return { error: timelineError.message };
   }
 
   return { moment };

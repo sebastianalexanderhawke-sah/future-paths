@@ -116,8 +116,8 @@ export function OtherPathCard({ path, index }: OtherPathCardProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-[#ececf0] bg-white">
       <details className="group">
-        <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-6 py-5 transition-colors duration-150 hover:bg-[#fafafa] [&::-webkit-details-marker]:hidden">
-          <div className="flex min-w-0 flex-col gap-2">
+        <summary className="flex cursor-pointer list-none items-start justify-between gap-4 px-7 py-6 transition-colors duration-150 hover:bg-[#fafafa] [&::-webkit-details-marker]:hidden">
+          <div className="flex min-w-0 flex-col gap-2.5">
             <h4 className="text-[15px] font-semibold text-[#111]">
               {scannable.title}
             </h4>
@@ -134,16 +134,21 @@ export function OtherPathCard({ path, index }: OtherPathCardProps) {
               </p>
             ) : null}
           </div>
-          <span
+          <svg
             aria-hidden="true"
-            className="mt-1 shrink-0 text-[12px] text-[#cccccc]"
+            viewBox="0 0 16 16"
+            className="mt-1.5 h-4 w-4 shrink-0 text-[#cccccc] transition-transform duration-200 group-open:rotate-180"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            <span className="group-open:hidden">▼</span>
-            <span className="hidden group-open:inline">▲</span>
-          </span>
+            <path d="M4 6l4 4 4-4" />
+          </svg>
         </summary>
 
-        <div className="border-t border-[#f5f5f5] px-6 pb-6 pt-1">
+        <div className="border-t border-[#f5f5f5] px-7 pb-7 pt-2">
           <PathDetails path={path} index={index} showThemes={false} />
         </div>
       </details>

@@ -17,7 +17,7 @@ import {
 } from "@/lib/ai-audit";
 import { buildForecastSimplificationExperiment } from "@/lib/forecast-simplification-experiment";
 import { saveForecast } from "@/lib/forecasts";
-import { getMoment, createMoment, updateMoment } from "@/lib/moments";
+import { getMoment, createMoment, updateMoment, deleteMoment } from "@/lib/moments";
 import type { ThemeName } from "@/types/enums";
 
 type SelectedPath = {
@@ -56,6 +56,12 @@ function sseData(event: unknown): string {
 
 const FORECAST_SECTION_KEYS = ["active", "hidden", "blind_spots", "wild_card"] as const;
 
+// Long-running streamed AI generation: run on the Node.js runtime and allow up
+// to 60s so the request is not terminated before generation completes. The
+// generation itself is bounded by IDENTITY_ENGINE_TIMEOUT_MS (default 30s).
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
 
@@ -85,6 +91,9 @@ export async function POST(request: Request) {
   const mergedContextSummary = mergeContextSummary(contextSummary, selectedPathSummary);
 
   let momentId = inputMomentId;
+  // True only when this request created the moment. Cleanup on failure must
+  // never touch a pre-existing situation supplied by the client.
+  const momentWasCreated = !inputMomentId;
 
   if (momentId) {
     const existingMoment = await getMoment(momentId);
@@ -121,6 +130,15 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(": ping\n\n"));
       };
 
+      // Remove the situation this request created if generation fails before a
+      // successful result is produced. No-op when the client supplied an
+      // existing momentId.
+      const cleanupOrphanedMoment = async () => {
+        if (momentWasCreated) {
+          await deleteMoment(resolvedMomentId).catch(() => {});
+        }
+      };
+
       try {
         const futureParser = createArrayItemParser([...FORECAST_SECTION_KEYS], (item, key) => {
           enqueue({ type: "future", data: { ...(item as object), section: key } });
@@ -142,6 +160,7 @@ export async function POST(request: Request) {
         );
 
         if (!forecastGeneration.ok) {
+          await cleanupOrphanedMoment();
           enqueue({ type: "error", error: forecastGeneration.error });
           return;
         }
@@ -154,6 +173,7 @@ export async function POST(request: Request) {
 
         const refreshedMoment = await getMoment(resolvedMomentId);
         if ("error" in refreshedMoment) {
+          await cleanupOrphanedMoment();
           enqueue({ type: "error", error: refreshedMoment.error });
           return;
         }
@@ -215,6 +235,7 @@ export async function POST(request: Request) {
         });
 
         if ("error" in saveResult) {
+          await cleanupOrphanedMoment();
           enqueue({ type: "error", error: `Failed to save forecast: ${saveResult.error}` });
           return;
         }
@@ -231,6 +252,7 @@ export async function POST(request: Request) {
           },
         });
       } catch (error) {
+        await cleanupOrphanedMoment();
         enqueue({
           type: "error",
           error: error instanceof Error ? error.message : "An error occurred",

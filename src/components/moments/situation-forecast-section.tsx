@@ -167,23 +167,10 @@ export function SituationForecastSection({
   const checkInSection = hasChosenPath && showCheckIn ? (
     <section id="check-in" className="scroll-mt-6">
       <OverviewCard className="px-9 py-7">
-        {checkInFirst ? (
-          <>
-            <h2 className="text-[17px] font-bold text-[#111]">Check-in</h2>
-            <p className="mt-[3px] text-[13px] text-[#888888]">
-              What has actually happened? Describe what you&apos;ve lived since
-              you last checked in.
-            </p>
-          </>
-        ) : (
-          <>
-            <h2 className="text-[17px] font-bold text-[#111]">Check-in</h2>
-            <p className="mt-[3px] text-[13px] text-[#888888]">
-              What actually happened? Reality carries more weight than
-              prediction.
-            </p>
-          </>
-        )}
+        <h2 className="text-[17px] font-bold text-[#111]">Check-in</h2>
+        <p className="mt-[3px] text-[13px] text-[#888888]">
+          Tell Reflection what happened since your last prediction.
+        </p>
 
         <div className="mt-5">
           <CheckInForm momentId={momentId} onBeforeSubmit={handleBeforeSubmit} />

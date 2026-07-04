@@ -415,32 +415,39 @@ describe("/moments/[id] page — section order", () => {
   // Skip past import declarations by starting search from the JSX return block
   const JSX_START = PAGE_SOURCE.indexOf("return (");
 
-  it("Situation summary appears before Decision paths in JSX", () => {
-    const summaryPos = PAGE_SOURCE.indexOf("Situation summary", JSX_START);
-    const pathsPos = PAGE_SOURCE.indexOf("Decision paths", JSX_START);
+  it("Situation summary appears before Chosen Path in JSX", () => {
+    const summaryPos = PAGE_SOURCE.indexOf("{summaryCard}", JSX_START);
+    const chosenPos = PAGE_SOURCE.indexOf("{chosenPathCard}", JSX_START);
     expect(summaryPos).toBeGreaterThan(0);
-    expect(pathsPos).toBeGreaterThan(0);
-    expect(summaryPos).toBeLessThan(pathsPos);
+    expect(chosenPos).toBeGreaterThan(0);
+    expect(summaryPos).toBeLessThan(chosenPos);
   });
 
-  it("Decision paths appears before SituationForecastSection usage in JSX", () => {
-    const pathsPos = PAGE_SOURCE.indexOf("Decision paths", JSX_START);
+  it("Chosen Path appears before SituationForecastSection usage in JSX", () => {
+    const chosenPos = PAGE_SOURCE.indexOf("{chosenPathCard}", JSX_START);
     const forecastPos = PAGE_SOURCE.indexOf("<SituationForecastSection", JSX_START);
-    expect(pathsPos).toBeGreaterThan(0);
+    expect(chosenPos).toBeGreaterThan(0);
     expect(forecastPos).toBeGreaterThan(0);
-    expect(pathsPos).toBeLessThan(forecastPos);
+    expect(chosenPos).toBeLessThan(forecastPos);
   });
 
-  it("SituationForecastSection appears before Archive in JSX", () => {
+  it("SituationForecastSection appears before Resolve in JSX", () => {
     const forecastPos = PAGE_SOURCE.indexOf("<SituationForecastSection", JSX_START);
-    const archivePos = PAGE_SOURCE.indexOf("Archive situation", JSX_START);
-    expect(forecastPos).toBeLessThan(archivePos);
+    const resolvePos = PAGE_SOURCE.indexOf("{resolveCard}", JSX_START);
+    expect(forecastPos).toBeGreaterThan(0);
+    expect(resolvePos).toBeGreaterThan(0);
+    expect(forecastPos).toBeLessThan(resolvePos);
   });
 });
 
-describe("/moments/[id] page — other paths are collapsible", () => {
-  it("uses <details> for other paths", () => {
-    expect(PAGE_SOURCE).toContain("See other paths considered");
+describe("/moments/[id] page — alternative paths", () => {
+  it("presents unchosen paths as Alternative Paths", () => {
+    expect(PAGE_SOURCE).toContain("Alternative Paths");
+    expect(PAGE_SOURCE).not.toContain("See other paths considered");
+  });
+
+  it("each alternative path is an expandable card", () => {
+    expect(PATH_CARD_SOURCE).toContain("<details");
   });
 });
 
@@ -495,8 +502,8 @@ describe("CurrentForecastFutureCard — movement indicators", () => {
 });
 
 describe("SituationForecastSection — forecast heading", () => {
-  it("uses 'What might happen next?' heading", () => {
-    expect(FORECAST_SOURCE).toContain("What might happen next?");
+  it("uses 'Possible Futures' heading", () => {
+    expect(FORECAST_SOURCE).toContain("Possible Futures");
   });
 
   it("shows 'No longer likely' for disappeared futures", () => {
@@ -594,7 +601,7 @@ describe("Wild card futures — visual distinction", () => {
 
   it("does not render a separate 'Wild Card Futures' section header on the situation detail page", () => {
     expect(SITUATION_FORECAST_SOURCE).not.toContain("Wild Card Futures");
-    expect(SITUATION_FORECAST_SOURCE).toContain("What might happen next?");
+    expect(SITUATION_FORECAST_SOURCE).toContain("Possible Futures");
   });
 
   it("wild card cards use wildcard CardShell variant", () => {

@@ -161,23 +161,9 @@ export async function generatePaths(
   const __t2 = Date.now();
   console.log(`[PROFILE] generatePaths STAGE=database save | start=${new Date(__t2).toISOString()}`);
 
-  const { error: updateError } = await supabase
-    .from("moments")
-    .update({
-      current_understanding: generated.current_understanding,
-      opportunity_themes: generated.opportunity_themes,
-      risk_themes: generated.risk_themes,
-    })
-    .eq("id", momentId)
-    .eq("user_id", auth.userId);
-
-  if (updateError) {
-    return { error: updateError.message };
-  }
+  const themes = collectThemes(generated.paths);
 
   const pathRows = generated.paths.map((path, index) => ({
-    moment_id: momentId,
-    user_id: auth.userId,
     description: encodePathDescriptionWithNativeTitle(path.title ?? "", path.description),
     benefits: path.benefits,
     consequences: path.consequences,
@@ -186,51 +172,35 @@ export async function generatePaths(
     sort_order: index,
   }));
 
-  const { data: insertedPaths, error: pathsError } = await supabase
-    .from("paths")
-    .insert(pathRows)
-    .select("*");
+  // Atomic: the moment update, the full path-set insert, and the timeline event
+  // are committed in a single transaction inside commit_generated_paths, so a
+  // failure leaves no partial state and needs no manual rollback. The
+  // (moment_id, sort_order) unique index makes a concurrent duplicate set
+  // impossible — the loser's insert raises a unique violation (23505) and the
+  // whole transaction rolls back.
+  const { data: insertedPaths, error: pathsError } = await supabase.rpc(
+    "commit_generated_paths",
+    {
+      p_moment_id: momentId,
+      p_current_understanding: generated.current_understanding,
+      p_opportunity_themes: generated.opportunity_themes,
+      p_risk_themes: generated.risk_themes,
+      p_paths: pathRows,
+      p_timeline_summary: generated.current_understanding,
+      p_timeline_metadata: {
+        moment_id: momentId,
+        moment_title: moment.title,
+        path_count: generated.paths.length,
+        themes,
+      },
+    },
+  );
 
   if (pathsError || !insertedPaths) {
-    await supabase
-      .from("moments")
-      .update({
-        current_understanding: moment.current_understanding,
-        opportunity_themes: moment.opportunity_themes,
-        risk_themes: moment.risk_themes,
-      })
-      .eq("id", momentId);
+    if (pathsError?.code === "23505") {
+      return { error: "Paths have already been generated for this moment." };
+    }
     return { error: pathsError?.message ?? "Failed to generate paths." };
-  }
-
-  const themes = collectThemes(generated.paths);
-
-  const { error: timelineError } = await supabase.from("timeline_events").insert({
-    user_id: auth.userId,
-    event_type: "paths_generated",
-    reference_type: "moment",
-    reference_id: momentId,
-    title: "Paths explored",
-    summary: generated.current_understanding,
-    metadata: {
-      moment_id: momentId,
-      moment_title: moment.title,
-      path_count: insertedPaths.length,
-      themes,
-    },
-  });
-
-  if (timelineError) {
-    await supabase.from("paths").delete().eq("moment_id", momentId);
-    await supabase
-      .from("moments")
-      .update({
-        current_understanding: moment.current_understanding,
-        opportunity_themes: moment.opportunity_themes,
-        risk_themes: moment.risk_themes,
-      })
-      .eq("id", momentId);
-    return { error: timelineError.message };
   }
 
   console.log(
@@ -377,49 +347,23 @@ export async function choosePath(
 
   const chosenAt = new Date().toISOString();
 
-  const { data: updatedPath, error: updateError } = await supabase
-    .from("paths")
-    .update({
-      is_chosen: true,
-      chosen_at: chosenAt,
-    })
-    .eq("id", pathId)
-    .eq("user_id", auth.userId)
-    .select("*")
-    .maybeSingle();
-
-  if (updateError) {
-    return { error: updateError.message };
-  }
-
-  if (!updatedPath) {
-    return { error: "Failed to choose path." };
-  }
-
-  const { error: timelineError } = await supabase.from("timeline_events").insert({
-    user_id: auth.userId,
-    event_type: "path_chosen",
-    reference_type: "path",
-    reference_id: pathId,
-    title: "Path chosen",
-    summary: path.description,
-    metadata: {
-      moment_id: momentId,
-      path_id: pathId,
-      path_description: path.description,
-      themes: path.themes,
+  // Atomic: marking the path chosen and recording the timeline event are
+  // committed together inside commit_path_choice, so the path can never end up
+  // chosen without its event (and no manual is_chosen revert is needed on a
+  // partial failure).
+  const { data: updatedPath, error: commitError } = await supabase.rpc(
+    "commit_path_choice",
+    {
+      p_path_id: pathId,
+      p_moment_id: momentId,
+      p_chosen_at: chosenAt,
+      p_summary: path.description,
+      p_themes: path.themes,
     },
-  });
+  );
 
-  if (timelineError) {
-    await supabase
-      .from("paths")
-      .update({
-        is_chosen: false,
-        chosen_at: null,
-      })
-      .eq("id", pathId);
-    return { error: timelineError.message };
+  if (commitError || !updatedPath) {
+    return { error: commitError?.message ?? "Failed to choose path." };
   }
 
   // Choosing a path for a situation is itself predictive evidence — not just

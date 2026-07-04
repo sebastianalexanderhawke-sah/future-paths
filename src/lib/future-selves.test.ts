@@ -102,6 +102,13 @@ function createSupabaseStub(tableConfigs: Record<string, TableConfig>, userId = 
 
   const client = {
     from: (table: string) => makeBuilder(table),
+    // Cross-instance generation lock RPCs: acquire returns true (lock granted),
+    // release resolves. The test's serialization guarantees come from the
+    // in-process chain, so the lock is a granted passthrough here.
+    rpc: async (name: string) => ({
+      data: name === "acquire_future_selves_lock" ? true : null,
+      error: null,
+    }),
     auth: {
       getUser: async () => ({ data: { user: { id: userId } }, error: null }),
     },
@@ -1358,6 +1365,13 @@ describe("queueFutureSelvesGeneration", () => {
 
     const client = {
       from: (table: string) => makeBuilder(table),
+      // Generation lock RPCs: acquire grants, release resolves. This does not
+      // touch getUser, so the per-user counter that distinguishes A from B is
+      // unaffected.
+      rpc: async (name: string) => ({
+        data: name === "acquire_future_selves_lock" ? true : null,
+        error: null,
+      }),
       auth: {
         getUser: async () => {
           getUserCallCount += 1;

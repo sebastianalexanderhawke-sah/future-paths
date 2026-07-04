@@ -140,6 +140,7 @@ export async function listCheckInsForMoment(
 export async function createCheckIn(
   momentId: string,
   reflection: string,
+  clientToken?: string | null,
 ): Promise<{ checkIn: CheckIn } | { error: string }> {
   const auth = await requireUser();
   if ("error" in auth) {
@@ -153,6 +154,24 @@ export async function createCheckIn(
 
   const trimmedReflection = reflection.trim();
   const supabase = await createClient();
+
+  // Idempotency: if this exact submission was already recorded (same client
+  // token), return the existing check-in instead of running the AI pipeline and
+  // creating a duplicate. This short-circuits the common double-submit / retry
+  // case before any expensive work; the unique index on (user_id, client_token)
+  // is the backstop for the truly-concurrent case (handled at insert below).
+  if (clientToken) {
+    const { data: existing } = await supabase
+      .from("check_ins")
+      .select("*")
+      .eq("user_id", auth.userId)
+      .eq("client_token", clientToken)
+      .maybeSingle();
+
+    if (existing) {
+      return { checkIn: existing };
+    }
+  }
 
   const { data: moment, error: momentError } = await supabase
     .from("moments")
@@ -226,11 +245,28 @@ export async function createCheckIn(
       reality_summary: generated.reality_summary,
       theme_changes: generated.theme_changes,
       identity_impact: generated.identity_impact,
+      client_token: clientToken ?? null,
     })
     .select("*")
     .single();
 
   if (checkInError || !checkIn) {
+    // A concurrent submission with the same token won the race and already
+    // created the check-in; the unique index rejects this one. Return the
+    // winner so the request is idempotent rather than an error.
+    if (checkInError?.code === "23505" && clientToken) {
+      const { data: existing } = await supabase
+        .from("check_ins")
+        .select("*")
+        .eq("user_id", auth.userId)
+        .eq("client_token", clientToken)
+        .maybeSingle();
+
+      if (existing) {
+        return { checkIn: existing };
+      }
+    }
+
     return { error: checkInError?.message ?? "Failed to create check-in." };
   }
 

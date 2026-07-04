@@ -39,6 +39,12 @@ function sseData(event: unknown): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }
 
+// Long-running streamed AI generation: run on the Node.js runtime and allow up
+// to 60s so the request is not terminated before generation completes. The
+// generation itself is bounded by IDENTITY_ENGINE_TIMEOUT_MS (default 30s).
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
 

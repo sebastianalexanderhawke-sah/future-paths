@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+
 import { extractAndPersistBehaviorObservations } from "@/lib/behavior-extraction";
 import { explainIdentities, needsExplanationRegeneration } from "@/lib/ai/explain-identity";
 import { getIdentityById } from "@/lib/identity-library";
@@ -577,15 +579,66 @@ export async function generateFutureSelves(
   return listFutureSelves({ status: "active" });
 }
 
-// Serializes generateFutureSelves() per user. Every trigger (choosing a path,
+const GENERATION_LOCK_TTL_SECONDS = 120;
+const GENERATION_LOCK_MAX_WAIT_MS = 10_000;
+const GENERATION_LOCK_POLL_MS = 250;
+
+// Cross-instance serialization. The in-process Map below still coalesces
+// triggers within a single Node process (the common case), but a Map cannot
+// serialize across separate application instances. This advisory lock — a row
+// per user in future_selves_generation_locks, acquired and released via RPC —
+// is the authoritative guarantee that two instances handling the same user
+// never run generateFutureSelves() concurrently. A dead holder's lease expires
+// and is reclaimed automatically, so a crashed instance cannot permanently
+// deadlock a user's generation. The generation pipeline itself is untouched.
+async function generateFutureSelvesWithCrossInstanceLock(
+  momentId?: string,
+): Promise<{ futureSelves: FutureSelf[] } | { error: string }> {
+  const supabase = await createClient();
+  const holder = randomUUID();
+  const deadline = Date.now() + GENERATION_LOCK_MAX_WAIT_MS;
+  let acquired = false;
+
+  for (;;) {
+    const { data } = await supabase.rpc("acquire_future_selves_lock", {
+      p_holder: holder,
+      p_ttl_seconds: GENERATION_LOCK_TTL_SECONDS,
+    });
+    if (data === true) {
+      acquired = true;
+      break;
+    }
+    if (Date.now() >= deadline) {
+      // Best-effort: proceed without the lock rather than dropping the trigger.
+      // This is no worse than the prior behavior (which had no cross-instance
+      // lock at all) and only happens under sustained cross-instance contention.
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, GENERATION_LOCK_POLL_MS));
+  }
+
+  try {
+    return await generateFutureSelves(momentId);
+  } finally {
+    if (acquired) {
+      try {
+        await supabase.rpc("release_future_selves_lock", { p_holder: holder });
+      } catch {
+        // Best-effort release; the lease also expires on its own.
+      }
+    }
+  }
+}
+
+// Serializes Future Selves generation per user. Every trigger (choosing a path,
 // submitting a check-in, answering a reflection, the manual refresh action)
-// calls this instead of generateFutureSelves() directly. The pipeline itself
-// is untouched — this only ensures two triggers for the same user never run
-// generateFutureSelves() concurrently, so overlapping triggers (e.g. two path
-// choices seconds apart, or a background run still in flight when another
-// trigger fires) queue and run one after another against a consistent view
-// of the user's future_selves rows, instead of racing. Different users are
-// never serialized against each other.
+// calls this instead of generateFutureSelves() directly. The in-process chain
+// keeps same-instance triggers ordered; the cross-instance advisory lock inside
+// generateFutureSelvesWithCrossInstanceLock() extends that guarantee across
+// every instance. Overlapping triggers (e.g. two path choices seconds apart, or
+// a background run still in flight when another fires) run one after another
+// against a consistent view of the user's future_selves rows, instead of
+// racing. Different users are never serialized against each other.
 const inFlightGenerationByUser = new Map<string, Promise<unknown>>();
 
 export async function queueFutureSelvesGeneration(
@@ -597,7 +650,9 @@ export async function queueFutureSelvesGeneration(
   }
 
   const previous = inFlightGenerationByUser.get(auth.userId) ?? Promise.resolve();
-  const run = previous.catch(() => {}).then(() => generateFutureSelves(momentId));
+  const run = previous
+    .catch(() => {})
+    .then(() => generateFutureSelvesWithCrossInstanceLock(momentId));
 
   inFlightGenerationByUser.set(auth.userId, run);
   run

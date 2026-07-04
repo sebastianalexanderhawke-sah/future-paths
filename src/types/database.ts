@@ -73,6 +73,7 @@ export type CheckIn = {
   identity_impact: string;
   reflection_question?: string | null;
   reflection_answer?: string | null;
+  client_token?: string | null;
   created_at: string;
 };
 
@@ -361,6 +362,7 @@ export type CheckInInsert = Pick<
   | "identity_impact"
 > & {
   theme_changes?: ThemeChange[];
+  client_token?: string | null;
 };
 
 export type CheckInUpdate = {
@@ -985,7 +987,42 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      acquire_future_selves_lock: {
+        Args: { p_holder: string; p_ttl_seconds: number };
+        Returns: boolean;
+      };
+      release_future_selves_lock: {
+        Args: { p_holder: string };
+        Returns: undefined;
+      };
+      create_moment_with_event: {
+        Args: { p_title: string; p_description: string | null };
+        Returns: Moment;
+      };
+      commit_path_choice: {
+        Args: {
+          p_path_id: string;
+          p_moment_id: string;
+          p_chosen_at: string;
+          p_summary: string;
+          p_themes: ThemeName[];
+        };
+        Returns: Path;
+      };
+      commit_generated_paths: {
+        Args: {
+          p_moment_id: string;
+          p_current_understanding: string;
+          p_opportunity_themes: ThemeName[];
+          p_risk_themes: ThemeName[];
+          p_paths: unknown;
+          p_timeline_summary: string;
+          p_timeline_metadata: unknown;
+        };
+        Returns: Path[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { deleteMoment } from "@/lib/moments";
 import { runStreamingGeneration } from "@/lib/ai/stream";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
 import { createArrayItemParser } from "@/lib/ai/parse-stream";
@@ -19,6 +20,12 @@ function collectThemes(paths: { themes: ThemeName[] }[]): ThemeName[] {
 function sseData(event: unknown): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }
+
+// Long-running streamed AI generation: run on the Node.js runtime and allow up
+// to 60s so the request is not terminated before generation completes. The
+// generation itself is bounded by IDENTITY_ENGINE_TIMEOUT_MS (default 30s).
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -70,6 +77,13 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(": ping\n\n"));
       };
 
+      // This route always creates the moment above, so a generation failure
+      // before a successful result must remove it rather than leave an empty
+      // situation behind.
+      const cleanupOrphanedMoment = async () => {
+        await deleteMoment(moment.id).catch(() => {});
+      };
+
       try {
         const pathParser = createArrayItemParser(["paths"], (item) => {
           enqueue({ type: "path", data: item });
@@ -87,6 +101,7 @@ export async function POST(request: Request) {
         );
 
         if (!generationResult.ok) {
+          await cleanupOrphanedMoment();
           enqueue({ type: "error", error: generationResult.error });
           return;
         }
@@ -123,6 +138,7 @@ export async function POST(request: Request) {
           .select("*");
 
         if (pathsError || !insertedPaths) {
+          await cleanupOrphanedMoment();
           enqueue({
             type: "error",
             error: pathsError?.message ?? "Failed to insert paths",
@@ -159,6 +175,7 @@ export async function POST(request: Request) {
           },
         });
       } catch (error) {
+        await cleanupOrphanedMoment();
         enqueue({
           type: "error",
           error: error instanceof Error ? error.message : "An error occurred",

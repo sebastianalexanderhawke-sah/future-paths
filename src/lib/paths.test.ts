@@ -44,7 +44,10 @@ const CHAINABLE_METHODS = ["select", "eq", "order", "limit", "in", "neq"] as con
  * already-chosen check, the path lookup, then the update) — so responses are
  * queued per table and consumed in call order.
  */
-function createSupabaseStub(tableResponseQueues: Record<string, TableResponse[]>) {
+function createSupabaseStub(
+  tableResponseQueues: Record<string, TableResponse[]>,
+  rpcResponse: TableResponse = { data: null, error: null },
+) {
   const calls: TrackedCall[] = [];
   const callIndex: Record<string, number> = {};
 
@@ -87,6 +90,10 @@ function createSupabaseStub(tableResponseQueues: Record<string, TableResponse[]>
 
   const client = {
     from: (table: string) => makeBuilder(table),
+    rpc: (name: string, args: unknown) => {
+      calls.push({ table: `rpc:${name}`, method: "rpc", args: [args] });
+      return Promise.resolve(rpcResponse);
+    },
     auth: {
       getUser: async () => ({ data: { user: { id: "user-1" } }, error: null }),
     },
@@ -127,6 +134,18 @@ describe("choosePath", () => {
         },
       ],
       timeline_events: [{ data: null, error: null }],
+    },
+    // commit_path_choice RPC returns the updated (now-chosen) path row.
+    {
+      data: {
+        id: "path-1",
+        moment_id: "moment-1",
+        description: "Take the new job",
+        themes: ["Growth"],
+        is_chosen: true,
+        chosen_at: "2026-06-23T00:00:00.000Z",
+      },
+      error: null,
     });
     setActiveStub(stub);
 

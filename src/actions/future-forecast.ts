@@ -41,7 +41,7 @@ import {
 import { buildForecastSimplificationExperiment } from "@/lib/forecast-simplification-experiment";
 
 import { saveForecast } from "@/lib/forecasts";
-import { createMoment, getMoment, updateMoment } from "@/lib/moments";
+import { createMoment, getMoment, updateMoment, deleteMoment } from "@/lib/moments";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -199,6 +199,17 @@ export async function runFutureForecastAction(input: {
 
   let momentId = input.momentId;
 
+  // True only when this request creates the moment below. Cleanup on a failed
+  // generation must never remove a pre-existing situation supplied by the
+  // caller.
+  const momentWasCreated = !input.momentId;
+
+  const cleanupOrphanedMoment = async () => {
+    if (momentWasCreated && momentId) {
+      await deleteMoment(momentId).catch(() => {});
+    }
+  };
+
 
 
   if (momentId) {
@@ -289,6 +300,8 @@ export async function runFutureForecastAction(input: {
       error: forecastGeneration.error,
     });
 
+    await cleanupOrphanedMoment();
+
     return { error: forecastGeneration.error, result: null };
 
   }
@@ -304,6 +317,8 @@ export async function runFutureForecastAction(input: {
   const refreshedMoment = await getMoment(momentId);
 
   if ("error" in refreshedMoment) {
+
+    await cleanupOrphanedMoment();
 
     return { error: refreshedMoment.error, result: null };
 
@@ -373,6 +388,8 @@ export async function runFutureForecastAction(input: {
       pathId: input.selectedPath?.id ?? null,
       error: saveResult.error,
     });
+
+    await cleanupOrphanedMoment();
 
     return { error: `Failed to save forecast: ${saveResult.error}`, result: null };
   }
