@@ -6,6 +6,7 @@ type TrackedCall = { table: string; method: string; args: unknown[] };
 
 const {
   extractAndPersistMock,
+  extractCheckInObservationsMock,
   recognizeMock,
   getIdentityByIdMock,
   explainIdentitiesMock,
@@ -15,6 +16,7 @@ const {
   let stub: { client: unknown; calls: TrackedCall[] } | null = null;
   return {
     extractAndPersistMock: vi.fn(async () => {}),
+    extractCheckInObservationsMock: vi.fn(async () => {}),
     recognizeMock: vi.fn(() => []),
     getIdentityByIdMock: vi.fn(),
     explainIdentitiesMock: vi.fn(),
@@ -27,6 +29,7 @@ const {
 
 vi.mock("@/lib/behavior-extraction", () => ({
   extractAndPersistBehaviorObservations: extractAndPersistMock,
+  extractAndPersistCheckInObservations: extractCheckInObservationsMock,
 }));
 
 vi.mock("@/lib/identity-recognition", () => ({
@@ -1414,6 +1417,172 @@ describe("queueFutureSelvesGeneration", () => {
 
     releaseA();
     await userAPromise;
+  });
+
+  it("fails closed when the cross-instance lock is never granted: generation is skipped, but the triggering moment's extraction still runs", async () => {
+    vi.useFakeTimers({
+      toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"],
+    });
+    try {
+      const base = createSupabaseStub({
+        behavior_observations: { data: [], error: null },
+      });
+      const client = {
+        ...(base.client as Record<string, unknown>),
+        // Another instance holds the lock for the whole wait window.
+        rpc: async () => ({ data: false, error: null }),
+      };
+      setActiveStub({ client, calls: base.calls });
+
+      const resultPromise = queueFutureSelvesGeneration("moment-1");
+      // Run past the 10s acquisition deadline (250ms polls).
+      await vi.advanceTimersByTimeAsync(11_000);
+      const result = await resultPromise;
+
+      expect("error" in result).toBe(true);
+      // The racy recognition/persistence phase must not have run without the lock…
+      expect(explainIdentitiesMock).not.toHaveBeenCalled();
+      // …but the trigger's evidence is still captured for the next run.
+      expect(extractAndPersistMock).toHaveBeenCalledWith("user-1", "moment-1");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("acquires and releases the cross-instance lock with the same holder token", async () => {
+    explainIdentitiesMock.mockImplementation(
+      async (entries: Array<{ match: { identityId: string } }>) =>
+        entries.map(({ match }) => ({
+          identityId: match.identityId,
+          explanation: FALLBACK_EXPLANATION,
+        })),
+    );
+
+    const base = createSupabaseStub({
+      behavior_observations: OBSERVATIONS_RESPONSE,
+      future_selves: { data: [], error: null },
+      future_self_events: { error: null },
+    });
+    const rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+    const client = {
+      ...(base.client as Record<string, unknown>),
+      rpc: async (name: string, args: Record<string, unknown>) => {
+        rpcCalls.push({ name, args });
+        return { data: name === "acquire_future_selves_lock" ? true : null, error: null };
+      },
+    };
+    setActiveStub({ client, calls: base.calls });
+
+    const result = await queueFutureSelvesGeneration();
+    expect("error" in result).toBe(false);
+
+    const acquire = rpcCalls.find((c) => c.name === "acquire_future_selves_lock");
+    const release = rpcCalls.find((c) => c.name === "release_future_selves_lock");
+    expect(acquire).toBeDefined();
+    expect(release).toBeDefined();
+    expect(release!.args.p_holder).toBe(acquire!.args.p_holder);
+    expect(acquire!.args.p_ttl_seconds).toBe(120);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Lived-evidence extraction triggers
+// ---------------------------------------------------------------------------
+
+describe("generateFutureSelves — lived-evidence triggers", () => {
+  beforeEach(() => {
+    recognizeMock.mockReset();
+    recognizeMock.mockReturnValue([MATCH] as never[]);
+    getIdentityByIdMock.mockReset();
+    getIdentityByIdMock.mockReturnValue(PROFILE);
+    extractAndPersistMock.mockReset();
+    extractCheckInObservationsMock.mockReset();
+    explainIdentitiesMock.mockReset();
+    explainIdentitiesMock.mockImplementation(
+      async (entries: Array<{ match: { identityId: string } }>) =>
+        entries.map(({ match }) => ({
+          identityId: match.identityId,
+          explanation: FALLBACK_EXPLANATION,
+          source: "ai",
+        })),
+    );
+  });
+
+  it("extracts observations for the triggering check-in when none exist for it yet", async () => {
+    const stub = createSupabaseStub({
+      // 1: situation-level guard (already extracted), 2: check-in guard (not
+      // yet extracted), 3+: step-2 observation load.
+      behavior_observations: [
+        { data: [{ id: "obs-sit" }], error: null },
+        { data: [], error: null },
+        OBSERVATIONS_RESPONSE,
+      ],
+      future_selves: { data: [], error: null },
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    const result = await queueFutureSelvesGeneration("moment-1", {
+      checkInId: "check-in-9",
+      source: "check_in",
+    });
+
+    expect("error" in result).toBe(false);
+    // The situation was already extracted, so decision-time extraction is skipped…
+    expect(extractAndPersistMock).not.toHaveBeenCalled();
+    // …but the check-in's lived evidence is extracted exactly once.
+    expect(extractCheckInObservationsMock).toHaveBeenCalledTimes(1);
+    expect(extractCheckInObservationsMock).toHaveBeenCalledWith(
+      "user-1",
+      "check-in-9",
+      "check_in",
+    );
+  });
+
+  it("does not re-extract a check-in whose observations already exist (idempotent per check-in)", async () => {
+    const stub = createSupabaseStub({
+      behavior_observations: [
+        { data: [{ id: "obs-sit" }], error: null },
+        { data: [{ id: "obs-ci" }], error: null },
+        OBSERVATIONS_RESPONSE,
+      ],
+      future_selves: { data: [], error: null },
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    const result = await queueFutureSelvesGeneration("moment-1", {
+      checkInId: "check-in-9",
+      source: "check_in",
+    });
+
+    expect("error" in result).toBe(false);
+    expect(extractCheckInObservationsMock).not.toHaveBeenCalled();
+  });
+
+  it("extracts an answered reflection as its own evidence source", async () => {
+    const stub = createSupabaseStub({
+      behavior_observations: [
+        { data: [{ id: "obs-sit" }], error: null },
+        { data: [], error: null },
+        OBSERVATIONS_RESPONSE,
+      ],
+      future_selves: { data: [], error: null },
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    const result = await queueFutureSelvesGeneration("moment-1", {
+      checkInId: "check-in-9",
+      source: "reflection_answer",
+    });
+
+    expect("error" in result).toBe(false);
+    expect(extractCheckInObservationsMock).toHaveBeenCalledWith(
+      "user-1",
+      "check-in-9",
+      "reflection_answer",
+    );
   });
 });
 

@@ -196,7 +196,12 @@ export async function submitReflectionAnswer(
   // Reflection answers are first-class identity evidence — regenerate Future
   // Selves so they can incorporate the user's own interpretation of what the
   // experience revealed, in addition to Current Self which already receives it.
-  await queueFutureSelvesGeneration(checkIn.moment_id).catch(() => {});
+  // The trigger identifies the answered reflection so generation extracts its
+  // behavior observations (once) before recognition runs.
+  await queueFutureSelvesGeneration(checkIn.moment_id, {
+    checkInId: checkIn.id,
+    source: "reflection_answer",
+  }).catch(() => {});
 
   // Advance the queue: evaluate the next unanswered check-in so the user
   // never lands on an empty reflection queue after answering one.

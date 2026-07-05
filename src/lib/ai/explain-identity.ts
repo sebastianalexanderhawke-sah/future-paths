@@ -23,20 +23,50 @@ export type IdentityExplanation = {
   likely_evolution: string;
 };
 
+export type IdentityExplanationSource = "ai" | "fallback";
+
 export type IdentityExplanationResult = {
   identityId: string;
   explanation: IdentityExplanation;
+  /**
+   * Whether this explanation came from real AI generation or the hard-coded
+   * fallback. Persisted as future_selves.narrative_source so a fallback
+   * narrative is repaired on a later run instead of becoming permanent.
+   */
+  source: IdentityExplanationSource;
 };
 
 // ---------------------------------------------------------------------------
 // Regeneration decision
 // ---------------------------------------------------------------------------
 
-export type ExplanationRegenerationReason = "new" | "stable";
+export type ExplanationRegenerationReason =
+  | "new"
+  | "fallback_repair"
+  | "evidence_tier_increased"
+  | "stable";
 
 export type ExplanationRegenerationDecision = {
   regenerate: boolean;
   reason: ExplanationRegenerationReason;
+};
+
+const EVIDENCE_TIER_RANK: Record<FutureSelfEvidenceStrength, number> = {
+  Emerging: 0,
+  Moderate: 1,
+  Strong: 2,
+};
+
+function evidenceTierRank(value: string | null | undefined): number | null {
+  if (value && value in EVIDENCE_TIER_RANK) {
+    return EVIDENCE_TIER_RANK[value as FutureSelfEvidenceStrength];
+  }
+  return null;
+}
+
+export type ExistingNarrativeRow = {
+  narrative_source?: string | null;
+  narrative_evidence_strength?: string | null;
 };
 
 /**
@@ -49,21 +79,44 @@ export type ExplanationRegenerationDecision = {
  * recognition engine and persisted every run regardless of this decision —
  * see generateFutureSelves.
  *
- * Phase 6C: Future Selves are archetypes, not per-situation output. The
- * narrative is written once, when the identity first has no row at all, and
- * is otherwise left untouched by ordinary situations — including evidence
- * tier changes and reactivation after fading. It changes only when
- * something outside the ordinary recognition loop decides it's time: an
- * explicit user-triggered "regenerate this archetype" action, or a future
- * scheduled/periodic regeneration policy (see the module doc below for the
- * intended extension point). Neither is implemented here.
+ * Future Selves narratives are archetypes, not per-situation output, so
+ * stability is the default: percentage movement, reactivation after fading,
+ * and ordinary situations never regenerate. A narrative regenerates in
+ * exactly three cases:
+ *
+ *   1. "new" — the identity has no row at all.
+ *   2. "fallback_repair" — the stored narrative came from the hard-coded
+ *      fallback (the AI call failed when it was written). Without this, a
+ *      transient failure at first emergence made generic boilerplate the
+ *      identity's permanent narrative.
+ *   3. "evidence_tier_increased" — the evidence tier is now HIGHER than the
+ *      tier the narrative was written at (Emerging → Moderate → Strong).
+ *      A narrative written at Emerging says the evidence is limited; once
+ *      the identity is Strong that framing contradicts the numbers shown
+ *      beside it. Only increases regenerate — a decrease (evidence decaying)
+ *      does not — so tier oscillation around a boundary can never cause
+ *      regeneration churn: each identity regenerates at most twice over its
+ *      lifetime on this path.
  */
 export function needsExplanationRegeneration(
-  existing: { id: string } | undefined,
+  existing: ExistingNarrativeRow | undefined,
+  currentEvidenceStrength: FutureSelfEvidenceStrength,
 ): ExplanationRegenerationDecision {
   if (!existing) {
     return { regenerate: true, reason: "new" };
   }
+
+  if (existing.narrative_source === "fallback") {
+    return { regenerate: true, reason: "fallback_repair" };
+  }
+
+  const writtenAtRank = evidenceTierRank(existing.narrative_evidence_strength);
+  const currentRank = evidenceTierRank(currentEvidenceStrength);
+
+  if (writtenAtRank !== null && currentRank !== null && currentRank > writtenAtRank) {
+    return { regenerate: true, reason: "evidence_tier_increased" };
+  }
+
   return { regenerate: false, reason: "stable" };
 }
 
@@ -134,6 +187,7 @@ function fallbackResults(
   return entries.map(({ match }) => ({
     identityId: match.identityId,
     explanation: fallbackExplanation(match.evidenceStrength),
+    source: "fallback",
   }));
 }
 
@@ -237,7 +291,7 @@ function formatDimensions(dims: DimensionContribution[]): string {
     .slice(0, 5)
     .map(
       (d) =>
-        `  ${d.dimension}: weight ${d.identityWeight.toFixed(1)}, user score ${d.userScore}, contribution ${d.contribution.toFixed(1)}`,
+        `  ${d.dimension}: weight ${d.identityWeight.toFixed(1)}, user score ${d.userScore.toFixed(1)}, contribution ${d.contribution.toFixed(1)}`,
     )
     .join("\n");
 }
@@ -491,10 +545,16 @@ export async function explainIdentities(
       `[IDENTITY-DEBUG] missing identity_ids | count=${missingIdentityIds.length} ids=${JSON.stringify(missingIdentityIds)}`,
     );
 
-    return entries.map(({ match }) => ({
-      identityId: match.identityId,
-      explanation: byIdentityId.get(match.identityId) ?? fallbackExplanation(match.evidenceStrength),
-    }));
+    return entries.map(({ match }) => {
+      const explanation = byIdentityId.get(match.identityId);
+      return explanation
+        ? { identityId: match.identityId, explanation, source: "ai" as const }
+        : {
+            identityId: match.identityId,
+            explanation: fallbackExplanation(match.evidenceStrength),
+            source: "fallback" as const,
+          };
+    });
   } catch (error) {
     console.log(
       `[IDENTITY-DEBUG] caught error | name=${

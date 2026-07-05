@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { EMPTY_DIMENSION_SCORES } from "@/lib/behavior-signals";
+import {
+  computeDimensionScoresFromObservations,
+  EMPTY_DIMENSION_SCORES,
+  OBSERVATION_HALF_LIFE_DAYS,
+  observationTimeWeight,
+} from "@/lib/behavior-signals";
 import { IDENTITY_LIBRARY } from "@/lib/identity-library";
 import {
   computeConfidence,
@@ -237,6 +242,108 @@ describe("recognizeIdentities — options", () => {
     const matches = recognizeIdentities(richUser);
     for (let i = 1; i < matches.length; i++) {
       expect(matches[i].score).toBeLessThanOrEqual(matches[i - 1].score);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Time-aware evidence weighting
+// ---------------------------------------------------------------------------
+
+describe("time-aware dimension scoring", () => {
+  const NEWEST = "2026-07-01T00:00:00Z";
+  const ONE_HALF_LIFE_OLD = new Date(
+    Date.parse(NEWEST) - OBSERVATION_HALF_LIFE_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+
+  it("gives full weight to the newest observation and half weight after one half-life", () => {
+    const referenceMs = Date.parse(NEWEST);
+    expect(observationTimeWeight(NEWEST, referenceMs)).toBe(1);
+    expect(observationTimeWeight(ONE_HALF_LIFE_OLD, referenceMs)).toBeCloseTo(0.5, 10);
+  });
+
+  it("gives full weight to observations without a timestamp (legacy rows, plain signal lists)", () => {
+    expect(observationTimeWeight(undefined, Date.parse(NEWEST))).toBe(1);
+    expect(observationTimeWeight(NEWEST, null)).toBe(1);
+  });
+
+  it("decays old evidence relative to the newest observation, not the wall clock", () => {
+    // chooses_solo_path → Independence +2. One fresh, one a half-life older:
+    // Independence = 2×1 + 2×0.5 = 3, regardless of when the test runs.
+    const scores = computeDimensionScoresFromObservations([
+      { signals: ["chooses_solo_path"], extractedAt: NEWEST },
+      { signals: ["chooses_solo_path"], extractedAt: ONE_HALF_LIFE_OLD },
+    ]);
+    expect(scores.Independence).toBeCloseTo(3, 10);
+  });
+
+  it("matches unweighted sums exactly when no observation carries a timestamp", () => {
+    const scores = computeDimensionScoresFromObservations([
+      { signals: ["chooses_solo_path"] },
+      { signals: ["chooses_solo_path"] },
+      { signals: ["starts_something_new"] },
+    ]);
+    expect(scores.Independence).toBe(4);
+    expect(scores.Initiative).toBe(2);
+  });
+
+  it("historical evidence still matters — decayed weight never reaches zero", () => {
+    const tenYearsOld = new Date(
+      Date.parse(NEWEST) - 10 * 365 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const weight = observationTimeWeight(tenYearsOld, Date.parse(NEWEST));
+    expect(weight).toBeGreaterThan(0);
+    expect(weight).toBeLessThan(0.01);
+  });
+
+  it("lets sustained recent behavior overtake a larger but older pattern", () => {
+    // 10 old Connection observations (3 half-lives old → weight 0.125 each)
+    // vs 4 fresh Independence observations. Old total: 10×2×0.125 = 2.5;
+    // new total: 4×2 = 8. Identity built on recent behavior must outrank the
+    // fossil — this is the property lifetime summing could never provide.
+    const threeHalfLivesOld = new Date(
+      Date.parse(NEWEST) - 3 * OBSERVATION_HALF_LIFE_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const scores = computeDimensionScoresFromObservations([
+      ...Array.from({ length: 10 }, () => ({
+        signals: ["seeks_collaboration"],
+        extractedAt: threeHalfLivesOld,
+      })),
+      ...Array.from({ length: 4 }, () => ({
+        signals: ["chooses_solo_path"],
+        extractedAt: NEWEST,
+      })),
+    ]);
+    expect(scores.Independence).toBeGreaterThan(scores.Connection);
+    expect(scores.Connection).toBeGreaterThan(0);
+  });
+
+  it("attribution contributions reflect the same decay as the dimension scores", () => {
+    // Two identical observations, one a half-life older: the older one's
+    // supporting contribution must be half the newer one's.
+    const observations: AttributableObservation[] = [
+      obs(
+        { signals: ["chooses_solo_path"], momentId: "m1", momentTitle: "New", extractedAt: NEWEST },
+        0,
+      ),
+      obs(
+        {
+          signals: ["chooses_solo_path"],
+          momentId: "m2",
+          momentTitle: "Old",
+          extractedAt: ONE_HALF_LIFE_OLD,
+        },
+        1,
+      ),
+    ];
+    const attributed = recognizeIdentitiesWithAttribution(observations);
+    const srb = attributed.find((m) => m.identityId === "self-reliant-builder");
+    if (srb) {
+      const newer = srb.supportingObservations.find((o) => o.momentId === "m1");
+      const older = srb.supportingObservations.find((o) => o.momentId === "m2");
+      expect(newer).toBeDefined();
+      expect(older).toBeDefined();
+      expect(older!.contribution).toBeCloseTo(newer!.contribution / 2, 10);
     }
   });
 });

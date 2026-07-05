@@ -9,7 +9,6 @@ export type {
 export {
   getIdentityEngineMode,
   resolveProviderForMode,
-  shouldFallbackToMockOnError,
   getAnthropicApiKey,
 } from "@/lib/ai/config";
 

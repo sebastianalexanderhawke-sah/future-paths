@@ -39,6 +39,8 @@ export type SituationInput = {
   chosenPathDescription?: string;
   checkInReflection?: string;
   identityImpact?: string;
+  reflectionQuestion?: string;
+  reflectionAnswer?: string;
 };
 
 export const behaviorExtractV1 = {
@@ -64,6 +66,11 @@ export const behaviorExtractV1 = {
 
     if (input.identityImpact) {
       lines.push(`Identity impact noted: ${input.identityImpact}`);
+    }
+
+    if (input.reflectionQuestion && input.reflectionAnswer) {
+      lines.push(`\nReflection question: ${input.reflectionQuestion}`);
+      lines.push(`User's answer: ${input.reflectionAnswer}`);
     }
 
     lines.push("\nExtract behavioral observations from this situation.");

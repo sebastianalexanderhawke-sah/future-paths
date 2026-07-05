@@ -238,8 +238,117 @@ export function computeDimensionScores(signals: string[]): DimensionScoreMap {
   return scores;
 }
 
+// ---------------------------------------------------------------------------
+// Time-aware evidence weighting
+// ---------------------------------------------------------------------------
+//
+// Dimension scores were previously lifetime sums: every observation counted
+// with full weight forever. Over years that makes scores grow without bound,
+// pins every entrenched identity's likelihood near 100, and means a genuine
+// change in behavior can never outweigh accumulated history — identity stops
+// evolving.
+//
+// Strategy: exponential decay by evidence age, measured against the NEWEST
+// observation in the ledger (not the wall clock), with a one-year half-life.
+//
+//   weight(obs) = 0.5 ^ (ageInDays / OBSERVATION_HALF_LIFE_DAYS)
+//   ageInDays   = newest extracted_at − obs extracted_at
+//
+// Why these choices:
+// - Exponential decay is the unique memoryless weighting: the relative weight
+//   of two observations depends only on the time between them, never on when
+//   the score is computed — so rankings shift smoothly, with no cliff where
+//   evidence suddenly stops counting. Historical evidence always retains
+//   some weight; it never reaches zero.
+// - The half-life is one year because identity change in this product is
+//   framed in seasons and years (life chapters, monthly narratives, yearly
+//   evolution). One year of consistent new behavior carries the same total
+//   weight as the entire preceding year — enough for real change to overtake
+//   an established pattern in about a year — while three-year-old evidence
+//   still contributes 1/8 weight, so long-standing patterns don't vanish.
+//   It also bounds the steady-state score: for a user producing evidence at a
+//   constant rate the decayed sum converges instead of growing forever, so
+//   likelihood saturates at a level that reflects sustained recent behavior
+//   rather than account age.
+// - Anchoring "now" to the newest observation keeps scoring a deterministic
+//   function of the ledger alone: the same observations always produce the
+//   same scores, in tests and in production, and a returning user's evidence
+//   is decayed relative to their own history rather than to their absence.
+// - Observations without a timestamp keep full weight. This preserves exact
+//   behavior for callers (and tests) that score plain signal lists, and is
+//   the conservative choice for any legacy row missing extracted_at.
+
+export const OBSERVATION_HALF_LIFE_DAYS = 365;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export type TimestampedSignals = {
+  signals: string[];
+  /** ISO timestamp (behavior_observations.extracted_at). Absent ⇒ full weight. */
+  extractedAt?: string;
+};
+
+/**
+ * The reference "now" for decay: the newest valid extractedAt across the
+ * observations, in epoch ms. Null when no observation carries a timestamp
+ * (in which case every observation gets full weight).
+ */
+export function observationReferenceTimeMs(
+  observations: { extractedAt?: string }[],
+): number | null {
+  let newest: number | null = null;
+
+  for (const observation of observations) {
+    if (!observation.extractedAt) continue;
+    const time = Date.parse(observation.extractedAt);
+    if (Number.isNaN(time)) continue;
+    if (newest === null || time > newest) {
+      newest = time;
+    }
+  }
+
+  return newest;
+}
+
+/**
+ * The decay weight of one observation relative to the reference time.
+ * Full weight (1) for the newest observation, halving every
+ * OBSERVATION_HALF_LIFE_DAYS, never reaching zero. Observations without a
+ * parseable timestamp get full weight.
+ */
+export function observationTimeWeight(
+  extractedAt: string | undefined,
+  referenceTimeMs: number | null,
+): number {
+  if (!extractedAt || referenceTimeMs === null) {
+    return 1;
+  }
+
+  const time = Date.parse(extractedAt);
+  if (Number.isNaN(time)) {
+    return 1;
+  }
+
+  const ageDays = Math.max(0, (referenceTimeMs - time) / MS_PER_DAY);
+  return Math.pow(0.5, ageDays / OBSERVATION_HALF_LIFE_DAYS);
+}
+
 export function computeDimensionScoresFromObservations(
-  observations: { signals: string[] }[],
+  observations: TimestampedSignals[],
 ): DimensionScoreMap {
-  return computeDimensionScores(observations.flatMap((o) => o.signals));
+  const referenceTimeMs = observationReferenceTimeMs(observations);
+  const scores = { ...EMPTY_DIMENSION_SCORES };
+
+  for (const observation of observations) {
+    const timeWeight = observationTimeWeight(observation.extractedAt, referenceTimeMs);
+
+    for (const slug of observation.signals) {
+      if (!isValidSignalSlug(slug)) continue;
+      for (const { dimension, weight } of SIGNAL_DEFINITIONS[slug].dimensions) {
+        scores[dimension] += weight * timeWeight;
+      }
+    }
+  }
+
+  return scores;
 }

@@ -4,6 +4,8 @@ import {
   computeDimensionScoresFromObservations,
   EMPTY_DIMENSION_SCORES,
   isValidSignalSlug,
+  observationReferenceTimeMs,
+  observationTimeWeight,
   SIGNAL_DEFINITIONS,
   type SignalSlug,
 } from "@/lib/behavior-signals";
@@ -338,10 +340,19 @@ function buildAttribution(
     return a.extractedAt < b.extractedAt ? -1 : 1;
   });
 
-  // Per-observation contributions.
+  // Per-observation contributions, scaled by the same time-decay weight the
+  // dimension scores use (see behavior-signals.ts). This keeps attribution
+  // consistent with the total: summing these contributions still recovers
+  // computeWeightedScore, and the "top supporting observations" reflect what
+  // actually drives the current (decayed) score rather than raw lifetime
+  // impact. The sign of a contribution is unaffected (weights are positive),
+  // so supporting/opposing classification and confidence counts are unchanged.
+  const referenceTimeMs = observationReferenceTimeMs(sorted);
   const withContrib = sorted.map((obs) => ({
     obs,
-    contribution: computeObservationContribution(obs.signals, weights),
+    contribution:
+      computeObservationContribution(obs.signals, weights) *
+      observationTimeWeight(obs.extractedAt, referenceTimeMs),
   }));
 
   const supportingCount = withContrib.filter((x) => x.contribution > 0).length;
@@ -495,7 +506,7 @@ export function recognizeIdentitiesWithAttribution(
  * observations. Computes dimension scores first, then calls recognizeIdentities.
  */
 export function recognizeIdentitiesFromObservations(
-  observations: { signals: string[] }[],
+  observations: { signals: string[]; extractedAt?: string }[],
   options: RecognitionOptions = {},
 ): IdentityMatch[] {
   const userDimensions = computeDimensionScoresFromObservations(observations);

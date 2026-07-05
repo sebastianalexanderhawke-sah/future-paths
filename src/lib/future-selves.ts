@@ -1,6 +1,10 @@
 import { randomUUID } from "crypto";
 
-import { extractAndPersistBehaviorObservations } from "@/lib/behavior-extraction";
+import {
+  extractAndPersistBehaviorObservations,
+  extractAndPersistCheckInObservations,
+  type CheckInObservationSource,
+} from "@/lib/behavior-extraction";
 import { explainIdentities, needsExplanationRegeneration } from "@/lib/ai/explain-identity";
 import { getIdentityById } from "@/lib/identity-library";
 import {
@@ -202,6 +206,77 @@ async function recordFutureSelfEvent(input: {
 const MAX_RECOGNIZED_IDENTITIES = 5;
 
 /**
+ * Identifies the lived-evidence event that triggered a generation run, so
+ * step 1 can extract behavior observations from it. A check-in trigger
+ * extracts from the check-in's reflection; a reflection_answer trigger
+ * extracts from the answered reflection Q&A on that check-in.
+ */
+export type FutureSelvesGenerationTrigger = {
+  checkInId: string;
+  source: CheckInObservationSource;
+};
+
+/**
+ * Extracts decision-time behavior observations for the triggering moment if
+ * none exist yet (idempotent per moment). This is part of step 1 of
+ * generateFutureSelves, and is also run on the lock-timeout path so a
+ * trigger's evidence is never lost even when the recognition/persistence
+ * phase is skipped — extraction only appends to behavior_observations and
+ * never touches future_selves rows.
+ */
+async function ensureBehaviorObservationsForMoment(
+  userId: string,
+  momentId: string,
+): Promise<"extracted" | "skipped"> {
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("behavior_observations")
+    .select("id")
+    .eq("moment_id", momentId)
+    .eq("user_id", userId)
+    .eq("source_type", "situation_complete")
+    .limit(1);
+
+  if (existing?.length) {
+    return "skipped";
+  }
+
+  await extractAndPersistBehaviorObservations(userId, momentId).catch(() => {});
+  return "extracted";
+}
+
+/**
+ * Extracts lived-evidence observations for a specific (check-in, source) pair
+ * if none exist yet — exactly one extraction per check-in and one per
+ * answered reflection, guaranteed by the check_in_id + source_type existence
+ * check. This is what makes check-ins and reflection answers actually move
+ * Future Selves: before this, the ledger only ever received decision-time
+ * evidence, so regeneration recomputed identical scores.
+ */
+async function ensureCheckInObservations(
+  userId: string,
+  trigger: FutureSelvesGenerationTrigger,
+): Promise<"extracted" | "skipped"> {
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("behavior_observations")
+    .select("id")
+    .eq("check_in_id", trigger.checkInId)
+    .eq("source_type", trigger.source)
+    .eq("user_id", userId)
+    .limit(1);
+
+  if (existing?.length) {
+    return "skipped";
+  }
+
+  await extractAndPersistCheckInObservations(userId, trigger.checkInId, trigger.source).catch(
+    () => {},
+  );
+  return "extracted";
+}
+
+/**
  * New pipeline: Situation → Behavior Extraction → Behavior Ledger →
  * Dimension Scores → Identity Recognition → Identity Attribution →
  * AI Explanation → Future Self persistence.
@@ -216,10 +291,11 @@ const MAX_RECOGNIZED_IDENTITIES = 5;
  */
 export async function generateFutureSelves(
   momentId?: string,
+  trigger?: FutureSelvesGenerationTrigger,
 ): Promise<{ futureSelves: FutureSelf[] } | { error: string }> {
   const __gfsT0 = Date.now();
   console.log(
-    `[PROFILE] generateFutureSelves TOTAL | start=${new Date(__gfsT0).toISOString()} momentId=${momentId}`,
+    `[PROFILE] generateFutureSelves TOTAL | start=${new Date(__gfsT0).toISOString()} momentId=${momentId} trigger=${trigger ? `${trigger.source}:${trigger.checkInId}` : "none"}`,
   );
 
   const auth = await requireUser();
@@ -235,16 +311,8 @@ export async function generateFutureSelves(
     `[PROFILE] generateFutureSelves STAGE=1 behavior extraction | start=${new Date(__step1T0).toISOString()}`,
   );
   if (momentId) {
-    const { data: existing } = await supabase
-      .from("behavior_observations")
-      .select("id")
-      .eq("moment_id", momentId)
-      .eq("user_id", auth.userId)
-      .limit(1);
-
-    if (!existing?.length) {
-      await extractAndPersistBehaviorObservations(auth.userId, momentId).catch(() => {});
-    } else {
+    const outcome = await ensureBehaviorObservationsForMoment(auth.userId, momentId);
+    if (outcome === "skipped") {
       console.log(
         `[PROFILE] generateFutureSelves STAGE=1 behavior extraction | SKIPPED (already extracted for this moment)`,
       );
@@ -252,6 +320,18 @@ export async function generateFutureSelves(
   } else {
     console.log(
       `[PROFILE] generateFutureSelves STAGE=1 behavior extraction | SKIPPED (no momentId provided)`,
+    );
+  }
+
+  // Step 1b: Lived evidence. When this run was triggered by a check-in or an
+  // answered reflection, extract observations from it (once per check-in and
+  // once per answered reflection — the (check_in_id, source_type) guard makes
+  // this idempotent). This is the step that turns lived experience into
+  // evidence the recognition engine can actually see.
+  if (trigger) {
+    const outcome = await ensureCheckInObservations(auth.userId, trigger);
+    console.log(
+      `[PROFILE] generateFutureSelves STAGE=1b lived-evidence extraction | source=${trigger.source} checkInId=${trigger.checkInId} outcome=${outcome}`,
     );
   }
   console.log(
@@ -345,16 +425,24 @@ export async function generateFutureSelves(
       allExisting.find((r) => r.identity_id === match.identityId) ??
       allExisting.find((r) => !r.identity_id && r.name === profile.canonical_name);
 
-    return [{ match, profile, existing, decision: needsExplanationRegeneration(existing) }];
+    return [
+      {
+        match,
+        profile,
+        existing,
+        decision: needsExplanationRegeneration(existing, match.evidenceStrength),
+      },
+    ];
   });
 
   // Step 6b: Future Self narratives are stable archetype descriptions, not
-  // per-situation output (Phase 6C) — the AI is only invoked for identities
-  // with no existing row at all. Every other identity (evidence tier moved,
-  // reactivated from faded, percentage moved) keeps its existing
-  // why_emerging / growth_opportunities / blind_spots / likely_evolution —
-  // only percentage, evidence, and supporting data update below regardless
-  // of this decision.
+  // per-situation output — the AI is invoked only for identities with no
+  // existing row, identities whose stored narrative is a fallback awaiting
+  // repair, and identities whose evidence tier has increased since the
+  // narrative was written (see needsExplanationRegeneration). Every other
+  // identity keeps its existing why_emerging / growth_opportunities /
+  // blind_spots / likely_evolution — only percentage, evidence, and
+  // supporting data update below regardless of this decision.
   const entriesNeedingRegeneration = entries.filter((e) => e.decision.regenerate);
   const __step7T0 = Date.now();
   console.log(
@@ -366,7 +454,7 @@ export async function generateFutureSelves(
   console.log(
     `[PROFILE] generateFutureSelves STAGE=7 AI explanation | end=${new Date().toISOString()} durationMs=${Date.now() - __step7T0}`,
   );
-  const explanationById = new Map(explanationResults.map((r) => [r.identityId, r.explanation]));
+  const explanationById = new Map(explanationResults.map((r) => [r.identityId, r]));
 
   const __step8T0 = Date.now();
   console.log(
@@ -383,8 +471,11 @@ export async function generateFutureSelves(
     // Regenerated identities use the fresh AI explanation; unchanged ones
     // keep their existing narrative fields untouched — only percentage,
     // evidence, and supporting data are refreshed below regardless.
-    const explanation = decision.regenerate
-      ? explanationById.get(match.identityId)!
+    const regenerated = decision.regenerate
+      ? explanationById.get(match.identityId)
+      : undefined;
+    const explanation = regenerated
+      ? regenerated.explanation
       : {
           why_emerging: existing!.why_emerging,
           growth_opportunities: existing!.growth_opportunities,
@@ -394,6 +485,18 @@ export async function generateFutureSelves(
 
     const percentage = match.likelihood;
     const evidenceStrength = match.evidenceStrength;
+
+    // Narrative provenance travels with the narrative: written only when the
+    // narrative itself is (re)written, so an untouched narrative keeps the
+    // source and evidence tier it was originally authored at. A fallback
+    // source makes the next run repair it; the recorded tier is what a later
+    // run compares against to detect a tier increase.
+    const narrativeProvenanceFields = regenerated
+      ? {
+          narrative_source: regenerated.source ?? "ai",
+          narrative_evidence_strength: evidenceStrength,
+        }
+      : {};
 
     const attributionFields = {
       identity_id: match.identityId,
@@ -419,6 +522,7 @@ export async function generateFutureSelves(
       // Untyped empty literal — infers never[], which satisfies ThemeName[]
       // (the old `as string[]` assertion failed the build's type check).
       themes: [],
+      ...narrativeProvenanceFields,
     };
 
     if (!existing) {
@@ -582,6 +686,10 @@ export async function generateFutureSelves(
 const GENERATION_LOCK_TTL_SECONDS = 120;
 const GENERATION_LOCK_MAX_WAIT_MS = 10_000;
 const GENERATION_LOCK_POLL_MS = 250;
+// Renew at a third of the TTL so a generation that outlives its initial lease
+// keeps the lock (mutual exclusion cannot lapse mid-run), while a crashed
+// holder is still reclaimable within one TTL.
+const GENERATION_LOCK_RENEW_MS = (GENERATION_LOCK_TTL_SECONDS * 1000) / 3;
 
 // Cross-instance serialization. The in-process Map below still coalesces
 // triggers within a single Node process (the common case), but a Map cannot
@@ -590,9 +698,14 @@ const GENERATION_LOCK_POLL_MS = 250;
 // is the authoritative guarantee that two instances handling the same user
 // never run generateFutureSelves() concurrently. A dead holder's lease expires
 // and is reclaimed automatically, so a crashed instance cannot permanently
-// deadlock a user's generation. The generation pipeline itself is untouched.
+// deadlock a user's generation. While generation runs, the lease is renewed on
+// a heartbeat (acquire is re-entrant for the current holder), so a run longer
+// than the TTL never loses the lock. The generation pipeline itself is
+// untouched.
 async function generateFutureSelvesWithCrossInstanceLock(
+  userId: string,
   momentId?: string,
+  trigger?: FutureSelvesGenerationTrigger,
 ): Promise<{ futureSelves: FutureSelf[] } | { error: string }> {
   const supabase = await createClient();
   const holder = randomUUID();
@@ -609,23 +722,52 @@ async function generateFutureSelvesWithCrossInstanceLock(
       break;
     }
     if (Date.now() >= deadline) {
-      // Best-effort: proceed without the lock rather than dropping the trigger.
-      // This is no worse than the prior behavior (which had no cross-instance
-      // lock at all) and only happens under sustained cross-instance contention.
       break;
     }
     await new Promise((resolve) => setTimeout(resolve, GENERATION_LOCK_POLL_MS));
   }
 
+  if (!acquired) {
+    // Fail closed: another instance is generating for this user right now, and
+    // running the pipeline without the lock would interleave two generations'
+    // future_selves writes — the exact race the lock exists to prevent. The
+    // trigger's evidence is still captured (extraction is idempotent and never
+    // touches future_selves rows), so the next generation run includes it;
+    // only the recognition/persistence phase is deferred.
+    if (momentId) {
+      await ensureBehaviorObservationsForMoment(userId, momentId);
+    }
+    if (trigger) {
+      await ensureCheckInObservations(userId, trigger);
+    }
+    return {
+      error: "A Future Selves update is already in progress. Please try again in a moment.",
+    };
+  }
+
+  // Heartbeat: re-acquiring with the same holder token extends the lease.
+  const renewTimer = setInterval(() => {
+    void supabase
+      .rpc("acquire_future_selves_lock", {
+        p_holder: holder,
+        p_ttl_seconds: GENERATION_LOCK_TTL_SECONDS,
+      })
+      .then(
+        () => {},
+        () => {
+          // Best-effort renewal; the next tick retries.
+        },
+      );
+  }, GENERATION_LOCK_RENEW_MS);
+
   try {
-    return await generateFutureSelves(momentId);
+    return await generateFutureSelves(momentId, trigger);
   } finally {
-    if (acquired) {
-      try {
-        await supabase.rpc("release_future_selves_lock", { p_holder: holder });
-      } catch {
-        // Best-effort release; the lease also expires on its own.
-      }
+    clearInterval(renewTimer);
+    try {
+      await supabase.rpc("release_future_selves_lock", { p_holder: holder });
+    } catch {
+      // Best-effort release; the lease also expires on its own.
     }
   }
 }
@@ -643,6 +785,7 @@ const inFlightGenerationByUser = new Map<string, Promise<unknown>>();
 
 export async function queueFutureSelvesGeneration(
   momentId?: string,
+  trigger?: FutureSelvesGenerationTrigger,
 ): Promise<{ futureSelves: FutureSelf[] } | { error: string }> {
   const auth = await requireUser();
   if ("error" in auth) {
@@ -652,7 +795,7 @@ export async function queueFutureSelvesGeneration(
   const previous = inFlightGenerationByUser.get(auth.userId) ?? Promise.resolve();
   const run = previous
     .catch(() => {})
-    .then(() => generateFutureSelvesWithCrossInstanceLock(momentId));
+    .then(() => generateFutureSelvesWithCrossInstanceLock(auth.userId, momentId, trigger));
 
   inFlightGenerationByUser.set(auth.userId, run);
   run

@@ -153,44 +153,15 @@ export async function generateTimeline(): Promise<
 
   const supabase = await createClient();
 
-  const { data: existingChapters, error: existingError } = await supabase
-    .from("life_chapters")
-    .select("id")
-    .eq("user_id", auth.userId);
-
-  if (existingError) {
-    return { error: existingError.message };
-  }
-
-  const existingIds = (existingChapters ?? []).map((chapter) => chapter.id);
-
-  if (existingIds.length > 0) {
-    const { error: deleteEvidenceError } = await supabase
-      .from("life_chapter_evidence")
-      .delete()
-      .eq("user_id", auth.userId);
-
-    if (deleteEvidenceError) {
-      return { error: deleteEvidenceError.message };
-    }
-
-    const { error: deleteChaptersError } = await supabase
-      .from("life_chapters")
-      .delete()
-      .eq("user_id", auth.userId);
-
-    if (deleteChaptersError) {
-      return { error: deleteChaptersError.message };
-    }
-  }
-
-  const createdChapters: LifeChapter[] = [];
-
-  for (const [index, draft] of drafts.entries()) {
-    const { data: chapter, error: insertError } = await supabase
-      .from("life_chapters")
-      .insert({
-        user_id: auth.userId,
+  // Atomic: the delete of the previous chapter set and the insert of the new
+  // one commit together inside replace_life_chapters. A failure (or an
+  // interrupted request) can no longer destroy the previous timeline and
+  // leave a partial new one — either the complete new set lands, or the old
+  // timeline is untouched.
+  const { data: chapters, error: replaceError } = await supabase.rpc(
+    "replace_life_chapters",
+    {
+      p_chapters: drafts.map((draft) => ({
         title: draft.title,
         period_label: draft.period_label,
         starts_at: draft.starts_at,
@@ -198,35 +169,20 @@ export async function generateTimeline(): Promise<
         summary: draft.summary,
         themes: draft.themes,
         includes_current_self: draft.includes_current_self,
-        sort_order: index,
-      })
-      .select("*")
-      .single();
-
-    if (insertError || !chapter) {
-      return { error: insertError?.message ?? "Failed to create life chapter." };
-    }
-
-    if (draft.evidence.length > 0) {
-      const { error: evidenceError } = await supabase.from("life_chapter_evidence").insert(
-        draft.evidence.map((item, evidenceIndex) => ({
-          life_chapter_id: chapter.id,
-          user_id: auth.userId,
+        evidence: draft.evidence.map((item, evidenceIndex) => ({
           evidence_type: item.evidence_type,
           evidence_id: item.evidence_id,
           label: item.label,
           occurred_at: item.occurred_at,
           sort_order: evidenceIndex,
         })),
-      );
+      })),
+    },
+  );
 
-      if (evidenceError) {
-        return { error: evidenceError.message };
-      }
-    }
-
-    createdChapters.push(chapter);
+  if (replaceError || !chapters) {
+    return { error: replaceError?.message ?? "Failed to save life chapters." };
   }
 
-  return { chapters: createdChapters };
+  return { chapters };
 }

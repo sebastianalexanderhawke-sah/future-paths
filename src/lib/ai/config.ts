@@ -52,8 +52,8 @@ export function resolveProviderForMode(
   return getAnthropicApiKey() ? "claude" : "mock";
 }
 
-export function shouldFallbackToMockOnError(
-  mode: IdentityEngineMode = getIdentityEngineMode(),
-): boolean {
-  return mode === "auto";
-}
+// Note: there is intentionally no "fall back to mock on error" facility.
+// Every structured generation is persisted as durable user data, and
+// fabricated mock content must never be stored as if it were real analysis.
+// In "auto" mode the mock provider is used only when no API key is
+// configured (a development setup), never as a silent failure mask.

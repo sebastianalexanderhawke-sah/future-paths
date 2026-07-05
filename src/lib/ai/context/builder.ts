@@ -539,6 +539,14 @@ async function loadTimelineContext(
   supabase: SupabaseClient,
   base: IdentityContextBundle,
 ): Promise<IdentityContextBundle> {
+  // Every evidence query is explicitly ordered newest-first. The chapter
+  // candidates below are computed from the full result sets, but the
+  // timeline* arrays are later truncated to their per-array limits by
+  // enforceContextLimits at serialization — without an ORDER BY that
+  // truncation kept whichever rows the database happened to return, so the
+  // AI narrated life chapters from an arbitrary (and run-to-run unstable)
+  // sample of history. With deterministic ordering it always keeps the
+  // newest N of each.
   const [
     { data: moments },
     { data: chosenPaths },
@@ -553,35 +561,42 @@ async function loadTimelineContext(
       .from("moments")
       .select("id, title, created_at, status")
       .eq("user_id", base.userId)
-      .eq("status", "active"),
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
     supabase
       .from("paths")
       .select("id, moment_id, description, themes, chosen_at, created_at")
       .eq("user_id", base.userId)
-      .eq("is_chosen", true),
+      .eq("is_chosen", true)
+      .order("chosen_at", { ascending: false }),
     supabase
       .from("check_ins")
       .select("id, reflection, theme_changes, identity_impact, created_at, reflection_question, reflection_answer")
-      .eq("user_id", base.userId),
+      .eq("user_id", base.userId)
+      .order("created_at", { ascending: false }),
     supabase
       .from("identity_updates")
       .select("id, title, summary, themes, created_at")
-      .eq("user_id", base.userId),
+      .eq("user_id", base.userId)
+      .order("created_at", { ascending: false }),
     supabase
       .from("future_selves")
       .select("id, name, percentage, themes, status, updated_at")
       .eq("user_id", base.userId)
-      .eq("status", "active"),
+      .eq("status", "active")
+      .order("percentage", { ascending: false }),
     supabase
       .from("contradictions")
       .select("id, title, themes, intensity, status, updated_at")
       .eq("user_id", base.userId)
-      .in("status", ["active", "softened"]),
+      .in("status", ["active", "softened"])
+      .order("updated_at", { ascending: false }),
     supabase
       .from("alternate_selves")
       .select("id, name, themes, status, updated_at, past_crossroad_id")
       .eq("user_id", base.userId)
-      .eq("status", "active"),
+      .eq("status", "active")
+      .order("updated_at", { ascending: false }),
     supabase
       .from("current_self")
       .select("title, summary, themes, observations, recent_growth")

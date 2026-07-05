@@ -133,6 +133,11 @@ export type FutureSelf = {
   supporting_observations: Record<string, unknown>[] | null;
   supporting_situations: Record<string, unknown>[] | null;
   opposing_observations: Record<string, unknown>[] | null;
+  // Narrative provenance: whether the stored narrative came from real AI
+  // generation or the fallback, and the evidence tier it was written at.
+  // Drives the narrative regeneration policy (needsExplanationRegeneration).
+  narrative_source: "ai" | "fallback";
+  narrative_evidence_strength: FutureSelfEvidenceStrength | null;
 };
 
 export type FutureSelfEvent = {
@@ -404,6 +409,8 @@ export type FutureSelfInsert = Pick<
   supporting_observations?: Record<string, unknown>[];
   supporting_situations?: Record<string, unknown>[];
   opposing_observations?: Record<string, unknown>[];
+  narrative_source?: "ai" | "fallback";
+  narrative_evidence_strength?: FutureSelfEvidenceStrength | null;
 };
 
 export type FutureSelfUpdate = Partial<
@@ -429,6 +436,8 @@ export type FutureSelfUpdate = Partial<
     | "supporting_observations"
     | "supporting_situations"
     | "opposing_observations"
+    | "narrative_source"
+    | "narrative_evidence_strength"
   >
 >;
 
@@ -624,10 +633,18 @@ export type TimelineEventInsert = Pick<
   occurred_at?: string;
 };
 
+export type BehaviorObservationSourceType =
+  | "situation_complete"
+  | "check_in"
+  | "reflection_answer";
+
 export type BehaviorObservation = {
   id: string;
   user_id: string;
   moment_id: string;
+  /** The check-in this observation was extracted from; null for decision-time
+   *  ('situation_complete') observations. */
+  check_in_id: string | null;
   observation: string;
   signals: string[];
   source_type: string;
@@ -637,7 +654,9 @@ export type BehaviorObservation = {
 export type BehaviorObservationInsert = Pick<
   BehaviorObservation,
   "user_id" | "moment_id" | "observation" | "signals" | "source_type"
->;
+> & {
+  check_in_id?: string | null;
+};
 
 export type Database = {
   public: {
@@ -657,6 +676,12 @@ export type Database = {
             foreignKeyName: "behavior_observations_moment_id_fkey";
             columns: ["moment_id"];
             referencedRelation: "moments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "behavior_observations_check_in_id_fkey";
+            columns: ["check_in_id"];
+            referencedRelation: "check_ins";
             referencedColumns: ["id"];
           },
         ];
@@ -1021,6 +1046,10 @@ export type Database = {
           p_timeline_metadata: unknown;
         };
         Returns: Path[];
+      };
+      replace_life_chapters: {
+        Args: { p_chapters: unknown };
+        Returns: LifeChapter[];
       };
     };
     Enums: Record<string, never>;

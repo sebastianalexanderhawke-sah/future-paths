@@ -2,14 +2,9 @@ import type { z } from "zod";
 
 import { buildIdentityContext } from "@/lib/ai/context/builder";
 import type { BuildContextOptions } from "@/lib/ai/context/profiles";
-import {
-  getIdentityEngineMode,
-  shouldFallbackToMockOnError,
-} from "@/lib/ai/config";
 import { getPromptDefinition } from "@/lib/ai/prompts/registry";
 import type { PromptId } from "@/lib/ai/prompts/ids";
 import { getIdentityAIProvider } from "@/lib/ai/providers";
-import { mockProvider } from "@/lib/ai/providers/mock-provider";
 import type { GenerationResult } from "@/lib/ai/types";
 import { getUsageTracker } from "@/lib/ai/usage";
 
@@ -52,7 +47,6 @@ export async function runStructuredGeneration<T>(
     schema: options.schema,
   };
 
-  const mode = getIdentityEngineMode();
   const primaryProvider = getIdentityAIProvider();
   const usageTracker = getUsageTracker();
   const primaryResult = await primaryProvider.completeStructured(request);
@@ -83,23 +77,11 @@ export async function runStructuredGeneration<T>(
     error: primaryResult.error,
   });
 
-  if (!shouldFallbackToMockOnError(mode) || primaryProvider.id === "mock") {
-    return primaryResult;
-  }
-
-  const fallbackResult = await mockProvider.completeStructured(request);
-
-  if (fallbackResult.ok) {
-    await usageTracker.track({
-      userId: options.userId,
-      promptId: prompt.promptId,
-      promptVersion: prompt.promptVersion,
-      provider: "mock",
-      success: true,
-      durationMs: Date.now() - startedAt,
-      error: `Fallback after ${primaryProvider.id} failure: ${primaryResult.error}`,
-    });
-  }
-
-  return fallbackResult;
+  // No mock fallback: every caller of this function persists its result as
+  // durable user data (check-ins, identity updates, Current Self, forecasts,
+  // life chapters, …), and fabricated mock content must never be stored as
+  // if it were real analysis. A failed generation surfaces as a failure the
+  // caller (and user) can retry. Preview-only flows that want a fallback
+  // implement their own, clearly labeled one (see discovery questions).
+  return primaryResult;
 }

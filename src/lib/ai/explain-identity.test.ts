@@ -4,27 +4,63 @@ import { needsExplanationRegeneration } from "@/lib/ai/explain-identity";
 
 describe("needsExplanationRegeneration", () => {
   it("regenerates when an identity is recognized for the first time (no existing row)", () => {
-    const decision = needsExplanationRegeneration(undefined);
+    const decision = needsExplanationRegeneration(undefined, "Emerging");
     expect(decision).toEqual({ regenerate: true, reason: "new" });
   });
 
-  it("does not regenerate when percentage moves within the same evidence_strength tier (22% -> 24%, both Emerging)", () => {
-    const decision = needsExplanationRegeneration({ id: "fs-1" });
+  it("does not regenerate when percentage moves within the same evidence tier the narrative was written at", () => {
+    const decision = needsExplanationRegeneration(
+      { narrative_source: "ai", narrative_evidence_strength: "Emerging" },
+      "Emerging",
+    );
     expect(decision).toEqual({ regenerate: false, reason: "stable" });
   });
 
-  it("does not regenerate even when the evidence_strength tier crosses a boundary (24% Emerging -> 42% Moderate) — Phase 6C treats the narrative as a stable archetype, not per-situation output", () => {
-    const decision = needsExplanationRegeneration({ id: "fs-1" });
+  it("regenerates when the stored narrative is a fallback — a transient AI failure must never become the permanent narrative", () => {
+    const decision = needsExplanationRegeneration(
+      { narrative_source: "fallback", narrative_evidence_strength: "Emerging" },
+      "Emerging",
+    );
+    expect(decision).toEqual({ regenerate: true, reason: "fallback_repair" });
+  });
+
+  it("regenerates when the evidence tier has increased since the narrative was written (Emerging → Moderate)", () => {
+    const decision = needsExplanationRegeneration(
+      { narrative_source: "ai", narrative_evidence_strength: "Emerging" },
+      "Moderate",
+    );
+    expect(decision).toEqual({ regenerate: true, reason: "evidence_tier_increased" });
+  });
+
+  it("regenerates when the tier jumps two levels (Emerging → Strong)", () => {
+    const decision = needsExplanationRegeneration(
+      { narrative_source: "ai", narrative_evidence_strength: "Emerging" },
+      "Strong",
+    );
+    expect(decision).toEqual({ regenerate: true, reason: "evidence_tier_increased" });
+  });
+
+  it("does not regenerate when the tier has DECREASED — decay-driven oscillation around a boundary must not cause churn", () => {
+    const decision = needsExplanationRegeneration(
+      { narrative_source: "ai", narrative_evidence_strength: "Strong" },
+      "Moderate",
+    );
     expect(decision).toEqual({ regenerate: false, reason: "stable" });
   });
 
-  it("does not regenerate when a faded identity reappears — reactivation is an ordinary situation, not a narrative-changing event", () => {
-    const decision = needsExplanationRegeneration({ id: "fs-1" });
+  it("does not regenerate a stable AI narrative at the same tier even after a large percentage swing", () => {
+    const decision = needsExplanationRegeneration(
+      { narrative_source: "ai", narrative_evidence_strength: "Strong" },
+      "Strong",
+    );
     expect(decision).toEqual({ regenerate: false, reason: "stable" });
   });
 
-  it("does not regenerate for a large percentage swing that stays within the Strong tier", () => {
-    const decision = needsExplanationRegeneration({ id: "fs-1" });
+  it("treats a row without a recorded written-at tier (pre-provenance legacy) as stable rather than churning", () => {
+    const decision = needsExplanationRegeneration(
+      { narrative_source: "ai", narrative_evidence_strength: null },
+      "Strong",
+    );
     expect(decision).toEqual({ regenerate: false, reason: "stable" });
   });
 });

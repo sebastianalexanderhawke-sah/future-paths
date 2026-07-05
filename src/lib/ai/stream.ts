@@ -2,15 +2,10 @@ import type { z } from "zod";
 
 import { buildIdentityContext } from "@/lib/ai/context/builder";
 import type { BuildContextOptions } from "@/lib/ai/context/profiles";
-import {
-  getIdentityEngineMode,
-  shouldFallbackToMockOnError,
-} from "@/lib/ai/config";
 import { getPromptDefinition } from "@/lib/ai/prompts/registry";
 import type { PromptId } from "@/lib/ai/prompts/ids";
 import { getIdentityAIProvider } from "@/lib/ai/providers";
 import { streamStructuredGeneration } from "@/lib/ai/providers/claude-provider";
-import { mockProvider } from "@/lib/ai/providers/mock-provider";
 import type { GenerationResult } from "@/lib/ai/types";
 
 export type RunStreamingGenerationOptions<T> = BuildContextOptions & {
@@ -23,8 +18,10 @@ export type RunStreamingGenerationOptions<T> = BuildContextOptions & {
  * token as it arrives from the API. Returns the same GenerationResult when the
  * full response has been parsed and validated.
  *
- * Falls back to the mock provider (no streaming) when the engine is in mock
- * mode or when the primary provider fails and fallback is enabled.
+ * Uses the mock provider (no streaming) only when the engine itself is in
+ * mock mode. There is deliberately no mock fallback on failure: the streaming
+ * routes persist their results (moments, paths, forecasts), and fabricated
+ * mock content must never be stored as if it were real analysis.
  */
 export async function runStreamingGeneration<T>(
   options: RunStreamingGenerationOptions<T>,
@@ -45,7 +42,6 @@ export async function runStreamingGeneration<T>(
     schema: options.schema,
   };
 
-  const mode = getIdentityEngineMode();
   const primaryProvider = getIdentityAIProvider();
 
   if (primaryProvider.id === "mock") {
@@ -53,11 +49,5 @@ export async function runStreamingGeneration<T>(
     return result;
   }
 
-  const result = await streamStructuredGeneration(request, onChunk);
-
-  if (!result.ok && shouldFallbackToMockOnError(mode)) {
-    return mockProvider.completeStructured(request);
-  }
-
-  return result;
+  return streamStructuredGeneration(request, onChunk);
 }
