@@ -76,10 +76,6 @@ export async function generateDiscoveryQuestionsAction(input: {
     return { error: auth.error };
   }
 
-  const __t0 = Date.now();
-  console.log(
-    `[PROFILE] generateDiscoveryQuestionsAction STAGE=follow-up question generation | start=${new Date(__t0).toISOString()}`,
-  );
   try {
     const generationResult = await runStructuredGeneration({
       userId: auth.userId,
@@ -92,9 +88,6 @@ export async function generateDiscoveryQuestionsAction(input: {
         additionalContext: input.additionalContext,
       },
     });
-    console.log(
-      `[PROFILE] generateDiscoveryQuestionsAction STAGE=follow-up question generation | end=${new Date().toISOString()} durationMs=${Date.now() - __t0} ok=${generationResult.ok}`,
-    );
 
     if (
       !generationResult.ok ||

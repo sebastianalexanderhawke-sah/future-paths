@@ -28,10 +28,21 @@ export type StructuredGenerationRequest<T> = {
   };
 };
 
+// Token accounting for a single provider call, as reported by the Anthropic
+// API. Carried on the result (not persisted metadata) so the orchestrator can
+// record it via the usage tracker.
+export type GenerationUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationInputTokens?: number;
+  cacheReadInputTokens?: number;
+};
+
 export type GenerationSuccess<T> = {
   ok: true;
   data: T;
   metadata: GenerationMetadata;
+  usage?: GenerationUsage;
 };
 
 export type GenerationFailure = {

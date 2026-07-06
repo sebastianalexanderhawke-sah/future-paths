@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { archiveMomentAction } from "@/actions/moments";
 import { CheckInCard } from "@/components/check-ins/check-in-card";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
+import { AppShell } from "@/components/overview/app-shell";
 import { ResolveTransformForm } from "@/components/situations/resolve-transform-form";
 import { listCheckInsForMoment } from "@/lib/check-ins";
 import { listIdentityUpdatesForMoment } from "@/lib/identity-updates";
@@ -40,19 +41,22 @@ export default async function ResolvePage({ params }: ResolvePageProps) {
   const chosenPath = paths.find((p) => p.is_chosen) ?? null;
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4">
+    <AppShell activeHref="/moments">
+      {/* Page header */}
+      <div className="mb-10">
         <Link
           href={`/moments/${moment.id}`}
-          className="text-sm text-zinc-500 hover:text-zinc-700"
+          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
         >
           ← Back to situation
         </Link>
-        <h1 className="mt-1 text-lg font-semibold text-zinc-900">{moment.title}</h1>
-        <p className="text-xs text-zinc-400">Before you close this</p>
-      </header>
+        <h1 className="mb-1.5 mt-3 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
+          {moment.title}
+        </h1>
+        <p className="text-[15px] text-[#999999]">Before you close this</p>
+      </div>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-10">
+      <div className="flex max-w-2xl flex-col gap-6 pb-14">
         {/* ── What was navigated ──────────────────────────────────────────── */}
         <section className="rounded-xl border border-zinc-200 bg-white p-6">
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
@@ -108,7 +112,7 @@ export default async function ResolvePage({ params }: ResolvePageProps) {
             <input type="hidden" name="momentId" value={moment.id} />
             <button
               type="submit"
-              className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+              className="cursor-pointer rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
             >
               Mark as complete
             </button>
@@ -128,7 +132,7 @@ export default async function ResolvePage({ params }: ResolvePageProps) {
             <ResolveTransformForm momentId={moment.id} />
           </div>
         </section>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -1,8 +1,6 @@
-import Link from "next/link";
-
 import { generateIdentityPromptsAction } from "@/actions/identity-prompts";
-import { signOut } from "@/actions/auth";
 import { IdentityPromptCard } from "@/components/identity-prompts/identity-prompt-card";
+import { AppShell } from "@/components/overview/app-shell";
 import { listIdentityPrompts } from "@/lib/identity-prompts";
 
 type IdentityPromptsPageProps = {
@@ -17,8 +15,8 @@ export default async function IdentityPromptsPage({
 
   if ("error" in result) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-12">
-        <p className="text-sm text-red-600">{result.error}</p>
+      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
+        <p className="text-[13px] text-red-600">{result.error}</p>
       </div>
     );
   }
@@ -29,54 +27,44 @@ export default async function IdentityPromptsPage({
   );
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
+    <AppShell activeHref="/identity-prompts">
+      {/* Page header */}
+      <div className="mb-10 flex items-start justify-between">
         <div>
-          <Link href="/overview" className="text-sm text-zinc-500 hover:text-zinc-700">
-            Future Paths
-          </Link>
-          <h1 className="text-lg font-semibold text-zinc-900">Identity Prompts</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <form action={generateIdentityPromptsAction}>
-            <button
-              type="submit"
-              className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-            >
-              Generate prompts
-            </button>
-          </form>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
-        {error ? (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+          <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
+            Identity Prompts
+          </h1>
+          <p className="text-[15px] text-[#999999]">
+            Questions drawn from your current self, active futures, and recent
+            shifts — always tentative, never absolute.
           </p>
-        ) : null}
+        </div>
+        <form action={generateIdentityPromptsAction}>
+          <button
+            type="submit"
+            className="shrink-0 cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+          >
+            Generate prompts
+          </button>
+        </form>
+      </div>
 
+      {error ? (
+        <p className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="flex max-w-2xl flex-col gap-8 pb-14">
         <section className="flex flex-col gap-4">
           <div>
-            <h2 className="text-sm font-medium text-zinc-900">Pending</h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Questions drawn from your current self, active futures, recent shifts,
-              and theme signals — always tentative, never absolute.
-            </p>
+            <h2 className="text-[17px] font-bold text-[#111]">Pending</h2>
           </div>
 
           {pendingPrompts.length === 0 ? (
             <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-8 text-center text-sm text-zinc-600">
-              No pending prompts. Capture a moment, check in, then generate new
-              reflection questions.
+              No pending prompts. Start a situation, check in, then generate
+              new questions.
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -90,8 +78,10 @@ export default async function IdentityPromptsPage({
         {answeredPrompts.length > 0 ? (
           <section className="flex flex-col gap-4">
             <div>
-              <h2 className="text-sm font-medium text-zinc-900">Answered</h2>
-              <p className="mt-1 text-sm text-zinc-500">Your recent reflections</p>
+              <h2 className="text-[17px] font-bold text-[#111]">Answered</h2>
+              <p className="mt-[3px] text-[13px] text-[#999999]">
+                Your recent answers
+              </p>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -101,7 +91,7 @@ export default async function IdentityPromptsPage({
             </div>
           </section>
         ) : null}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
-import { signOut } from "@/actions/auth";
 import { AlternateSelfCard } from "@/components/alternate-selves/alternate-self-card";
+import { AppShell } from "@/components/overview/app-shell";
 import { listPastCrossroads } from "@/lib/past-crossroads";
 
 export default async function AlternateSelvesPage() {
@@ -9,8 +9,8 @@ export default async function AlternateSelvesPage() {
 
   if ("error" in result) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-12">
-        <p className="text-sm text-red-600">{result.error}</p>
+      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
+        <p className="text-[13px] text-red-600">{result.error}</p>
       </div>
     );
   }
@@ -18,42 +18,31 @@ export default async function AlternateSelvesPage() {
   const { crossroads } = result;
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
+    <AppShell activeHref="/alternate-selves">
+      {/* Page header */}
+      <div className="mb-10 flex items-start justify-between">
         <div>
-          <Link href="/overview" className="text-sm text-zinc-500 hover:text-zinc-700">
-            Future Paths
-          </Link>
-          <h1 className="text-lg font-semibold text-zinc-900">Alternate Selves</h1>
+          <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
+            Alternate Selves
+          </h1>
+          <p className="text-[15px] text-[#999999]">
+            Past crossroads and the roads not taken — perspective, not regret.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/alternate-selves/new"
-            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-          >
-            New past crossroad
-          </Link>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
+        <Link
+          href="/alternate-selves/new"
+          className="shrink-0 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+        >
+          New past crossroad
+        </Link>
+      </div>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
+      <div className="flex max-w-2xl flex-col gap-8 pb-14">
         <section className="flex flex-col gap-4">
           <div>
-            <h2 className="text-sm font-medium text-zinc-900">
+            <h2 className="text-[17px] font-bold text-[#111]">
               Who could you have become?
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Past crossroads, alternative paths, and alternate selves — perspective,
-              not regret.
-            </p>
           </div>
 
           {crossroads.length === 0 ? (
@@ -69,7 +58,7 @@ export default async function AlternateSelvesPage() {
             </div>
           )}
         </section>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

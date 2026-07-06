@@ -598,10 +598,6 @@ export function SituationEntryFlow() {
   }
 
   function handleContinueFromForecast() {
-    // Decision mode with a chosen path creates a Future Self — set the notification badge.
-    if (isDecisionMode && selectedPathId) {
-      localStorage.setItem("fp:future-selves:new", "1");
-    }
     const momentId =
       pathForecastResult?.momentId ?? forecastResult?.momentId ?? simulatorResult?.momentId;
     if (momentId) {

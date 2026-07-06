@@ -9,6 +9,8 @@ export type UsageEvent = {
   durationMs?: number;
   inputTokens?: number;
   outputTokens?: number;
+  cacheCreationInputTokens?: number;
+  cacheReadInputTokens?: number;
   error?: string;
 };
 

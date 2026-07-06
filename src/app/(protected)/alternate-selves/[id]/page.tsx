@@ -6,8 +6,8 @@ import {
   generateAlternateSelfAction,
   generateAlternativePathsAction,
 } from "@/actions/alternate-selves";
-import { signOut } from "@/actions/auth";
 import { AlternativePathCard } from "@/components/alternate-selves/alternative-path-card";
+import { AppShell } from "@/components/overview/app-shell";
 import { getPastCrossroad } from "@/lib/past-crossroads";
 
 type AlternateSelfDetailPageProps = {
@@ -29,8 +29,8 @@ export default async function AlternateSelfDetailPage({
     }
 
     return (
-      <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-12">
-        <p className="text-sm text-red-600">{result.error}</p>
+      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
+        <p className="text-[13px] text-red-600">{result.error}</p>
       </div>
     );
   }
@@ -40,36 +40,27 @@ export default async function AlternateSelfDetailPage({
   const canSelect = alternativePaths.length > 0;
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
-        <div>
-          <Link
-            href="/alternate-selves"
-            className="text-sm text-zinc-500 hover:text-zinc-700"
-          >
-            Alternate Selves
-          </Link>
-          <h1 className="text-lg font-semibold text-zinc-900">
-            {alternateSelf?.name ?? "Past crossroad"}
-          </h1>
-        </div>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-          >
-            Sign out
-          </button>
-        </form>
-      </header>
+    <AppShell activeHref="/alternate-selves">
+      {/* Page header */}
+      <div className="mb-10">
+        <Link
+          href="/alternate-selves"
+          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
+        >
+          ← Alternate Selves
+        </Link>
+        <h1 className="mb-1.5 mt-3 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
+          {alternateSelf?.name ?? "Past crossroad"}
+        </h1>
+      </div>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
-        {error ? (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </p>
-        ) : null}
+      {error ? (
+        <p className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          {error}
+        </p>
+      ) : null}
 
+      <div className="flex max-w-2xl flex-col gap-8 pb-14">
         <article className="rounded-lg border border-zinc-200 bg-white p-4">
           <p className="text-xs text-zinc-400">
             {new Date(crossroad.created_at).toLocaleDateString()}
@@ -107,7 +98,7 @@ export default async function AlternateSelfDetailPage({
               <input type="hidden" name="crossroadId" value={crossroad.id} />
               <button
                 type="submit"
-                className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+                className="cursor-pointer rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
               >
                 Generate alternative paths
               </button>
@@ -118,7 +109,7 @@ export default async function AlternateSelfDetailPage({
                 <input type="hidden" name="crossroadId" value={crossroad.id} />
                 <button
                   type="submit"
-                  className="text-sm text-zinc-600 underline-offset-4 hover:underline"
+                  className="cursor-pointer text-sm text-zinc-600 underline-offset-4 hover:underline"
                 >
                   Regenerate alternative paths
                 </button>
@@ -150,7 +141,7 @@ export default async function AlternateSelfDetailPage({
                 <input type="hidden" name="crossroadId" value={crossroad.id} />
                 <button
                   type="submit"
-                  className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+                  className="cursor-pointer rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
                 >
                   {alternateSelf ? "Refresh alternate self" : "Generate alternate self"}
                 </button>
@@ -196,12 +187,12 @@ export default async function AlternateSelfDetailPage({
           <input type="hidden" name="crossroadId" value={crossroad.id} />
           <button
             type="submit"
-            className="text-sm text-zinc-500 underline-offset-4 hover:text-zinc-700 hover:underline"
+            className="cursor-pointer text-sm text-zinc-500 underline-offset-4 hover:text-zinc-700 hover:underline"
           >
             Archive this past crossroad
           </button>
         </form>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

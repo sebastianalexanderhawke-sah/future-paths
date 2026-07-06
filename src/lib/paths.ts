@@ -95,9 +95,6 @@ export async function listPathsForMoment(
 export async function generatePaths(
   momentId: string,
 ): Promise<{ paths: Path[] } | { error: string }> {
-  const __t0 = Date.now();
-  console.log(`[PROFILE] generatePaths TOTAL | start=${new Date(__t0).toISOString()} momentId=${momentId}`);
-
   const auth = await requireUser();
   if ("error" in auth) {
     return auth;
@@ -133,13 +130,9 @@ export async function generatePaths(
   }
 
   if (existingPaths && existingPaths.length > 0) {
-    return { error: "Paths have already been generated for this moment." };
+    return { error: "Paths have already been generated for this situation." };
   }
 
-  const __t1 = Date.now();
-  console.log(
-    `[PROFILE] generatePaths STAGE=situation+path generation (crossroad.generate, single combined AI call) | start=${new Date(__t1).toISOString()}`,
-  );
   const generationResult = await runStructuredGeneration({
     userId: auth.userId,
     profile: "crossroad",
@@ -149,18 +142,12 @@ export async function generatePaths(
       momentId,
     },
   });
-  console.log(
-    `[PROFILE] generatePaths STAGE=situation+path generation | end=${new Date().toISOString()} durationMs=${Date.now() - __t1} ok=${generationResult.ok}`,
-  );
 
   if (!generationResult.ok) {
     return { error: generationResult.error };
   }
 
   const generated = generationResult.data;
-
-  const __t2 = Date.now();
-  console.log(`[PROFILE] generatePaths STAGE=database save | start=${new Date(__t2).toISOString()}`);
 
   const persistResult = await persistGeneratedPaths({
     momentId,
@@ -171,13 +158,6 @@ export async function generatePaths(
   if ("error" in persistResult) {
     return persistResult;
   }
-
-  console.log(
-    `[PROFILE] generatePaths STAGE=database save | end=${new Date().toISOString()} durationMs=${Date.now() - __t2}`,
-  );
-  console.log(
-    `[PROFILE] generatePaths TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __t0}`,
-  );
 
   return { paths: persistResult.paths };
 }
@@ -235,7 +215,7 @@ export async function persistGeneratedPaths(input: {
 
   if (pathsError || !insertedPaths) {
     if (pathsError?.code === "23505") {
-      return { error: "Paths have already been generated for this moment." };
+      return { error: "Paths have already been generated for this situation." };
     }
     return { error: pathsError?.message ?? "Failed to generate paths." };
   }
@@ -312,11 +292,6 @@ export async function choosePath(
   momentId: string,
   pathId: string,
 ): Promise<{ path: Path } | { error: string }> {
-  const __choosePathT0 = Date.now();
-  console.log(
-    `[PROFILE] choosePath TOTAL | start=${new Date(__choosePathT0).toISOString()} momentId=${momentId} pathId=${pathId}`,
-  );
-
   const auth = await requireUser();
   if ("error" in auth) {
     return auth;
@@ -352,7 +327,7 @@ export async function choosePath(
   }
 
   if (chosenExisting) {
-    return { error: "A path has already been chosen for this moment." };
+    return { error: "A path has already been chosen for this situation." };
   }
 
   const { data: path, error: pathError } = await supabase
@@ -403,23 +378,9 @@ export async function choosePath(
   // to execute once the response has been sent — the pipeline itself
   // (extraction → recognition → explanation → persistence → current self
   // regeneration) is unchanged, only WHEN it runs has moved.
-  console.log(
-    `[PROFILE] choosePath STAGE=queueFutureSelvesGeneration | SCHEDULED via after() (background, not awaited before response) at ${new Date().toISOString()}`,
-  );
   after(async () => {
-    const __gfsT0 = Date.now();
-    console.log(
-      `[PROFILE] choosePath STAGE=queueFutureSelvesGeneration (BACKGROUND, after response) | start=${new Date(__gfsT0).toISOString()}`,
-    );
     await queueFutureSelvesGeneration(momentId).catch(() => {});
-    console.log(
-      `[PROFILE] choosePath STAGE=queueFutureSelvesGeneration (BACKGROUND) | end=${new Date().toISOString()} durationMs=${Date.now() - __gfsT0}`,
-    );
   });
-
-  console.log(
-    `[PROFILE] choosePath TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __choosePathT0}`,
-  );
 
   return { path: updatedPath };
 }

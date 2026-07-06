@@ -169,7 +169,7 @@ export function SituationForecastSection({
       <OverviewCard className="px-9 py-7">
         <h2 className="text-[17px] font-bold text-[#111]">Check-in</h2>
         <p className="mt-[3px] text-[13px] text-[#888888]">
-          Tell Reflection what happened since your last prediction.
+          Record what actually happened since your last forecast.
         </p>
 
         <div className="mt-5">

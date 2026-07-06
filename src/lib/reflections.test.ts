@@ -21,6 +21,8 @@ const {
   listIdentityUpdatesMock,
   getChosenPathsForMomentsMock,
   getLastCheckInsForMomentsMock,
+  getCurrentSelfMock,
+  getLatestSettledChapterMock,
 } = vi.hoisted(() => ({
   getUserIdentityMock: vi.fn(),
   getUnansweredReflectionSummaryMock: vi.fn(),
@@ -29,6 +31,8 @@ const {
   listIdentityUpdatesMock: vi.fn(),
   getChosenPathsForMomentsMock: vi.fn(),
   getLastCheckInsForMomentsMock: vi.fn(),
+  getCurrentSelfMock: vi.fn(),
+  getLatestSettledChapterMock: vi.fn(),
 }));
 
 vi.mock("@/lib/user-identity", () => ({
@@ -51,6 +55,12 @@ vi.mock("@/lib/paths", () => ({
 }));
 vi.mock("@/lib/check-ins", () => ({
   getLastCheckInsForMoments: getLastCheckInsForMomentsMock,
+}));
+vi.mock("@/lib/current-self", () => ({
+  getCurrentSelf: getCurrentSelfMock,
+}));
+vi.mock("@/lib/monthly-identity-narrative", () => ({
+  getLatestSettledChapter: getLatestSettledChapterMock,
 }));
 vi.mock("@/actions/auth", () => ({
   signOut: vi.fn(),
@@ -212,6 +222,8 @@ describe("overview surfaces the waiting reflection", () => {
     listIdentityUpdatesMock.mockResolvedValue({ identityUpdates: [] });
     getChosenPathsForMomentsMock.mockResolvedValue({});
     getLastCheckInsForMomentsMock.mockResolvedValue({});
+    getCurrentSelfMock.mockResolvedValue({ currentSelf: null });
+    getLatestSettledChapterMock.mockResolvedValue(null);
   });
 
   async function renderOverviewPage(): Promise<string> {

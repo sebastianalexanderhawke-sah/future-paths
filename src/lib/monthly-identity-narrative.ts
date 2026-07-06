@@ -31,6 +31,38 @@ async function requireUser(): Promise<AuthSuccess | AuthFailure> {
 
 const MAX_HOW_YOU_CHANGED_ITEMS = 5;
 
+export type LatestSettledChapter = {
+  month: string;
+  generatedAt: string;
+};
+
+/**
+ * The most recent settled (non-current-month) chapter, read directly from the
+ * persisted narratives table. A pure read for surfaces like the Overview's
+ * "Since your last visit" card — never triggers narrative generation, unlike
+ * loadMonthlyIdentityNarratives. generated_at is the row's creation time
+ * (upserts only touch updated_at), so it marks when the chapter first
+ * appeared.
+ */
+export async function getLatestSettledChapter(): Promise<LatestSettledChapter | null> {
+  const auth = await requireUser();
+  if ("error" in auth) {
+    return null;
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("monthly_identity_narratives")
+    .select("month, generated_at")
+    .eq("user_id", auth.userId)
+    .neq("month", currentMonthLabel())
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data ? { month: data.month, generatedAt: data.generated_at } : null;
+}
+
 export type MonthlyIdentityNarrative = {
   month: string;
   headline: string;

@@ -52,10 +52,7 @@ export async function extractBehaviorObservations(
     return { ok: false, error: "ANTHROPIC_API_KEY is not configured." };
   }
 
-  const __aiT0 = Date.now();
-  console.log(
-    `[PROFILE] extractBehaviorObservations STAGE=Anthropic API call | start=${new Date(__aiT0).toISOString()}`,
-  );
+  const startedAt = Date.now();
   try {
     const client = new Anthropic({ apiKey });
     const controller = new AbortController();
@@ -66,15 +63,34 @@ export async function extractBehaviorObservations(
         model: getClaudeModel(),
         max_tokens: 1024,
         temperature: 0.2,
-        system: behaviorExtractV1.buildSystemPrompt(),
+        // Static system prompt marked as a cacheable prefix — cost only,
+        // never affects output. Extraction runs in bursts (situation + each
+        // check-in source), so repeats within the cache TTL are common.
+        system: [
+          {
+            type: "text",
+            text: behaviorExtractV1.buildSystemPrompt(),
+            cache_control: { type: "ephemeral" },
+          },
+        ],
         messages: [{ role: "user", content: behaviorExtractV1.buildUserPrompt(input) }],
       },
       { signal: controller.signal },
     );
 
     clearTimeout(timeout);
+
     console.log(
-      `[PROFILE] extractBehaviorObservations STAGE=Anthropic API call | end=${new Date().toISOString()} durationMs=${Date.now() - __aiT0}`,
+      `[ai-usage] ${JSON.stringify({
+        promptId: "behavior_extract",
+        provider: "claude",
+        success: true,
+        durationMs: Date.now() - startedAt,
+        inputTokens: response.usage?.input_tokens,
+        outputTokens: response.usage?.output_tokens,
+        cacheCreationInputTokens: response.usage?.cache_creation_input_tokens ?? undefined,
+        cacheReadInputTokens: response.usage?.cache_read_input_tokens ?? undefined,
+      })}`,
     );
 
     const text = response.content
@@ -92,11 +108,9 @@ export async function extractBehaviorObservations(
 
     return { ok: true, data };
   } catch (error) {
-    console.log(
-      `[PROFILE] extractBehaviorObservations STAGE=Anthropic API call | THREW at ${new Date().toISOString()} durationMs=${Date.now() - __aiT0}`,
-    );
     const message =
       error instanceof Error ? error.message : "Behavior extraction failed.";
+    console.error(`[extractBehaviorObservations] Extraction failed: ${message}`);
     return { ok: false, error: message };
   }
 }
@@ -118,10 +132,6 @@ export async function extractAndPersistBehaviorObservations(
   userId: string,
   momentId: string,
 ): Promise<PersistResult> {
-  const __t0 = Date.now();
-  console.log(
-    `[PROFILE] extractAndPersistBehaviorObservations TOTAL | start=${new Date(__t0).toISOString()} momentId=${momentId}`,
-  );
   const supabase = await createClient();
 
   const [momentResult, pathResult] = await Promise.all([
@@ -161,9 +171,6 @@ export async function extractAndPersistBehaviorObservations(
   const result = await extractBehaviorObservations(input);
 
   if (!result.ok) {
-    console.log(
-      `[PROFILE] extractAndPersistBehaviorObservations TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __t0} (extraction failed)`,
-    );
     return { ok: false, inserted: 0, error: result.error };
   }
 
@@ -174,8 +181,6 @@ export async function extractAndPersistBehaviorObservations(
     checkInId: null,
     sourceType: "situation_complete",
     observations: result.data.observations,
-    profileLabel: "extractAndPersistBehaviorObservations",
-    startedAt: __t0,
   });
 }
 
@@ -196,10 +201,6 @@ export async function extractAndPersistCheckInObservations(
   checkInId: string,
   source: CheckInObservationSource,
 ): Promise<PersistResult> {
-  const __t0 = Date.now();
-  console.log(
-    `[PROFILE] extractAndPersistCheckInObservations TOTAL | start=${new Date(__t0).toISOString()} checkInId=${checkInId} source=${source}`,
-  );
   const supabase = await createClient();
 
   const { data: checkIn, error: checkInError } = await supabase
@@ -272,9 +273,6 @@ export async function extractAndPersistCheckInObservations(
   const result = await extractBehaviorObservations(input);
 
   if (!result.ok) {
-    console.log(
-      `[PROFILE] extractAndPersistCheckInObservations TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __t0} (extraction failed)`,
-    );
     return { ok: false, inserted: 0, error: result.error };
   }
 
@@ -285,8 +283,6 @@ export async function extractAndPersistCheckInObservations(
     checkInId,
     sourceType: source,
     observations: result.data.observations,
-    profileLabel: "extractAndPersistCheckInObservations",
-    startedAt: __t0,
   });
 }
 
@@ -297,15 +293,10 @@ async function persistObservations(input: {
   checkInId: string | null;
   sourceType: string;
   observations: BehaviorExtractionOutput["observations"];
-  profileLabel: string;
-  startedAt: number;
 }): Promise<PersistResult> {
-  const { supabase, userId, momentId, checkInId, sourceType, observations, profileLabel, startedAt } = input;
+  const { supabase, userId, momentId, checkInId, sourceType, observations } = input;
 
   if (observations.length === 0) {
-    console.log(
-      `[PROFILE] ${profileLabel} TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - startedAt} (0 observations)`,
-    );
     return { ok: true, inserted: 0 };
   }
 
@@ -323,14 +314,8 @@ async function persistObservations(input: {
     .insert(rows);
 
   if (insertError) {
-    console.log(
-      `[PROFILE] ${profileLabel} TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - startedAt} (insert failed)`,
-    );
     return { ok: false, inserted: 0, error: insertError.message };
   }
 
-  console.log(
-    `[PROFILE] ${profileLabel} TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - startedAt} inserted=${rows.length}`,
-  );
   return { ok: true, inserted: rows.length };
 }

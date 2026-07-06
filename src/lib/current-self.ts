@@ -64,13 +64,13 @@ async function loadGenerationInput(userId: string): Promise<GenerationInput> {
     return { error: "Not authenticated." };
   }
 
+  // Prerequisite gating only needs counts. The previous version also read the
+  // full paths/check_ins/identity_updates tables and discarded the rows — the
+  // context builder loads what generation actually uses.
   const [
     { count: momentCount, error: momentError },
     { count: checkInCount, error: checkInCountError },
-    { data: activeFutureSelves, error: futuresError },
-    { error: pathsError },
-    { error: checkInsError },
-    { error: updatesError },
+    { count: activeFutureSelfCount, error: futuresError },
   ] = await Promise.all([
     supabase
       .from("moments")
@@ -82,34 +82,17 @@ async function loadGenerationInput(userId: string): Promise<GenerationInput> {
       .eq("user_id", userId),
     supabase
       .from("future_selves")
-      .select("id")
+      .select("*", { count: "exact", head: true })
       .eq("user_id", userId)
       .eq("status", "active"),
-    supabase
-      .from("paths")
-      .select("themes")
-      .eq("user_id", userId)
-      .eq("is_chosen", true),
-    supabase.from("check_ins").select("theme_changes").eq("user_id", userId),
-    supabase.from("identity_updates").select("themes").eq("user_id", userId),
   ]);
 
-  if (
-    momentError ||
-    checkInCountError ||
-    futuresError ||
-    pathsError ||
-    checkInsError ||
-    updatesError
-  ) {
+  if (momentError || checkInCountError || futuresError) {
     return {
       error:
         momentError?.message ??
         checkInCountError?.message ??
         futuresError?.message ??
-        pathsError?.message ??
-        checkInsError?.message ??
-        updatesError?.message ??
         "Failed to load history.",
     };
   }
@@ -117,7 +100,7 @@ async function loadGenerationInput(userId: string): Promise<GenerationInput> {
   return {
     momentCount: momentCount ?? 0,
     checkInCount: checkInCount ?? 0,
-    activeFutureSelfCount: activeFutureSelves?.length ?? 0,
+    activeFutureSelfCount: activeFutureSelfCount ?? 0,
   };
 }
 
@@ -153,10 +136,6 @@ export async function generateCurrentSelf(
     return { error: CURRENT_SELF_PREREQUISITE_ERROR };
   }
 
-  const __aiT0 = Date.now();
-  console.log(
-    `[PROFILE] generateCurrentSelf STAGE=current_self.generate AI call | start=${new Date(__aiT0).toISOString()}`,
-  );
   const generationResult = await runStructuredGeneration({
     userId: auth.userId,
     profile: "current_self",
@@ -166,9 +145,6 @@ export async function generateCurrentSelf(
       ? { reflectionQA: reflectionInput.reflection }
       : undefined,
   });
-  console.log(
-    `[PROFILE] generateCurrentSelf STAGE=current_self.generate AI call | end=${new Date().toISOString()} durationMs=${Date.now() - __aiT0} ok=${generationResult.ok}`,
-  );
 
   if (!generationResult.ok) {
     return { error: generationResult.error };
@@ -275,10 +251,17 @@ export async function getActivitySummary(): Promise<ActivitySummary> {
       .from("check_ins")
       .select("*", { count: "exact", head: true })
       .eq("user_id", auth.userId),
+    // "Reflections" in the product vocabulary are answered reflection
+    // questions on check-ins — not identity-prompt responses, which this
+    // stat previously counted and which read 0 beside the "built only from
+    // what you've recorded" promise.
     supabase
-      .from("identity_prompt_responses")
+      .from("check_ins")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", auth.userId),
+      .eq("user_id", auth.userId)
+      .not("reflection_question", "is", null)
+      .not("reflection_answer", "is", null)
+      .neq("reflection_answer", ""),
     supabase
       .from("moments")
       .select("created_at")
@@ -314,22 +297,12 @@ export async function requestCurrentSelfRegeneration(
   userId: string,
   options?: { immediate?: boolean; reflectionInput?: GenerateCurrentSelfInput },
 ): Promise<void> {
-  const __t0 = Date.now();
-  console.log(
-    `[PROFILE] requestCurrentSelfRegeneration | start=${new Date(__t0).toISOString()} immediate=${Boolean(options?.immediate)}`,
-  );
   if (!options?.immediate) {
     const updatedAt = await getCurrentSelfUpdatedAt(userId);
     if (updatedAt && Date.now() - new Date(updatedAt).getTime() < REGENERATION_DEBOUNCE_MS) {
-      console.log(
-        `[PROFILE] requestCurrentSelfRegeneration | SKIPPED (debounced) end=${new Date().toISOString()} durationMs=${Date.now() - __t0}`,
-      );
       return;
     }
   }
 
   await generateCurrentSelf(options?.reflectionInput).catch(() => {});
-  console.log(
-    `[PROFILE] requestCurrentSelfRegeneration | end=${new Date().toISOString()} durationMs=${Date.now() - __t0}`,
-  );
 }

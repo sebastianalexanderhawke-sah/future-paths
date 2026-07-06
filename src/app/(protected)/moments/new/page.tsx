@@ -1,21 +1,27 @@
 import Link from "next/link";
 
 import { SituationEntryFlow } from "@/components/home/situation-entry-flow";
+import { AppShell } from "@/components/overview/app-shell";
+import { OverviewCard } from "@/components/overview/overview-card";
 
 export default function NewSituationPage() {
   return (
-    <div className="flex flex-1 flex-col bg-white">
-      <header className="border-b border-zinc-100 px-6 py-4">
+    <AppShell activeHref="/moments">
+      {/* Page header — the flow supplies its own stage headings. */}
+      <div className="mb-8">
         <Link
           href="/overview"
-          className="text-sm text-zinc-400 transition-colors hover:text-zinc-600"
+          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
         >
-          ← Home
+          ← Overview
         </Link>
-      </header>
-      <main className="mx-auto flex w-full max-w-2xl flex-col px-6 py-12">
-        <SituationEntryFlow />
-      </main>
-    </div>
+      </div>
+
+      <div className="max-w-2xl pb-14">
+        <OverviewCard className="px-9 py-9">
+          <SituationEntryFlow />
+        </OverviewCard>
+      </div>
+    </AppShell>
   );
 }

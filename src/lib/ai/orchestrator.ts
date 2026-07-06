@@ -17,19 +17,9 @@ export async function runStructuredGeneration<T>(
   options: RunStructuredGenerationOptions<T>,
 ): Promise<GenerationResult<T>> {
   const startedAt = Date.now();
-  console.log(
-    `[PROFILE] runStructuredGeneration TOTAL promptId=${options.promptId} | start=${new Date(startedAt).toISOString()}`,
-  );
   const prompt = getPromptDefinition(options.promptId);
 
-  const __ctxT0 = Date.now();
-  console.log(
-    `[PROFILE] runStructuredGeneration DB_QUERY buildIdentityContext promptId=${options.promptId} | start=${new Date(__ctxT0).toISOString()}`,
-  );
   const contextResult = await buildIdentityContext(options);
-  console.log(
-    `[PROFILE] runStructuredGeneration DB_QUERY buildIdentityContext promptId=${options.promptId} | end=${new Date().toISOString()} durationMs=${Date.now() - __ctxT0}`,
-  );
 
   if ("error" in contextResult) {
     return {
@@ -59,11 +49,12 @@ export async function runStructuredGeneration<T>(
       provider: primaryResult.metadata.provider,
       success: true,
       durationMs: Date.now() - startedAt,
+      inputTokens: primaryResult.usage?.inputTokens,
+      outputTokens: primaryResult.usage?.outputTokens,
+      cacheCreationInputTokens: primaryResult.usage?.cacheCreationInputTokens,
+      cacheReadInputTokens: primaryResult.usage?.cacheReadInputTokens,
     });
 
-    console.log(
-      `[PROFILE] runStructuredGeneration TOTAL promptId=${options.promptId} | end=${new Date().toISOString()} durationMs=${Date.now() - startedAt}`,
-    );
     return primaryResult;
   }
 

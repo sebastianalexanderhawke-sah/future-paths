@@ -52,7 +52,7 @@ export default async function TimelinePage() {
                   No monthly chapters yet.
                 </p>
                 <p className="mt-2 max-w-[400px] text-[13px] leading-relaxed text-[#999999]">
-                  Capture moments, choose paths, and check in — your first
+                  Start situations, choose paths, and check in — your first
                   chapter appears once a month of activity accumulates.
                 </p>
               </div>

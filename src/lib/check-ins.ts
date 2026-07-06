@@ -105,11 +105,11 @@ function validateReflection(reflection: string): string | null {
   const trimmed = reflection.trim();
 
   if (!trimmed) {
-    return "Reflection is required.";
+    return "Describe what happened first.";
   }
 
   if (trimmed.length > REFLECTION_MAX_LENGTH) {
-    return `Reflection must be ${REFLECTION_MAX_LENGTH} characters or fewer.`;
+    return `Check-ins must be ${REFLECTION_MAX_LENGTH} characters or fewer.`;
   }
 
   return null;

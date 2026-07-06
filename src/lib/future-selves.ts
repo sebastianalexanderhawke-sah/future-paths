@@ -293,11 +293,6 @@ export async function generateFutureSelves(
   momentId?: string,
   trigger?: FutureSelvesGenerationTrigger,
 ): Promise<{ futureSelves: FutureSelf[] } | { error: string }> {
-  const __gfsT0 = Date.now();
-  console.log(
-    `[PROFILE] generateFutureSelves TOTAL | start=${new Date(__gfsT0).toISOString()} momentId=${momentId} trigger=${trigger ? `${trigger.source}:${trigger.checkInId}` : "none"}`,
-  );
-
   const auth = await requireUser();
   if ("error" in auth) {
     return auth;
@@ -306,21 +301,8 @@ export async function generateFutureSelves(
   const supabase = await createClient();
 
   // Step 1: Extract behavior for the triggering moment if not yet done.
-  const __step1T0 = Date.now();
-  console.log(
-    `[PROFILE] generateFutureSelves STAGE=1 behavior extraction | start=${new Date(__step1T0).toISOString()}`,
-  );
   if (momentId) {
-    const outcome = await ensureBehaviorObservationsForMoment(auth.userId, momentId);
-    if (outcome === "skipped") {
-      console.log(
-        `[PROFILE] generateFutureSelves STAGE=1 behavior extraction | SKIPPED (already extracted for this moment)`,
-      );
-    }
-  } else {
-    console.log(
-      `[PROFILE] generateFutureSelves STAGE=1 behavior extraction | SKIPPED (no momentId provided)`,
-    );
+    await ensureBehaviorObservationsForMoment(auth.userId, momentId);
   }
 
   // Step 1b: Lived evidence. When this run was triggered by a check-in or an
@@ -329,28 +311,15 @@ export async function generateFutureSelves(
   // this idempotent). This is the step that turns lived experience into
   // evidence the recognition engine can actually see.
   if (trigger) {
-    const outcome = await ensureCheckInObservations(auth.userId, trigger);
-    console.log(
-      `[PROFILE] generateFutureSelves STAGE=1b lived-evidence extraction | source=${trigger.source} checkInId=${trigger.checkInId} outcome=${outcome}`,
-    );
+    await ensureCheckInObservations(auth.userId, trigger);
   }
-  console.log(
-    `[PROFILE] generateFutureSelves STAGE=1 behavior extraction | end=${new Date().toISOString()} durationMs=${Date.now() - __step1T0}`,
-  );
 
   // Step 2: Load all behavior observations for this user, joined with moment titles.
-  const __step2T0 = Date.now();
-  console.log(
-    `[PROFILE] generateFutureSelves DB_QUERY Step2 load observations | start=${new Date(__step2T0).toISOString()}`,
-  );
   const { data: rawObservations, error: obsError } = await supabase
     .from("behavior_observations")
     .select("id, observation, signals, moment_id, extracted_at, moments(title)")
     .eq("user_id", auth.userId)
     .order("extracted_at", { ascending: true });
-  console.log(
-    `[PROFILE] generateFutureSelves DB_QUERY Step2 load observations | end=${new Date().toISOString()} durationMs=${Date.now() - __step2T0} rows=${rawObservations?.length}`,
-  );
 
   if (obsError) {
     return { error: obsError.message };
@@ -372,14 +341,7 @@ export async function generateFutureSelves(
   }));
 
   // Step 4: Deterministic identity recognition — no AI involved.
-  const __step4T0 = Date.now();
-  console.log(
-    `[PROFILE] generateFutureSelves STAGE=4 identity recognition (deterministic, no AI) | start=${new Date(__step4T0).toISOString()}`,
-  );
   const recognizedIdentities = recognizeIdentitiesWithAttribution(observations);
-  console.log(
-    `[PROFILE] generateFutureSelves STAGE=4 identity recognition | end=${new Date().toISOString()} durationMs=${Date.now() - __step4T0} matches=${recognizedIdentities.length}`,
-  );
 
   // The Identity Engine is the sole source of Future Selves — never fall
   // back to legacy rows. If nothing clears the normal threshold, use the
@@ -393,17 +355,10 @@ export async function generateFutureSelves(
       : recognizeIdentitiesWithAttribution(observations, { minLikelihood: 0, maxResults: 1 });
 
   // Step 5: Load existing future_selves rows for continuity matching.
-  const __step5T0 = Date.now();
-  console.log(
-    `[PROFILE] generateFutureSelves DB_QUERY Step5 load existing rows | start=${new Date(__step5T0).toISOString()}`,
-  );
   const { data: existingRows, error: existingError } = await supabase
     .from("future_selves")
     .select("*")
     .eq("user_id", auth.userId);
-  console.log(
-    `[PROFILE] generateFutureSelves DB_QUERY Step5 load existing rows | end=${new Date().toISOString()} durationMs=${Date.now() - __step5T0} rows=${existingRows?.length}`,
-  );
 
   if (existingError) {
     return { error: existingError.message };
@@ -444,22 +399,10 @@ export async function generateFutureSelves(
   // blind_spots / likely_evolution — only percentage, evidence, and
   // supporting data update below regardless of this decision.
   const entriesNeedingRegeneration = entries.filter((e) => e.decision.regenerate);
-  const __step7T0 = Date.now();
-  console.log(
-    `[PROFILE] generateFutureSelves STAGE=7 AI explanation (explainIdentities) | start=${new Date(__step7T0).toISOString()} entryCount=${entries.length} regenerating=${entriesNeedingRegeneration.length} skipped=${entries.length - entriesNeedingRegeneration.length}`,
-  );
   const explanationResults = await explainIdentities(
     entriesNeedingRegeneration.map(({ match, profile }) => ({ match, profile })),
   );
-  console.log(
-    `[PROFILE] generateFutureSelves STAGE=7 AI explanation | end=${new Date().toISOString()} durationMs=${Date.now() - __step7T0}`,
-  );
   const explanationById = new Map(explanationResults.map((r) => [r.identityId, r]));
-
-  const __step8T0 = Date.now();
-  console.log(
-    `[PROFILE] generateFutureSelves STAGE=8 future self persistence (DB writes) | start=${new Date(__step8T0).toISOString()}`,
-  );
 
   const now = new Date().toISOString();
   // Track which existing row IDs were matched this run (for fading unmatched rows).
@@ -657,28 +600,10 @@ export async function generateFutureSelves(
     hasMeaningfulTransition = true;
   }
 
-  console.log(
-    `[PROFILE] generateFutureSelves STAGE=8 future self persistence | end=${new Date().toISOString()} durationMs=${Date.now() - __step8T0}`,
-  );
 
-  const __step9T0 = Date.now();
-  console.log(
-    `[PROFILE] generateFutureSelves STAGE=9 current self regeneration | start=${new Date(__step9T0).toISOString()} hasMeaningfulTransition=${hasMeaningfulTransition}`,
-  );
   if (hasMeaningfulTransition) {
     await requestCurrentSelfRegeneration(auth.userId);
-  } else {
-    console.log(
-      `[PROFILE] generateFutureSelves STAGE=9 current self regeneration | SKIPPED (no meaningful transition)`,
-    );
   }
-  console.log(
-    `[PROFILE] generateFutureSelves STAGE=9 current self regeneration | end=${new Date().toISOString()} durationMs=${Date.now() - __step9T0}`,
-  );
-
-  console.log(
-    `[PROFILE] generateFutureSelves TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __gfsT0}`,
-  );
 
   return listFutureSelves({ status: "active" });
 }

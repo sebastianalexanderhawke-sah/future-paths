@@ -49,7 +49,7 @@ export function CheckInForm({ momentId, onBeforeSubmit }: CheckInFormProps) {
           htmlFor="reflection"
           className="text-[13px] font-medium text-[#666666]"
         >
-          Update this situation
+          What actually happened?
         </label>
         <textarea
           id="reflection"

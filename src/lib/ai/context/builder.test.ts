@@ -18,7 +18,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 const { buildIdentityContext } = await import("@/lib/ai/context/builder");
 
-const CHAINABLE_METHODS = ["select", "eq", "order", "limit", "in", "neq"] as const;
+const CHAINABLE_METHODS = ["select", "eq", "order", "limit", "in", "neq", "not"] as const;
 
 function createSupabaseStub(tableResponses: Record<string, TableResponse>) {
   function makeBuilder(table: string) {

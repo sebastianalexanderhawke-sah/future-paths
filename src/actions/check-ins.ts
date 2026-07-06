@@ -25,7 +25,7 @@ export async function createCheckInAction(
   }
 
   if (typeof reflection !== "string") {
-    return { error: "Reflection is required." };
+    return { error: "Describe what happened first." };
   }
 
   const result = await createCheckIn(

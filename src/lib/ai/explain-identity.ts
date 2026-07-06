@@ -196,55 +196,16 @@ function fallbackResults(
 // ---------------------------------------------------------------------------
 
 function extractJson(text: string): unknown {
-  console.log(`[IDENTITY-DEBUG] extractJson start | inputChars=${text.length}`);
   const trimmed = text.trim();
   try {
-    console.log(`[IDENTITY-DEBUG] JSON.parse attempt=direct start`);
-    const result = JSON.parse(trimmed);
-    console.log(`[IDENTITY-DEBUG] JSON.parse attempt=direct end | success=true`);
-    console.log(`[IDENTITY-DEBUG] extractJson end | branch=direct`);
-    return result;
-  } catch (directError) {
-    console.log(
-      `[IDENTITY-DEBUG] JSON.parse attempt=direct end | success=false error=${
-        directError instanceof Error ? `${directError.name}: ${directError.message}` : String(directError)
-      }`,
-    );
+    return JSON.parse(trimmed);
+  } catch {
     const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    if (fenced?.[1]) {
-      console.log(`[IDENTITY-DEBUG] JSON.parse attempt=fenced start`);
-      try {
-        const result = JSON.parse(fenced[1].trim());
-        console.log(`[IDENTITY-DEBUG] JSON.parse attempt=fenced end | success=true`);
-        console.log(`[IDENTITY-DEBUG] extractJson end | branch=fenced`);
-        return result;
-      } catch (fencedError) {
-        console.log(
-          `[IDENTITY-DEBUG] JSON.parse attempt=fenced end | success=false error=${
-            fencedError instanceof Error ? `${fencedError.name}: ${fencedError.message}` : String(fencedError)
-          }`,
-        );
-        throw fencedError;
-      }
-    }
+    if (fenced?.[1]) return JSON.parse(fenced[1].trim());
+
     const start = trimmed.indexOf("{");
-    if (start >= 0) {
-      console.log(`[IDENTITY-DEBUG] JSON.parse attempt=slice-from-brace start | braceIndex=${start}`);
-      try {
-        const result = JSON.parse(trimmed.slice(start));
-        console.log(`[IDENTITY-DEBUG] JSON.parse attempt=slice-from-brace end | success=true`);
-        console.log(`[IDENTITY-DEBUG] extractJson end | branch=slice-from-brace`);
-        return result;
-      } catch (sliceError) {
-        console.log(
-          `[IDENTITY-DEBUG] JSON.parse attempt=slice-from-brace end | success=false error=${
-            sliceError instanceof Error ? `${sliceError.name}: ${sliceError.message}` : String(sliceError)
-          }`,
-        );
-        throw sliceError;
-      }
-    }
-    console.log(`[IDENTITY-DEBUG] extractJson end | branch=none-found`);
+    if (start >= 0) return JSON.parse(trimmed.slice(start));
+
     throw new Error("Response did not contain JSON.");
   }
 }
@@ -400,41 +361,29 @@ function buildUserPrompt(
 export async function explainIdentities(
   entries: Array<{ profile: IdentityProfile; match: IdentityMatchWithAttribution }>,
 ): Promise<IdentityExplanationResult[]> {
-  console.log(`[IDENTITY-DEBUG] enter explainIdentities | entryCount=${entries.length}`);
-
   if (entries.length === 0) {
     return [];
   }
 
   const providerMode = resolveProviderForMode();
-  console.log(`[IDENTITY-DEBUG] provider selected | provider=${providerMode}`);
 
   if (providerMode === "mock") {
-    console.log(`[IDENTITY-DEBUG] fallbackResults() executing | reason=provider_mock`);
     return fallbackResults(entries);
   }
 
   const apiKey = getAnthropicApiKey();
-  console.log(`[IDENTITY-DEBUG] api key present | present=${Boolean(apiKey)}`);
   if (!apiKey) {
-    console.log(`[IDENTITY-DEBUG] fallbackResults() executing | reason=missing_api_key`);
     return fallbackResults(entries);
   }
 
   const model = getClaudeModel();
-  console.log(`[IDENTITY-DEBUG] model used | model=${model}`);
-  console.log(`[IDENTITY-DEBUG] number of identities | count=${entries.length}`);
+  const startedAt = Date.now();
 
   try {
     const client = new Anthropic({ apiKey });
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), getGenerationTimeoutMs());
 
-    const __aiWaitT0 = Date.now();
-    console.log(
-      `[PROFILE] explainIdentities AI_WAIT | start=${new Date(__aiWaitT0).toISOString()} entryCount=${entries.length}`,
-    );
-    console.log(`[IDENTITY-DEBUG] AI request started | model=${model} entryCount=${entries.length}`);
     const response = await client.messages.create(
       {
         model,
@@ -442,22 +391,35 @@ export async function explainIdentities(
         // and person-level predictions per identity) — 2048 truncated these.
         max_tokens: 8192,
         temperature: 0.3,
-        system: buildSystemPrompt(),
+        // Static system prompt marked as a cacheable prefix — cost only,
+        // never affects output. See claude-provider for the same pattern.
+        system: [
+          {
+            type: "text",
+            text: buildSystemPrompt(),
+            cache_control: { type: "ephemeral" },
+          },
+        ],
         messages: [{ role: "user", content: buildUserPrompt(entries) }],
       },
       { signal: controller.signal },
     );
-    console.log(
-      `[PROFILE] explainIdentities AI_WAIT | end=${new Date().toISOString()} durationMs=${Date.now() - __aiWaitT0}`,
-    );
-    console.log(
-      `[IDENTITY-DEBUG] AI request completed | stopReason=${response.stop_reason} durationMs=${Date.now() - __aiWaitT0}`,
-    );
-    console.log(
-      `[IDENTITY-DEBUG] token usage | inputTokens=${response.usage?.input_tokens} outputTokens=${response.usage?.output_tokens}`,
-    );
 
     clearTimeout(timeout);
+
+    console.log(
+      `[ai-usage] ${JSON.stringify({
+        promptId: "explain_identity.batch",
+        provider: "claude",
+        success: true,
+        durationMs: Date.now() - startedAt,
+        entryCount: entries.length,
+        inputTokens: response.usage?.input_tokens,
+        outputTokens: response.usage?.output_tokens,
+        cacheCreationInputTokens: response.usage?.cache_creation_input_tokens ?? undefined,
+        cacheReadInputTokens: response.usage?.cache_read_input_tokens ?? undefined,
+      })}`,
+    );
 
     const text = response.content
       .filter((block) => block.type === "text")
@@ -465,63 +427,13 @@ export async function explainIdentities(
       .join("\n")
       .trim();
 
-    console.log(`[IDENTITY-DEBUG] raw response length | chars=${text.length}`);
-    console.log(`[IDENTITY-DEBUG] raw response first 500 chars | text=${JSON.stringify(text.slice(0, 500))}`);
-    console.log(`[IDENTITY-DEBUG] raw response last 500 chars | text=${JSON.stringify(text.slice(-500))}`);
-
     if (!text) {
-      console.log(`[IDENTITY-DEBUG] fallbackResults() executing | reason=empty_response_text`);
+      console.warn("[explainIdentities] Empty response — using fallback narratives.");
       return fallbackResults(entries);
     }
 
-    const __parseT0 = Date.now();
-    console.log(`[PROFILE] explainIdentities PARSE | start=${new Date(__parseT0).toISOString()}`);
-
-    let raw: unknown;
-    try {
-      raw = extractJson(text);
-      console.log(`[IDENTITY-DEBUG] JSON extraction | success=true`);
-      console.log(
-        `[IDENTITY-DEBUG] parsed JSON keys | keys=${
-          raw && typeof raw === "object" ? JSON.stringify(Object.keys(raw)) : `n/a (typeof=${typeof raw})`
-        }`,
-      );
-    } catch (jsonError) {
-      console.log(
-        `[IDENTITY-DEBUG] JSON extraction | success=false error=${
-          jsonError instanceof Error ? `${jsonError.name}: ${jsonError.message}` : String(jsonError)
-        }`,
-      );
-      throw jsonError;
-    }
-
-    let parsed: ReturnType<typeof batchResponseSchema.parse>;
-    console.log(`[IDENTITY-DEBUG] batchResponseSchema.parse start`);
-    try {
-      parsed = batchResponseSchema.parse(raw);
-      console.log(`[IDENTITY-DEBUG] batchResponseSchema.parse end | success=true`);
-      console.log(`[IDENTITY-DEBUG] Zod validation | success=true`);
-    } catch (zodError) {
-      console.log(`[IDENTITY-DEBUG] batchResponseSchema.parse end | success=false`);
-      console.log(
-        `[IDENTITY-DEBUG] Zod validation | success=false fullError=${
-          zodError instanceof z.ZodError ? JSON.stringify(zodError.issues, null, 2) : String(zodError)
-        }`,
-      );
-      if (zodError instanceof z.ZodError) {
-        for (const issue of zodError.issues) {
-          console.log(
-            `[IDENTITY-DEBUG] invalid field | path=${issue.path.join(".")} code=${issue.code} message=${issue.message}`,
-          );
-        }
-      }
-      throw zodError;
-    }
-
-    console.log(
-      `[PROFILE] explainIdentities PARSE | end=${new Date().toISOString()} durationMs=${Date.now() - __parseT0}`,
-    );
-    console.log(`[IDENTITY-DEBUG] explanations parsed | count=${parsed.identities.length}`);
+    const raw = extractJson(text);
+    const parsed = batchResponseSchema.parse(raw);
 
     // Index by identity_id so we can merge back in input order.
     // Any identity the model omitted gets a fallback — partial failures
@@ -538,13 +450,6 @@ export async function explainIdentities(
       ]),
     );
 
-    const missingIdentityIds = entries
-      .map(({ match }) => match.identityId)
-      .filter((id) => !byIdentityId.has(id));
-    console.log(
-      `[IDENTITY-DEBUG] missing identity_ids | count=${missingIdentityIds.length} ids=${JSON.stringify(missingIdentityIds)}`,
-    );
-
     return entries.map(({ match }) => {
       const explanation = byIdentityId.get(match.identityId);
       return explanation
@@ -556,14 +461,15 @@ export async function explainIdentities(
           };
     });
   } catch (error) {
-    console.log(
-      `[IDENTITY-DEBUG] caught error | name=${
-        error instanceof Error ? error.name : typeof error
-      } message=${error instanceof Error ? error.message : String(error)} stack=${
-        error instanceof Error ? error.stack : "n/a"
-      }`,
-    );
-    console.log(`[IDENTITY-DEBUG] fallbackResults() executing | reason=caught_exception`);
+    // Failures degrade to fallback narratives (repaired on a later run via
+    // narrative_source) — keep the diagnostic that explains why.
+    const detail =
+      error instanceof z.ZodError
+        ? JSON.stringify(error.issues)
+        : error instanceof Error
+          ? error.message
+          : String(error);
+    console.error(`[explainIdentities] Generation failed — using fallback narratives: ${detail}`);
     return fallbackResults(entries);
   }
 }

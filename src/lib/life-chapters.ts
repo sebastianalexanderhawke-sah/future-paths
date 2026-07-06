@@ -10,7 +10,7 @@ type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
 
 const INSUFFICIENT_SIGNAL_ERROR =
-  "Not enough meaningful identity signal to form life chapters yet. Capture moments, check in, and reflect first.";
+  "Not enough meaningful identity signal to form life chapters yet. Start situations, check in, and reflect first.";
 
 async function requireUser(): Promise<AuthSuccess | AuthFailure> {
   const supabase = await createClient();

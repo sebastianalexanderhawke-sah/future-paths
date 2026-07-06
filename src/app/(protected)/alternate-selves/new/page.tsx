@@ -1,28 +1,32 @@
 import Link from "next/link";
 
 import { PastCrossroadForm } from "@/components/alternate-selves/past-crossroad-form";
+import { AppShell } from "@/components/overview/app-shell";
 
 export default function NewAlternateSelfPage() {
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4">
+    <AppShell activeHref="/alternate-selves">
+      {/* Page header */}
+      <div className="mb-10">
         <Link
           href="/alternate-selves"
-          className="text-sm text-zinc-500 hover:text-zinc-700"
+          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
         >
-          ← Back to alternate selves
+          ← Alternate Selves
         </Link>
-        <h1 className="mt-1 text-lg font-semibold text-zinc-900">New past crossroad</h1>
-      </header>
-
-      <main className="mx-auto w-full max-w-2xl px-6 py-12">
-        <p className="mb-8 text-sm text-zinc-500">
-          Describe a significant decision that already happened. You will generate
-          plausible alternative paths next, then explore an alternate self — never as
-          regret, never as advice.
+        <h1 className="mb-1.5 mt-3 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
+          New past crossroad
+        </h1>
+        <p className="text-[15px] text-[#999999]">
+          Describe a significant decision that already happened. You&apos;ll
+          explore plausible alternative paths next — never as regret, never as
+          advice.
         </p>
+      </div>
+
+      <div className="max-w-2xl pb-14">
         <PastCrossroadForm />
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -126,8 +126,8 @@ export default async function CurrentSelfPage({
             <OverviewCard className="px-9 py-14">
               <div className="flex flex-col items-center text-center">
                 <p className="max-w-[380px] text-[13px] leading-relaxed text-[#999999]">
-                  No Current Self yet. Capture a moment, check in, refresh your
-                  Future Selves, then generate your current identity summary.
+                  No Current Self yet. Start a situation and check in — your
+                  identity portrait builds itself from what you record.
                 </p>
                 <Link
                   href="/moments/new"

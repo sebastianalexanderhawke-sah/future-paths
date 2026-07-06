@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { signOut } from "@/actions/auth";
+import { AppShell } from "@/components/overview/app-shell";
 import { ChapterEvidence } from "@/components/timeline/chapter-evidence";
 import { getLifeChapter } from "@/lib/life-chapters";
 
@@ -34,8 +34,8 @@ export default async function TimelineDetailPage({ params }: TimelineDetailPageP
     }
 
     return (
-      <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-12">
-        <p className="text-sm text-red-600">{result.error}</p>
+      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
+        <p className="text-[13px] text-red-600">{result.error}</p>
       </div>
     );
   }
@@ -43,25 +43,21 @@ export default async function TimelineDetailPage({ params }: TimelineDetailPageP
   const { chapter, evidence } = result;
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
-        <div>
-          <Link href="/timeline" className="text-sm text-zinc-500 hover:text-zinc-700">
-            Timeline
-          </Link>
-          <h1 className="text-lg font-semibold text-zinc-900">Life chapter</h1>
-        </div>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-          >
-            Sign out
-          </button>
-        </form>
-      </header>
+    <AppShell activeHref="/timeline">
+      {/* Page header */}
+      <div className="mb-10">
+        <Link
+          href="/timeline"
+          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
+        >
+          ← Timeline
+        </Link>
+        <h1 className="mb-1.5 mt-3 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
+          Life chapter
+        </h1>
+      </div>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
+      <div className="flex max-w-2xl flex-col gap-8 pb-14">
         <article className="rounded-lg border border-zinc-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-zinc-400">{chapter.period_label}</p>
@@ -94,7 +90,7 @@ export default async function TimelineDetailPage({ params }: TimelineDetailPageP
         </article>
 
         <ChapterEvidence evidence={evidence} />
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

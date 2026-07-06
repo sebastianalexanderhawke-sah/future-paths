@@ -3,6 +3,7 @@ import type { z } from "zod";
 import type {
   GenerationResult,
   GenerationSuccess,
+  GenerationUsage,
   StructuredGenerationRequest,
 } from "@/lib/ai/types";
 import { createGenerationMetadata } from "@/lib/ai/types";
@@ -17,6 +18,7 @@ export function toGenerationSuccess<T>(input: {
   promptId: string;
   promptVersion: string;
   data: T;
+  usage?: GenerationUsage;
 }): GenerationSuccess<T> {
   return {
     ok: true,
@@ -26,6 +28,7 @@ export function toGenerationSuccess<T>(input: {
       promptId: input.promptId,
       promptVersion: input.promptVersion,
     }),
+    ...(input.usage ? { usage: input.usage } : {}),
   };
 }
 

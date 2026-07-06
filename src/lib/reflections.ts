@@ -104,42 +104,28 @@ export async function getUnansweredReflectionSummary(): Promise<
   // Unanswered = a question exists and the answer is NULL or empty string —
   // the same semantics the previous in-memory `!row.reflection_answer` filter
   // applied. This runs on every protected page (sidebar badge), so it is a
-  // count plus a single oldest-pending row instead of a full-history read;
-  // both are served by the check_ins_unanswered_reflection_idx partial index.
+  // single query: `count: "exact"` alongside `limit(1)` makes PostgREST return
+  // the total matching count with the one oldest-pending row, both served by
+  // the check_ins_unanswered_reflection_idx partial index.
   const unansweredFilter = "reflection_answer.is.null,reflection_answer.eq.";
 
-  const [countResult, pendingResult] = await Promise.all([
-    supabase
-      .from("check_ins")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", auth.userId)
-      .not("reflection_question", "is", null)
-      .or(unansweredFilter),
-    supabase
-      .from("check_ins")
-      .select("*")
-      .eq("user_id", auth.userId)
-      .not("reflection_question", "is", null)
-      .or(unansweredFilter)
-      .order("created_at", { ascending: true }) // oldest first — queue order
-      .limit(1),
-  ]);
+  const { data, count, error } = await supabase
+    .from("check_ins")
+    .select("*", { count: "exact" })
+    .eq("user_id", auth.userId)
+    .not("reflection_question", "is", null)
+    .or(unansweredFilter)
+    .order("created_at", { ascending: true }) // oldest first — queue order
+    .limit(1);
 
-  if (countResult.error) {
-    return { error: countResult.error.message };
+  if (error) {
+    return { error: error.message };
   }
 
-  if (pendingResult.error) {
-    return { error: pendingResult.error.message };
-  }
-
-  const pendingCheckIns = await attachMomentsToCheckIns(
-    pendingResult.data ?? [],
-    auth.userId,
-  );
+  const pendingCheckIns = await attachMomentsToCheckIns(data ?? [], auth.userId);
 
   return {
-    unansweredCount: countResult.count ?? 0,
+    unansweredCount: count ?? 0,
     // The oldest unanswered — the active queue entry.
     pending: pendingCheckIns[0] ?? null,
   };

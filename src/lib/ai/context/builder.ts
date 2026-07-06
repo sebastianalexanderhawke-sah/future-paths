@@ -258,35 +258,61 @@ async function loadFutureSelfContext(
       .eq("user_id", base.userId),
   ]);
 
-  const { data: checkIns } = await supabase
-    .from("check_ins")
-    .select("theme_changes, identity_impact, reality_summary, reflection_question, reflection_answer")
-    .eq("user_id", base.userId);
-
-  const { data: identityUpdates } = await supabase
-    .from("identity_updates")
-    .select("title, summary, themes")
-    .eq("user_id", base.userId);
-
-  const { data: chosenPaths } = await supabase
-    .from("paths")
-    .select("themes, chosen_at, description, future_shift")
-    .eq("user_id", base.userId)
-    .eq("is_chosen", true)
-    .order("chosen_at", { ascending: false });
-
-  const { data: activeFutureSelves } = await supabase
-    .from("future_selves")
-    .select("name, summary, percentage, evidence_strength, themes")
-    .eq("user_id", base.userId)
-    .eq("status", "active")
-    .order("percentage", { ascending: false });
-
-  const { data: currentSelf } = await supabase
-    .from("current_self")
-    .select("title, summary, themes, observations, recent_growth")
-    .eq("user_id", base.userId)
-    .maybeSingle();
+  // Every capped array is capped in SQL (ordered newest-first + LIMIT) instead
+  // of fetching the full history and truncating in memory — enforceContextLimits
+  // would previously keep whichever rows the database happened to return.
+  // chosenPaths deliberately stays unbounded: pathThemes flattens the themes of
+  // the entire chosen-path history into the prompt.
+  const [
+    { data: checkIns },
+    { data: answeredCheckIns },
+    { data: identityUpdates },
+    { data: chosenPaths },
+    { data: activeFutureSelves },
+    { data: currentSelf },
+  ] = await Promise.all([
+    supabase
+      .from("check_ins")
+      .select("theme_changes, identity_impact, reality_summary, reflection_question, reflection_answer")
+      .eq("user_id", base.userId)
+      .order("created_at", { ascending: false })
+      .limit(CONTEXT_LIMITS.COUNTS.checkIns),
+    // Answered reflections are queried separately: they are filtered from the
+    // full history (not just the newest N check-ins), matching the previous
+    // filter-then-truncate semantics but bounded and deterministic in SQL.
+    supabase
+      .from("check_ins")
+      .select("reflection_question, reflection_answer")
+      .eq("user_id", base.userId)
+      .not("reflection_question", "is", null)
+      .not("reflection_answer", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(CONTEXT_LIMITS.COUNTS.checkIns),
+    supabase
+      .from("identity_updates")
+      .select("title, summary, themes")
+      .eq("user_id", base.userId)
+      .order("created_at", { ascending: false })
+      .limit(CONTEXT_LIMITS.COUNTS.identityUpdates),
+    supabase
+      .from("paths")
+      .select("themes, chosen_at, description, future_shift")
+      .eq("user_id", base.userId)
+      .eq("is_chosen", true)
+      .order("chosen_at", { ascending: false }),
+    supabase
+      .from("future_selves")
+      .select("name, summary, percentage, evidence_strength, themes")
+      .eq("user_id", base.userId)
+      .eq("status", "active")
+      .order("percentage", { ascending: false })
+      .limit(CONTEXT_LIMITS.COUNTS.futureSelves),
+    supabase
+      .from("current_self")
+      .select("title, summary, themes, observations, recent_growth")
+      .eq("user_id", base.userId)
+      .maybeSingle(),
+  ]);
 
   // Only the single newest path gets its own field — the rest of the
   // history stays in pathThemes (themes only) so this doesn't duplicate
@@ -295,7 +321,7 @@ async function loadFutureSelfContext(
 
   // Answered reflections extracted as a dedicated evidence layer so the AI
   // can treat them as highest-confidence without hunting through checkIns.
-  const confirmedReflections = (checkIns ?? [])
+  const confirmedReflections = (answeredCheckIns ?? [])
     .filter(
       (c): c is typeof c & { reflection_question: string; reflection_answer: string } =>
         typeof c.reflection_question === "string" && typeof c.reflection_answer === "string",
@@ -344,42 +370,51 @@ async function loadCurrentSelfContext(
       .eq("user_id", base.userId),
   ]);
 
-  const { data: activeFutureSelves } = await supabase
-    .from("future_selves")
-    .select("*")
-    .eq("user_id", base.userId)
-    .eq("status", "active")
-    .order("percentage", { ascending: false });
-
-  const { data: recentMoments } = await supabase
-    .from("moments")
-    .select("id, title, description, status, created_at")
-    .eq("user_id", base.userId)
-    .order("created_at", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.moments);
-
-  const { data: chosenPaths } = await supabase
-    .from("paths")
-    .select("id, moment_id, description, themes, future_shift")
-    .eq("user_id", base.userId)
-    .eq("is_chosen", true)
-    .order("chosen_at", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.chosenPaths);
-
-  const { data: checkIns } = await supabase
-    .from("check_ins")
-    .select(
-      "id, moment_id, reflection, reality_summary, theme_changes, identity_impact, reflection_question, reflection_answer, created_at",
-    )
-    .eq("user_id", base.userId)
-    .order("created_at", { ascending: false })
-    .limit(CONTEXT_LIMITS.COUNTS.checkIns);
-
-  const { data: identityUpdates } = await supabase
-    .from("identity_updates")
-    .select("title, summary, themes")
-    .eq("user_id", base.userId)
-    .order("created_at", { ascending: false });
+  // All bounded reads run in parallel with their caps applied in SQL — the
+  // caps mirror what enforceContextLimits keeps, so the prompt content is
+  // unchanged while the database stops returning rows that would be discarded.
+  const [
+    { data: activeFutureSelves },
+    { data: recentMoments },
+    { data: chosenPaths },
+    { data: checkIns },
+    { data: identityUpdates },
+  ] = await Promise.all([
+    supabase
+      .from("future_selves")
+      .select("*")
+      .eq("user_id", base.userId)
+      .eq("status", "active")
+      .order("percentage", { ascending: false })
+      .limit(CONTEXT_LIMITS.COUNTS.futureSelves),
+    supabase
+      .from("moments")
+      .select("id, title, description, status, created_at")
+      .eq("user_id", base.userId)
+      .order("created_at", { ascending: false })
+      .limit(CONTEXT_LIMITS.COUNTS.moments),
+    supabase
+      .from("paths")
+      .select("id, moment_id, description, themes, future_shift")
+      .eq("user_id", base.userId)
+      .eq("is_chosen", true)
+      .order("chosen_at", { ascending: false })
+      .limit(CONTEXT_LIMITS.COUNTS.chosenPaths),
+    supabase
+      .from("check_ins")
+      .select(
+        "id, moment_id, reflection, reality_summary, theme_changes, identity_impact, reflection_question, reflection_answer, created_at",
+      )
+      .eq("user_id", base.userId)
+      .order("created_at", { ascending: false })
+      .limit(CONTEXT_LIMITS.COUNTS.checkIns),
+    supabase
+      .from("identity_updates")
+      .select("title, summary, themes")
+      .eq("user_id", base.userId)
+      .order("created_at", { ascending: false })
+      .limit(CONTEXT_LIMITS.COUNTS.identityUpdates),
+  ]);
 
   return {
     ...base,
@@ -458,7 +493,8 @@ async function loadContradictionContext(
     .select("*")
     .eq("user_id", base.userId)
     .eq("status", "active")
-    .order("percentage", { ascending: false });
+    .order("percentage", { ascending: false })
+    .limit(CONTEXT_LIMITS.COUNTS.futureSelves);
 
   const { data: answeredPrompts } = await supabase
     .from("identity_prompts")

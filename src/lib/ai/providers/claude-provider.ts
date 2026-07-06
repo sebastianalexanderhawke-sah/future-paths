@@ -5,6 +5,7 @@ import {
   getClaudeModel,
   getGenerationTimeoutMs,
 } from "@/lib/ai/config";
+import type { GenerationUsage } from "@/lib/ai/types";
 import { getPromptDefinition } from "@/lib/ai/prompts/registry";
 import {
   toGenerationFailure,
@@ -44,6 +45,37 @@ function extractJson(text: string): unknown {
   }
 }
 
+// System prompts are static per prompt module (base + task instructions with
+// no per-request content), so they are marked as a cacheable prefix. Repeated
+// calls to the same prompt within the cache TTL read the system portion at
+// ~10% of input price; prompts below the model's minimum cacheable size are
+// silently processed uncached (no error, no extra cost). This changes cost
+// only — never model output.
+function buildCacheableSystem(
+  systemPrompt: string,
+): Anthropic.Messages.TextBlockParam[] {
+  return [
+    {
+      type: "text",
+      text: systemPrompt,
+      cache_control: { type: "ephemeral" },
+    },
+  ];
+}
+
+function toGenerationUsage(usage: Anthropic.Messages.Usage): GenerationUsage {
+  return {
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
+    ...(usage.cache_creation_input_tokens != null
+      ? { cacheCreationInputTokens: usage.cache_creation_input_tokens }
+      : {}),
+    ...(usage.cache_read_input_tokens != null
+      ? { cacheReadInputTokens: usage.cache_read_input_tokens }
+      : {}),
+  };
+}
+
 export async function streamStructuredGeneration<T>(
   request: StructuredGenerationRequest<T>,
   onChunk: (text: string) => void,
@@ -68,7 +100,7 @@ export async function streamStructuredGeneration<T>(
           model: getClaudeModel(),
           max_tokens: request.options?.maxTokens ?? 4096,
           temperature: request.options?.temperature ?? 0.4,
-          system: prompt.buildSystemPrompt(),
+          system: buildCacheableSystem(prompt.buildSystemPrompt()),
           messages: [
             {
               role: "user",
@@ -142,18 +174,12 @@ export const claudeProvider: IdentityAIProvider = {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), getGenerationTimeoutMs());
 
-      console.log("MODEL USED:", getClaudeModel());
-
-      const __aiWaitT0 = Date.now();
-      console.log(
-        `[PROFILE] claudeProvider.completeStructured AI_WAIT promptId=${request.promptId} | start=${new Date(__aiWaitT0).toISOString()}`,
-      );
       const response = await client.messages.create(
         {
           model: getClaudeModel(),
           max_tokens: request.options?.maxTokens ?? 4096,
           temperature: request.options?.temperature ?? 0.4,
-          system: prompt.buildSystemPrompt(),
+          system: buildCacheableSystem(prompt.buildSystemPrompt()),
           messages: [
             {
               role: "user",
@@ -162,9 +188,6 @@ export const claudeProvider: IdentityAIProvider = {
           ],
         },
         { signal: controller.signal },
-      );
-      console.log(
-        `[PROFILE] claudeProvider.completeStructured AI_WAIT promptId=${request.promptId} | end=${new Date().toISOString()} durationMs=${Date.now() - __aiWaitT0}`,
       );
 
       clearTimeout(timeout);
@@ -179,31 +202,22 @@ export const claudeProvider: IdentityAIProvider = {
         return toGenerationFailure("Claude returned an empty response.", true);
       }
 
-      const __parseT0 = Date.now();
-      console.log(
-        `[PROFILE] claudeProvider.completeStructured PARSE promptId=${request.promptId} | start=${new Date(__parseT0).toISOString()}`,
-      );
       const raw = extractJson(text);
-
-      console.log(
-        "CURRENT_SELF RAW OUTPUT:",
-        JSON.stringify(raw, null, 2),
-      );
-
       const parsed = prompt.parseOutput(raw);
       const data = validateStructuredOutput(request.schema, parsed);
-      console.log(
-        `[PROFILE] claudeProvider.completeStructured PARSE promptId=${request.promptId} | end=${new Date().toISOString()} durationMs=${Date.now() - __parseT0}`,
-      );
 
       return toGenerationSuccess({
         provider: "claude",
         promptId: prompt.promptId,
         promptVersion: prompt.promptVersion,
         data,
+        usage: toGenerationUsage(response.usage),
       });
     } catch (error) {
-      console.error("CLAUDE ERROR:", error);
+      console.error(
+        `[claude-provider] Generation failed promptId=${request.promptId}:`,
+        error instanceof Error ? error.message : error,
+      );
       const message =
         error instanceof Error ? error.message : "Claude generation failed.";
       return toGenerationFailure(message, true);
