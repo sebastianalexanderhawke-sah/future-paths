@@ -1,4 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { swallowReporting } from "@/lib/observability";
+import {
+  allowRequest,
+  RATE_LIMIT_MESSAGE,
+  STREAM_RATE_LIMIT,
+  STREAM_RATE_WINDOW_MS,
+} from "@/lib/rate-limit";
 import { runStreamingGeneration } from "@/lib/ai/stream";
 import { forecastOutputSchema } from "@/lib/ai/schemas/forecast";
 import { createArrayItemParser } from "@/lib/ai/parse-stream";
@@ -86,6 +93,12 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  if (
+    !allowRequest(`future-forecast:${user.id}`, STREAM_RATE_LIMIT, STREAM_RATE_WINDOW_MS)
+  ) {
+    return Response.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
+  }
+
   const title = situationText.trim();
   const selectedPathSummary = selectedPath ? buildSelectedPathSummary(selectedPath) : null;
   const mergedContextSummary = mergeContextSummary(contextSummary, selectedPathSummary);
@@ -135,7 +148,11 @@ export async function POST(request: Request) {
       // existing momentId.
       const cleanupOrphanedMoment = async () => {
         if (momentWasCreated) {
-          await deleteMoment(resolvedMomentId).catch(() => {});
+          await deleteMoment(resolvedMomentId).catch(
+            swallowReporting("future-forecast stream: orphaned moment cleanup failed", {
+              momentId: resolvedMomentId,
+            }),
+          );
         }
       };
 
@@ -168,7 +185,12 @@ export async function POST(request: Request) {
         if (forecastGeneration.data.current_understanding) {
           await updateMoment(resolvedMomentId, {
             current_understanding: forecastGeneration.data.current_understanding,
-          }).catch(() => {});
+          }).catch(
+            swallowReporting(
+              "future-forecast stream: current_understanding update failed",
+              { momentId: resolvedMomentId },
+            ),
+          );
         }
 
         const refreshedMoment = await getMoment(resolvedMomentId);

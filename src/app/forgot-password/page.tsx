@@ -1,8 +1,8 @@
 import Link from "next/link";
 
-import { SignupForm } from "@/components/auth/signup-form";
+import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
-export default function SignupPage() {
+export default function ForgotPasswordPage() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-16">
       <div className="flex w-full max-w-sm flex-col items-center gap-8">
@@ -11,15 +11,14 @@ export default function SignupPage() {
             Future Paths
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            Create account
+            Reset your password
           </h1>
           <p className="text-sm text-zinc-600">
-            Begin mapping the paths that shape you. Future Paths is in beta —
-            you&rsquo;re early, and your feedback shapes it.
+            Enter your email and we&rsquo;ll send you a link to set a new one.
           </p>
         </div>
 
-        <SignupForm />
+        <ForgotPasswordForm />
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ export default function Home() {
       <main className="flex w-full max-w-2xl flex-col items-center gap-10 text-center">
         <div className="flex flex-col gap-4">
           <p className="text-sm font-medium tracking-wide text-zinc-500 uppercase">
-            Future Paths
+            Future Paths <span className="text-zinc-400">· Beta</span>
           </p>
           <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
             Understand who you are becoming
@@ -31,6 +31,15 @@ export default function Home() {
             Sign in
           </Link>
         </div>
+
+        <footer className="flex items-center gap-4 text-sm text-zinc-500">
+          <Link href="/privacy" className="hover:text-zinc-700">
+            Privacy Policy
+          </Link>
+          <Link href="/terms" className="hover:text-zinc-700">
+            Terms of Use
+          </Link>
+        </footer>
       </main>
     </div>
   );

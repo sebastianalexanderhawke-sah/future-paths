@@ -4,12 +4,35 @@ import { IDENTITY_ENGINE_MODES } from "@/lib/ai/types";
 export const DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-20250514";
 export const DEFAULT_GENERATION_TIMEOUT_MS = 30_000;
 
+/**
+ * A misconfigured Identity Engine is a deployment error, not a generation
+ * error: it must surface loudly instead of degrading to mock output.
+ */
+export class IdentityEngineConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IdentityEngineConfigError";
+  }
+}
+
 function parseMode(value: string | undefined): IdentityEngineMode {
-  if (value && IDENTITY_ENGINE_MODES.includes(value as IdentityEngineMode)) {
-    return value as IdentityEngineMode;
+  const trimmed = value?.trim();
+
+  // Absent means "local development, no engine configured" — the mock default
+  // (production refuses to run on mock regardless; see getIdentityAIProvider).
+  if (!trimmed) {
+    return "mock";
   }
 
-  return "mock";
+  if (IDENTITY_ENGINE_MODES.includes(trimmed as IdentityEngineMode)) {
+    return trimmed as IdentityEngineMode;
+  }
+
+  // A present-but-unrecognized value is a typo, and a typo must never silently
+  // select the mock provider.
+  throw new IdentityEngineConfigError(
+    `Invalid IDENTITY_ENGINE_MODE "${trimmed}". Expected one of: ${IDENTITY_ENGINE_MODES.join(", ")}.`,
+  );
 }
 
 export function getIdentityEngineMode(): IdentityEngineMode {
@@ -50,6 +73,19 @@ export function resolveProviderForMode(
   }
 
   return getAnthropicApiKey() ? "claude" : "mock";
+}
+
+export function isProductionRuntime(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
+/**
+ * Explicit opt-in for running the mock provider in a production build
+ * (e.g. a staging deployment that must not spend AI budget). Without it,
+ * production fails closed rather than persisting fabricated analysis.
+ */
+export function isMockAllowedInProduction(): boolean {
+  return process.env.IDENTITY_ENGINE_ALLOW_MOCK?.trim() === "true";
 }
 
 // Note: there is intentionally no "fall back to mock on error" facility.

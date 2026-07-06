@@ -5,8 +5,11 @@ import type { BuildContextOptions } from "@/lib/ai/context/profiles";
 import { getPromptDefinition } from "@/lib/ai/prompts/registry";
 import type { PromptId } from "@/lib/ai/prompts/ids";
 import { getIdentityAIProvider } from "@/lib/ai/providers";
+import type { IdentityAIProvider } from "@/lib/ai/providers/types";
 import type { GenerationResult } from "@/lib/ai/types";
+import { consumeGenerationQuota, QUOTA_EXCEEDED_MESSAGE } from "@/lib/ai/quota";
 import { getUsageTracker } from "@/lib/ai/usage";
+import { reportError } from "@/lib/observability";
 
 export type RunStructuredGenerationOptions<T> = BuildContextOptions & {
   promptId: PromptId;
@@ -37,8 +40,53 @@ export async function runStructuredGeneration<T>(
     schema: options.schema,
   };
 
-  const primaryProvider = getIdentityAIProvider();
+  // Provider resolution throws IdentityEngineConfigError when production is
+  // misconfigured (mock provider without explicit opt-in, invalid mode).
+  // Surface it as a generation failure so callers degrade the same way they
+  // do for any other failed generation, and report it — a config error means
+  // every generation is failing.
+  let primaryProvider: IdentityAIProvider;
+  try {
+    primaryProvider = getIdentityAIProvider();
+  } catch (error) {
+    await reportError("ai.orchestrator: provider resolution failed", error, {
+      promptId: prompt.promptId,
+    });
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Identity Engine is misconfigured.",
+      fallbackAvailable: false,
+    };
+  }
+
   const usageTracker = getUsageTracker();
+
+  // Daily per-user quota, consumed per attempt (attempts cost money whether or
+  // not they succeed). Mock generations are free and never consume quota. The
+  // rejection is tracked through the usage log so quota pressure is visible in
+  // the same [ai-usage] telemetry as spend.
+  if (primaryProvider.id !== "mock") {
+    const quota = await consumeGenerationQuota(options.userId);
+
+    if (!quota.allowed) {
+      await usageTracker.track({
+        userId: options.userId,
+        promptId: prompt.promptId,
+        promptVersion: prompt.promptVersion,
+        provider: primaryProvider.id,
+        success: false,
+        durationMs: Date.now() - startedAt,
+        error: "quota_exceeded",
+      });
+
+      return {
+        ok: false,
+        error: QUOTA_EXCEEDED_MESSAGE,
+        fallbackAvailable: false,
+      };
+    }
+  }
+
   const primaryResult = await primaryProvider.completeStructured(request);
 
   if (primaryResult.ok) {

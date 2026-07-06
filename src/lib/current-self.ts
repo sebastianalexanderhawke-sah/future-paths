@@ -1,5 +1,9 @@
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { currentSelfNullableOutputSchema } from "@/lib/ai/schemas/current-self";
+import {
+  reportDiscardedResultError,
+  swallowReporting,
+} from "@/lib/observability";
 import { createClient } from "@/lib/supabase/server";
 import type { CurrentSelf } from "@/types/database";
 
@@ -304,5 +308,22 @@ export async function requestCurrentSelfRegeneration(
     }
   }
 
-  await generateCurrentSelf(options?.reflectionInput).catch(() => {});
+  await generateCurrentSelf(options?.reflectionInput)
+    .then((result) => {
+      // Missing prerequisites is the expected state for new users (no moment,
+      // check-in, or active Future Self yet), not an operational failure.
+      if ("error" in result && result.error === CURRENT_SELF_PREREQUISITE_ERROR) {
+        return;
+      }
+      return reportDiscardedResultError(
+        "requestCurrentSelfRegeneration: Current Self generation failed",
+        result,
+        { userId },
+      );
+    })
+    .catch(
+      swallowReporting("requestCurrentSelfRegeneration: Current Self generation failed", {
+        userId,
+      }),
+    );
 }

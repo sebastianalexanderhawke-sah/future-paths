@@ -1,4 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  allowRequest,
+  RATE_LIMIT_MESSAGE,
+  STREAM_RATE_LIMIT,
+  STREAM_RATE_WINDOW_MS,
+} from "@/lib/rate-limit";
 import { runStreamingGeneration } from "@/lib/ai/stream";
 import { discoveryQuestionOutputSchema } from "@/lib/ai/schemas/discovery-question";
 import { createArrayItemParser } from "@/lib/ai/parse-stream";
@@ -66,6 +72,12 @@ export async function POST(request: Request) {
 
   if (authError || !user) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  if (
+    !allowRequest(`discovery-questions:${user.id}`, STREAM_RATE_LIMIT, STREAM_RATE_WINDOW_MS)
+  ) {
+    return Response.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
   }
 
   const encoder = new TextEncoder();

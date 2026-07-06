@@ -1,5 +1,12 @@
+import Link from "next/link";
+
 import packageJson from "../../../../package.json";
 
+import {
+  DisplayNameForm,
+  EmailChangeForm,
+  PasswordChangeForm,
+} from "@/components/settings/account-controls";
 import { AppSidebar } from "@/components/overview/app-sidebar";
 import { OverviewCard } from "@/components/overview/overview-card";
 import { getUnansweredReflectionSummary } from "@/lib/reflections";
@@ -7,8 +14,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserIdentity } from "@/lib/user-identity";
 
 // Honesty rule for this page: nothing renders as a control unless it works.
-// Capabilities that don't exist yet are stated as plain text, so no toggle,
-// button, or picker ever silently does nothing.
+// Every form below performs a real action against the existing stack;
+// capabilities that don't exist yet (export, deletion, notifications) are
+// stated as plain text, so no toggle, button, or picker ever silently does
+// nothing.
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -26,7 +35,6 @@ export default async function SettingsPage() {
 
   const reflectionSummary =
     "pending" in reflectionSummaryResult ? reflectionSummaryResult : null;
-  const displayName = userIdentity.displayName ?? "Not set";
   const email = user?.email ?? "—";
 
   return (
@@ -80,21 +88,10 @@ export default async function SettingsPage() {
                 </span>
               </div>
 
-              <div className="mt-6">
-                <div className="flex items-center justify-between border-b border-[#f5f5f5] py-3.5">
-                  <span className="text-[14px] font-medium text-[#111]">
-                    Display Name
-                  </span>
-                  <span className="text-[13px] text-[#999999]">
-                    {displayName}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-3.5">
-                  <span className="text-[14px] font-medium text-[#111]">
-                    Email Address
-                  </span>
-                  <span className="text-[13px] text-[#999999]">{email}</span>
-                </div>
+              <div className="mt-6 max-w-[36rem]">
+                <DisplayNameForm currentName={userIdentity.displayName} />
+                <EmailChangeForm currentEmail={email} />
+                <PasswordChangeForm />
               </div>
             </OverviewCard>
 
@@ -112,7 +109,28 @@ export default async function SettingsPage() {
               </p>
               <p className="mt-2 max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
                 We never invent experiences that are not part of your history,
-                and your entries are never shared.
+                and your entries are never shared. The full picture — what is
+                stored, what the AI processes, and how to have everything
+                deleted — is in the{" "}
+                <Link
+                  href="/privacy"
+                  className="text-[#111] underline underline-offset-4"
+                >
+                  Privacy Policy
+                </Link>{" "}
+                and{" "}
+                <Link
+                  href="/terms"
+                  className="text-[#111] underline underline-offset-4"
+                >
+                  Terms of Use
+                </Link>
+                .
+              </p>
+              <p className="mt-2 max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
+                Want your account and everything in it deleted during the beta?
+                Reply to your beta invite email and we&apos;ll take care of it,
+                usually within a few days.
               </p>
             </OverviewCard>
 
@@ -125,10 +143,11 @@ export default async function SettingsPage() {
               </div>
 
               <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
-                A few account tools aren&apos;t in the app yet: changing your
-                password or email, exporting your data, deleting your account,
-                and notification preferences. They&apos;re planned — until they
-                ship, nothing here will pretend to do them.
+                A few account tools aren&apos;t in the app yet: exporting your
+                data, deleting your account yourself, and notification
+                preferences. They&apos;re planned — until they ship, nothing
+                here will pretend to do them, and deletion is always available
+                by request above.
               </p>
             </OverviewCard>
 

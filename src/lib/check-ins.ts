@@ -12,6 +12,11 @@ import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { hasForecastForMomentAndPath, saveForecast } from "@/lib/forecasts";
 import { queueFutureSelvesGeneration } from "@/lib/future-selves";
 import { createIdentityUpdateIfMeaningful } from "@/lib/identity-updates";
+import {
+  reportDiscardedResultError,
+  reportError,
+  swallowReporting,
+} from "@/lib/observability";
 import { evaluateReflectionQuestion } from "@/lib/reflection-question";
 import { createClient } from "@/lib/supabase/server";
 import type { CheckIn } from "@/types/database";
@@ -236,7 +241,7 @@ export async function createCheckIn(
 
   const generated = generationResult.data;
 
-  const { data: checkIn, error: checkInError } = await supabase
+  const { data: insertedCheckIn, error: checkInError } = await supabase
     .from("check_ins")
     .insert({
       user_id: auth.userId,
@@ -251,39 +256,74 @@ export async function createCheckIn(
     .select("*")
     .single();
 
-  if (checkInError || !checkIn) {
-    // A concurrent submission with the same token won the race and already
-    // created the check-in; the unique index rejects this one. Return the
-    // winner so the request is idempotent rather than an error.
-    if (checkInError?.code === "23505" && clientToken) {
-      const { data: existing } = await supabase
-        .from("check_ins")
-        .select("*")
-        .eq("user_id", auth.userId)
-        .eq("client_token", clientToken)
-        .maybeSingle();
+  // A submission with this token already created the check-in — either a
+  // concurrent duplicate or a retry after a mid-flow failure. Recover the
+  // winner's row and fall through to the downstream writes instead of
+  // returning early: the original request may have died between the check-in
+  // insert and the timeline event / path lock / enrichment, and an early
+  // return would make that partial state permanent.
+  let recoveredExisting = false;
+  let recoveredCheckIn: CheckIn | null = null;
 
-      if (existing) {
-        return { checkIn: existing };
-      }
+  if ((checkInError || !insertedCheckIn) && checkInError?.code === "23505" && clientToken) {
+    const { data: existing } = await supabase
+      .from("check_ins")
+      .select("*")
+      .eq("user_id", auth.userId)
+      .eq("client_token", clientToken)
+      .maybeSingle();
+
+    if (existing) {
+      recoveredCheckIn = existing;
+      recoveredExisting = true;
     }
+  }
 
+  const checkIn = insertedCheckIn ?? recoveredCheckIn;
+
+  if (!checkIn) {
     return { error: checkInError?.message ?? "Failed to create check-in." };
   }
 
+  // On a recovered retry, the timeline event marks how far the original
+  // request got: it is the first write after the check-in row, so if it
+  // exists the original request also reached the path lock and scheduled
+  // enrichment — everything is done, and re-running enrichment would
+  // duplicate identity updates. If it's missing, the original died in the
+  // partial-write window: complete every remaining step below (each one is
+  // idempotent or conditioned on current state).
+  if (recoveredExisting) {
+    const { data: existingEvent } = await supabase
+      .from("timeline_events")
+      .select("id")
+      .eq("user_id", auth.userId)
+      .eq("reference_type", "check_in")
+      .eq("reference_id", checkIn.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingEvent) {
+      revalidatePath(`/moments/${momentId}`);
+      return { checkIn };
+    }
+  }
+
+  // Payload fields come from the check-in row rather than this request's
+  // generation, so a recovered retry records the original stored summary —
+  // not the retry's regenerated one. On the fresh path the two are identical.
   const { error: timelineError } = await supabase.from("timeline_events").insert({
     user_id: auth.userId,
     event_type: "check_in_recorded",
     reference_type: "check_in",
     reference_id: checkIn.id,
     title: "Reality recorded",
-    summary: generated.reality_summary,
+    summary: checkIn.reality_summary,
     metadata: {
       moment_id: momentId,
       path_id: chosenPath.id,
       check_in_id: checkIn.id,
-      theme_changes: generated.theme_changes,
-      identity_impact: generated.identity_impact,
+      theme_changes: checkIn.theme_changes,
+      identity_impact: checkIn.identity_impact,
     },
   });
 
@@ -368,7 +408,18 @@ export async function createCheckIn(
             pathId: chosenPath.id,
             sections: regenSections,
             situationSummary,
-          }).catch(() => {});
+          }).catch(
+            swallowReporting("createCheckIn: forecast save failed", {
+              momentId,
+              pathId: chosenPath.id,
+            }),
+          );
+        } else {
+          await reportError(
+            "createCheckIn: forecast regeneration failed",
+            regenResult.error,
+            { momentId, pathId: chosenPath.id },
+          );
         }
       }
 
@@ -376,7 +427,11 @@ export async function createCheckIn(
         userId,
         trimmedReflection,
         generated.reality_summary,
-      ).catch(() => null);
+      ).catch((error) =>
+        reportError("createCheckIn: reflection evaluation failed", error, {
+          checkInId: checkIn.id,
+        }).then(() => null),
+      );
 
       if (reflectionEvaluation?.should_reflect && reflectionEvaluation.question) {
         const { error: reflectionUpdateError } = await supabase
@@ -397,13 +452,25 @@ export async function createCheckIn(
       await queueFutureSelvesGeneration(momentId, {
         checkInId: checkIn.id,
         source: "check_in",
-      }).catch(() => {});
+      })
+        .then((result) =>
+          reportDiscardedResultError(
+            "createCheckIn: Future Selves regeneration failed",
+            result,
+            { momentId, checkInId: checkIn.id },
+          ),
+        )
+        .catch(
+          swallowReporting("createCheckIn: Future Selves regeneration failed", {
+            momentId,
+            checkInId: checkIn.id,
+          }),
+        );
       await requestCurrentSelfRegeneration(userId);
     } catch (error) {
-      console.error(
-        "[createCheckIn] Background enrichment failed:",
-        error instanceof Error ? error.message : error,
-      );
+      await reportError("createCheckIn: background enrichment failed", error, {
+        momentId,
+      });
     }
   });
 

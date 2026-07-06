@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { swallowReporting } from "@/lib/observability";
 import { createForecastModePath } from "@/lib/paths";
 
 import { withJustChosenPathFlag } from "@/lib/forecast-visit-flag";
@@ -206,7 +207,11 @@ export async function runFutureForecastAction(input: {
 
   const cleanupOrphanedMoment = async () => {
     if (momentWasCreated && momentId) {
-      await deleteMoment(momentId).catch(() => {});
+      await deleteMoment(momentId).catch(
+        swallowReporting("future-forecast action: orphaned moment cleanup failed", {
+          momentId,
+        }),
+      );
     }
   };
 
@@ -311,7 +316,11 @@ export async function runFutureForecastAction(input: {
   if (forecastGeneration.data.current_understanding) {
     await updateMoment(momentId, {
       current_understanding: forecastGeneration.data.current_understanding,
-    }).catch(() => {});
+    }).catch(
+      swallowReporting("future-forecast action: current_understanding update failed", {
+        momentId,
+      }),
+    );
   }
 
   const refreshedMoment = await getMoment(momentId);

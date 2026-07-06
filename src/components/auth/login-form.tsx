@@ -33,9 +33,17 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="password" className="text-sm text-zinc-600">
-          Password
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="password" className="text-sm text-zinc-600">
+            Password
+          </label>
+          <Link
+            href="/forgot-password"
+            className="text-sm text-zinc-500 underline-offset-4 hover:text-zinc-700 hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <input
           id="password"
           name="password"

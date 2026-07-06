@@ -5,6 +5,13 @@ import { runStreamingGeneration } from "@/lib/ai/stream";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
 import { createArrayItemParser } from "@/lib/ai/parse-stream";
 import { isAiAuditEnabled, toRawPathsAudit } from "@/lib/ai-audit";
+import { swallowReporting } from "@/lib/observability";
+import {
+  allowRequest,
+  RATE_LIMIT_MESSAGE,
+  STREAM_RATE_LIMIT,
+  STREAM_RATE_WINDOW_MS,
+} from "@/lib/rate-limit";
 
 function sseData(event: unknown): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -38,6 +45,12 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  if (
+    !allowRequest(`decision-simulator:${user.id}`, STREAM_RATE_LIMIT, STREAM_RATE_WINDOW_MS)
+  ) {
+    return Response.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
+  }
+
   const title = situationText.trim();
 
   const momentResult = await createMoment({
@@ -63,7 +76,11 @@ export async function POST(request: Request) {
       // before a successful result must remove it rather than leave an empty
       // situation behind.
       const cleanupOrphanedMoment = async () => {
-        await deleteMoment(moment.id).catch(() => {});
+        await deleteMoment(moment.id).catch(
+          swallowReporting("decision-simulator stream: orphaned moment cleanup failed", {
+            momentId: moment.id,
+          }),
+        );
       };
 
       try {

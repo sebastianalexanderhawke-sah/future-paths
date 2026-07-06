@@ -8,6 +8,10 @@ import {
 } from "@/components/home/path-native-title";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
 import { queueFutureSelvesGeneration } from "@/lib/future-selves";
+import {
+  reportDiscardedResultError,
+  swallowReporting,
+} from "@/lib/observability";
 import { createClient } from "@/lib/supabase/server";
 import type { Path } from "@/types/database";
 import type { ThemeName } from "@/types/enums";
@@ -379,7 +383,19 @@ export async function choosePath(
   // (extraction → recognition → explanation → persistence → current self
   // regeneration) is unchanged, only WHEN it runs has moved.
   after(async () => {
-    await queueFutureSelvesGeneration(momentId).catch(() => {});
+    await queueFutureSelvesGeneration(momentId)
+      .then((result) =>
+        reportDiscardedResultError(
+          "choosePath: Future Selves regeneration failed",
+          result,
+          { momentId },
+        ),
+      )
+      .catch(
+        swallowReporting("choosePath: Future Selves regeneration failed", {
+          momentId,
+        }),
+      );
   });
 
   return { path: updatedPath };

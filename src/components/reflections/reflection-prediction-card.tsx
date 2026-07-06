@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -24,8 +24,13 @@ export function ReflectionPredictionCard({
   const router = useRouter();
   const wasPending = useRef(false);
 
+  // Controlled so the user's writing survives a failed submission (React
+  // resets uncontrolled fields after a form action completes, error or not).
+  const [answer, setAnswer] = useState("");
+
   useEffect(() => {
     if (wasPending.current && !pending && !state.error) {
+      setAnswer("");
       router.refresh();
     }
     wasPending.current = pending;
@@ -39,6 +44,8 @@ export function ReflectionPredictionCard({
         rows={4}
         required
         maxLength={2000}
+        value={answer}
+        onChange={(event) => setAnswer(event.target.value)}
         placeholder="Write whatever comes to mind."
         className="rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-zinc-400"
       />

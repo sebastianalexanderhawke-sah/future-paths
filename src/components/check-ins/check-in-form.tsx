@@ -30,6 +30,14 @@ export function CheckInForm({ momentId, onBeforeSubmit }: CheckInFormProps) {
     typeof window === "undefined" ? "" : crypto.randomUUID(),
   );
 
+  // Controlled so the user's writing survives a failed submission: React
+  // resets uncontrolled fields after a form action completes — including when
+  // it returns an error (AI outage, timeout, quota) — which would wipe the
+  // reflection at exactly the moment the user most needs it kept. Same
+  // pattern as situation-entry-flow. A successful submit redirects, so the
+  // text never lingers after success.
+  const [reflection, setReflection] = useState("");
+
   return (
     <form
       action={formAction}
@@ -57,6 +65,8 @@ export function CheckInForm({ momentId, onBeforeSubmit }: CheckInFormProps) {
           rows={6}
           required
           maxLength={5000}
+          value={reflection}
+          onChange={(event) => setReflection(event.target.value)}
           placeholder="What changed? What surprised you? What happened differently than expected?"
           className="rounded-xl border border-[#ececf0] bg-white px-4 py-3 text-[14px] leading-[1.6] text-[#111] outline-none transition-colors duration-150 placeholder:text-[#bbbbbb] focus:border-[#6366f1]"
         />

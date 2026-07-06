@@ -1090,6 +1090,10 @@ export type Database = {
         Args: { p_chapters: unknown };
         Returns: LifeChapter[];
       };
+      consume_ai_generation_quota: {
+        Args: { p_limit: number };
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

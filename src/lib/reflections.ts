@@ -2,6 +2,11 @@ import { after } from "next/server";
 
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { queueFutureSelvesGeneration } from "@/lib/future-selves";
+import {
+  reportDiscardedResultError,
+  reportError,
+  swallowReporting,
+} from "@/lib/observability";
 import { evaluateReflectionQuestion } from "@/lib/reflection-question";
 import { validateReflectionAnswerLength } from "@/lib/reflections-validation";
 import { createClient } from "@/lib/supabase/server";
@@ -220,15 +225,31 @@ export async function submitReflectionAnswer(
       await queueFutureSelvesGeneration(checkIn.moment_id, {
         checkInId: checkIn.id,
         source: "reflection_answer",
-      }).catch(() => {});
+      })
+        .then((result) =>
+          reportDiscardedResultError(
+            "submitReflectionAnswer: Future Selves regeneration failed",
+            result,
+            { momentId: checkIn.moment_id, checkInId: checkIn.id },
+          ),
+        )
+        .catch(
+          swallowReporting(
+            "submitReflectionAnswer: Future Selves regeneration failed",
+            { momentId: checkIn.moment_id, checkInId: checkIn.id },
+          ),
+        );
 
       // Advance the queue: evaluate the next unanswered check-in so the user
       // never lands on an empty reflection queue after answering one.
-      await advanceReflectionQueue(userId).catch(() => {});
+      await advanceReflectionQueue(userId).catch(
+        swallowReporting("submitReflectionAnswer: reflection queue advance failed"),
+      );
     } catch (error) {
-      console.error(
-        "[submitReflectionAnswer] Background regeneration failed:",
-        error instanceof Error ? error.message : error,
+      await reportError(
+        "submitReflectionAnswer: background regeneration failed",
+        error,
+        { checkInId: checkIn.id },
       );
     }
   });
@@ -259,7 +280,11 @@ async function advanceReflectionQueue(userId: string): Promise<void> {
       userId,
       candidate.reflection,
       candidate.reality_summary,
-    ).catch(() => null);
+    ).catch((error) =>
+      reportError("advanceReflectionQueue: reflection evaluation failed", error, {
+        checkInId: candidate.id,
+      }).then(() => null),
+    );
 
     if (result?.should_reflect && result.question) {
       await supabase

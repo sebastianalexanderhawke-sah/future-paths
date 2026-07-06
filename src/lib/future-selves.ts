@@ -12,6 +12,7 @@ import {
   type AttributableObservation,
 } from "@/lib/identity-recognition";
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
+import { reportError, swallowReporting } from "@/lib/observability";
 import { createClient } from "@/lib/supabase/server";
 import type { FutureSelf, FutureSelfEvent } from "@/types/database";
 
@@ -241,7 +242,12 @@ async function ensureBehaviorObservationsForMoment(
     return "skipped";
   }
 
-  await extractAndPersistBehaviorObservations(userId, momentId).catch(() => {});
+  await extractAndPersistBehaviorObservations(userId, momentId).catch(
+    swallowReporting("future-selves: behavior observation extraction failed", {
+      userId,
+      momentId,
+    }),
+  );
   return "extracted";
 }
 
@@ -679,8 +685,13 @@ async function generateFutureSelvesWithCrossInstanceLock(
       })
       .then(
         () => {},
-        () => {
-          // Best-effort renewal; the next tick retries.
+        (error) => {
+          // Best-effort renewal; the next tick retries. Reported because a
+          // persistently failing heartbeat means mutual exclusion can lapse
+          // mid-generation once the lease expires.
+          void reportError("future-selves: generation lock renewal failed", error, {
+            userId,
+          });
         },
       );
   }, GENERATION_LOCK_RENEW_MS);
@@ -691,8 +702,11 @@ async function generateFutureSelvesWithCrossInstanceLock(
     clearInterval(renewTimer);
     try {
       await supabase.rpc("release_future_selves_lock", { p_holder: holder });
-    } catch {
+    } catch (error) {
       // Best-effort release; the lease also expires on its own.
+      await reportError("future-selves: generation lock release failed", error, {
+        userId,
+      });
     }
   }
 }
@@ -717,6 +731,11 @@ export async function queueFutureSelvesGeneration(
     return auth;
   }
 
+  // The two bare catches below are chain plumbing, not swallowed failures:
+  // a previous run's failure was already delivered to (and reported by) its
+  // own caller, and this run's failure propagates through the returned `run`
+  // promise to the current caller. Catching here only prevents an unhandled
+  // rejection on the internally retained chain.
   const previous = inFlightGenerationByUser.get(auth.userId) ?? Promise.resolve();
   const run = previous
     .catch(() => {})
