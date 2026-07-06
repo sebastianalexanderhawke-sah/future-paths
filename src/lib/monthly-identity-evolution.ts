@@ -101,6 +101,16 @@ function monthLabelOf(monthKey: string): string {
   return `${MONTH_NAMES[month - 1]} ${year}`;
 }
 
+/**
+ * Label of the calendar month containing `now` (UTC), in the exact format
+ * MonthlyIdentityEvolution rows use for `month` (e.g. "June 2026") — so
+ * callers can tell the still-changing current month apart from settled
+ * historical months.
+ */
+export function currentMonthLabel(now: Date = new Date()): string {
+  return monthLabelOf(monthKeyOf(now.toISOString()));
+}
+
 function pathTitle(path: Pick<Path, "description">): string {
   const { nativeTitle, description } = decodeNativePathFields(path.description);
   return nativeTitle ?? toFirstSentence(description);

@@ -1,110 +1,236 @@
-import { describe, expect, it } from "vitest";
-import { readFileSync } from "fs";
-import { resolve } from "path";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
-// Source-level assertions: verify what the MonthlyIdentityNarrativeCard
-// renders, and that the Timeline page is built solely from
-// MonthlyIdentityNarrative data with the old Life-Chapters/activity-feed
-// rendering removed entirely. These complement live visual testing.
+import type { MonthlyIdentityNarrative } from "@/lib/monthly-identity-narrative";
 
-const CARD_SOURCE = readFileSync(
-  resolve(__dirname, "monthly-identity-narrative-card.tsx"),
-  "utf-8",
+// Behavioral tests: render the MonthlyIdentityNarrativeCard and the Timeline
+// page with fixture narratives and assert on the visible output — headline,
+// paragraphs, change rows, evidence counts — instead of on component source.
+
+const {
+  getUserIdentityMock,
+  getUnansweredReflectionSummaryMock,
+  loadMonthlyIdentityNarrativesMock,
+} = vi.hoisted(() => ({
+  getUserIdentityMock: vi.fn(),
+  getUnansweredReflectionSummaryMock: vi.fn(),
+  loadMonthlyIdentityNarrativesMock: vi.fn(),
+}));
+
+vi.mock("@/lib/user-identity", () => ({
+  getUserIdentity: getUserIdentityMock,
+}));
+vi.mock("@/lib/reflections", () => ({
+  getUnansweredReflectionSummary: getUnansweredReflectionSummaryMock,
+}));
+vi.mock("@/lib/monthly-identity-narrative", () => ({
+  loadMonthlyIdentityNarratives: loadMonthlyIdentityNarrativesMock,
+}));
+vi.mock("@/actions/auth", () => ({
+  signOut: vi.fn(),
+}));
+
+const { MonthlyIdentityNarrativeCard } = await import(
+  "@/components/timeline/monthly-identity-narrative-card"
 );
+const { default: TimelinePage } = await import("@/app/(protected)/timeline/page");
 
-const PAGE_SOURCE = readFileSync(
-  resolve(__dirname, "../../app/(protected)/timeline/page.tsx"),
-  "utf-8",
-);
+function makeNarrative(
+  overrides: Partial<MonthlyIdentityNarrative> = {},
+): MonthlyIdentityNarrative {
+  return {
+    month: "June 2026",
+    headline: "The month you stopped waiting for permission",
+    openingBeginning: "June opened with a decision you had postponed for weeks.",
+    openingEnd: "By the end of the month the move felt inevitable.",
+    howYouChanged: ["You became more decisive", "You became less anchored to routine"],
+    previousMonth: "May 2026",
+    comparison: {
+      traitsMorePresent: [],
+      traitsLessPresent: [],
+      newlyObserved: [],
+    } as MonthlyIdentityNarrative["comparison"],
+    situationCount: 2,
+    checkInCount: 1,
+    reflectionCount: 1,
+    ...overrides,
+  };
+}
 
-describe("MonthlyIdentityNarrativeCard — present fields", () => {
-  it("renders the month label", () => {
-    expect(CARD_SOURCE).toContain("narrative.month");
+function renderCard(narrative: MonthlyIdentityNarrative): string {
+  return renderToStaticMarkup(createElement(MonthlyIdentityNarrativeCard, { narrative }));
+}
+
+async function renderTimelinePage(): Promise<string> {
+  return renderToStaticMarkup(await TimelinePage());
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  getUserIdentityMock.mockResolvedValue({ displayName: "Sam", initial: "S" });
+  getUnansweredReflectionSummaryMock.mockResolvedValue({
+    unansweredCount: 0,
+    pending: null,
   });
-
-  it("renders the headline", () => {
-    expect(CARD_SOURCE).toContain("narrative.headline");
-  });
-
-  it("renders both opening paragraphs", () => {
-    expect(CARD_SOURCE).toContain("narrative.openingBeginning");
-    expect(CARD_SOURCE).toContain("narrative.openingEnd");
-  });
-
-  it("renders how-you-changed as a bullet list", () => {
-    expect(CARD_SOURCE).toContain("narrative.howYouChanged");
-    expect(CARD_SOURCE).toMatch(/[•][^\n]*\{change\}/);
-  });
-
-  it("renders evidence counts", () => {
-    expect(CARD_SOURCE).toContain("situationCount");
-    expect(CARD_SOURCE).toContain("checkInCount");
-    expect(CARD_SOURCE).toContain("reflectionCount");
-    expect(CARD_SOURCE).toContain("Evidence");
+  loadMonthlyIdentityNarrativesMock.mockResolvedValue({
+    narratives: [makeNarrative()],
   });
 });
+
+// ---------------------------------------------------------------------------
+// MonthlyIdentityNarrativeCard — narrative content
+// ---------------------------------------------------------------------------
+
+describe("MonthlyIdentityNarrativeCard — narrative content", () => {
+  it("renders the headline", () => {
+    expect(renderCard(makeNarrative())).toContain(
+      "The month you stopped waiting for permission",
+    );
+  });
+
+  it("shows the first opening paragraph as the preview and keeps the rest behind a disclosure", () => {
+    const html = renderCard(makeNarrative());
+
+    expect(html).toContain("June opened with a decision you had postponed for weeks.");
+    // The second paragraph reads on demand: not in the initial render, but
+    // reachable through the collapsed disclosure toggle.
+    expect(html).not.toContain("By the end of the month the move felt inevitable.");
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("Read full chapter");
+  });
+
+  it("uses the closing paragraph as the preview when the opening one is missing", () => {
+    const html = renderCard(makeNarrative({ openingBeginning: "" }));
+
+    expect(html).toContain("By the end of the month the move felt inevitable.");
+    expect(html).not.toContain("Read full chapter");
+  });
+
+  it("renders no preview or disclosure when both opening paragraphs are missing", () => {
+    const html = renderCard(makeNarrative({ openingBeginning: "", openingEnd: "" }));
+
+    expect(html).not.toContain("June opened with");
+    expect(html).not.toContain("Read full chapter");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MonthlyIdentityNarrativeCard — how you changed
+// ---------------------------------------------------------------------------
+
+describe("MonthlyIdentityNarrativeCard — how you changed", () => {
+  it("renders one row per change statement", () => {
+    const html = renderCard(makeNarrative());
+
+    expect(html).toContain("How You Changed");
+    expect(html).toContain("You became more decisive");
+    expect(html).toContain("You became less anchored to routine");
+  });
+
+  it("marks 'became more' statements as up and 'became less' statements as down", () => {
+    const html = renderCard(
+      makeNarrative({ howYouChanged: ["You became more decisive"] }),
+    );
+    expect(html).toContain("↑");
+    expect(html).not.toContain("↓");
+
+    const downHtml = renderCard(
+      makeNarrative({ howYouChanged: ["You became less anchored to routine"] }),
+    );
+    expect(downHtml).toContain("↓");
+    expect(downHtml).not.toContain("↑");
+  });
+
+  it("omits the section entirely when there are no change statements", () => {
+    const html = renderCard(makeNarrative({ howYouChanged: [] }));
+
+    expect(html).not.toContain("How You Changed");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MonthlyIdentityNarrativeCard — evidence
+// ---------------------------------------------------------------------------
+
+describe("MonthlyIdentityNarrativeCard — evidence", () => {
+  it("renders the evidence counts with pluralized labels", () => {
+    const html = renderCard(makeNarrative());
+
+    expect(html).toContain("Evidence");
+    expect(html).toContain("situations");
+    expect(html).toContain("check-in");
+    expect(html).toContain("reflection");
+  });
+
+  it("uses singular labels for counts of one and plural otherwise", () => {
+    const html = renderCard(
+      makeNarrative({ situationCount: 1, checkInCount: 3, reflectionCount: 0 }),
+    );
+
+    expect(html).toContain(">situation<");
+    expect(html).toContain(">check-ins<");
+    expect(html).toContain(">reflections<");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MonthlyIdentityNarrativeCard — section order
+// ---------------------------------------------------------------------------
 
 describe("MonthlyIdentityNarrativeCard — section order", () => {
-  it("orders sections as: headline, opening, how you changed, evidence", () => {
-    const headlineIndex = CARD_SOURCE.indexOf("narrative.headline");
-    const openingBeginningIndex = CARD_SOURCE.indexOf("narrative.openingBeginning");
-    const openingEndIndex = CARD_SOURCE.indexOf("narrative.openingEnd");
-    const howYouChangedIndex = CARD_SOURCE.indexOf("How you changed");
-    const evidenceIndex = CARD_SOURCE.indexOf("Evidence");
+  it("renders headline, opening preview, how you changed, then evidence", () => {
+    const html = renderCard(makeNarrative());
+
+    const headlineIndex = html.indexOf("The month you stopped waiting for permission");
+    const previewIndex = html.indexOf("June opened with a decision");
+    const changedIndex = html.indexOf("How You Changed");
+    const evidenceIndex = html.indexOf("Evidence");
 
     expect(headlineIndex).toBeGreaterThan(-1);
-    expect(openingBeginningIndex).toBeGreaterThan(headlineIndex);
-    expect(openingEndIndex).toBeGreaterThan(openingBeginningIndex);
-    expect(howYouChangedIndex).toBeGreaterThan(openingEndIndex);
-    expect(evidenceIndex).toBeGreaterThan(howYouChangedIndex);
+    expect(previewIndex).toBeGreaterThan(headlineIndex);
+    expect(changedIndex).toBeGreaterThan(previewIndex);
+    expect(evidenceIndex).toBeGreaterThan(changedIndex);
   });
 });
 
-describe("MonthlyIdentityNarrativeCard — removed sections", () => {
-  it("does not render a why-this-changed section", () => {
-    expect(CARD_SOURCE).not.toContain("narrative.whyThisChanged");
-    expect(CARD_SOURCE).not.toContain("Why this changed");
+// ---------------------------------------------------------------------------
+// Timeline page — renders monthly narratives
+// ---------------------------------------------------------------------------
+
+describe("Timeline page — renders monthly narratives", () => {
+  it("renders each narrative as a dated chapter: month label plus card content", async () => {
+    loadMonthlyIdentityNarrativesMock.mockResolvedValue({
+      narratives: [
+        makeNarrative(),
+        makeNarrative({ month: "May 2026", headline: "A slower month of groundwork" }),
+      ],
+    });
+
+    const html = await renderTimelinePage();
+
+    expect(html).toContain("June 2026");
+    expect(html).toContain("The month you stopped waiting for permission");
+    expect(html).toContain("May 2026");
+    expect(html).toContain("A slower month of groundwork");
   });
 
-  it("does not render major decisions, future shifts, themes, or raw identity-shift evidence lists", () => {
-    expect(CARD_SOURCE).not.toContain("majorDecisions");
-    expect(CARD_SOURCE).not.toContain("futureShifts");
-    expect(CARD_SOURCE).not.toContain("narrative.themes");
-    expect(CARD_SOURCE).not.toContain("Future movements");
-    expect(CARD_SOURCE).not.toContain("Major decisions");
-  });
-});
+  it("shows an empty state when there are no monthly narratives", async () => {
+    loadMonthlyIdentityNarrativesMock.mockResolvedValue({ narratives: [] });
 
-describe("MonthlyIdentityNarrativeCard — omits empty sections without fabricating content", () => {
-  it("guards howYouChanged behind a length check", () => {
-    expect(CARD_SOURCE).toContain("narrative.howYouChanged.length > 0");
+    const html = await renderTimelinePage();
+
+    expect(html).toContain("No monthly chapters yet.");
   });
 
-  it("guards each opening paragraph independently", () => {
-    expect(CARD_SOURCE).toContain("narrative.openingBeginning ?");
-    expect(CARD_SOURCE).toContain("narrative.openingEnd ?");
-  });
-});
+  it("surfaces a load error instead of silently rendering nothing", async () => {
+    loadMonthlyIdentityNarrativesMock.mockResolvedValue({
+      error: "Could not load your timeline.",
+    });
 
-describe("Timeline page — uses MonthlyIdentityNarrative as the sole data source", () => {
-  it("loads monthly identity narratives", () => {
-    expect(PAGE_SOURCE).toContain("loadMonthlyIdentityNarratives");
-    expect(PAGE_SOURCE).toContain("MonthlyIdentityNarrativeCard");
-  });
+    const html = await renderTimelinePage();
 
-  it("removes the old Life Chapters / activity-feed rendering entirely", () => {
-    expect(PAGE_SOURCE).not.toContain("listLifeChapters");
-    expect(PAGE_SOURCE).not.toContain("LifeChapterCard");
-    expect(PAGE_SOURCE).not.toContain("generateTimelineAction");
-    expect(PAGE_SOURCE).not.toContain("deleteTimelineDevAction");
-    expect(PAGE_SOURCE).not.toContain("TimelineEventCard");
-  });
-
-  it("shows an empty state when there are no monthly narratives", () => {
-    expect(PAGE_SOURCE).toContain("narratives.length === 0");
-  });
-
-  it("surfaces a load error instead of silently rendering nothing", () => {
-    expect(PAGE_SOURCE).toContain('"error" in result');
+    expect(html).toContain("Could not load your timeline.");
+    expect(html).not.toContain("No monthly chapters yet.");
   });
 });

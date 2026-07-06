@@ -1,21 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import { deleteMoment } from "@/lib/moments";
+import { createMoment, deleteMoment } from "@/lib/moments";
+import { persistGeneratedPaths } from "@/lib/paths";
 import { runStreamingGeneration } from "@/lib/ai/stream";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
 import { createArrayItemParser } from "@/lib/ai/parse-stream";
-import { encodePathDescriptionWithNativeTitle } from "@/components/home/path-native-title";
 import { isAiAuditEnabled, toRawPathsAudit } from "@/lib/ai-audit";
-import type { ThemeName } from "@/types/enums";
-
-function collectThemes(paths: { themes: ThemeName[] }[]): ThemeName[] {
-  const seen = new Set<ThemeName>();
-  for (const path of paths) {
-    for (const theme of path.themes) {
-      seen.add(theme);
-    }
-  }
-  return [...seen];
-}
 
 function sseData(event: unknown): string {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -51,23 +40,16 @@ export async function POST(request: Request) {
 
   const title = situationText.trim();
 
-  const { data: moment, error: momentError } = await supabase
-    .from("moments")
-    .insert({
-      user_id: user.id,
-      title,
-      description: contextSummary ?? null,
-    })
-    .select("*")
-    .single();
+  const momentResult = await createMoment({
+    title,
+    description: contextSummary ?? null,
+  });
 
-  if (momentError || !moment) {
-    return Response.json(
-      { error: momentError?.message ?? "Failed to create moment" },
-      { status: 500 },
-    );
+  if ("error" in momentResult) {
+    return Response.json({ error: momentResult.error }, { status: 500 });
   }
 
+  const moment = momentResult.moment;
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -108,60 +90,19 @@ export async function POST(request: Request) {
 
         const generated = generationResult.data;
 
-        await supabase
-          .from("moments")
-          .update({
-            current_understanding: generated.current_understanding,
-            opportunity_themes: generated.opportunity_themes,
-            risk_themes: generated.risk_themes,
-          })
-          .eq("id", moment.id)
-          .eq("user_id", user.id);
+        const persistResult = await persistGeneratedPaths({
+          momentId: moment.id,
+          momentTitle: title,
+          generated,
+        });
 
-        const pathRows = generated.paths.map((path, index) => ({
-          moment_id: moment.id,
-          user_id: user.id,
-          description: encodePathDescriptionWithNativeTitle(
-            path.title ?? "",
-            path.description,
-          ),
-          benefits: path.benefits,
-          consequences: path.consequences,
-          future_shift: path.future_shift,
-          themes: path.themes,
-          sort_order: index,
-        }));
-
-        const { data: insertedPaths, error: pathsError } = await supabase
-          .from("paths")
-          .insert(pathRows)
-          .select("*");
-
-        if (pathsError || !insertedPaths) {
+        if ("error" in persistResult) {
           await cleanupOrphanedMoment();
-          enqueue({
-            type: "error",
-            error: pathsError?.message ?? "Failed to insert paths",
-          });
+          enqueue({ type: "error", error: persistResult.error });
           return;
         }
 
-        const themes = collectThemes(generated.paths);
-
-        await supabase.from("timeline_events").insert({
-          user_id: user.id,
-          event_type: "paths_generated",
-          reference_type: "moment",
-          reference_id: moment.id,
-          title: "Paths explored",
-          summary: generated.current_understanding,
-          metadata: {
-            moment_id: moment.id,
-            moment_title: title,
-            path_count: insertedPaths.length,
-            themes,
-          },
-        });
+        const insertedPaths = persistResult.paths;
 
         enqueue({
           type: "result",

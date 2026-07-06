@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { computeMonthlyComparison } from "@/lib/monthly-identity-comparison";
 import type { MonthlyIdentityEvolution } from "@/lib/monthly-identity-evolution";
+import type { ThemeName } from "@/types/enums";
 
 function buildMonth(overrides: Partial<MonthlyIdentityEvolution> = {}): MonthlyIdentityEvolution {
   return {
@@ -20,7 +21,7 @@ function buildMonth(overrides: Partial<MonthlyIdentityEvolution> = {}): MonthlyI
   };
 }
 
-function identityUpdate(themes: string[]) {
+function identityUpdate(themes: ThemeName[]) {
   return {
     id: `update-${Math.random()}`,
     title: "An identity update",
@@ -126,15 +127,15 @@ describe("computeMonthlyComparison — comparison against a previous month", () 
 
   it("caps traitsMorePresent and traitsLessPresent at 3 items each", () => {
     const current = withIdentityUpdates(
-      identityUpdate(["A"]),
-      identityUpdate(["B"]),
-      identityUpdate(["C"]),
-      identityUpdate(["D"]),
+      identityUpdate(["Connection"]),
+      identityUpdate(["Independence"]),
+      identityUpdate(["Curiosity"]),
+      identityUpdate(["Stability"]),
     );
     const previous = buildMonth();
 
     const result = computeMonthlyComparison(current, previous);
     expect(result.traitsMorePresent).toHaveLength(3);
-    expect(result.traitsMorePresent).toEqual(["A", "B", "C"]);
+    expect(result.traitsMorePresent).toEqual(["Connection", "Independence", "Curiosity"]);
   });
 });

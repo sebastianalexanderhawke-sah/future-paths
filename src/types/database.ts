@@ -96,6 +96,32 @@ export type ForecastInsert = Pick<
   situation_summary?: string | null;
 };
 
+// Persisted AI narrative draft for one calendar month of the Timeline.
+// Deterministic narrative parts (comparisons, counts) are computed at read
+// time and never stored — see lib/monthly-identity-narrative.ts.
+export type MonthlyIdentityNarrativeRow = {
+  id: string;
+  user_id: string;
+  month: string;
+  headline: string;
+  opening_beginning: string;
+  opening_end: string;
+  evidence_fingerprint: string;
+  generated_at: string;
+  updated_at: string;
+};
+
+export type MonthlyIdentityNarrativeInsert = Pick<
+  MonthlyIdentityNarrativeRow,
+  "user_id" | "month" | "headline" | "evidence_fingerprint"
+> & {
+  opening_beginning?: string;
+  opening_end?: string;
+  updated_at?: string;
+};
+
+export type MonthlyIdentityNarrativeUpdate = Partial<MonthlyIdentityNarrativeInsert>;
+
 export type IdentityUpdate = {
   id: string;
   user_id: string;
@@ -758,6 +784,19 @@ export type Database = {
             foreignKeyName: "forecasts_path_id_fkey";
             columns: ["path_id"];
             referencedRelation: "paths";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      monthly_identity_narratives: {
+        Row: MonthlyIdentityNarrativeRow;
+        Insert: MonthlyIdentityNarrativeInsert;
+        Update: MonthlyIdentityNarrativeUpdate;
+        Relationships: [
+          {
+            foreignKeyName: "monthly_identity_narratives_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];

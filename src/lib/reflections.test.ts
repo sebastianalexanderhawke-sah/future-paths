@@ -1,12 +1,102 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   parseReflectionQuestionResult,
   reflectionQuestionOutputSchema,
 } from "@/lib/reflection-question";
 import { validateReflectionAnswerLength } from "@/lib/reflections-validation";
+import type { ReflectionCheckIn } from "@/lib/reflections";
+
+// Module mocks so the Overview page (an async server component) can be
+// rendered with fixture data in the reflection-surfacing tests below.
+const {
+  getUserIdentityMock,
+  getUnansweredReflectionSummaryMock,
+  listMomentsMock,
+  listActiveFutureSelvesMock,
+  listIdentityUpdatesMock,
+  getChosenPathsForMomentsMock,
+  getLastCheckInsForMomentsMock,
+} = vi.hoisted(() => ({
+  getUserIdentityMock: vi.fn(),
+  getUnansweredReflectionSummaryMock: vi.fn(),
+  listMomentsMock: vi.fn(),
+  listActiveFutureSelvesMock: vi.fn(),
+  listIdentityUpdatesMock: vi.fn(),
+  getChosenPathsForMomentsMock: vi.fn(),
+  getLastCheckInsForMomentsMock: vi.fn(),
+}));
+
+vi.mock("@/lib/user-identity", () => ({
+  getUserIdentity: getUserIdentityMock,
+}));
+vi.mock("@/lib/reflections", () => ({
+  getUnansweredReflectionSummary: getUnansweredReflectionSummaryMock,
+}));
+vi.mock("@/lib/moments", () => ({
+  listMoments: listMomentsMock,
+}));
+vi.mock("@/lib/future-selves", () => ({
+  listActiveFutureSelves: listActiveFutureSelvesMock,
+}));
+vi.mock("@/lib/identity-updates", () => ({
+  listIdentityUpdates: listIdentityUpdatesMock,
+}));
+vi.mock("@/lib/paths", () => ({
+  getChosenPathsForMoments: getChosenPathsForMomentsMock,
+}));
+vi.mock("@/lib/check-ins", () => ({
+  getLastCheckInsForMoments: getLastCheckInsForMomentsMock,
+}));
+vi.mock("@/actions/auth", () => ({
+  signOut: vi.fn(),
+}));
+// FuturePathsCard calls useRouter at render time; outside a running Next app
+// there is no router context, so provide an inert one.
+vi.mock("next/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/navigation")>();
+  return {
+    ...actual,
+    useRouter: () => ({
+      push: vi.fn(),
+      replace: vi.fn(),
+      prefetch: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      refresh: vi.fn(),
+    }),
+  };
+});
+
+const { ReflectionWaitingHomeSection } = await import(
+  "@/components/home/reflection-waiting-home-section"
+);
+const { default: OverviewPage } = await import("@/app/(protected)/overview/page");
+
+function makePendingReflection(): ReflectionCheckIn {
+  return {
+    id: "check-in-1",
+    user_id: "user-1",
+    moment_id: "moment-1",
+    path_id: "path-1",
+    reflection: "We finally talked about the move.",
+    reality_summary: "The conversation happened.",
+    theme_changes: [],
+    identity_impact: "",
+    reflection_question: "What surprised you most about her response?",
+    reflection_answer: null,
+    created_at: "2026-06-23T16:27:12.813Z",
+    moment: {
+      title: "The job offer in Dallas",
+      description: "A new role in another city.",
+      current_understanding: null,
+    },
+  };
+}
 
 describe("CheckIn reflection fields", () => {
   const DB_SOURCE = readFileSync(resolve(__dirname, "../types/database.ts"), "utf-8");
@@ -109,29 +199,64 @@ describe("/reflections page", () => {
   });
 });
 
-describe("overview Reflection Waiting section", () => {
-  const OVERVIEW_SOURCE = readFileSync(
-    resolve(__dirname, "../app/(protected)/overview/page.tsx"),
-    "utf-8",
-  );
-  const SECTION_SOURCE = readFileSync(
-    resolve(__dirname, "../components/home/reflection-waiting-home-section.tsx"),
-    "utf-8",
-  );
-
-  it("fetches unanswered reflection summary", () => {
-    expect(OVERVIEW_SOURCE).toContain("getUnansweredReflectionSummary");
+describe("overview surfaces the waiting reflection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getUserIdentityMock.mockResolvedValue({ displayName: "Sam", initial: "S" });
+    getUnansweredReflectionSummaryMock.mockResolvedValue({
+      unansweredCount: 0,
+      pending: null,
+    });
+    listMomentsMock.mockResolvedValue({ moments: [] });
+    listActiveFutureSelvesMock.mockResolvedValue({ futureSelves: [] });
+    listIdentityUpdatesMock.mockResolvedValue({ identityUpdates: [] });
+    getChosenPathsForMomentsMock.mockResolvedValue({});
+    getLastCheckInsForMomentsMock.mockResolvedValue({});
   });
 
-  it("passes pending reflection to section component", () => {
-    expect(OVERVIEW_SOURCE).toContain("pendingReflection");
-    expect(OVERVIEW_SOURCE).toContain("ReflectionWaitingHomeSection");
+  async function renderOverviewPage(): Promise<string> {
+    return renderToStaticMarkup(await OverviewPage());
+  }
+
+  it("lists a pending reflection under Needs Attention, linking to /reflections", async () => {
+    getUnansweredReflectionSummaryMock.mockResolvedValue({
+      unansweredCount: 1,
+      pending: makePendingReflection(),
+    });
+
+    const html = await renderOverviewPage();
+
+    expect(html).toContain("Reflection available");
+    expect(html).toContain("The job offer in Dallas");
+    expect(html).toContain('href="/reflections"');
   });
 
-  it("links to /reflections and shows pending reflection", () => {
-    expect(SECTION_SOURCE).toContain("/reflections");
-    expect(SECTION_SOURCE).toContain("Reflection Waiting");
-    expect(SECTION_SOURCE).toContain("Answer");
+  it("shows no reflection attention row when nothing is waiting", async () => {
+    const html = await renderOverviewPage();
+
+    expect(html).not.toContain("Reflection available");
+  });
+});
+
+describe("ReflectionWaitingHomeSection", () => {
+  it("shows the pending question with its situation and links to /reflections", () => {
+    const html = renderToStaticMarkup(
+      createElement(ReflectionWaitingHomeSection, {
+        pending: makePendingReflection(),
+      }),
+    );
+
+    expect(html).toContain("What surprised you most about her response?");
+    expect(html).toContain("The job offer in Dallas");
+    expect(html).toContain('href="/reflections"');
+  });
+
+  it("renders nothing when no reflection is pending", () => {
+    const html = renderToStaticMarkup(
+      createElement(ReflectionWaitingHomeSection, { pending: null }),
+    );
+
+    expect(html).toBe("");
   });
 });
 

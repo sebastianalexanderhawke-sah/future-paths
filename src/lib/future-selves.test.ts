@@ -17,7 +17,8 @@ const {
   return {
     extractAndPersistMock: vi.fn(async () => {}),
     extractCheckInObservationsMock: vi.fn(async () => {}),
-    recognizeMock: vi.fn(() => []),
+    // Wide return type so per-test match fixtures don't collapse to never[].
+    recognizeMock: vi.fn((..._args: unknown[]): unknown[] => []),
     getIdentityByIdMock: vi.fn(),
     explainIdentitiesMock: vi.fn(),
     getActiveStub: () => stub,
@@ -76,7 +77,9 @@ function createSupabaseStub(tableConfigs: Record<string, TableConfig>, userId = 
   }
 
   function makeBuilder(table: string) {
-    const builder: Record<string, (...args: unknown[]) => unknown> = {};
+    // `unknown` values: `then` takes function parameters, which strict
+    // contravariance rejects under a `(...args: unknown[]) => unknown` index.
+    const builder: Record<string, unknown> = {};
     const chainable = ["select", "eq", "order", "limit", "in", "neq", "not"] as const;
 
     for (const method of chainable) {
@@ -1341,7 +1344,9 @@ describe("queueFutureSelvesGeneration", () => {
     let getUserCallCount = 0;
 
     function makeBuilder(table: string) {
-      const builder: Record<string, (...args: unknown[]) => unknown> = {};
+      // `unknown` values: `then` takes function parameters, which strict
+    // contravariance rejects under a `(...args: unknown[]) => unknown` index.
+    const builder: Record<string, unknown> = {};
       const chainable = ["select", "eq", "order", "limit", "in", "neq", "not"] as const;
       for (const method of chainable) {
         builder[method] = (...args: unknown[]) => {

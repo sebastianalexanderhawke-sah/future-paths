@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { checkInOutputSchema } from "@/lib/ai/schemas/check-in";
@@ -303,91 +304,108 @@ export async function createCheckIn(
     }
   }
 
-  await createIdentityUpdateIfMeaningful({
-    userId: auth.userId,
-    moment: { id: moment.id, title: moment.title },
-    checkIn,
-  });
+  // The check-in itself (row, timeline event, path lock) is committed above —
+  // that is the work the user is waiting on. Everything below is downstream
+  // enrichment (identity update, forecast regeneration, reflection question,
+  // Future Selves, Current Self): each stage is idempotent or debounced and
+  // none changes the response, so it runs via after(), once the response has
+  // been sent. The stages run sequentially inside one callback in the exact
+  // order they previously ran on the request path, preserving their ordering
+  // guarantees; queueFutureSelvesGeneration keeps its own per-user in-process
+  // chain and cross-instance lock.
+  const userId = auth.userId;
+  after(async () => {
+    try {
+      await createIdentityUpdateIfMeaningful({
+        userId,
+        moment: { id: moment.id, title: moment.title },
+        checkIn,
+      });
 
-  // Trigger forecast regeneration if a path-specific forecast already exists.
-  const shouldRegenerate = await hasForecastForMomentAndPath(
-    momentId,
-    chosenPath.id,
-    auth.userId,
-  );
-
-  if (shouldRegenerate) {
-    const { data: allCheckIns } = await supabase
-      .from("check_ins")
-      .select("reality_summary, created_at")
-      .eq("moment_id", momentId)
-      .eq("user_id", auth.userId)
-      .order("created_at", { ascending: true });
-
-    const checkInHistory = (allCheckIns ?? []).map((ci) => ci.reality_summary);
-
-    const regenResult = await runStructuredGeneration({
-      userId: auth.userId,
-      profile: "forecast",
-      promptId: "forecast.generate",
-      schema: forecastOutputSchema,
-      overrides: {
+      // Trigger forecast regeneration if a path-specific forecast already exists.
+      const shouldRegenerate = await hasForecastForMomentAndPath(
         momentId,
-        pathId: chosenPath.id,
-        checkInHistory,
-      },
-    });
+        chosenPath.id,
+        userId,
+      );
 
-    if (regenResult.ok) {
-      const regenSections = buildForecastSectionsFromGeneration(
-        regenResult.data,
-        moment.title,
-        null,
-        moment.description,
-        [],
-      );
-      const situationSummary = formatForecastSituationSummary(
-        moment.description ?? moment.title,
-      );
-      await saveForecast({
-        userId: auth.userId,
-        momentId,
-        pathId: chosenPath.id,
-        sections: regenSections,
-        situationSummary,
+      if (shouldRegenerate) {
+        const { data: allCheckIns } = await supabase
+          .from("check_ins")
+          .select("reality_summary, created_at")
+          .eq("moment_id", momentId)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: true });
+
+        const checkInHistory = (allCheckIns ?? []).map((ci) => ci.reality_summary);
+
+        const regenResult = await runStructuredGeneration({
+          userId,
+          profile: "forecast",
+          promptId: "forecast.generate",
+          schema: forecastOutputSchema,
+          overrides: {
+            momentId,
+            pathId: chosenPath.id,
+            checkInHistory,
+          },
+        });
+
+        if (regenResult.ok) {
+          const regenSections = buildForecastSectionsFromGeneration(
+            regenResult.data,
+            moment.title,
+            null,
+            moment.description,
+            [],
+          );
+          const situationSummary = formatForecastSituationSummary(
+            moment.description ?? moment.title,
+          );
+          await saveForecast({
+            userId,
+            momentId,
+            pathId: chosenPath.id,
+            sections: regenSections,
+            situationSummary,
+          }).catch(() => {});
+        }
+      }
+
+      const reflectionEvaluation = await evaluateReflectionQuestion(
+        userId,
+        trimmedReflection,
+        generated.reality_summary,
+      ).catch(() => null);
+
+      if (reflectionEvaluation?.should_reflect && reflectionEvaluation.question) {
+        const { error: reflectionUpdateError } = await supabase
+          .from("check_ins")
+          .update({ reflection_question: reflectionEvaluation.question })
+          .eq("id", checkIn.id)
+          .eq("user_id", userId);
+
+        if (reflectionUpdateError) {
+          console.error("[createCheckIn] Failed to persist reflection_question:", reflectionUpdateError.message);
+        }
+      }
+
+      // Check-ins are lived evidence — the strongest signal Future Selves
+      // respond to — so every check-in always triggers a regeneration. The
+      // trigger identifies this check-in so generation extracts its behavior
+      // observations (once) before recognition runs.
+      await queueFutureSelvesGeneration(momentId, {
+        checkInId: checkIn.id,
+        source: "check_in",
       }).catch(() => {});
+      await requestCurrentSelfRegeneration(userId);
+    } catch (error) {
+      console.error(
+        "[createCheckIn] Background enrichment failed:",
+        error instanceof Error ? error.message : error,
+      );
     }
-  }
-
-  const reflectionEvaluation = await evaluateReflectionQuestion(
-    auth.userId,
-    trimmedReflection,
-    generated.reality_summary,
-  ).catch(() => null);
-
-  if (reflectionEvaluation?.should_reflect && reflectionEvaluation.question) {
-    const { error: reflectionUpdateError } = await supabase
-      .from("check_ins")
-      .update({ reflection_question: reflectionEvaluation.question })
-      .eq("id", checkIn.id)
-      .eq("user_id", auth.userId);
-
-    if (reflectionUpdateError) {
-      console.error("[createCheckIn] Failed to persist reflection_question:", reflectionUpdateError.message);
-    } else {
-      checkIn.reflection_question = reflectionEvaluation.question;
-    }
-  }
-
-  // Check-ins are lived evidence — the strongest signal Future Selves
-  // respond to — so every check-in always triggers a regeneration. The
-  // trigger identifies this check-in so generation extracts its behavior
-  // observations (once) before recognition runs.
-  await queueFutureSelvesGeneration(momentId, {
-    checkInId: checkIn.id,
-    source: "check_in",
-  }).catch(() => {});
-  await requestCurrentSelfRegeneration(auth.userId);
+  });
 
   revalidatePath(`/moments/${momentId}`);
 

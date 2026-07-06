@@ -23,7 +23,9 @@ const CHAINABLE_METHODS = ["select", "eq", "order", "limit", "in", "neq"] as con
 function createSupabaseStub(tableResponses: Record<string, TableResponse>) {
   function makeBuilder(table: string) {
     const response = tableResponses[table] ?? { data: [], error: null };
-    const builder: Record<string, (...args: unknown[]) => unknown> = {};
+    // `unknown` values: `then` takes function parameters, which strict
+    // contravariance rejects under a `(...args: unknown[]) => unknown` index.
+    const builder: Record<string, unknown> = {};
 
     for (const method of CHAINABLE_METHODS) {
       builder[method] = () => builder;

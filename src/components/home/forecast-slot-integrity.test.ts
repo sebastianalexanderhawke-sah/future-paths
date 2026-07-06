@@ -32,6 +32,7 @@ describe("forecast slot integrity", () => {
 
   it("preserves all surviving active futures without adding fallback replacements", () => {
     const generated = {
+      wild_card: [],
       active: [
         {
           title: "She Says Yes To Coffee",

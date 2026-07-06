@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import type { z } from "zod";
 
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import {
@@ -161,6 +162,48 @@ export async function generatePaths(
   const __t2 = Date.now();
   console.log(`[PROFILE] generatePaths STAGE=database save | start=${new Date(__t2).toISOString()}`);
 
+  const persistResult = await persistGeneratedPaths({
+    momentId,
+    momentTitle: moment.title,
+    generated,
+  });
+
+  if ("error" in persistResult) {
+    return persistResult;
+  }
+
+  console.log(
+    `[PROFILE] generatePaths STAGE=database save | end=${new Date().toISOString()} durationMs=${Date.now() - __t2}`,
+  );
+  console.log(
+    `[PROFILE] generatePaths TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __t0}`,
+  );
+
+  return { paths: persistResult.paths };
+}
+
+/**
+ * Commits a generated path set through the atomic persistence layer. Shared by
+ * the synchronous generatePaths flow above and the streaming
+ * /api/stream/decision-simulator route, so every path set — however it was
+ * generated — lands through the same commit_generated_paths RPC.
+ *
+ * Atomic: the moment update, the full path-set insert, and the timeline event
+ * are committed in a single transaction inside commit_generated_paths, so a
+ * failure leaves no partial state and needs no manual rollback. The
+ * (moment_id, sort_order) unique index makes a concurrent duplicate set
+ * impossible — the loser's insert raises a unique violation (23505) and the
+ * whole transaction rolls back. Ownership is enforced inside the RPC via
+ * auth.uid(), so no user id is passed from the caller.
+ */
+export async function persistGeneratedPaths(input: {
+  momentId: string;
+  momentTitle: string;
+  generated: z.input<typeof crossroadOutputSchema>;
+}): Promise<{ paths: Path[] } | { error: string }> {
+  const { momentId, momentTitle, generated } = input;
+  const supabase = await createClient();
+
   const themes = collectThemes(generated.paths);
 
   const pathRows = generated.paths.map((path, index) => ({
@@ -172,12 +215,6 @@ export async function generatePaths(
     sort_order: index,
   }));
 
-  // Atomic: the moment update, the full path-set insert, and the timeline event
-  // are committed in a single transaction inside commit_generated_paths, so a
-  // failure leaves no partial state and needs no manual rollback. The
-  // (moment_id, sort_order) unique index makes a concurrent duplicate set
-  // impossible — the loser's insert raises a unique violation (23505) and the
-  // whole transaction rolls back.
   const { data: insertedPaths, error: pathsError } = await supabase.rpc(
     "commit_generated_paths",
     {
@@ -189,7 +226,7 @@ export async function generatePaths(
       p_timeline_summary: generated.current_understanding,
       p_timeline_metadata: {
         moment_id: momentId,
-        moment_title: moment.title,
+        moment_title: momentTitle,
         path_count: generated.paths.length,
         themes,
       },
@@ -202,13 +239,6 @@ export async function generatePaths(
     }
     return { error: pathsError?.message ?? "Failed to generate paths." };
   }
-
-  console.log(
-    `[PROFILE] generatePaths STAGE=database save | end=${new Date().toISOString()} durationMs=${Date.now() - __t2}`,
-  );
-  console.log(
-    `[PROFILE] generatePaths TOTAL | end=${new Date().toISOString()} durationMs=${Date.now() - __t0}`,
-  );
 
   return { paths: insertedPaths };
 }

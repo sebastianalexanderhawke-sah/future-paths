@@ -35,6 +35,8 @@ describe("ai audit", () => {
     const raw = buildRawForecastAudit(
       {
         current_understanding: "You are starting a business.",
+        opportunity_themes: [],
+        risk_themes: [],
         paths: [
           {
             title: "Launch Now",
@@ -50,12 +52,15 @@ describe("ai audit", () => {
         {
           name: "Keeps shipping consistently even under pressure",
           summary: "Someone who treats discomfort as a signal to keep going rather than to stop.",
-          percentage: 40,
+          movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["Skills compound steadily."],
-          consequences: ["Other areas may be neglected."],
-          prediction: "Becomes someone who measures their life largely by progress.",
+          core_behaviors: ["Ships work on a steady cadence."],
+          behavioral_evidence: ["Launched despite the setback."],
+          growth_opportunities: ["Skills compound steadily."],
+          blind_spots: ["Other areas may be neglected."],
+          likely_evolution: "Becomes someone who measures their life largely by progress.",
           themes: ["Growth"],
+          why_emerging: "",
         },
       ],
     );

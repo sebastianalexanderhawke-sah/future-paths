@@ -161,6 +161,7 @@ describe("ForecastSections ↔ sections_json round-trip shape", () => {
       ],
       hiddenFutures: [],
       blindSpotFutures: [],
+      wildCardFutures: [],
     };
 
     // Simulate JSONB round-trip: serialize → parse

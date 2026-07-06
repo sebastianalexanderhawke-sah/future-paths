@@ -4,6 +4,7 @@ import {
   encodePathDescriptionWithNativeTitle,
   decodeNativePathFields,
 } from "@/components/home/path-native-title";
+import type { ThemeName } from "@/types/enums";
 import {
   assignUniquePathTitles,
   assignUniquePathTitlesWithTrace,
@@ -54,12 +55,13 @@ describe("formatPathTitle", () => {
       false,
     );
 
+    const nativeTitlePaths: { description: string; themes: ThemeName[] }[] = [
+      { description: "Be direct after work.", themes: ["Courage"] },
+      { description: "Stay friendly at work.", themes: ["Connection"] },
+      { description: "Redirect energy elsewhere.", themes: ["Independence"] },
+    ];
     const { titles, traces } = assignUniquePathTitlesWithTrace(
-      [
-        { description: "Be direct after work.", themes: ["Courage"] },
-        { description: "Stay friendly at work.", themes: ["Connection"] },
-        { description: "Redirect energy elsewhere.", themes: ["Independence"] },
-      ].map((path, index) => ({
+      nativeTitlePaths.map((path, index) => ({
         description: encodePathDescriptionWithNativeTitle(
           ["Ask Her Out", "Friendship First", "Move On"][index]!,
           path.description,

@@ -1,3 +1,5 @@
+import { after } from "next/server";
+
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { queueFutureSelvesGeneration } from "@/lib/future-selves";
 import { evaluateReflectionQuestion } from "@/lib/reflection-question";
@@ -98,25 +100,47 @@ export async function getUnansweredReflectionSummary(): Promise<
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("check_ins")
-    .select("*")
-    .eq("user_id", auth.userId)
-    .not("reflection_question", "is", null)
-    .order("created_at", { ascending: true }); // oldest first — queue order
 
-  if (error) {
-    return { error: error.message };
+  // Unanswered = a question exists and the answer is NULL or empty string —
+  // the same semantics the previous in-memory `!row.reflection_answer` filter
+  // applied. This runs on every protected page (sidebar badge), so it is a
+  // count plus a single oldest-pending row instead of a full-history read;
+  // both are served by the check_ins_unanswered_reflection_idx partial index.
+  const unansweredFilter = "reflection_answer.is.null,reflection_answer.eq.";
+
+  const [countResult, pendingResult] = await Promise.all([
+    supabase
+      .from("check_ins")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", auth.userId)
+      .not("reflection_question", "is", null)
+      .or(unansweredFilter),
+    supabase
+      .from("check_ins")
+      .select("*")
+      .eq("user_id", auth.userId)
+      .not("reflection_question", "is", null)
+      .or(unansweredFilter)
+      .order("created_at", { ascending: true }) // oldest first — queue order
+      .limit(1),
+  ]);
+
+  if (countResult.error) {
+    return { error: countResult.error.message };
   }
 
-  // Filter unanswered in JavaScript so both NULL and empty-string are treated
-  // as unanswered, consistent with how listReflectionCheckIns handles this.
-  const pendingRows = (data ?? []).filter((row) => !row.reflection_answer);
-  const pendingCheckIns = await attachMomentsToCheckIns(pendingRows, auth.userId);
+  if (pendingResult.error) {
+    return { error: pendingResult.error.message };
+  }
+
+  const pendingCheckIns = await attachMomentsToCheckIns(
+    pendingResult.data ?? [],
+    auth.userId,
+  );
 
   return {
-    unansweredCount: pendingRows.length,
-    // First item is the oldest unanswered — the active queue entry.
+    unansweredCount: countResult.count ?? 0,
+    // The oldest unanswered — the active queue entry.
     pending: pendingCheckIns[0] ?? null,
   };
 }
@@ -178,34 +202,50 @@ export async function submitReflectionAnswer(
     .eq("user_id", auth.userId)
     .maybeSingle();
 
-  // Reflection answered: the user has already done the interpretive work,
-  // so this is eligible to update Current Self immediately, bypassing the
-  // debounce that applies to routine events.
-  await requestCurrentSelfRegeneration(auth.userId, {
-    immediate: true,
-    reflectionInput: {
-      reflection: {
-        question: checkIn.reflection_question,
-        answer: trimmedAnswer,
-        checkInReflection: checkIn.reflection,
-        momentTitle: moment?.title ?? "Untitled situation",
-      },
-    },
+  // The answer is stored — that is the work the user is waiting on. The
+  // downstream regenerations are idempotent (extraction is once-per-source,
+  // generation is serialized by its own lock) and don't change the response,
+  // so they run via after(), in the same order they previously ran on the
+  // request path.
+  const userId = auth.userId;
+  const reflectionQuestion = checkIn.reflection_question;
+  after(async () => {
+    try {
+      // Reflection answered: the user has already done the interpretive work,
+      // so this is eligible to update Current Self immediately, bypassing the
+      // debounce that applies to routine events.
+      await requestCurrentSelfRegeneration(userId, {
+        immediate: true,
+        reflectionInput: {
+          reflection: {
+            question: reflectionQuestion,
+            answer: trimmedAnswer,
+            checkInReflection: checkIn.reflection,
+            momentTitle: moment?.title ?? "Untitled situation",
+          },
+        },
+      });
+
+      // Reflection answers are first-class identity evidence — regenerate Future
+      // Selves so they can incorporate the user's own interpretation of what the
+      // experience revealed, in addition to Current Self which already receives it.
+      // The trigger identifies the answered reflection so generation extracts its
+      // behavior observations (once) before recognition runs.
+      await queueFutureSelvesGeneration(checkIn.moment_id, {
+        checkInId: checkIn.id,
+        source: "reflection_answer",
+      }).catch(() => {});
+
+      // Advance the queue: evaluate the next unanswered check-in so the user
+      // never lands on an empty reflection queue after answering one.
+      await advanceReflectionQueue(userId).catch(() => {});
+    } catch (error) {
+      console.error(
+        "[submitReflectionAnswer] Background regeneration failed:",
+        error instanceof Error ? error.message : error,
+      );
+    }
   });
-
-  // Reflection answers are first-class identity evidence — regenerate Future
-  // Selves so they can incorporate the user's own interpretation of what the
-  // experience revealed, in addition to Current Self which already receives it.
-  // The trigger identifies the answered reflection so generation extracts its
-  // behavior observations (once) before recognition runs.
-  await queueFutureSelvesGeneration(checkIn.moment_id, {
-    checkInId: checkIn.id,
-    source: "reflection_answer",
-  }).catch(() => {});
-
-  // Advance the queue: evaluate the next unanswered check-in so the user
-  // never lands on an empty reflection queue after answering one.
-  await advanceReflectionQueue(auth.userId).catch(() => {});
 
   return { ok: true };
 }

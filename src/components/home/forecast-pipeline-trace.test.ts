@@ -6,6 +6,7 @@ describe("forecast pipeline trace", () => {
   it("records stage-by-stage trace entries when audit collection is enabled", () => {
     const result = processGeneratedForecastSections(
       {
+        wild_card: [],
         active: [
           {
             title: "She Says Yes To Coffee",

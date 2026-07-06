@@ -8,7 +8,9 @@ import type { ThemeName } from "@/types/enums";
 describe("serializeContext — mostRecentChosenPath", () => {
   const mostRecentChosenPath = {
     description: "Take the new job",
-    themes: ["Stability"] as IdentityContextBundle["mostRecentChosenPath"]["themes"],
+    themes: ["Stability"] as NonNullable<
+      IdentityContextBundle["mostRecentChosenPath"]
+    >["themes"],
     chosen_at: "2026-06-23T16:27:12.813Z",
     future_shift: "Builds toward financial stability",
   };
@@ -87,6 +89,8 @@ describe("serializeContext — monthlyIdentityEvolution", () => {
           identityImpact: "x".repeat(80),
           themeChanges: [],
           createdAt: `2026-06-${String((i % 28) + 1).padStart(2, "0")}T00:00:00.000Z`,
+          reflectionQuestion: null,
+          reflectionAnswer: null,
         })),
       },
     };

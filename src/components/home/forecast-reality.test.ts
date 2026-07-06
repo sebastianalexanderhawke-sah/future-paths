@@ -56,6 +56,7 @@ describe("forecast reality", () => {
     const sections = buildRealityForecastSections(
       [
         {
+          title: "Take The Job",
           description: "Accept the role in Dallas",
           benefits: ["Build a new social circle", "Gain clarity"],
           consequences: ["Temporary loneliness", "Distance from familiar places"],
@@ -83,6 +84,7 @@ describe("forecast reality", () => {
       [],
       "I like a girl at work",
       {
+        title: "Friendship First",
         description: "Keep things friendly at work.",
         benefits: ["The friendship grows stronger"],
         consequences: ["She may assume you are not interested"],
@@ -121,6 +123,7 @@ describe("forecast reality", () => {
   it("processes dedicated forecast generation through safeguards", () => {
     const sections = processGeneratedForecastSections(
       {
+        wild_card: [],
         active: [
           {
             title: "She Says Yes To Coffee",
@@ -201,6 +204,7 @@ describe("forecast reality", () => {
 
     const sections = processGeneratedForecastSections(
       {
+        wild_card: [],
         active: [
           {
             title: "She Says Yes To Coffee",
@@ -287,6 +291,7 @@ describe("forecast reality", () => {
   it("falls back to title/why truncation when draft has no signals", () => {
     const sections = processGeneratedForecastSections(
       {
+        wild_card: [],
         active: [
           {
             title: "She Says Yes To Coffee",
@@ -369,6 +374,7 @@ describe("forecast reality", () => {
 
     const sections = processGeneratedForecastSections(
       {
+        wild_card: [],
         active: [
           {
             title: "She Welcomes More Contact",
@@ -448,6 +454,7 @@ describe("forecast reality", () => {
   it("passes timeframe from draft through to ScannableFuture", () => {
     const sections = processGeneratedForecastSections(
       {
+        wild_card: [],
         active: [
           {
             title: "She Says Yes To Coffee",

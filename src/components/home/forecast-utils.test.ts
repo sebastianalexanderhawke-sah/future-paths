@@ -5,9 +5,12 @@ import {
   withForecastFallbacks,
 } from "@/components/home/forecast-utils";
 import { isReflectiveForecast } from "@/components/home/forecast-reality";
+import type { MockCrossroadResult } from "@/lib/mock-crossroad-generator";
 
-const crossroad = {
+const crossroad: MockCrossroadResult = {
   current_understanding: "You are exploring a move.",
+  opportunity_themes: [],
+  risk_themes: [],
   paths: [
     {
       title: "Take The Job",
@@ -50,7 +53,7 @@ const crossroad = {
       themes: ["Courage"],
     },
   ],
-} as const;
+};
 
 describe("buildForecastSections", () => {
   it("maps crossroad and future self output into scannable forecast cards", () => {
@@ -60,12 +63,16 @@ describe("buildForecastSections", () => {
         {
           name: "Adapts quickly to the new city rather than waiting it out",
           summary: "A version focused on adaptation.",
-          percentage: 72,
+          movement_direction: "positive",
           evidence_strength: "Moderate",
-          benefits: ["New routines form faster.", "Local opportunities open up sooner."],
-          consequences: ["Old routines and ties may fade.", "Less time spent weighing the move."],
-          prediction: "Becomes someone who treats relocation as routine rather than disruption.",
+          core_behaviors: ["Builds new routines quickly after a move."],
+          behavioral_evidence: ["Accepted the Dallas role."],
+          growth_opportunities: ["Local opportunities open up sooner."],
+          blind_spots: ["Old routines and ties may fade."],
+          likely_evolution:
+            "Becomes someone who treats relocation as routine rather than disruption.",
           themes: ["Growth"],
+          why_emerging: "",
         },
       ],
       "I moved to Dallas",
@@ -85,7 +92,7 @@ describe("buildForecastSections", () => {
 
   it("fills fallback sections when generation is sparse", () => {
     const sections = withForecastFallbacks(
-      { activeFutures: [], hiddenFutures: [], blindSpotFutures: [] },
+      { activeFutures: [], hiddenFutures: [], blindSpotFutures: [], wildCardFutures: [] },
       "I moved to Dallas",
     );
 

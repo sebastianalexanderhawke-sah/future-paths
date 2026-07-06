@@ -31,7 +31,9 @@ function createSupabaseStub(tableResponses: Record<string, TableResponse>) {
 
   function makeBuilder(table: string) {
     const response = tableResponses[table] ?? { data: [], error: null };
-    const builder: Record<string, (...args: unknown[]) => unknown> = {};
+    // `unknown` values: `then` takes function parameters, which strict
+    // contravariance rejects under a `(...args: unknown[]) => unknown` index.
+    const builder: Record<string, unknown> = {};
 
     for (const method of CHAINABLE_METHODS) {
       builder[method] = (...args: unknown[]) => {
@@ -40,6 +42,10 @@ function createSupabaseStub(tableResponses: Record<string, TableResponse>) {
       };
     }
 
+    builder.upsert = (...args: unknown[]) => {
+      calls.push({ table, method: "upsert", args });
+      return builder;
+    };
     builder.single = () => Promise.resolve(response);
     builder.maybeSingle = () => Promise.resolve(response);
     builder.then = (
@@ -338,5 +344,166 @@ describe("loadMonthlyIdentityNarratives", () => {
     const result = await loadMonthlyIdentityNarratives();
 
     expect(result).toEqual({ error: "Generation failed." });
+  });
+
+  it("persists generated narratives, then serves later loads without any AI call", async () => {
+    // First load: nothing stored yet → generation runs and the drafts are
+    // persisted per (user, month).
+    const firstStub = createSupabaseStub(ONE_MONTH_OF_DATA);
+    setActiveStub(firstStub);
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          month: "June 2026",
+          headline: "Decisions started getting made before certainty arrived.",
+          opening_beginning: "Plans waited for a clearer picture.",
+          opening_end: "Action came first and the picture filled in after.",
+        },
+      ],
+    });
+
+    await loadMonthlyIdentityNarratives();
+
+    const upsertCall = firstStub.calls.find(
+      (call) => call.table === "monthly_identity_narratives" && call.method === "upsert",
+    );
+    expect(upsertCall).toBeDefined();
+    const persistedRows = upsertCall!.args[0] as Array<Record<string, unknown>>;
+    expect(persistedRows).toHaveLength(1);
+    expect(persistedRows[0]).toMatchObject({
+      user_id: "user-1",
+      month: "June 2026",
+      headline: "Decisions started getting made before certainty arrived.",
+    });
+
+    // Second load: the stored narrative covers every month, so no AI call is
+    // made and the stored draft is rendered verbatim.
+    setActiveStub(
+      createSupabaseStub({
+        ...ONE_MONTH_OF_DATA,
+        monthly_identity_narratives: { data: persistedRows, error: null },
+      }),
+    );
+    runStructuredGenerationMock.mockClear();
+
+    const result = await loadMonthlyIdentityNarratives();
+    if (!("narratives" in result)) throw new Error("expected narratives");
+
+    expect(runStructuredGenerationMock).not.toHaveBeenCalled();
+    expect(result.narratives[0].headline).toBe(
+      "Decisions started getting made before certainty arrived.",
+    );
+    expect(result.narratives[0].openingBeginning).toBe("Plans waited for a clearer picture.");
+  });
+
+  it("never regenerates a stored historical month, even when its fingerprint no longer matches", async () => {
+    // June 2026 is a settled past month; its stored narrative must be served
+    // as-is regardless of what the evidence would fingerprint to today.
+    setActiveStub(
+      createSupabaseStub({
+        ...ONE_MONTH_OF_DATA,
+        monthly_identity_narratives: {
+          data: [
+            {
+              month: "June 2026",
+              headline: "The original June chapter.",
+              opening_beginning: "It began.",
+              opening_end: "It ended.",
+              evidence_fingerprint: "a-fingerprint-that-no-longer-matches",
+            },
+          ],
+          error: null,
+        },
+      }),
+    );
+
+    const result = await loadMonthlyIdentityNarratives();
+    if (!("narratives" in result)) throw new Error("expected narratives");
+
+    expect(runStructuredGenerationMock).not.toHaveBeenCalled();
+    expect(result.narratives[0].headline).toBe("The original June chapter.");
+  });
+
+  it("regenerates the current month when its stored fingerprint is stale", async () => {
+    const { currentMonthLabel } = await import("@/lib/monthly-identity-evolution");
+    const nowIso = new Date().toISOString();
+    const nowLabel = currentMonthLabel();
+
+    const currentMonthData = {
+      paths: {
+        data: [
+          {
+            id: "path-1",
+            moment_id: "moment-1",
+            description: "@native-title:Apply Wider, Move Faster@\nSend more applications.",
+            themes: ["Courage", "Independence"],
+            chosen_at: nowIso,
+          },
+        ],
+        error: null,
+      },
+      identity_updates: {
+        data: [
+          {
+            id: "update-1",
+            moment_id: "moment-1",
+            update_type: "reality_shift",
+            title: "More willing to act without certainty",
+            summary: "Applied before having a finished plan.",
+            themes: ["Courage"],
+            created_at: nowIso,
+          },
+        ],
+        error: null,
+      },
+      future_self_events: { data: [], error: null },
+      future_selves: { data: [], error: null },
+      monthly_identity_narratives: {
+        data: [
+          {
+            month: nowLabel,
+            headline: "The stale current-month chapter.",
+            opening_beginning: "Old beginning.",
+            opening_end: "Old end.",
+            evidence_fingerprint: "written-before-this-month's-newest-evidence",
+          },
+        ],
+        error: null,
+      },
+    };
+
+    const stub = createSupabaseStub(currentMonthData);
+    setActiveStub(stub);
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          month: nowLabel,
+          headline: "The refreshed current-month chapter.",
+          opening_beginning: "New beginning.",
+          opening_end: "New end.",
+        },
+      ],
+    });
+
+    const result = await loadMonthlyIdentityNarratives();
+    if (!("narratives" in result)) throw new Error("expected narratives");
+
+    expect(runStructuredGenerationMock).toHaveBeenCalledTimes(1);
+    expect(result.narratives[0].headline).toBe("The refreshed current-month chapter.");
+
+    const upsertCall = stub.calls.find(
+      (call) => call.table === "monthly_identity_narratives" && call.method === "upsert",
+    );
+    expect(upsertCall).toBeDefined();
+    const rows = upsertCall!.args[0] as Array<Record<string, unknown>>;
+    expect(rows[0]).toMatchObject({
+      month: nowLabel,
+      headline: "The refreshed current-month chapter.",
+    });
+    expect(rows[0].evidence_fingerprint).not.toBe(
+      "written-before-this-month's-newest-evidence",
+    );
   });
 });

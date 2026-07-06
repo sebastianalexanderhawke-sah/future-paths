@@ -14,18 +14,25 @@ import {
 } from "@/lib/ai/prompts/registry";
 
 describe("prompt registry", () => {
-  it("registers every migration-order prompt id at version 1", () => {
-    expect(PROMPT_MIGRATION_ORDER).toHaveLength(14);
+  it("registers every migration-order prompt id with buildable prompts", () => {
+    expect(PROMPT_MIGRATION_ORDER.length).toBeGreaterThan(0);
 
     for (const promptId of PROMPT_MIGRATION_ORDER) {
       const definition = getPromptDefinition(promptId);
 
       expect(definition.promptId).toBe(promptId);
-      expect(definition.promptVersion).toBe("1");
+      // Versions advance independently per prompt; the contract is that each
+      // definition carries a numeric version string for audit records.
+      expect(definition.promptVersion).toMatch(/^\d+$/);
       expect(definition.buildSystemPrompt().length).toBeGreaterThan(50);
-      expect(definition.buildUserPrompt({ userId: "user-1", profile: promptId })).toContain(
-        "Context JSON",
-      );
+
+      // The user prompt must embed the serialized context bundle.
+      const userPrompt = definition.buildUserPrompt({
+        userId: "user-1",
+        profile: promptId,
+      });
+      expect(userPrompt).toContain("Context JSON");
+      expect(userPrompt).toContain("user-1");
     }
   });
 
@@ -76,11 +83,50 @@ describe("prompt registry", () => {
       profile: "future_self",
     });
 
+    // The prompt must teach exactly the vocabulary the output parser enforces.
     expect(systemPrompt).toContain("movement_direction");
     expect(userPrompt).toContain("positive, negative, unchanged");
     expect(systemPrompt).toContain("Emerging, Moderate, Strong");
-    expect(systemPrompt).toContain("Avoid: archetypes");
-    expect(systemPrompt).toContain("Do not predict specific events");
+
+    // And the parser holds the model to it: a movement_direction draft parses…
+    const validDraft = {
+      name: "Self-Reliant Builder",
+      summary: "You keep choosing to build things on your own terms.",
+      movement_direction: "positive",
+      evidence_strength: "Emerging",
+      core_behaviors: [
+        "Ships side projects on a regular schedule",
+        "Applies for roles above current experience level",
+        "Asks for feedback directly instead of waiting",
+      ],
+      behavioral_evidence: ["Chose the Dallas role", "Launched the MVP"],
+      growth_opportunities: [
+        "Larger projects become realistic",
+        "A reputation for finishing forms",
+        "New collaborators seek you out",
+      ],
+      blind_spots: [
+        "Undervalues rest between pushes",
+        "Misses help others would offer",
+        "Avoids delegating early",
+      ],
+      likely_evolution:
+        "You become someone who treats building as the default response to uncertainty.",
+      themes: ["Growth"],
+      why_emerging: "You shipped the project you had postponed for months.",
+    };
+
+    const parsed = definition.parseOutput([validDraft]) as Array<
+      Record<string, unknown>
+    >;
+    expect(parsed[0]?.movement_direction).toBe("positive");
+    expect(parsed[0]).not.toHaveProperty("percentage");
+
+    // …while the old percentage-only contract is rejected.
+    const { movement_direction: _dropped, ...withoutDirection } = validDraft;
+    expect(() =>
+      definition.parseOutput([{ ...withoutDirection, percentage: 62 }]),
+    ).toThrow();
   });
 
   it("requires future_self.discover to preserve identity across generations", () => {

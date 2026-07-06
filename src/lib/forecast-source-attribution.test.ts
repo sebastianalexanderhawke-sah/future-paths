@@ -64,6 +64,7 @@ describe("forecast source attribution", () => {
 
   it("tags surviving Claude futures during forecast processing", () => {
     const generated = {
+      wild_card: [],
       active: [
         {
           title: "She Says Yes To Coffee",
