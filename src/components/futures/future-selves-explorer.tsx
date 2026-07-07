@@ -12,19 +12,16 @@ type FutureSelvesExplorerProps = {
 };
 
 /**
- * The dedicated Future Selves page: the SAME canonical BranchMap the
- * overview's Future Paths card renders, given a larger chart area — zooming
- * into the overview, not a second visualization. What this page adds is
- * interaction depth: selecting a branch opens the full identity card in a
- * dialog, and faded futures are listed below the map.
+ * The active-futures visualization of the dedicated Future Selves page: the
+ * SAME canonical BranchMap the overview's Future Paths card renders, given a
+ * larger chart area — zooming into the overview, not a second visualization.
+ * What this adds is interaction depth: selecting a branch opens the full
+ * identity card in a dialog. Faded futures live in their own sibling card on
+ * the page (FadedPathsCard), deliberately separate from the tree.
  */
 export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps) {
   const active = useMemo(
     () => futureSelves.filter((f) => f.status === "active"),
-    [futureSelves],
-  );
-  const faded = useMemo(
-    () => futureSelves.filter((f) => f.status === "faded"),
     [futureSelves],
   );
 
@@ -84,25 +81,6 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
     }
   };
 
-  const fadedSection =
-    faded.length > 0 ? (
-      <details className="group mt-6">
-        <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1] [&::-webkit-details-marker]:hidden">
-          <span className="group-open:hidden">▼ Faded futures ({faded.length})</span>
-          <span className="hidden group-open:inline">▲ Hide faded futures</span>
-        </summary>
-        <p className="mt-2 text-[13px] leading-relaxed text-[#888888]">
-          Paths that once emerged but are no longer being reinforced. Active
-          futures are the ones currently shaping your trajectory.
-        </p>
-        <div className="mt-4 flex flex-col gap-3">
-          {faded.map((futureSelf) => (
-            <FutureCard key={futureSelf.id} futureSelf={futureSelf} />
-          ))}
-        </div>
-      </details>
-    ) : null;
-
   return (
     <div className="w-full">
       {active.length > 0 ? (
@@ -119,8 +97,9 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
       <BranchMap
         futureSelves={active}
         // Full width of this page's quieter, wider surface: the exact
-        // Overview composition, faithfully enlarged — never reshaped.
-        widthClassName="mt-4"
+        // Overview composition, faithfully enlarged — never reshaped. The
+        // generous top margin lets the hero breathe under its heading.
+        widthClassName="mt-10"
         interaction={{
           kind: "dialog",
           openId,
@@ -130,8 +109,6 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
           },
         }}
       />
-
-      <div className="mx-auto w-full max-w-3xl">{fadedSection}</div>
 
       {/* Deep dive: a temporary, centered exploration of one future. */}
       {openFuture ? (
@@ -153,7 +130,7 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
             aria-label={openFuture.name}
             onClick={(event) => event.stopPropagation()}
             onKeyDown={trapTab}
-            className={`relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl shadow-xl ${
+            className={`relative max-h-[85vh] w-full max-w-[960px] overflow-y-auto rounded-2xl shadow-xl ${
               closing ? "modal-out" : "modal-in"
             }`}
           >

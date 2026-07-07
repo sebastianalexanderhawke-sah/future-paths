@@ -92,25 +92,31 @@ export function branchCurve(
 // Canonical layout model
 // ---------------------------------------------------------------------------
 
-// Geometry is AUTHORED in a fixed 800×560 coordinate space, and RENDERED
-// through the canonical composition below. HTML elements — endpoint dots and
-// labels — are placed by converting the same coordinates to percentages, so
-// branches, dots, and labels stay visually connected at any rendered size.
+// Geometry is AUTHORED in a fixed 800×440 coordinate space — the Overview
+// card's original one, unchanged — and RENDERED through the canonical
+// composition below. HTML elements — endpoint dots and labels — are placed
+// by converting the same coordinates to percentages, so branches, dots, and
+// labels stay visually connected at any rendered size.
 export const VIEW_W = 800;
-export const VIEW_H = 560;
+export const VIEW_H = 440;
 export const VIEW_CENTER: readonly [number, number] = [VIEW_W / 2, VIEW_H / 2];
 
-// The canonical RENDERED shape — the Overview card's composition, which is
-// the product's visual source of truth (a 968×320 chart in the 1120px
-// shell). Every BranchMap locks its chart area to this aspect ratio, so the
-// authored space is compressed vertically by the same fixed amount
-// everywhere: rendered angles are identical on every page and at every
-// viewport width, and the dedicated page is a faithful enlargement of the
-// Overview — never a reshaping of it. Width is the ONLY thing a renderer
-// chooses. (The compression is part of the design; what must never vary is
-// that it's the SAME compression on every surface.)
-export const RENDER_W = 800;
-export const RENDER_H = 264;
+// The canonical RENDERED shape — the Overview card's original chart box,
+// which is the product's visual source of truth: full card width × 260px in
+// the 1120px shell (1120 − 80 column padding − 72 card padding − 2 border =
+// 966). These are design pixels, not view units; only their RATIO matters.
+// Every BranchMap locks its chart area to this aspect ratio, so the authored
+// space is compressed vertically by the same fixed amount everywhere:
+// rendered angles are identical on every page and at every viewport width,
+// and the dedicated page is a faithful enlargement of the Overview — never a
+// reshaping of it. Width is the ONLY thing a renderer chooses.
+//
+// Do NOT re-derive these from any other surface. An earlier revision set the
+// ratio to 800/264 (a 968×320 box) — a composition the Overview never had —
+// which silently made the Overview chart ~23% taller. The Overview owns the
+// composition; other pages inherit it.
+export const RENDER_W = 966;
+export const RENDER_H = 260;
 
 type Slot = {
   /** Branch endpoint in view coordinates. */
@@ -122,43 +128,26 @@ type Slot = {
 };
 
 // Hand-curated layout — each slot is a permanent visual home, chosen by eye
-// rather than calculated, the way branches on a real tree each found their
-// own light. Together the five homes wrap the full circle, but nothing about
-// them is even: reaches run from a tucked-in 200 to a stretched-out 275,
-// angular gaps run from 42° to 110°, bows run from a slight 22 to a heavy
-// 42, and no branch mirrors another. One quiet gap stays open at the bottom.
-// The picture should say "growing in multiple directions", never "five
-// points on a circle" — adjust these by looking at the rendering, not by
-// doing math.
+// rather than calculated. These are the Overview card's ORIGINAL slots: the
+// composition is deliberately a little irregular (no perfectly opposite
+// pairs, staggered heights, one slot left open at the bottom right) so the
+// eye travels around it naturally. This picture is the product's canonical
+// design — adjust it by looking at the Overview card, not by doing math, and
+// never redesign it to suit another surface.
 const SLOTS: Record<string, Slot> = {
-  // Short and steep — a young shoot that went almost straight up.
   topLeft: {
-    end: [270, 122],
-    bend: 26,
+    end: [192, 84],
+    bend: 30,
     labelStyle: { right: 16, bottom: 12, textAlign: "right" },
   },
-  // The high reacher: long, climbing well past the others' height.
   topRight: {
-    end: [572, 88],
-    bend: -22,
+    end: [616, 72],
+    bend: -26,
     labelStyle: { left: 16, bottom: 12 },
   },
-  // The farthest reach of all, low and wide — grown toward open ground.
-  lowRight: {
-    end: [660, 362],
-    bend: 38,
-    labelStyle: { left: 16, top: 12 },
-  },
-  // Tucked in close, dropped low — the quiet one.
-  bottomLeft: {
-    end: [278, 442],
-    bend: -24,
-    labelStyle: { right: 14, top: 14, textAlign: "right" },
-  },
-  // Nearly level, with the heaviest bow — an old limb settling sideways.
-  left: {
-    end: [163, 246],
-    bend: -42,
+  midLeft: {
+    end: [148, 268],
+    bend: -34,
     labelStyle: {
       right: 20,
       top: "50%",
@@ -166,18 +155,28 @@ const SLOTS: Record<string, Slot> = {
       textAlign: "right",
     },
   },
+  midRight: {
+    end: [662, 240],
+    bend: 32,
+    labelStyle: { left: 20, top: "50%", transform: "translateY(-50%)" },
+  },
+  bottomLeft: {
+    end: [242, 372],
+    bend: -28,
+    labelStyle: { right: 14, top: 14, textAlign: "right" },
+  },
 };
 
-// Curated slot sets for 1–5 futures. Each set nests inside the next, so when
-// a future emerges or fades the existing branches keep their homes and only
-// the arriving/leaving branch changes — spatial memory survives count
-// changes as far as the assignment order allows.
+// The Overview's original curated slot sets for 1–5 futures. Not nested —
+// when a future emerges or fades the picture may recompose (accepted; see
+// the spatial-memory notes on slotKey below, which cover the common case of
+// likelihood changes within a stable set).
 const SLOT_SETS: Record<number, (keyof typeof SLOTS)[]> = {
-  1: ["topRight"],
-  2: ["topRight", "left"],
-  3: ["topRight", "left", "bottomLeft"],
-  4: ["topRight", "left", "bottomLeft", "lowRight"],
-  5: ["topRight", "left", "bottomLeft", "lowRight", "topLeft"],
+  1: ["midRight"],
+  2: ["midLeft", "midRight"],
+  3: ["topLeft", "topRight", "bottomLeft"],
+  4: ["topLeft", "topRight", "midLeft", "midRight"],
+  5: ["topLeft", "topRight", "midLeft", "midRight", "bottomLeft"],
 };
 
 /** The layout holds at most this many branches — the engine's identity cap. */

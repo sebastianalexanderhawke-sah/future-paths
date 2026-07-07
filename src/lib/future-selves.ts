@@ -77,6 +77,34 @@ export async function listActiveFutureSelves(
   return listFutureSelves({ status: "active", limit });
 }
 
+/**
+ * Every recorded event (emerged / grew / faded / returned) for this user's
+ * Future Selves, oldest first, grouped by future_self_id — the raw material
+ * for telling each future's evolution story. A plain object (not a Map) so
+ * it can cross the server→client component boundary.
+ */
+export async function loadFutureSelfEventsByFutureSelf(): Promise<
+  Record<string, FutureSelfEvent[]>
+> {
+  const auth = await requireUser();
+  if ("error" in auth) {
+    return {};
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("future_self_events")
+    .select("*")
+    .eq("user_id", auth.userId)
+    .order("created_at", { ascending: true });
+
+  const byFutureSelf: Record<string, FutureSelfEvent[]> = {};
+  for (const event of data ?? []) {
+    (byFutureSelf[event.future_self_id] ??= []).push(event);
+  }
+  return byFutureSelf;
+}
+
 export type FutureSelfImpactEntry = {
   futureSelfId: string;
   name: string;

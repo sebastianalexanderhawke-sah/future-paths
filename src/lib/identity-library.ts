@@ -5,6 +5,14 @@ export type IdentityDimensionWeights = Partial<Record<IdentityDimension, number>
 export type IdentityProfile = {
   id: string;
   canonical_name: string;
+  /**
+   * Timeless one-sentence answer to "who is this person?" — hand-written,
+   * never AI-generated, identical every time this identity appears. Shown
+   * quoted under the name on the Future Self card, so it must not
+   * paraphrase short_description or read like a forecast (the card's
+   * closing narrative owns the future tense).
+   */
+  identity_statement: string;
   short_description: string;
   dimension_weights: IdentityDimensionWeights;
   typical_behaviors: string[];
@@ -14,6 +22,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "self-reliant-builder",
     canonical_name: "Self-Reliant Builder",
+    identity_statement: "Builds a life that doesn't wait for anyone's permission.",
     // Phase 8F boundary vs Long-Haul Finisher: the Builder persists to stay
     // free of anyone else's control; the Finisher persists to complete what
     // was chosen, comfortably inside structures. Autonomy vs completion.
@@ -38,6 +47,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "community-weaver",
     canonical_name: "Community Weaver",
+    identity_statement: "Creates the belonging other people get to live inside.",
     short_description:
       "Actively initiates and holds relationships, organizing shared experiences and staying present through difficulty.",
     dimension_weights: {
@@ -63,6 +73,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "relentless-grower",
     canonical_name: "Relentless Grower",
+    identity_statement: "Chooses long-term growth over immediate comfort.",
     short_description:
       "Treats plateaus as problems and discomfort as a signal to push further, adapting method to pursue harder challenges.",
     dimension_weights: {
@@ -93,6 +104,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "reflective-practitioner",
     canonical_name: "Reflective Practitioner",
+    identity_statement: "Understands life by pausing to examine it.",
     short_description:
       "Pauses to examine decisions and patterns before committing, building understanding through consistent self-examination.",
     dimension_weights: {
@@ -114,6 +126,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "adaptive-explorer",
     canonical_name: "Adaptive Explorer",
+    identity_statement: "Follows what is interesting before it is certain.",
     short_description:
       "Pursues unfamiliar ideas and territories readily, changing direction when something more interesting appears and sharing experiments before they are complete.",
     dimension_weights: {
@@ -138,6 +151,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "threshold-crosser",
     canonical_name: "Threshold Crosser",
+    identity_statement: "Moves while the outcome is still unknowable.",
     short_description:
       "Acts before certainty arrives and moves into high-stakes situations others hesitate at, accepting instability as the cost of forward motion.",
     dimension_weights: {
@@ -165,6 +179,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "quiet-supporter",
     canonical_name: "Quiet Supporter",
+    identity_statement: "Shows up for their people and asks for almost nothing back.",
     // Phase 8F boundary vs Steady Foundation Builder: the Supporter's
     // steadiness exists FOR specific people; the Foundation Builder's exists
     // FOR the built structure. Loyalty to persons vs loyalty to arrangements.
@@ -188,6 +203,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "steady-foundation-builder",
     canonical_name: "Steady Foundation Builder",
+    identity_statement: "Protects what has been patiently built.",
     // Phase 8F boundary vs Quiet Supporter: this steadiness protects the
     // built structure — house, routine, arrangement — not a specific person.
     short_description:
@@ -210,6 +226,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "deliberate-soloist",
     canonical_name: "Deliberate Soloist",
+    identity_statement: "Does their deepest work in their own company.",
     short_description:
       "Chooses solitude as the environment for clearest thinking and deepest work, building a life with significant independence from others.",
     dimension_weights: {
@@ -231,6 +248,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "vulnerable-leader",
     canonical_name: "Vulnerable Leader",
+    identity_statement: "Steps forward without pretending to be certain.",
     // Phase 8F: rewritten out of corporate leadership-training language into
     // ordinary human terms — the person who steps forward without pretending
     // certainty. Same psychology, same weights.
@@ -264,6 +282,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
     // and pick up the new display name on their next generation run.
     id: "committed-achiever",
     canonical_name: "Long-Haul Finisher",
+    identity_statement: "Stays long after the excitement is gone.",
     short_description:
       "Stays with chosen commitments long after the excitement is gone, refusing pivots that would restart the clock — effort compounds because it is never scattered.",
     dimension_weights: {
@@ -287,6 +306,7 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "resilient-adapter",
     canonical_name: "Resilient Adapter",
+    identity_statement: "Becomes the steady one when everything shakes.",
     // Phase 8F: rewritten from "survives things" to chosen steadiness — this
     // person deliberately becomes the stable force others hold onto during
     // uncertainty. Absorbs Grounded Realist's clear-sightedness (naming

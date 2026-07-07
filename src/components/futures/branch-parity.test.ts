@@ -7,6 +7,8 @@ import {
   RENDER_H,
   RENDER_W,
   VIEW_CENTER,
+  VIEW_H,
+  VIEW_W,
 } from "@/components/futures/branch-language";
 import type { FutureSelf } from "@/types/database";
 
@@ -154,6 +156,42 @@ describe("Overview and Future Selves render one canonical layout", () => {
       expect(overviewHtml).toContain(f.name);
       expect(explorerHtml).toContain(f.name);
     }
+  });
+});
+
+describe("the canonical composition is the Overview's original design", () => {
+  // The Overview (Home) card is the product's visual source of truth; the
+  // dedicated page is an enlargement of it, never the other way around.
+  // These pins encode the ORIGINAL Overview composition: geometry authored
+  // in its 800×440 space, rendered in its full-width × 260px chart box
+  // (966×260 at the 1120px shell). If a refactor changes any of these
+  // numbers, it has changed the product's design — that is a bug, not a
+  // cleanup.
+
+  it("keeps the Overview's authored space and rendered chart shape", () => {
+    expect([VIEW_W, VIEW_H]).toEqual([800, 440]);
+    expect(RENDER_W / RENDER_H).toBeCloseTo(966 / 260, 10);
+  });
+
+  it("keeps the Overview's original slot endpoints", () => {
+    const five = ["a", "b", "c", "d", "e"].map((id) =>
+      makeFuture({ id, identity_id: `identity-${id}`, name: `Future ${id}` }),
+    );
+    const fullCurveEnds = layoutBranches(five)
+      .map((b) => pathEndpoint(b.curve.d).join(","))
+      .sort();
+    // The five permanent homes, exactly as the Overview always drew them.
+    expect(fullCurveEnds).toEqual(
+      [
+        [192, 84],
+        [616, 72],
+        [148, 268],
+        [662, 240],
+        [242, 372],
+      ]
+        .map((p) => p.join(","))
+        .sort(),
+    );
   });
 });
 

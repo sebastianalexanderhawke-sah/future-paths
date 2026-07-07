@@ -1,7 +1,11 @@
 import { generateFutureSelvesAction } from "@/actions/future-selves";
+import { FadedPathsSection } from "@/components/futures/faded-paths-section";
 import { FutureSelvesExplorer } from "@/components/futures/future-selves-explorer";
 import { AppShell } from "@/components/overview/app-shell";
-import { listFutureSelves } from "@/lib/future-selves";
+import {
+  listFutureSelves,
+  loadFutureSelfEventsByFutureSelf,
+} from "@/lib/future-selves";
 
 type FutureSelvesPageProps = {
   searchParams: Promise<{ error?: string }>;
@@ -9,7 +13,10 @@ type FutureSelvesPageProps = {
 
 export default async function FutureSelvesPage({ searchParams }: FutureSelvesPageProps) {
   const { error } = await searchParams;
-  const result = await listFutureSelves();
+  const [result, eventsByFutureSelf] = await Promise.all([
+    listFutureSelves(),
+    loadFutureSelfEventsByFutureSelf(),
+  ]);
 
   if ("error" in result) {
     return (
@@ -47,16 +54,26 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
         </p>
       ) : null}
 
-      <div className="pb-16">
-        {/* The same white surface language as the overview's cards, but
-            still: no hover lift, more air. This page is for lingering with
-            the tree, not scanning a dashboard. */}
-        {/* Slimmer horizontal padding than the overview card, so the map
-            renders wider here than there — a faithful enlargement of the
-            same composition. */}
-        <section className="rounded-2xl border border-[#f0f0f2] bg-white px-4 py-10 shadow-[0_1px_2px_rgba(17,17,17,0.02),0_12px_32px_rgba(17,17,17,0.04)] sm:px-8 sm:py-12">
+      <div className="flex flex-col gap-5 pb-16">
+        {/* Card 1 — the visualization. The same white surface language as
+            the overview's cards, but still: no hover lift, more air. This
+            card is for lingering with the tree, not scanning a dashboard. */}
+        {/* The hero: attention lands on the tree first, everything else
+            supports it. Slim horizontal padding gives the map the full card
+            width (the chart's aspect is canonical, so width is the lever
+            that makes it bigger), and tall vertical padding gives it a
+            stage rather than a slot. */}
+        <section className="rounded-2xl border border-[#f0f0f2] bg-white px-3 py-14 shadow-[0_1px_2px_rgba(17,17,17,0.02),0_12px_32px_rgba(17,17,17,0.04)] sm:px-6 sm:py-16">
           <FutureSelvesExplorer futureSelves={result.futureSelves} />
         </section>
+
+        {/* Then the faded paths: one section card with the page's single
+            level of disclosure — expand it and every faded future appears
+            immediately as a normal card in this same column. */}
+        <FadedPathsSection
+          futureSelves={result.futureSelves.filter((f) => f.status === "faded")}
+          eventsByFutureSelf={eventsByFutureSelf}
+        />
       </div>
     </AppShell>
   );

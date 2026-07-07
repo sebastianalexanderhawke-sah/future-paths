@@ -96,10 +96,11 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
   });
 
   if (branches.length === 0) {
+    // No geometry to protect here, so no aspect lock — the original
+    // Overview's fixed-height empty block, exactly as it always rendered.
     return (
       <div
-        className={`mx-auto flex min-h-[260px] w-full flex-col items-center justify-center ${widthClassName}`}
-        style={{ aspectRatio: `${RENDER_W} / ${RENDER_H}` }}
+        className={`mx-auto flex h-[240px] w-full flex-col items-center justify-center ${widthClassName}`}
       >
         <span className="flex h-[68px] w-[68px] items-center justify-center rounded-full border border-[#ececf0] bg-white text-[15px] font-semibold text-[#111] shadow-[0_10px_36px_rgba(17,17,17,0.10),0_2px_8px_rgba(17,17,17,0.05)]">
           You
@@ -120,10 +121,10 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
 
   return (
     // The chart area is locked to the canonical RENDERED aspect ratio — the
-    // Overview composition — so the viewBox→viewport mapping is the same on
-    // every page at every width: identical rendered angles everywhere, and
-    // any other surface is a faithful enlargement of the Overview. Callers
-    // choose width only.
+    // Overview card's original 966×260 chart box — so the viewBox→viewport
+    // mapping is the same on every page at every width: identical rendered
+    // angles everywhere, and any other surface is a faithful enlargement of
+    // the Overview. Callers choose width only.
     <div
       className={`relative mx-auto w-full ${widthClassName}`}
       style={{ aspectRatio: `${RENDER_W} / ${RENDER_H}` }}

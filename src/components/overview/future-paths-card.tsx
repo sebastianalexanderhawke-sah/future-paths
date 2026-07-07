@@ -36,8 +36,8 @@ export function FuturePathsCard({ futureSelves }: FuturePathsCardProps) {
       <BranchMap
         futureSelves={futureSelves}
         // Full card width — THIS rendering is the canonical composition the
-        // aspect ratio in branch-language.ts is defined by (968px wide →
-        // ~320px tall in the 1120px shell).
+        // aspect ratio in branch-language.ts is defined by: the original
+        // full-width × 260px chart (966×260 in the 1120px shell).
         interaction={{ kind: "link", href: "/future-selves" }}
       />
     </OverviewCard>
