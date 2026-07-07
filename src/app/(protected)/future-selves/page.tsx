@@ -1,7 +1,6 @@
 import { generateFutureSelvesAction } from "@/actions/future-selves";
 import { FutureSelvesExplorer } from "@/components/futures/future-selves-explorer";
 import { AppShell } from "@/components/overview/app-shell";
-import { OverviewCard } from "@/components/overview/overview-card";
 import { listFutureSelves } from "@/lib/future-selves";
 
 type FutureSelvesPageProps = {
@@ -48,12 +47,16 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
         </p>
       ) : null}
 
-      <div className="pb-14">
-        {/* The same white-card surface the overview's Future Paths section
-            uses, so the two renderings of this data read as one system. */}
-        <OverviewCard className="px-9 py-8">
+      <div className="pb-16">
+        {/* The same white surface language as the overview's cards, but
+            still: no hover lift, more air. This page is for lingering with
+            the tree, not scanning a dashboard. */}
+        {/* Slimmer horizontal padding than the overview card, so the map
+            renders wider here than there — a faithful enlargement of the
+            same composition. */}
+        <section className="rounded-2xl border border-[#f0f0f2] bg-white px-4 py-10 shadow-[0_1px_2px_rgba(17,17,17,0.02),0_12px_32px_rgba(17,17,17,0.04)] sm:px-8 sm:py-12">
           <FutureSelvesExplorer futureSelves={result.futureSelves} />
-        </OverviewCard>
+        </section>
       </div>
     </AppShell>
   );

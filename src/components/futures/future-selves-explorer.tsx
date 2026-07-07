@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { layoutBranches } from "@/components/futures/branch-language";
+import { BranchMap } from "@/components/futures/branch-map";
 import { FutureCard } from "@/components/futures/future-card";
 import type { FutureSelf } from "@/types/database";
 
@@ -10,246 +11,13 @@ type FutureSelvesExplorerProps = {
   futureSelves: FutureSelf[];
 };
 
-// Per-slot accents, identical to the overview's Future Paths card so both
-// renderings of the same data read as one system. Decorative and stable per
-// position; meaning lives in the label text, not the color.
-const ACCENTS = [
-  { color: "#6366f1", soft: "#eef2ff" },
-  { color: "#22c55e", soft: "#f0fdf4" },
-  { color: "#ef4444", soft: "#fff5f5" },
-  { color: "#3b82f6", soft: "#eff6ff" },
-  { color: "#f59e0b", soft: "#fffbeb" },
-];
-
-// ---------------------------------------------------------------------------
-// Geometry
-// ---------------------------------------------------------------------------
-
-// Canvas sized to the maximum reach (225px) plus node + label headroom.
-// The center ring and its whitespace moat keep their absolute size, so
-// shrinking the canvas makes "You" proportionally MORE dominant, not less.
-const SIZE = 540;
-const CENTER = SIZE / 2;
-const BRANCH_START = 46; // branches visibly begin outside the center circle
-
-// Absolute branch length: how established THIS future is, independent of the
-// others — a branch never shrinks because a rival grew. Smoothstep curve
-// tuned to where engine likelihoods actually live (~10–40%), saturating at
-// 45%+ so no branch becomes gigantic. Radial distance from center:
-//   10% → 107px   15% → 125px   20% → 146px   25% → 169px
-//   30% → 190px   35% → 206px   40% → 218px   45%+ → 225px
-// Smooth, monotonic, no jumps; ~4.5px per point through the common belt.
-// Fill along the branch still shows evidence progress — two distinct
-// signals on one line. Never time, never inevitability.
-const LENGTH_FLOOR = 90; // 0%
-const LENGTH_CEIL = 225; // 45% and above
-const CURVE_END = 45;
-
-function branchLength(pct: number): number {
-  const t = Math.max(0, Math.min(1, pct / CURVE_END));
-  const s = t * t * (3 - 2 * t); // smoothstep
-  return LENGTH_FLOOR + s * (LENGTH_CEIL - LENGTH_FLOOR);
-}
-
-// Endpoint weight: ~30% size range across 0–100%.
-function nodeRadius(pct: number, isSelected: boolean): number {
-  return 7 + (pct / 100) * 2.2 + (isSelected ? 2 : 0);
-}
-
-// Preferred home bearing per archetype (0° = up, clockwise) — spatial memory.
-// The layout algorithm starts from these and only bends them as far as needed
-// to keep the current set of active futures evenly breathable. Deterministic,
-// never random.
-const IDENTITY_BEARINGS: Record<string, number> = {
-  "threshold-crosser": 352,
-  "relentless-grower": 25,
-  "quiet-supporter": 62,
-  "self-reliant-builder": 94,
-  "reflective-practitioner": 118,
-  "committed-achiever": 144, // Long-Haul Finisher (id is stable)
-  "steady-foundation-builder": 168,
-  "resilient-adapter": 196,
-  "vulnerable-leader": 218,
-  "community-weaver": 248,
-  "deliberate-soloist": 278,
-  "adaptive-explorer": 312,
-};
-
-function preferredBearing(futureSelf: FutureSelf): number {
-  const known = IDENTITY_BEARINGS[futureSelf.identity_id ?? ""];
-  if (known !== undefined) return known;
-  let hash = 0;
-  for (const ch of futureSelf.identity_id ?? futureSelf.name) {
-    hash = (hash * 31 + ch.charCodeAt(0)) % 360;
-  }
-  return hash;
-}
-
 /**
- * Layout: starts from each future's permanent home bearing, then relaxes
- * angles until every circular gap is at least MIN_GAP degrees. Positions are
- * preserved approximately (identities keep their home direction) while the
- * landscape stays evenly breathable as futures appear and fade. Pure and
- * deterministic — the same set of futures always produces the same layout.
+ * The dedicated Future Selves page: the SAME canonical BranchMap the
+ * overview's Future Paths card renders, given a larger chart area — zooming
+ * into the overview, not a second visualization. What this page adds is
+ * interaction depth: selecting a branch opens the full identity card in a
+ * dialog, and faded futures are listed below the map.
  */
-const MIN_GAP = 34;
-
-function resolveBearings(futures: FutureSelf[]): Map<string, number> {
-  const entries = futures
-    .map((f) => ({ id: f.id, bearing: preferredBearing(f) }))
-    .sort((a, b) => a.bearing - b.bearing);
-
-  const n = entries.length;
-  const bearings = entries.map((e) => e.bearing);
-  if (n > 1) {
-    const gap = Math.min(MIN_GAP, 360 / n);
-    // Circular relaxation: push apart any adjacent pair closer than the gap.
-    for (let iter = 0; iter < 24; iter++) {
-      let moved = false;
-      for (let i = 0; i < n; i++) {
-        const j = (i + 1) % n;
-        const raw = (bearings[j] - bearings[i] + 360) % 360;
-        if (raw < gap - 0.01) {
-          const push = (gap - raw) / 2;
-          bearings[i] = (bearings[i] - push + 360) % 360;
-          bearings[j] = (bearings[j] + push) % 360;
-          moved = true;
-        }
-      }
-      if (!moved) break;
-    }
-  }
-
-  return new Map(entries.map((e, i) => [e.id, bearings[i]]));
-}
-
-function directionFor(bearing: number): { cos: number; sin: number } {
-  const angle = ((bearing - 90) * Math.PI) / 180;
-  return { cos: Math.cos(angle), sin: Math.sin(angle) };
-}
-
-function labelAnchor(cos: number): "start" | "middle" | "end" {
-  if (cos > 0.35) return "start";
-  if (cos < -0.35) return "end";
-  return "middle";
-}
-
-// ---------------------------------------------------------------------------
-// Settling animation: when the landscape changes (a future appears, fades,
-// or its percentage moves), branches glide to their new bearing/length over
-// ~500ms instead of snapping. New branches grow outward from the center.
-// Skipped entirely under prefers-reduced-motion.
-// ---------------------------------------------------------------------------
-
-type BranchGeometry = { bearing: number; length: number };
-
-function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-function shortestAngleDelta(from: number, to: number): number {
-  return ((to - from + 540) % 360) - 180;
-}
-
-function useSettlingLayout(targets: Map<string, BranchGeometry>): Map<string, BranchGeometry> {
-  const [current, setCurrent] = useState(targets);
-  const currentRef = useRef(targets);
-  currentRef.current = current;
-  const isFirstRun = useRef(true);
-
-  const targetsKey = useMemo(
-    () =>
-      [...targets.entries()]
-        .map(([id, g]) => `${id}:${g.bearing.toFixed(1)}:${g.length.toFixed(1)}`)
-        .sort()
-        .join("|"),
-    [targets],
-  );
-
-  useEffect(() => {
-    if (isFirstRun.current) {
-      isFirstRun.current = false;
-      setCurrent(targets);
-      return;
-    }
-    const reduceMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduceMotion) {
-      setCurrent(targets);
-      return;
-    }
-
-    const from = new Map(currentRef.current);
-    const start = performance.now();
-    const DURATION = 500;
-    let frame: number;
-
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / DURATION);
-      const eased = easeInOutCubic(t);
-      const next = new Map<string, BranchGeometry>();
-      for (const [id, target] of targets) {
-        // A newly appearing future grows outward from the center.
-        const prev = from.get(id) ?? { bearing: target.bearing, length: BRANCH_START };
-        next.set(id, {
-          bearing: prev.bearing + shortestAngleDelta(prev.bearing, target.bearing) * eased,
-          length: prev.length + (target.length - prev.length) * eased,
-        });
-      }
-      setCurrent(next);
-      if (t < 1) frame = requestAnimationFrame(tick);
-    };
-
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetsKey]);
-
-  return current;
-}
-
-// ---------------------------------------------------------------------------
-// Center
-// ---------------------------------------------------------------------------
-
-// The anchor, styled like the overview card's center: a white ringed circle
-// with "You" inside it, sitting over two quiet orbit rings.
-function CenterYou({ visible }: { visible: boolean }) {
-  return (
-    <g
-      className={`transition-opacity duration-200 motion-reduce:transition-none ${
-        visible ? "opacity-100" : "opacity-0"
-      }`}
-    >
-      <circle
-        cx={CENTER}
-        cy={CENTER}
-        r={34}
-        fill="#ffffff"
-        stroke="#ececf0"
-        strokeWidth={1.5}
-      />
-      <text
-        x={CENTER}
-        y={CENTER}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={15}
-        fontWeight={600}
-        fill="#111111"
-        className="select-none"
-      >
-        You
-      </text>
-    </g>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Explorer
-// ---------------------------------------------------------------------------
-
 export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps) {
   const active = useMemo(
     () => futureSelves.filter((f) => f.status === "active"),
@@ -264,34 +32,15 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
   // temporary deep dive in a modal.
   const [openId, setOpenId] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
-  const [focusedId, setFocusedId] = useState<string | null>(null);
-  const triggerRef = useRef<SVGGElement | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const openFuture = active.find((f) => f.id === openId) ?? null;
-
-  // Intro choreography (center → branches draw → nodes → labels), ≤700ms.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  // Layout: resolved bearings + absolute establishment lengths, settled via
-  // animation. Each branch's length depends only on its own percentage.
-  const layoutTargets = useMemo(() => {
-    const bearings = resolveBearings(active);
-    const map = new Map<string, BranchGeometry>();
-    for (const f of active) {
-      map.set(f.id, {
-        bearing: bearings.get(f.id)!,
-        length: branchLength(Math.max(0, Math.min(100, f.percentage))),
-      });
-    }
-    return map;
-  }, [active]);
-  const layout = useSettlingLayout(layoutTargets);
+  // The same layout the map draws from — used here only to hand the dialog
+  // card the accent its branch wears.
+  const branches = useMemo(() => layoutBranches(active), [active]);
+  const openBranch = branches.find((b) => b.futureSelf.id === openId) ?? null;
+  const openFuture = openBranch?.futureSelf ?? null;
 
   // Modal open/close plumbing.
   const close = useCallback(() => {
@@ -354,194 +103,35 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
       </details>
     ) : null;
 
-  if (active.length === 0) {
-    return (
-      <div className="mx-auto flex w-full max-w-md flex-col items-center">
-        <svg viewBox={`0 0 ${SIZE} 240`} className="w-56" aria-hidden="true">
-          <g transform={`translate(0 ${120 - CENTER})`}>
-            <CenterYou visible />
-          </g>
-        </svg>
-        <p className="max-w-[340px] text-center text-[13px] leading-relaxed text-[#999999]">
-          No future paths yet. As you work through situations and reflections,
-          possible futures will begin to emerge here.
-        </p>
-        <Link
-          href="/moments/new"
-          className="mt-4 text-[13px] font-medium text-[#6366f1] transition-opacity duration-150 hover:opacity-80"
-        >
-          Start with a situation →
-        </Link>
-        {fadedSection}
-      </div>
-    );
-  }
-
-  const modalOpen = openFuture !== null;
-
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h2 className="text-[22px] font-bold tracking-[-0.3px] text-[#111]">
-        Which future are you becoming?
-      </h2>
-      <p className="mt-1 text-[13px] text-[#999999]">
-        Each branch is a possible life. Select one to explore it.
-      </p>
+    <div className="w-full">
+      {active.length > 0 ? (
+        <div className="text-center">
+          <h2 className="text-[22px] font-bold tracking-[-0.3px] text-[#111]">
+            Which future are you becoming?
+          </h2>
+          <p className="mt-1.5 text-[13px] text-[#999999]">
+            Each branch is a possible life. Select one to explore it.
+          </p>
+        </div>
+      ) : null}
 
-      <svg
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
-        // Height-driven on desktop so title + tree + faded section share one
-        // laptop viewport; width-driven on mobile where vertical scroll is
-        // natural.
-        className="mx-auto mt-1 block h-auto w-full max-w-full overflow-visible lg:h-[min(62vh,540px)] lg:w-auto"
-        aria-label="Map of your possible future selves. Longer branches are more established futures; the filled part of each branch shows how much current evidence reinforces it."
-      >
-        {/* Quiet orbit rings behind everything — the same constellation
-            depth the overview card draws. */}
-        <circle cx={CENTER} cy={CENTER} r={62} fill="none" stroke="#eeeef2" strokeWidth={1} />
-        <circle cx={CENTER} cy={CENTER} r={106} fill="none" stroke="#f2f2f5" strokeWidth={1} />
+      <BranchMap
+        futureSelves={active}
+        // Full width of this page's quieter, wider surface: the exact
+        // Overview composition, faithfully enlarged — never reshaped.
+        widthClassName="mt-4"
+        interaction={{
+          kind: "dialog",
+          openId,
+          onOpen: (futureSelf, trigger) => {
+            triggerRef.current = trigger;
+            setOpenId(futureSelf.id);
+          },
+        }}
+      />
 
-        {active.map((futureSelf, accentIndex) => {
-          const geometry = layout.get(futureSelf.id) ?? layoutTargets.get(futureSelf.id)!;
-          const { cos, sin } = directionFor(geometry.bearing);
-          const isOpen = futureSelf.id === openId;
-          const isFocused = futureSelf.id === focusedId;
-          const accent = ACCENTS[accentIndex % ACCENTS.length];
-
-          const pct = Math.max(0, Math.min(100, futureSelf.percentage));
-          const radius = nodeRadius(pct, isOpen);
-          const end = geometry.length;
-
-          const x1 = CENTER + cos * BRANCH_START;
-          const y1 = CENTER + sin * BRANCH_START;
-          const x2 = CENTER + cos * (end - radius);
-          const y2 = CENTER + sin * (end - radius);
-          const nodeX = CENTER + cos * end;
-          const nodeY = CENTER + sin * end;
-
-          const labelDistance = end + radius + 12;
-          const labelX = CENTER + cos * labelDistance;
-          const blockShift = sin < -0.35 ? -19 : sin > 0.35 ? 6 : -7;
-          const labelY = CENTER + sin * labelDistance + blockShift;
-
-          return (
-            <g
-              key={futureSelf.id}
-              role="button"
-              tabIndex={0}
-              aria-haspopup="dialog"
-              aria-label={`${futureSelf.name}, ${pct} percent, ${futureSelf.evidence_strength}. Press to explore this future.`}
-              className={`cursor-pointer outline-none transition-opacity duration-300 motion-reduce:transition-none ${
-                modalOpen
-                  ? isOpen
-                    ? "opacity-100"
-                    : "opacity-20"
-                  : "opacity-90 hover:opacity-100 focus:opacity-100"
-              }`}
-              onClick={(event) => {
-                triggerRef.current = event.currentTarget;
-                setOpenId(futureSelf.id);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  triggerRef.current = event.currentTarget;
-                  setOpenId(futureSelf.id);
-                }
-              }}
-              onFocus={() => setFocusedId(futureSelf.id)}
-              onBlur={() => setFocusedId(null)}
-            >
-              {/* Track: the full reach of this branch — quiet. */}
-              <line
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                pathLength={100}
-                stroke="#ececf0"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeDasharray="100 100"
-                strokeDashoffset={mounted ? 0 : 100}
-                className="[transition:stroke-dashoffset_380ms_ease-out_100ms] motion-reduce:[transition:none]"
-              />
-              {/* Fill: evidence currently reinforcing this path, in the same
-                  branch accent the overview card gives this position. */}
-              {pct > 0 ? (
-                <line
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  pathLength={100}
-                  stroke={accent.color}
-                  strokeWidth={3}
-                  strokeLinecap="round"
-                  strokeDasharray={`${mounted ? pct : 0} 100`}
-                  opacity={isOpen ? 1 : 0.85}
-                  className="[transition:stroke-dasharray_450ms_ease-out_180ms,opacity_300ms] motion-reduce:[transition:none]"
-                />
-              ) : null}
-              {/* Focus ring (keyboard) */}
-              {isFocused && !modalOpen ? (
-                <circle
-                  cx={nodeX}
-                  cy={nodeY}
-                  r={radius + 6}
-                  fill="none"
-                  stroke={accent.color}
-                  strokeWidth={1.5}
-                  strokeDasharray="3 3"
-                />
-              ) : null}
-              {/* Endpoint: colored dot in a thin white ring over a soft halo —
-                  the destination marker, exactly as the overview draws it. */}
-              <circle
-                cx={nodeX}
-                cy={nodeY}
-                r={radius + 5}
-                fill={accent.soft}
-                opacity={mounted ? 1 : 0}
-                className="[transition:opacity_200ms_420ms] motion-reduce:[transition:none]"
-              />
-              <circle
-                cx={nodeX}
-                cy={nodeY}
-                r={radius}
-                fill={accent.color}
-                stroke="#ffffff"
-                strokeWidth={2}
-                opacity={mounted ? 1 : 0}
-                className="[transition:r_250ms,opacity_200ms_420ms] motion-reduce:[transition:none]"
-              />
-              {/* Label: name over metadata, always outward. */}
-              <text
-                x={labelX}
-                y={labelY}
-                textAnchor={labelAnchor(cos)}
-                dominantBaseline="middle"
-                paintOrder="stroke"
-                stroke="#ffffff"
-                strokeWidth={4}
-                opacity={mounted ? 1 : 0}
-                className="select-none [transition:opacity_200ms_520ms] motion-reduce:[transition:none]"
-              >
-                <tspan x={labelX} fontSize={14} fontWeight={isOpen ? 600 : 500} fill="#111111">
-                  {futureSelf.name}
-                </tspan>
-                <tspan x={labelX} dy={15.5} fontSize={11} fontWeight={500} fill={accent.color}>
-                  {pct}% • {futureSelf.evidence_strength}
-                </tspan>
-              </text>
-            </g>
-          );
-        })}
-
-        <CenterYou visible={mounted} />
-      </svg>
-
-      {fadedSection}
+      <div className="mx-auto w-full max-w-3xl">{fadedSection}</div>
 
       {/* Deep dive: a temporary, centered exploration of one future. */}
       {openFuture ? (
@@ -563,7 +153,7 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
             aria-label={openFuture.name}
             onClick={(event) => event.stopPropagation()}
             onKeyDown={trapTab}
-            className={`relative w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl shadow-xl ${
+            className={`relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl shadow-xl ${
               closing ? "modal-out" : "modal-in"
             }`}
           >
@@ -576,7 +166,7 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
             >
               ×
             </button>
-            <FutureCard futureSelf={openFuture} />
+            <FutureCard futureSelf={openFuture} accent={openBranch?.accent} />
           </div>
         </div>
       ) : null}

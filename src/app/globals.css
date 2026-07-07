@@ -6,9 +6,10 @@
   100% { transform: translateX(-50%) translateY(8px); opacity: 0; }
 }
 
-/* Future Self deep-dive modal: calm scale/fade in, quick shrink away. */
+/* Future Self deep-dive modal: a soft, settling arrival — this is meeting a
+   version of yourself, not opening a dialog — and a quick, quiet leave. */
 @keyframes futureModalIn {
-  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  from { opacity: 0; transform: scale(0.97) translateY(14px); }
   to   { opacity: 1; transform: none; }
 }
 
@@ -21,7 +22,7 @@
   to   { opacity: 1; }
 }
 
-.modal-in { animation: futureModalIn 0.22s ease-out backwards; }
+.modal-in { animation: futureModalIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 .modal-out { animation: futureModalOut 0.15s ease-in forwards; }
 .modal-backdrop-in { animation: futureBackdropIn 0.2s ease-out backwards; }
 .modal-backdrop-out { animation: futureModalOut 0.15s ease-in forwards; }
