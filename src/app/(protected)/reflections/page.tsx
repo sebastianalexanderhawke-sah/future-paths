@@ -199,9 +199,16 @@ export default async function WorkspacePage() {
                 <p className="text-[17px] font-semibold text-[#111]">
                   You&apos;re all caught up.
                 </p>
-                <p className="mt-2 text-[13px] leading-relaxed text-[#999999]">
-                  Check back after new situations develop.
+                <p className="mt-2 max-w-[360px] text-[13px] leading-relaxed text-[#999999]">
+                  Reflections and check-ins appear here as your situations
+                  develop. Capture what&apos;s on your mind to get moving.
                 </p>
+                <Link
+                  href="/moments/new"
+                  className="mt-5 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+                >
+                  Start with a situation
+                </Link>
               </div>
             </OverviewCard>
           ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   resolveAndTransformAction,
@@ -15,9 +15,22 @@ export function ResolveTransformForm({ momentId }: { momentId: string }) {
     initialState,
   );
 
+  // Idempotency token, same pattern as the check-in form: stable while the
+  // form is open, so a resubmit after a dropped connection recovers the new
+  // situation the server already created instead of creating a duplicate.
+  const [clientToken] = useState(() =>
+    typeof window === "undefined" ? "" : crypto.randomUUID(),
+  );
+
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="momentId" value={momentId} />
+      <input
+        type="hidden"
+        name="clientToken"
+        value={clientToken}
+        suppressHydrationWarning
+      />
       <div className="flex flex-col gap-2">
         <label htmlFor="newTitle" className="text-sm font-medium text-zinc-700">
           What is the new situation?

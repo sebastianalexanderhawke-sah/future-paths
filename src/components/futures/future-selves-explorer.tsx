@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { FutureCard } from "@/components/futures/future-card";
@@ -8,6 +9,17 @@ import type { FutureSelf } from "@/types/database";
 type FutureSelvesExplorerProps = {
   futureSelves: FutureSelf[];
 };
+
+// Per-slot accents, identical to the overview's Future Paths card so both
+// renderings of the same data read as one system. Decorative and stable per
+// position; meaning lives in the label text, not the color.
+const ACCENTS = [
+  { color: "#6366f1", soft: "#eef2ff" },
+  { color: "#22c55e", soft: "#f0fdf4" },
+  { color: "#ef4444", soft: "#fff5f5" },
+  { color: "#3b82f6", soft: "#eff6ff" },
+  { color: "#f59e0b", soft: "#fffbeb" },
+];
 
 // ---------------------------------------------------------------------------
 // Geometry
@@ -18,8 +30,7 @@ type FutureSelvesExplorerProps = {
 // shrinking the canvas makes "You" proportionally MORE dominant, not less.
 const SIZE = 540;
 const CENTER = SIZE / 2;
-const RING_RADIUS = 24;
-const BRANCH_START = 46; // branches visibly begin outside the center's ring
+const BRANCH_START = 46; // branches visibly begin outside the center circle
 
 // Absolute branch length: how established THIS future is, independent of the
 // others — a branch never shrinks because a rival grew. Smoothstep curve
@@ -202,6 +213,8 @@ function useSettlingLayout(targets: Map<string, BranchGeometry>): Map<string, Br
 // Center
 // ---------------------------------------------------------------------------
 
+// The anchor, styled like the overview card's center: a white ringed circle
+// with "You" inside it, sitting over two quiet orbit rings.
 function CenterYou({ visible }: { visible: boolean }) {
   return (
     <g
@@ -209,18 +222,22 @@ function CenterYou({ visible }: { visible: boolean }) {
         visible ? "opacity-100" : "opacity-0"
       }`}
     >
-      <circle cx={CENTER} cy={CENTER} r={RING_RADIUS} fill="none" stroke="#d4d4d8" strokeWidth={1.5} />
-      <circle cx={CENTER} cy={CENTER} r={13} fill="#18181b" />
+      <circle
+        cx={CENTER}
+        cy={CENTER}
+        r={34}
+        fill="#ffffff"
+        stroke="#ececf0"
+        strokeWidth={1.5}
+      />
       <text
         x={CENTER}
-        y={CENTER + 46}
+        y={CENTER}
         textAnchor="middle"
-        fontSize={13.5}
-        fontWeight={700}
-        fill="#18181b"
-        paintOrder="stroke"
-        stroke="#fafafa"
-        strokeWidth={4}
+        dominantBaseline="central"
+        fontSize={15}
+        fontWeight={600}
+        fill="#111111"
         className="select-none"
       >
         You
@@ -320,15 +337,12 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
 
   const fadedSection =
     faded.length > 0 ? (
-      <details className="group mt-3">
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-zinc-700 [&::-webkit-details-marker]:hidden">
-          <span aria-hidden="true" className="text-zinc-400">
-            <span className="group-open:hidden">▶</span>
-            <span className="hidden group-open:inline">▼</span>
-          </span>
-          Faded Futures ({faded.length})
+      <details className="group mt-6">
+        <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1] [&::-webkit-details-marker]:hidden">
+          <span className="group-open:hidden">▼ Faded futures ({faded.length})</span>
+          <span className="hidden group-open:inline">▲ Hide faded futures</span>
         </summary>
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-[13px] leading-relaxed text-[#888888]">
           Paths that once emerged but are no longer being reinforced. Active
           futures are the ones currently shaping your trajectory.
         </p>
@@ -348,12 +362,16 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
             <CenterYou visible />
           </g>
         </svg>
-        <p className="text-center text-sm leading-relaxed text-zinc-500">
-          No active future trajectories yet.
-          <br />
-          As you make more decisions and complete more reflections, possible
-          futures will begin to emerge.
+        <p className="max-w-[340px] text-center text-[13px] leading-relaxed text-[#999999]">
+          No future paths yet. As you work through situations and reflections,
+          possible futures will begin to emerge here.
         </p>
+        <Link
+          href="/moments/new"
+          className="mt-4 text-[13px] font-medium text-[#6366f1] transition-opacity duration-150 hover:opacity-80"
+        >
+          Start with a situation →
+        </Link>
         {fadedSection}
       </div>
     );
@@ -363,10 +381,10 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <h2 className="text-base font-semibold text-zinc-900">
+      <h2 className="text-[22px] font-bold tracking-[-0.3px] text-[#111]">
         Which future are you becoming?
       </h2>
-      <p className="mt-1 text-sm text-zinc-500">
+      <p className="mt-1 text-[13px] text-[#999999]">
         Each branch is a possible life. Select one to explore it.
       </p>
 
@@ -378,11 +396,17 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
         className="mx-auto mt-1 block h-auto w-full max-w-full overflow-visible lg:h-[min(62vh,540px)] lg:w-auto"
         aria-label="Map of your possible future selves. Longer branches are more established futures; the filled part of each branch shows how much current evidence reinforces it."
       >
-        {active.map((futureSelf) => {
+        {/* Quiet orbit rings behind everything — the same constellation
+            depth the overview card draws. */}
+        <circle cx={CENTER} cy={CENTER} r={62} fill="none" stroke="#eeeef2" strokeWidth={1} />
+        <circle cx={CENTER} cy={CENTER} r={106} fill="none" stroke="#f2f2f5" strokeWidth={1} />
+
+        {active.map((futureSelf, accentIndex) => {
           const geometry = layout.get(futureSelf.id) ?? layoutTargets.get(futureSelf.id)!;
           const { cos, sin } = directionFor(geometry.bearing);
           const isOpen = futureSelf.id === openId;
           const isFocused = futureSelf.id === focusedId;
+          const accent = ACCENTS[accentIndex % ACCENTS.length];
 
           const pct = Math.max(0, Math.min(100, futureSelf.percentage));
           const radius = nodeRadius(pct, isOpen);
@@ -435,14 +459,15 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
                 x2={x2}
                 y2={y2}
                 pathLength={100}
-                stroke="#e4e4e7"
+                stroke="#ececf0"
                 strokeWidth={1.5}
                 strokeLinecap="round"
                 strokeDasharray="100 100"
                 strokeDashoffset={mounted ? 0 : 100}
                 className="[transition:stroke-dashoffset_380ms_ease-out_100ms] motion-reduce:[transition:none]"
               />
-              {/* Fill: evidence currently reinforcing this path. */}
+              {/* Fill: evidence currently reinforcing this path, in the same
+                  branch accent the overview card gives this position. */}
               {pct > 0 ? (
                 <line
                   x1={x1}
@@ -450,11 +475,12 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
                   x2={x2}
                   y2={y2}
                   pathLength={100}
-                  stroke={isOpen ? "#09090b" : "#3f3f46"}
-                  strokeWidth={3 + Math.min(1.5, pct / 45)}
+                  stroke={accent.color}
+                  strokeWidth={3}
                   strokeLinecap="round"
                   strokeDasharray={`${mounted ? pct : 0} 100`}
-                  className="[transition:stroke-dasharray_450ms_ease-out_180ms,stroke_300ms] motion-reduce:[transition:none]"
+                  opacity={isOpen ? 1 : 0.85}
+                  className="[transition:stroke-dasharray_450ms_ease-out_180ms,opacity_300ms] motion-reduce:[transition:none]"
                 />
               ) : null}
               {/* Focus ring (keyboard) */}
@@ -464,21 +490,30 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
                   cy={nodeY}
                   r={radius + 6}
                   fill="none"
-                  stroke="#71717a"
+                  stroke={accent.color}
                   strokeWidth={1.5}
                   strokeDasharray="3 3"
                 />
               ) : null}
-              {/* Endpoint: scaled subtly by how established the future is. */}
+              {/* Endpoint: colored dot in a thin white ring over a soft halo —
+                  the destination marker, exactly as the overview draws it. */}
+              <circle
+                cx={nodeX}
+                cy={nodeY}
+                r={radius + 5}
+                fill={accent.soft}
+                opacity={mounted ? 1 : 0}
+                className="[transition:opacity_200ms_420ms] motion-reduce:[transition:none]"
+              />
               <circle
                 cx={nodeX}
                 cy={nodeY}
                 r={radius}
-                fill={isOpen ? "#09090b" : "#fafafa"}
-                stroke={isOpen ? "#09090b" : "#71717a"}
+                fill={accent.color}
+                stroke="#ffffff"
                 strokeWidth={2}
                 opacity={mounted ? 1 : 0}
-                className="[transition:fill_250ms,stroke_250ms,r_250ms,opacity_200ms_420ms] motion-reduce:[transition:none]"
+                className="[transition:r_250ms,opacity_200ms_420ms] motion-reduce:[transition:none]"
               />
               {/* Label: name over metadata, always outward. */}
               <text
@@ -487,15 +522,15 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
                 textAnchor={labelAnchor(cos)}
                 dominantBaseline="middle"
                 paintOrder="stroke"
-                stroke="#fafafa"
+                stroke="#ffffff"
                 strokeWidth={4}
                 opacity={mounted ? 1 : 0}
                 className="select-none [transition:opacity_200ms_520ms] motion-reduce:[transition:none]"
               >
-                <tspan x={labelX} fontSize={14} fontWeight={600} fill="#3f3f46">
+                <tspan x={labelX} fontSize={14} fontWeight={isOpen ? 600 : 500} fill="#111111">
                   {futureSelf.name}
                 </tspan>
-                <tspan x={labelX} dy={15.5} fontSize={10.5} fill="#a1a1aa">
+                <tspan x={labelX} dy={15.5} fontSize={11} fontWeight={500} fill={accent.color}>
                   {pct}% • {futureSelf.evidence_strength}
                 </tspan>
               </text>

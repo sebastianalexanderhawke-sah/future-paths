@@ -162,10 +162,15 @@ export async function createCheckIn(
   const supabase = await createClient();
 
   // Idempotency: if this exact submission was already recorded (same client
-  // token), return the existing check-in instead of running the AI pipeline and
-  // creating a duplicate. This short-circuits the common double-submit / retry
-  // case before any expensive work; the unique index on (user_id, client_token)
-  // is the backstop for the truly-concurrent case (handled at insert below).
+  // token), recover the existing check-in instead of running the AI pipeline
+  // and creating a duplicate. Deliberately NOT an early return: the original
+  // request may have died after the check-in insert but before the timeline
+  // event / path lock / enrichment, so recovery falls through to the
+  // completion probe below, which finishes whatever downstream steps are
+  // missing. The unique index on (user_id, client_token) is the backstop for
+  // the truly-concurrent case (handled at insert below).
+  let recoveredCheckIn: CheckIn | null = null;
+
   if (clientToken) {
     const { data: existing } = await supabase
       .from("check_ins")
@@ -175,7 +180,46 @@ export async function createCheckIn(
       .maybeSingle();
 
     if (existing) {
-      return { checkIn: existing };
+      if (existing.moment_id !== momentId) {
+        // Token collision across situations — nothing downstream of this
+        // request's moment can be completed from it; return the recorded row.
+        return { checkIn: existing };
+      }
+
+      // The timeline event is the first write after the check-in row, so its
+      // presence means the original request completed everything (see the
+      // matching probe below). Only a submission that died in the
+      // partial-write window falls through to be completed.
+      const { data: completedEvent } = await supabase
+        .from("timeline_events")
+        .select("id")
+        .eq("user_id", auth.userId)
+        .eq("reference_type", "check_in")
+        .eq("reference_id", existing.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (completedEvent) {
+        // The path lock is the one write that follows the timeline event, so
+        // an original request that died between the two would otherwise leave
+        // the chosen path permanently unlocked. Idempotent: filtered on
+        // is_locked = false, so it is a no-op when the original completed.
+        const { error: lockError } = await supabase
+          .from("paths")
+          .update({ is_locked: true })
+          .eq("moment_id", momentId)
+          .eq("user_id", auth.userId)
+          .eq("is_chosen", true)
+          .eq("is_locked", false);
+
+        if (lockError) {
+          return { error: lockError.message };
+        }
+
+        return { checkIn: existing };
+      }
+
+      recoveredCheckIn = existing;
     }
   }
 
@@ -223,66 +267,74 @@ export async function createCheckIn(
 
   const isFirstCheckIn = (count ?? 0) === 0;
 
-  const generationResult = await runStructuredGeneration({
-    userId: auth.userId,
-    profile: "check_in",
-    promptId: "check_in.generate",
-    schema: checkInOutputSchema,
-    overrides: {
-      momentId,
-      pathId: chosenPath.id,
-      reflection: trimmedReflection,
-    },
-  });
+  let recoveredExisting = recoveredCheckIn !== null;
+  let insertedCheckIn: CheckIn | null = null;
+  let insertErrorMessage: string | null = null;
 
-  if (!generationResult.ok) {
-    return { error: generationResult.error };
-  }
+  // Recovered submissions skip generation and insert entirely: the stored row
+  // already holds the original AI output, and regenerating would burn quota to
+  // produce a result that must be discarded anyway.
+  if (!recoveredCheckIn) {
+    const generationResult = await runStructuredGeneration({
+      userId: auth.userId,
+      profile: "check_in",
+      promptId: "check_in.generate",
+      schema: checkInOutputSchema,
+      overrides: {
+        momentId,
+        pathId: chosenPath.id,
+        reflection: trimmedReflection,
+      },
+    });
 
-  const generated = generationResult.data;
+    if (!generationResult.ok) {
+      return { error: generationResult.error };
+    }
 
-  const { data: insertedCheckIn, error: checkInError } = await supabase
-    .from("check_ins")
-    .insert({
-      user_id: auth.userId,
-      moment_id: momentId,
-      path_id: chosenPath.id,
-      reflection: trimmedReflection,
-      reality_summary: generated.reality_summary,
-      theme_changes: generated.theme_changes,
-      identity_impact: generated.identity_impact,
-      client_token: clientToken ?? null,
-    })
-    .select("*")
-    .single();
+    const generated = generationResult.data;
 
-  // A submission with this token already created the check-in — either a
-  // concurrent duplicate or a retry after a mid-flow failure. Recover the
-  // winner's row and fall through to the downstream writes instead of
-  // returning early: the original request may have died between the check-in
-  // insert and the timeline event / path lock / enrichment, and an early
-  // return would make that partial state permanent.
-  let recoveredExisting = false;
-  let recoveredCheckIn: CheckIn | null = null;
-
-  if ((checkInError || !insertedCheckIn) && checkInError?.code === "23505" && clientToken) {
-    const { data: existing } = await supabase
+    const { data: inserted, error: checkInError } = await supabase
       .from("check_ins")
+      .insert({
+        user_id: auth.userId,
+        moment_id: momentId,
+        path_id: chosenPath.id,
+        reflection: trimmedReflection,
+        reality_summary: generated.reality_summary,
+        theme_changes: generated.theme_changes,
+        identity_impact: generated.identity_impact,
+        client_token: clientToken ?? null,
+      })
       .select("*")
-      .eq("user_id", auth.userId)
-      .eq("client_token", clientToken)
-      .maybeSingle();
+      .single();
 
-    if (existing) {
-      recoveredCheckIn = existing;
-      recoveredExisting = true;
+    insertedCheckIn = inserted;
+    insertErrorMessage = checkInError?.message ?? null;
+
+    // A concurrent submission with this token won the insert race. Recover the
+    // winner's row and fall through to the downstream writes instead of
+    // returning early: the winner may have died between the check-in insert
+    // and the timeline event / path lock / enrichment, and an early return
+    // would make that partial state permanent.
+    if ((checkInError || !inserted) && checkInError?.code === "23505" && clientToken) {
+      const { data: existing } = await supabase
+        .from("check_ins")
+        .select("*")
+        .eq("user_id", auth.userId)
+        .eq("client_token", clientToken)
+        .maybeSingle();
+
+      if (existing) {
+        recoveredCheckIn = existing;
+        recoveredExisting = true;
+      }
     }
   }
 
   const checkIn = insertedCheckIn ?? recoveredCheckIn;
 
   if (!checkIn) {
-    return { error: checkInError?.message ?? "Failed to create check-in." };
+    return { error: insertErrorMessage ?? "Failed to create check-in." };
   }
 
   // On a recovered retry, the timeline event marks how far the original
@@ -303,6 +355,19 @@ export async function createCheckIn(
       .maybeSingle();
 
     if (existingEvent) {
+      // Same partial-write window as the probe above: the original may have
+      // died after the timeline event but before the path lock. Idempotent.
+      const { error: lockError } = await supabase
+        .from("paths")
+        .update({ is_locked: true })
+        .eq("id", chosenPath.id)
+        .eq("user_id", auth.userId)
+        .eq("is_locked", false);
+
+      if (lockError) {
+        return { error: lockError.message };
+      }
+
       revalidatePath(`/moments/${momentId}`);
       return { checkIn };
     }
@@ -327,7 +392,9 @@ export async function createCheckIn(
     },
   });
 
-  if (timelineError) {
+  // 23505 means a concurrent recovery already recorded this event (unique on
+  // user/event/reference since 00059) — already-done, not a failure.
+  if (timelineError && timelineError.code !== "23505") {
     return { error: timelineError.message };
   }
 
@@ -423,10 +490,12 @@ export async function createCheckIn(
         }
       }
 
+      // Sourced from the check-in row (not this request's inputs) so a
+      // recovered retry evaluates the original stored submission.
       const reflectionEvaluation = await evaluateReflectionQuestion(
         userId,
-        trimmedReflection,
-        generated.reality_summary,
+        checkIn.reflection,
+        checkIn.reality_summary,
       ).catch((error) =>
         reportError("createCheckIn: reflection evaluation failed", error, {
           checkInId: checkIn.id,

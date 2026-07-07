@@ -100,7 +100,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
   const state = isArchived
     ? { label: "Resolved", color: "#888888", soft: "#f4f4f6" }
     : !hasChosenPath
-      ? { label: "Exploring options", color: "#3b82f6", soft: "#eff6ff" }
+      ? { label: "Exploring options", color: "#666666", soft: "#f4f4f6" }
       : !hasCheckIns
         ? { label: "Forecast", color: "#6366f1", soft: "#eef2ff" }
         : { label: "Checking in", color: "#22c55e", soft: "#f0fdf4" };

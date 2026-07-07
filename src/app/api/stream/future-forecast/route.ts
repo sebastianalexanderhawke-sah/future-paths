@@ -24,7 +24,7 @@ import {
 } from "@/lib/ai-audit";
 import { buildForecastSimplificationExperiment } from "@/lib/forecast-simplification-experiment";
 import { saveForecast } from "@/lib/forecasts";
-import { getMoment, createMoment, updateMoment, deleteMoment } from "@/lib/moments";
+import { getMoment, createMoment, updateMoment } from "@/lib/moments";
 import type { ThemeName } from "@/types/enums";
 
 type SelectedPath = {
@@ -83,6 +83,9 @@ export async function POST(request: Request) {
     selectedPath?: SelectedPath;
   };
 
+  const clientToken =
+    typeof body.clientToken === "string" && body.clientToken ? body.clientToken : null;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -104,8 +107,9 @@ export async function POST(request: Request) {
   const mergedContextSummary = mergeContextSummary(contextSummary, selectedPathSummary);
 
   let momentId = inputMomentId;
-  // True only when this request created the moment. Cleanup on failure must
-  // never touch a pre-existing situation supplied by the client.
+  // True only when this request created (or recovered via client token) the
+  // moment. Error events then carry momentId so the client can offer to
+  // resume generation for it — the situation is never deleted on failure.
   const momentWasCreated = !inputMomentId;
 
   if (momentId) {
@@ -126,7 +130,11 @@ export async function POST(request: Request) {
       }
     }
   } else {
-    const momentResult = await createMoment({ title, description: mergedContextSummary });
+    const momentResult = await createMoment({
+      title,
+      description: mergedContextSummary,
+      clientToken,
+    });
     if ("error" in momentResult) {
       return Response.json({ error: momentResult.error }, { status: 500 });
     }
@@ -143,18 +151,12 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(": ping\n\n"));
       };
 
-      // Remove the situation this request created if generation fails before a
-      // successful result is produced. No-op when the client supplied an
-      // existing momentId.
-      const cleanupOrphanedMoment = async () => {
-        if (momentWasCreated) {
-          await deleteMoment(resolvedMomentId).catch(
-            swallowReporting("future-forecast stream: orphaned moment cleanup failed", {
-              momentId: resolvedMomentId,
-            }),
-          );
-        }
-      };
+      // Failures keep the situation this request created — it holds the
+      // user's full written context, and the client offers "Resume
+      // generation" against it. The momentId rides on error events only for
+      // moments this request owns, so a resume is never offered against a
+      // pre-existing situation mid-flow.
+      const errorMomentId = momentWasCreated ? { momentId: resolvedMomentId } : {};
 
       try {
         const futureParser = createArrayItemParser([...FORECAST_SECTION_KEYS], (item, key) => {
@@ -177,8 +179,7 @@ export async function POST(request: Request) {
         );
 
         if (!forecastGeneration.ok) {
-          await cleanupOrphanedMoment();
-          enqueue({ type: "error", error: forecastGeneration.error });
+          enqueue({ type: "error", error: forecastGeneration.error, ...errorMomentId });
           return;
         }
 
@@ -195,8 +196,7 @@ export async function POST(request: Request) {
 
         const refreshedMoment = await getMoment(resolvedMomentId);
         if ("error" in refreshedMoment) {
-          await cleanupOrphanedMoment();
-          enqueue({ type: "error", error: refreshedMoment.error });
+          enqueue({ type: "error", error: refreshedMoment.error, ...errorMomentId });
           return;
         }
 
@@ -257,8 +257,11 @@ export async function POST(request: Request) {
         });
 
         if ("error" in saveResult) {
-          await cleanupOrphanedMoment();
-          enqueue({ type: "error", error: `Failed to save forecast: ${saveResult.error}` });
+          enqueue({
+            type: "error",
+            error: `Failed to save forecast: ${saveResult.error}`,
+            ...errorMomentId,
+          });
           return;
         }
 
@@ -274,10 +277,10 @@ export async function POST(request: Request) {
           },
         });
       } catch (error) {
-        await cleanupOrphanedMoment();
         enqueue({
           type: "error",
           error: error instanceof Error ? error.message : "An error occurred",
+          ...errorMomentId,
         });
       } finally {
         controller.close();

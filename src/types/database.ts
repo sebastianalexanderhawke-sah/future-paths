@@ -37,6 +37,7 @@ export type Moment = {
   status: MomentStatus;
   opportunity_themes: ThemeName[];
   risk_themes: ThemeName[];
+  client_token: string | null;
   created_at: string;
   updated_at: string;
 };

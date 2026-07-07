@@ -1,17 +1,9 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { signOut } from "@/actions/auth";
-
-// Finalized IA. Workspace is the entry point for reflections and check-ins;
-// it points at the reflections route until a dedicated /workspace ships.
-const NAV_ITEMS = [
-  { label: "Overview", href: "/overview", icon: "⌂" },
-  { label: "Current Self", href: "/current-self", icon: "◈" },
-  { label: "Situations", href: "/moments", icon: "◧" },
-  { label: "Workspace", href: "/reflections", icon: "✎" },
-  { label: "Timeline", href: "/timeline", icon: "◷" },
-  { label: "Settings", href: "/settings", icon: "⚙" },
-];
+import { SidebarNav, type SidebarNavItem } from "@/components/overview/sidebar-nav";
+import { getNavActivity } from "@/lib/nav-activity";
 
 type AppSidebarProps = {
   activeHref: string;
@@ -21,12 +13,55 @@ type AppSidebarProps = {
   userInitial: string;
 };
 
+// Finalized IA. Workspace is the entry point for reflections and check-ins;
+// it points at the reflections route until a dedicated /workspace ships.
+// Unseen-update dots: Workspace shows one while work is actually waiting;
+// Current Self and Timeline show one when their content changed since the
+// reader last opened them.
+function baseNavItems(unansweredReflections: number): SidebarNavItem[] {
+  return [
+    { label: "Overview", href: "/overview", icon: "⌂" },
+    { label: "Current Self", href: "/current-self", icon: "◈" },
+    { label: "Situations", href: "/moments", icon: "◧" },
+    {
+      label: "Workspace",
+      href: "/reflections",
+      icon: "✎",
+      hasUpdates: unansweredReflections > 0,
+    },
+    { label: "Timeline", href: "/timeline", icon: "◷" },
+    { label: "Settings", href: "/settings", icon: "⚙" },
+  ];
+}
+
+// Async wrapper so the two activity-timestamp lookups stream in behind a
+// Suspense boundary: the nav paints immediately (dots appear when the data
+// lands) and the page render never blocks on the sidebar.
+async function NavWithActivity({
+  items,
+  activeHref,
+}: {
+  items: SidebarNavItem[];
+  activeHref: string;
+}) {
+  const activity = await getNavActivity();
+  const enriched = items.map((item) => {
+    if (item.href === "/current-self")
+      return { ...item, activityAt: activity.currentSelfAt };
+    if (item.href === "/timeline")
+      return { ...item, activityAt: activity.timelineAt };
+    return item;
+  });
+  return <SidebarNav items={enriched} activeHref={activeHref} />;
+}
+
 export function AppSidebar({
   activeHref,
   unansweredReflections,
   userLabel,
   userInitial,
 }: AppSidebarProps) {
+  const navItems = baseNavItems(unansweredReflections);
 
   return (
     <aside className="sticky top-0 flex h-screen w-[200px] shrink-0 flex-col overflow-hidden border-r border-[#eeeeee] bg-white py-6">
@@ -45,29 +80,9 @@ export function AppSidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-col gap-1 px-3">
-        {NAV_ITEMS.map((item) => {
-          const isActive = item.href === activeHref;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive ? "page" : undefined}
-              className={[
-                "flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13px] transition-colors duration-150",
-                isActive
-                  ? "bg-[#eef2ff] font-semibold text-[#6366f1]"
-                  : "font-medium text-[#666666] hover:bg-[#f5f5f5] hover:text-[#111]",
-              ].join(" ")}
-            >
-              <span aria-hidden="true" className="w-[18px] shrink-0 text-center text-[15px] leading-none">
-                {item.icon}
-              </span>
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <Suspense fallback={<SidebarNav items={navItems} activeHref={activeHref} />}>
+        <NavWithActivity items={navItems} activeHref={activeHref} />
+      </Suspense>
 
       {/* Bottom section */}
       <div className="mt-auto border-t border-[#f2f2f4] px-3.5 pt-5">

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AppSidebar } from "@/components/overview/app-sidebar";
 import { OverviewCard } from "@/components/overview/overview-card";
 import { MonthlyIdentityNarrativeCard } from "@/components/timeline/monthly-identity-narrative-card";
@@ -55,6 +57,12 @@ export default async function TimelinePage() {
                   Start situations, choose paths, and check in — your first
                   chapter appears once a month of activity accumulates.
                 </p>
+                <Link
+                  href="/moments/new"
+                  className="mt-5 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+                >
+                  Start with a situation
+                </Link>
               </div>
             </OverviewCard>
           ) : (

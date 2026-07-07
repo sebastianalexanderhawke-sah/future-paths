@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import packageJson from "../../../../package.json";
 
+import { signOut } from "@/actions/auth";
 import {
   DisplayNameForm,
   EmailChangeForm,
@@ -59,7 +60,7 @@ export default async function SettingsPage() {
           </div>
 
           <div className="flex flex-col gap-5 pb-14">
-            {/* Account */}
+            {/* Account — who you are here */}
             <OverviewCard className="px-9 py-7">
               <div className="mb-6">
                 <h2 className="text-[17px] font-bold text-[#111]">Account</h2>
@@ -91,7 +92,39 @@ export default async function SettingsPage() {
               <div className="mt-6 max-w-[36rem]">
                 <DisplayNameForm currentName={userIdentity.displayName} />
                 <EmailChangeForm currentEmail={email} />
+              </div>
+            </OverviewCard>
+
+            {/* Security — how you get in */}
+            <OverviewCard className="px-9 py-7">
+              <div className="mb-4">
+                <h2 className="text-[17px] font-bold text-[#111]">Security</h2>
+                <p className="mt-[3px] text-[13px] text-[#888888]">
+                  How you sign in
+                </p>
+              </div>
+
+              <div className="max-w-[36rem]">
                 <PasswordChangeForm />
+
+                <div className="flex items-center justify-between gap-4 border-t border-[#f0f0f0] py-3.5">
+                  <div>
+                    <p className="text-[14px] font-medium text-[#111]">
+                      Sign out
+                    </p>
+                    <p className="mt-1 text-[13px] leading-[1.6] text-[#999999]">
+                      Ends your session on this device.
+                    </p>
+                  </div>
+                  <form action={signOut}>
+                    <button
+                      type="submit"
+                      className="shrink-0 cursor-pointer rounded-lg border border-[#e5e5e5] bg-white px-4 py-2 text-[13px] font-medium text-[#333333] transition-colors hover:border-[#111] hover:text-[#111]"
+                    >
+                      Sign out
+                    </button>
+                  </form>
+                </div>
               </div>
             </OverviewCard>
 
@@ -101,6 +134,9 @@ export default async function SettingsPage() {
                 <h2 className="text-[17px] font-bold text-[#111]">
                   Privacy &amp; Data
                 </h2>
+                <p className="mt-[3px] text-[13px] text-[#888888]">
+                  What is stored and how it&apos;s used
+                </p>
               </div>
 
               <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
@@ -140,6 +176,9 @@ export default async function SettingsPage() {
                 <h2 className="text-[17px] font-bold text-[#111]">
                   During the beta
                 </h2>
+                <p className="mt-[3px] text-[13px] text-[#888888]">
+                  What&apos;s not here yet
+                </p>
               </div>
 
               <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
@@ -155,15 +194,40 @@ export default async function SettingsPage() {
             <OverviewCard className="px-9 py-7">
               <div className="mb-4">
                 <h2 className="text-[17px] font-bold text-[#111]">About</h2>
+                <p className="mt-[3px] text-[13px] text-[#888888]">
+                  This application
+                </p>
               </div>
 
-              <div className="flex items-center justify-between py-1">
+              <div className="flex items-center justify-between py-2.5">
                 <span className="text-[14px] font-medium text-[#111]">
                   Application version
                 </span>
                 <span className="text-[13px] text-[#999999]">
                   {packageJson.version}
                 </span>
+              </div>
+              <div className="flex items-center justify-between border-t border-[#f0f0f0] py-2.5">
+                <span className="text-[14px] font-medium text-[#111]">
+                  Privacy Policy
+                </span>
+                <Link
+                  href="/privacy"
+                  className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
+                >
+                  Read →
+                </Link>
+              </div>
+              <div className="flex items-center justify-between border-t border-[#f0f0f0] py-2.5">
+                <span className="text-[14px] font-medium text-[#111]">
+                  Terms of Use
+                </span>
+                <Link
+                  href="/terms"
+                  className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
+                >
+                  Read →
+                </Link>
               </div>
             </OverviewCard>
           </div>

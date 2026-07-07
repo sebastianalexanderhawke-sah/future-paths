@@ -106,6 +106,7 @@ function makeMoment(overrides: Partial<Moment> = {}): Moment {
     status: "active",
     opportunity_themes: [],
     risk_themes: [],
+    client_token: null,
     created_at: "2026-06-01T00:00:00.000Z",
     updated_at: "2026-06-20T00:00:00.000Z",
     ...overrides,

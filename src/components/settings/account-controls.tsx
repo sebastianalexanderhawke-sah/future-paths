@@ -131,7 +131,7 @@ export function PasswordChangeForm() {
   );
 
   return (
-    <form action={formAction} className="border-t border-[#f0f0f0] py-3.5">
+    <form action={formAction} className="py-3.5">
       <span className={labelClassName}>Password</span>
       <p className={helpClassName}>
         At least 8 characters. You stay signed in after changing it.

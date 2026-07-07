@@ -18,12 +18,16 @@ export type DecisionSimulatorResult = {
 };
 
 export type DecisionSimulatorResponse =
-  | { error: string; result: null }
+  // momentId is present when the situation was created but path generation
+  // failed afterward — the situation is kept so the caller can offer to
+  // resume generation against it instead of creating a duplicate.
+  | { error: string; result: null; momentId?: string }
   | { error: null; result: DecisionSimulatorResult };
 
 export async function runDecisionSimulatorAction(input: {
   situationText: string;
   contextSummary: string | null;
+  clientToken?: string | null;
 }): Promise<DecisionSimulatorResponse> {
   const title = input.situationText.trim();
 
@@ -34,6 +38,7 @@ export async function runDecisionSimulatorAction(input: {
   const momentResult = await createMoment({
     title,
     description: input.contextSummary,
+    clientToken: input.clientToken,
   });
 
   if ("error" in momentResult) {
@@ -43,13 +48,13 @@ export async function runDecisionSimulatorAction(input: {
   const pathsResult = await generatePaths(momentResult.moment.id);
 
   if ("error" in pathsResult) {
-    return { error: pathsResult.error, result: null };
+    return { error: pathsResult.error, result: null, momentId: momentResult.moment.id };
   }
 
   const refreshedMoment = await getMoment(momentResult.moment.id);
 
   if ("error" in refreshedMoment) {
-    return { error: refreshedMoment.error, result: null };
+    return { error: refreshedMoment.error, result: null, momentId: momentResult.moment.id };
   }
 
   return {

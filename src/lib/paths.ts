@@ -251,6 +251,21 @@ export async function createForecastModePath(
     return { error: momentError?.message ?? "Moment not found." };
   }
 
+  // Idempotent: a retry (resume after a dropped connection, or Resume
+  // generation clicked twice) must not give the situation a second chosen
+  // path. If one already exists, it is the one this call would have created.
+  const { data: existingChosen } = await supabase
+    .from("paths")
+    .select("*")
+    .eq("moment_id", momentId)
+    .eq("user_id", auth.userId)
+    .eq("is_chosen", true)
+    .maybeSingle();
+
+  if (existingChosen) {
+    return { path: existingChosen };
+  }
+
   const chosenAt = new Date().toISOString();
 
   const { data: path, error: pathError } = await supabase

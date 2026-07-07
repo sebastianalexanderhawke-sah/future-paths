@@ -108,47 +108,10 @@ export async function getMoment(
   return { moment: data };
 }
 
-/**
- * Deletes a moment owned by the current user. Used to clean up a situation that
- * was created at the start of an AI generation request when that generation
- * fails before completion, so a failed request never leaves an orphaned,
- * empty situation behind. Scoped by user_id, so it can only ever remove the
- * caller's own moment. paths and forecasts are removed via ON DELETE CASCADE;
- * timeline_events reference a moment without an FK, so they are removed here.
- */
-export async function deleteMoment(
-  id: string,
-): Promise<{ ok: true } | { error: string }> {
-  const auth = await requireUser();
-  if ("error" in auth) {
-    return auth;
-  }
-
-  const supabase = await createClient();
-
-  await supabase
-    .from("timeline_events")
-    .delete()
-    .eq("user_id", auth.userId)
-    .eq("reference_type", "moment")
-    .eq("reference_id", id);
-
-  const { error } = await supabase
-    .from("moments")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", auth.userId);
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { ok: true };
-}
-
 export async function createMoment(input: {
   title: string;
   description?: string | null;
+  clientToken?: string | null;
 }): Promise<{ moment: Moment } | { error: string }> {
   const auth = await requireUser();
   if ("error" in auth) {
@@ -164,7 +127,39 @@ export async function createMoment(input: {
     input.description?.trim() === "" ? null : (input.description?.trim() ?? null);
 
   const title = input.title.trim();
+  const clientToken = input.clientToken ?? null;
   const supabase = await createClient();
+
+  // Idempotency (same pattern as check-ins): if this exact submission already
+  // created a moment — the browser disconnected after the server committed
+  // but before the client saw success — recover that moment instead of
+  // creating a duplicate. The description is refreshed if the caller edited
+  // context between attempts; the token identity is (user, submission), so
+  // title changes regenerate the token client-side.
+  if (clientToken) {
+    const { data: existing } = await supabase
+      .from("moments")
+      .select("*")
+      .eq("user_id", auth.userId)
+      .eq("client_token", clientToken)
+      .maybeSingle();
+
+    if (existing) {
+      if (existing.description !== description) {
+        const { data: refreshed } = await supabase
+          .from("moments")
+          .update({ description })
+          .eq("id", existing.id)
+          .eq("user_id", auth.userId)
+          .select("*")
+          .maybeSingle();
+
+        return { moment: refreshed ?? existing };
+      }
+
+      return { moment: existing };
+    }
+  }
 
   // Atomic: the moment row and its "moment_created" timeline event are written
   // in a single transaction inside create_moment_with_event, so a failure can
@@ -174,10 +169,26 @@ export async function createMoment(input: {
     {
       p_title: title,
       p_description: description,
+      p_client_token: clientToken,
     },
   );
 
   if (momentError || !moment) {
+    // Unique-violation backstop for the truly-concurrent duplicate: the other
+    // submission with this token won the insert; recover its moment.
+    if (momentError?.code === "23505" && clientToken) {
+      const { data: existing } = await supabase
+        .from("moments")
+        .select("*")
+        .eq("user_id", auth.userId)
+        .eq("client_token", clientToken)
+        .maybeSingle();
+
+      if (existing) {
+        return { moment: existing };
+      }
+    }
+
     return { error: momentError?.message ?? "Failed to create moment." };
   }
 

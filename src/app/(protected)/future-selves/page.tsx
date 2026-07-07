@@ -1,6 +1,7 @@
 import { generateFutureSelvesAction } from "@/actions/future-selves";
 import { FutureSelvesExplorer } from "@/components/futures/future-selves-explorer";
 import { AppShell } from "@/components/overview/app-shell";
+import { OverviewCard } from "@/components/overview/overview-card";
 import { listFutureSelves } from "@/lib/future-selves";
 
 type FutureSelvesPageProps = {
@@ -48,7 +49,11 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
       ) : null}
 
       <div className="pb-14">
-        <FutureSelvesExplorer futureSelves={result.futureSelves} />
+        {/* The same white-card surface the overview's Future Paths section
+            uses, so the two renderings of this data read as one system. */}
+        <OverviewCard className="px-9 py-8">
+          <FutureSelvesExplorer futureSelves={result.futureSelves} />
+        </OverviewCard>
       </div>
     </AppShell>
   );

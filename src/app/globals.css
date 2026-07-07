@@ -40,31 +40,31 @@ html {
   overflow-x: hidden;
 }
 
-/* ── Light mode (warm linen canvas) ─────────────────────────────────────── */
+/* ── Light mode (the product's one palette: cool neutrals, ink on white) ── */
 
 :root {
   color-scheme: light;
 
-  /* Canvas & surfaces */
-  --canvas: #f7f4ef;
-  --canvas-gradient-top: #fbf8f3;
-  --canvas-gradient-bottom: #f0ebe3;
-  --surface: #fffcf8;
-  --surface-muted: #f5f1ea;
-  --surface-raised: #fffcf8;
+  /* Canvas & surfaces — match the app shell (#f4f4f6 canvas, white cards) */
+  --canvas: #f4f4f6;
+  --canvas-gradient-top: #f8f8fa;
+  --canvas-gradient-bottom: #eeeef2;
+  --surface: #ffffff;
+  --surface-muted: #f4f4f6;
+  --surface-raised: #ffffff;
 
   /* Ink */
-  --ink-primary: #1c1917;
-  --ink-secondary: #57534e;
-  --ink-tertiary: #a8a29e;
+  --ink-primary: #111111;
+  --ink-secondary: #666666;
+  --ink-tertiary: #999999;
 
-  /* Actions */
-  --action-fill: #5c4d3c;
-  --action-fill-hover: #44382b;
-  --action-text: #fffcf8;
-  --action-soft-fill: #e8dfd4;
-  --action-soft-fill-hover: #ddd2c4;
-  --action-ring: rgb(92 77 60 / 0.35);
+  /* Actions — primary buttons are ink-on-white everywhere in the app */
+  --action-fill: #111111;
+  --action-fill-hover: #333333;
+  --action-text: #ffffff;
+  --action-soft-fill: #ececf0;
+  --action-soft-fill-hover: #e0e0e6;
+  --action-ring: rgb(17 17 17 / 0.3);
 
   /* Legacy aliases (existing pages) */
   --background: var(--canvas);
@@ -82,8 +82,8 @@ html {
   --space-card: 1.5rem;
 
   /* Shadows */
-  --shadow-elevated: 0 4px 24px rgb(26 22 20 / 0.06), 0 1px 2px rgb(26 22 20 / 0.04);
-  --shadow-hero: 0 12px 40px rgb(26 22 20 / 0.1), 0 2px 8px rgb(26 22 20 / 0.06);
+  --shadow-elevated: 0 4px 24px rgb(17 17 17 / 0.06), 0 1px 2px rgb(17 17 17 / 0.04);
+  --shadow-hero: 0 12px 40px rgb(17 17 17 / 0.1), 0 2px 8px rgb(17 17 17 / 0.06);
 
   /* Typography scale */
   --text-display-size: 2rem;
@@ -196,45 +196,8 @@ html {
   --state-momentum-decreasing-end: #78716c;
 }
 
-/* ── Dark mode (candlelit layers) ───────────────────────────────────────── */
-
-.dark {
-  color-scheme: dark;
-
-  --canvas: #12100e;
-  --canvas-gradient-top: #121110;
-  --canvas-gradient-bottom: #0a0908;
-  --surface: #1c1916;
-  --surface-muted: #252119;
-  --surface-raised: #252119;
-
-  --ink-primary: #fafaf9;
-  --ink-secondary: #a8a29e;
-  --ink-tertiary: #78716c;
-
-  --action-fill: #e7ddd0;
-  --action-fill-hover: #f5efe6;
-  --action-text: #1c1917;
-  --action-soft-fill: rgb(255 252 248 / 0.06);
-  --action-soft-fill-hover: rgb(255 252 248 / 0.1);
-  --action-ring: rgb(231 221 208 / 0.35);
-
-  --background: var(--canvas);
-  --foreground: var(--ink-primary);
-
-  --shadow-elevated: 0 12px 40px rgb(0 0 0 / 0.45);
-  --shadow-hero: 0 16px 48px rgb(0 0 0 / 0.55), 0 0 64px rgb(92 77 60 / 0.18);
-
-  --state-strengthened: #6bb892;
-  --state-emerging: #a88bd4;
-  --state-weakened: #78716c;
-  --state-contradiction-detected: #d97706;
-  --state-contradiction-resolved: #7a9e8e;
-  --state-momentum-increasing-start: #6bb892;
-  --state-momentum-increasing-end: #a88bd4;
-  --state-momentum-decreasing-start: #78716c;
-  --state-momentum-decreasing-end: #57534e;
-}
+/* Dark mode was removed with the legacy warm-linen system: the theme is
+   forced light in ThemeProvider until a real dark theme exists end to end. */
 
 @theme inline {
   --color-background: var(--background);

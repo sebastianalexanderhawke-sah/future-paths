@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { flushSync } from "react-dom";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { flushSync, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
+
+import { generateForecastForMomentAction } from "@/actions/future-forecast";
+import { generatePathsAction } from "@/actions/paths";
 
 import {
   generateDiscoveryQuestionsAction,
@@ -58,6 +61,18 @@ type StreamFutureDraft = {
 // when the final {type:"result"} event arrives.
 // ---------------------------------------------------------------------------
 
+// A server-side generation failure that happened AFTER the situation was
+// created. The situation is kept (never deleted), so callers can offer to
+// resume generation against `momentId` instead of re-creating a duplicate.
+class StreamGenerationError extends Error {
+  momentId: string | null;
+
+  constructor(message: string, momentId: string | null) {
+    super(message);
+    this.momentId = momentId;
+  }
+}
+
 async function readSSEStream<T>(
   url: string,
   body: unknown,
@@ -106,7 +121,10 @@ async function readSSEStream<T>(
         if (event.type === "result") {
           return event.data as T;
         } else if (event.type === "error") {
-          throw new Error((event.error as string) ?? "Streaming error");
+          throw new StreamGenerationError(
+            (event.error as string) ?? "Streaming error",
+            typeof event.momentId === "string" ? event.momentId : null,
+          );
         } else {
           onEvent?.(event);
         }
@@ -175,6 +193,19 @@ function StreamingFutureCard({ future }: { future: StreamFutureDraft }) {
   );
 }
 
+function ResumeGenerationButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
+    >
+      {pending ? "Resuming…" : "Resume generation"}
+    </button>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Stage type
 // ---------------------------------------------------------------------------
@@ -196,6 +227,10 @@ export function SituationEntryFlow() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [questionsComplete, setQuestionsComplete] = useState(false);
   const [simulatorError, setSimulatorError] = useState<string | null>(null);
+  // Set when the situation exists server-side but generation failed: the
+  // situation is kept, so the error UI offers "Resume generation" for it.
+  const [strandedMomentId, setStrandedMomentId] = useState<string | null>(null);
+  const [strandedForecastMomentId, setStrandedForecastMomentId] = useState<string | null>(null);
   const [simulatorResult, setSimulatorResult] = useState<DecisionSimulatorResult | null>(null);
   const [selectedPathId, setSelectedPathId] = useState<string | null>(null);
   const [forecastError, setForecastError] = useState<string | null>(null);
@@ -221,6 +256,22 @@ export function SituationEntryFlow() {
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [isSelectingPath, startSelectTransition] = useTransition();
 
+  // Idempotency token for situation creation, same pattern as the check-in
+  // form: stable while the submission identity (title + goal) is unchanged,
+  // so a retry after a dropped connection recovers the moment the server
+  // already created instead of creating a duplicate. Computed lazily in the
+  // submit handlers (client-only), keyed rather than effect-driven so a new
+  // title/goal mints a new token without extra renders.
+  const clientTokenRef = useRef<{ key: string; token: string } | null>(null);
+
+  function getClientToken(): string {
+    const key = `${situationText.trim()}|${goal ?? ""}`;
+    if (!clientTokenRef.current || clientTokenRef.current.key !== key) {
+      clientTokenRef.current = { key, token: crypto.randomUUID() };
+    }
+    return clientTokenRef.current.token;
+  }
+
   const hasSituation = situationText.trim().length > 0;
   const hasContext = additionalContext.trim().length > 0;
   const hasGoal = goal !== null;
@@ -233,6 +284,8 @@ export function SituationEntryFlow() {
     setAnswers({});
     setQuestionsComplete(false);
     setSimulatorError(null);
+    setStrandedMomentId(null);
+    setStrandedForecastMomentId(null);
     setSimulatorResult(null);
     setSelectedPathId(null);
     setForecastError(null);
@@ -351,6 +404,7 @@ export function SituationEntryFlow() {
     }
 
     setForecastError(null);
+    setStrandedForecastMomentId(null);
     setStreamingFutures([]);
     setIsStreamingForecast(true);
 
@@ -364,6 +418,7 @@ export function SituationEntryFlow() {
             answers,
             additionalContext.trim() || undefined,
           ),
+          clientToken: getClientToken(),
         },
         (event) => {
           if (event.type === "future") {
@@ -378,8 +433,18 @@ export function SituationEntryFlow() {
         },
       );
       setForecastResult(result);
-    } catch {
-      // Network failure: fall back to server action
+    } catch (streamError) {
+      // The server created the situation but generation failed afterward. The
+      // situation is kept, so offer to resume it rather than immediately
+      // re-running generation via the fallback.
+      if (streamError instanceof StreamGenerationError && streamError.momentId) {
+        setForecastError(streamError.message);
+        setStrandedForecastMomentId(streamError.momentId);
+        return;
+      }
+
+      // Network failure: fall back to server action. The shared client token
+      // recovers a moment the stream request may have already created.
       try {
         const response = await runFutureForecastAction({
           situationText: situationText.trim(),
@@ -388,9 +453,11 @@ export function SituationEntryFlow() {
             answers,
             additionalContext.trim() || undefined,
           ),
+          clientToken: getClientToken(),
         });
         if (response.error) {
           setForecastError(response.error);
+          setStrandedForecastMomentId(response.momentId ?? null);
         } else {
           setForecastResult(response.result);
         }
@@ -408,6 +475,7 @@ export function SituationEntryFlow() {
     }
 
     setSimulatorError(null);
+    setStrandedMomentId(null);
     setStreamingPaths([]);
     setIsStreamingPaths(true);
 
@@ -421,6 +489,7 @@ export function SituationEntryFlow() {
             answers,
             additionalContext.trim() || undefined,
           ),
+          clientToken: getClientToken(),
         },
         (event) => {
           if (event.type === "path") {
@@ -447,8 +516,18 @@ export function SituationEntryFlow() {
         },
       );
       setSimulatorResult(result);
-    } catch {
-      // Network failure: fall back to server action
+    } catch (streamError) {
+      // The server created the situation but generation failed afterward. The
+      // situation is kept, so offer to resume it — the server-action fallback
+      // would create a duplicate situation (and generation just failed anyway).
+      if (streamError instanceof StreamGenerationError && streamError.momentId) {
+        setSimulatorError(streamError.message);
+        setStrandedMomentId(streamError.momentId);
+        return;
+      }
+
+      // Network failure: fall back to server action. The shared client token
+      // recovers a moment the stream request may have already created.
       try {
         const response = await runDecisionSimulatorAction({
           situationText: situationText.trim(),
@@ -457,9 +536,11 @@ export function SituationEntryFlow() {
             answers,
             additionalContext.trim() || undefined,
           ),
+          clientToken: getClientToken(),
         });
         if (response.error) {
           setSimulatorError(response.error);
+          setStrandedMomentId(response.momentId ?? null);
         } else {
           setSimulatorResult(response.result);
         }
@@ -803,6 +884,19 @@ export function SituationEntryFlow() {
             <p className="text-sm text-red-500">{simulatorError}</p>
           ) : null}
 
+          {simulatorError && strandedMomentId ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-zinc-500">
+                Your situation and everything you wrote were saved. You can pick
+                up path generation where it left off.
+              </p>
+              <form action={generatePathsAction}>
+                <input type="hidden" name="momentId" value={strandedMomentId} />
+                <ResumeGenerationButton />
+              </form>
+            </div>
+          ) : null}
+
           {simulatorResult ? (
             <DecisionSimulatorResultView
               situationTitle={situationText.trim()}
@@ -883,6 +977,23 @@ export function SituationEntryFlow() {
 
               {forecastError ? (
                 <p className="text-sm text-red-500">{forecastError}</p>
+              ) : null}
+
+              {forecastError && strandedForecastMomentId ? (
+                <div className="flex flex-col gap-3">
+                  <p className="text-sm text-zinc-500">
+                    Your situation and everything you wrote were saved. You can
+                    pick up the forecast where it left off.
+                  </p>
+                  <form action={generateForecastForMomentAction}>
+                    <input
+                      type="hidden"
+                      name="momentId"
+                      value={strandedForecastMomentId}
+                    />
+                    <ResumeGenerationButton />
+                  </form>
+                </div>
               ) : null}
 
               {forecastResult ? (

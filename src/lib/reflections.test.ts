@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import {
@@ -82,9 +81,6 @@ vi.mock("next/navigation", async (importOriginal) => {
   };
 });
 
-const { ReflectionWaitingHomeSection } = await import(
-  "@/components/home/reflection-waiting-home-section"
-);
 const { default: OverviewPage } = await import("@/app/(protected)/overview/page");
 
 function makePendingReflection(): ReflectionCheckIn {
@@ -247,28 +243,6 @@ describe("overview surfaces the waiting reflection", () => {
     const html = await renderOverviewPage();
 
     expect(html).not.toContain("Reflection available");
-  });
-});
-
-describe("ReflectionWaitingHomeSection", () => {
-  it("shows the pending question with its situation and links to /reflections", () => {
-    const html = renderToStaticMarkup(
-      createElement(ReflectionWaitingHomeSection, {
-        pending: makePendingReflection(),
-      }),
-    );
-
-    expect(html).toContain("What surprised you most about her response?");
-    expect(html).toContain("The job offer in Dallas");
-    expect(html).toContain('href="/reflections"');
-  });
-
-  it("renders nothing when no reflection is pending", () => {
-    const html = renderToStaticMarkup(
-      createElement(ReflectionWaitingHomeSection, { pending: null }),
-    );
-
-    expect(html).toBe("");
   });
 });
 

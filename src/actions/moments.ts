@@ -18,6 +18,7 @@ export async function createMomentAction(
 ): Promise<MomentFormState> {
   const title = formData.get("title");
   const description = formData.get("description");
+  const clientToken = formData.get("clientToken");
 
   if (typeof title !== "string") {
     return { error: "Title is required." };
@@ -26,6 +27,8 @@ export async function createMomentAction(
   const result = await createMoment({
     title,
     description: typeof description === "string" ? description : null,
+    clientToken:
+      typeof clientToken === "string" && clientToken ? clientToken : null,
   });
 
   if ("error" in result) {
@@ -81,6 +84,7 @@ export async function resolveAndTransformAction(
 ): Promise<ResolveTransformFormState> {
   const momentId = formData.get("momentId");
   const newTitle = formData.get("newTitle");
+  const clientToken = formData.get("clientToken");
 
   if (typeof momentId !== "string") {
     return { error: "Invalid submission." };
@@ -95,7 +99,11 @@ export async function resolveAndTransformAction(
     return { error: archiveResult.error };
   }
 
-  const createResult = await createMoment({ title: newTitle.trim() });
+  const createResult = await createMoment({
+    title: newTitle.trim(),
+    clientToken:
+      typeof clientToken === "string" && clientToken ? clientToken : null,
+  });
   if ("error" in createResult) {
     return { error: createResult.error };
   }

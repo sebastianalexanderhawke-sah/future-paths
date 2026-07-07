@@ -1,11 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import { createMoment, deleteMoment } from "@/lib/moments";
+import { createMoment } from "@/lib/moments";
 import { persistGeneratedPaths } from "@/lib/paths";
 import { runStreamingGeneration } from "@/lib/ai/stream";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
 import { createArrayItemParser } from "@/lib/ai/parse-stream";
 import { isAiAuditEnabled, toRawPathsAudit } from "@/lib/ai-audit";
-import { swallowReporting } from "@/lib/observability";
 import {
   allowRequest,
   RATE_LIMIT_MESSAGE,
@@ -35,6 +34,9 @@ export async function POST(request: Request) {
     contextSummary: string | null;
   };
 
+  const clientToken =
+    typeof body.clientToken === "string" && body.clientToken ? body.clientToken : null;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
   const momentResult = await createMoment({
     title,
     description: contextSummary ?? null,
+    clientToken,
   });
 
   if ("error" in momentResult) {
@@ -70,17 +73,6 @@ export async function POST(request: Request) {
       const enqueue = (event: unknown) => {
         controller.enqueue(encoder.encode(sseData(event)));
         controller.enqueue(encoder.encode(": ping\n\n"));
-      };
-
-      // This route always creates the moment above, so a generation failure
-      // before a successful result must remove it rather than leave an empty
-      // situation behind.
-      const cleanupOrphanedMoment = async () => {
-        await deleteMoment(moment.id).catch(
-          swallowReporting("decision-simulator stream: orphaned moment cleanup failed", {
-            momentId: moment.id,
-          }),
-        );
       };
 
       try {
@@ -99,9 +91,12 @@ export async function POST(request: Request) {
           (text) => pathParser(text),
         );
 
+        // Failures past this point keep the situation: it holds the user's
+        // full written context, and the client offers "Resume generation"
+        // against it (the moment page's generate actions are the fallback).
+        // Deleting it here would destroy that context on an AI outage.
         if (!generationResult.ok) {
-          await cleanupOrphanedMoment();
-          enqueue({ type: "error", error: generationResult.error });
+          enqueue({ type: "error", error: generationResult.error, momentId: moment.id });
           return;
         }
 
@@ -114,8 +109,7 @@ export async function POST(request: Request) {
         });
 
         if ("error" in persistResult) {
-          await cleanupOrphanedMoment();
-          enqueue({ type: "error", error: persistResult.error });
+          enqueue({ type: "error", error: persistResult.error, momentId: moment.id });
           return;
         }
 
@@ -133,10 +127,10 @@ export async function POST(request: Request) {
           },
         });
       } catch (error) {
-        await cleanupOrphanedMoment();
         enqueue({
           type: "error",
           error: error instanceof Error ? error.message : "An error occurred",
+          momentId: moment.id,
         });
       } finally {
         controller.close();

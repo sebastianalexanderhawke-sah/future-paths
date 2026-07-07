@@ -11,20 +11,14 @@ import {
   type PatternImpactRow,
 } from "@/components/overview/pattern-emerging-card";
 import {
-  SinceLastVisitCard,
-  type SinceLastVisitItem,
-} from "@/components/overview/since-last-visit-card";
-import {
   WhatsChangedCard,
   type ChangeRow,
 } from "@/components/overview/whats-changed-card";
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
-import { getCurrentSelf } from "@/lib/current-self";
 import { getFutureSelfTrend } from "@/lib/future-self-trend";
 import { listActiveFutureSelves } from "@/lib/future-selves";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
-import { getLatestSettledChapter } from "@/lib/monthly-identity-narrative";
 import { getChosenPathsForMoments } from "@/lib/paths";
 import { getUnansweredReflectionSummary } from "@/lib/reflections";
 import { isCheckInStale } from "@/lib/relative-time";
@@ -44,16 +38,12 @@ export default async function OverviewPage() {
     futuresResult,
     reflectionSummaryResult,
     identityUpdatesResult,
-    currentSelfResult,
-    latestChapter,
   ] = await Promise.all([
     getUserIdentity(),
     listMoments(),
     listActiveFutureSelves(5),
     getUnansweredReflectionSummary(),
     listIdentityUpdates(5),
-    getCurrentSelf(),
-    getLatestSettledChapter(),
   ]);
 
   const situations = "moments" in momentsResult ? momentsResult.moments : [];
@@ -65,8 +55,6 @@ export default async function OverviewPage() {
     "identityUpdates" in identityUpdatesResult
       ? identityUpdatesResult.identityUpdates
       : [];
-  const currentSelf =
-    "currentSelf" in currentSelfResult ? currentSelfResult.currentSelf : null;
 
   const momentIds = situations.map((m) => m.id);
   const [chosenPaths, lastCheckIns] = await Promise.all([
@@ -152,48 +140,6 @@ export default async function OverviewPage() {
       delta: Math.round(trend.delta),
     }));
 
-  // ── Since your last visit: outcome digest ────────────────────────────
-  // Every candidate carries its own timestamp; the client component shows
-  // only what happened after the reader was last here. Outcomes, never
-  // mechanics — one calm card, one line per change.
-  const sinceLastVisitItems: SinceLastVisitItem[] = [];
-  if (reflectionSummary?.pending) {
-    sinceLastVisitItems.push({
-      key: "reflection-waiting",
-      text: "A new reflection is waiting for you.",
-      href: "/reflections",
-      at: reflectionSummary.pending.created_at,
-    });
-  }
-  if (currentSelf) {
-    sinceLastVisitItems.push({
-      key: "current-self",
-      text: "Your Current Self evolved.",
-      href: "/current-self",
-      at: currentSelf.updated_at,
-    });
-  }
-  const topMover = movers[0];
-  if (topMover) {
-    sinceLastVisitItems.push({
-      key: `future-${topMover.futureSelf.id}`,
-      text:
-        topMover.trend.direction === "up"
-          ? `${topMover.futureSelf.name} became more likely.`
-          : `${topMover.futureSelf.name} became less likely.`,
-      href: "/future-selves",
-      at: topMover.futureSelf.updated_at,
-    });
-  }
-  if (latestChapter) {
-    sinceLastVisitItems.push({
-      key: `chapter-${latestChapter.month}`,
-      text: `Your Timeline has a new chapter: ${latestChapter.month}.`,
-      href: "/timeline",
-      at: latestChapter.generatedAt,
-    });
-  }
-
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
       <AppSidebar
@@ -225,8 +171,6 @@ export default async function OverviewPage() {
           </div>
 
           <div className="flex flex-col gap-5 pb-14">
-            <SinceLastVisitCard items={sinceLastVisitItems} />
-
             <FuturePathsCard futureSelves={futureSelves} />
 
             <div className="grid grid-cols-2 gap-5">

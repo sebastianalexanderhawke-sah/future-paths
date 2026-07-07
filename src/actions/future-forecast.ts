@@ -42,7 +42,7 @@ import {
 import { buildForecastSimplificationExperiment } from "@/lib/forecast-simplification-experiment";
 
 import { saveForecast } from "@/lib/forecasts";
-import { createMoment, getMoment, updateMoment, deleteMoment } from "@/lib/moments";
+import { createMoment, getMoment, updateMoment } from "@/lib/moments";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -72,7 +72,10 @@ export type FutureForecastSelectedPath = {
 
 export type FutureForecastResponse =
 
-  | { error: string; result: null }
+  // momentId is present on failure when the situation exists — it is never
+  // deleted, so the caller can offer to resume generation against it instead
+  // of creating a duplicate.
+  | { error: string; result: null; momentId?: string }
 
   | { error: null; result: ForecastResult };
 
@@ -164,6 +167,8 @@ export async function runFutureForecastAction(input: {
 
   selectedPath?: FutureForecastSelectedPath;
 
+  clientToken?: string | null;
+
 }): Promise<FutureForecastResponse> {
 
   const title = input.situationText.trim();
@@ -199,23 +204,6 @@ export async function runFutureForecastAction(input: {
 
 
   let momentId = input.momentId;
-
-  // True only when this request creates the moment below. Cleanup on a failed
-  // generation must never remove a pre-existing situation supplied by the
-  // caller.
-  const momentWasCreated = !input.momentId;
-
-  const cleanupOrphanedMoment = async () => {
-    if (momentWasCreated && momentId) {
-      await deleteMoment(momentId).catch(
-        swallowReporting("future-forecast action: orphaned moment cleanup failed", {
-          momentId,
-        }),
-      );
-    }
-  };
-
-
 
   if (momentId) {
 
@@ -254,6 +242,8 @@ export async function runFutureForecastAction(input: {
       title,
 
       description: mergedContextSummary,
+
+      clientToken: input.clientToken,
 
     });
 
@@ -297,6 +287,10 @@ export async function runFutureForecastAction(input: {
 
 
 
+  // Failures past this point keep the situation: it holds the user's full
+  // written context, and the caller can offer to resume generation against it
+  // (the moment page's generate actions are the durable fallback). Deleting it
+  // would destroy that context because an AI call failed.
   if (!forecastGeneration.ok) {
 
     console.error("[runFutureForecastAction] AI generation failed", {
@@ -305,9 +299,7 @@ export async function runFutureForecastAction(input: {
       error: forecastGeneration.error,
     });
 
-    await cleanupOrphanedMoment();
-
-    return { error: forecastGeneration.error, result: null };
+    return { error: forecastGeneration.error, result: null, momentId };
 
   }
 
@@ -327,9 +319,7 @@ export async function runFutureForecastAction(input: {
 
   if ("error" in refreshedMoment) {
 
-    await cleanupOrphanedMoment();
-
-    return { error: refreshedMoment.error, result: null };
+    return { error: refreshedMoment.error, result: null, momentId };
 
   }
 
@@ -398,9 +388,7 @@ export async function runFutureForecastAction(input: {
       error: saveResult.error,
     });
 
-    await cleanupOrphanedMoment();
-
-    return { error: `Failed to save forecast: ${saveResult.error}`, result: null };
+    return { error: `Failed to save forecast: ${saveResult.error}`, result: null, momentId };
   }
 
   return {
@@ -428,7 +416,9 @@ export async function runFutureForecastAction(input: {
 }
 
 export type ForecastModeResponse =
-  | { error: string; momentId: null }
+  // On failure, momentId is set when the situation exists (it is never
+  // deleted) so the caller can offer to resume generation against it.
+  | { error: string; momentId: string | null }
   | { error: null; momentId: string };
 
 /**
@@ -439,11 +429,12 @@ export type ForecastModeResponse =
 export async function runForecastModeAction(input: {
   situationText: string;
   contextSummary: string | null;
+  clientToken?: string | null;
 }): Promise<ForecastModeResponse> {
   const forecastResponse = await runFutureForecastAction(input);
 
   if (forecastResponse.error) {
-    return { error: forecastResponse.error, momentId: null };
+    return { error: forecastResponse.error, momentId: forecastResponse.momentId ?? null };
   }
 
   if (!forecastResponse.result) {
@@ -454,7 +445,7 @@ export async function runForecastModeAction(input: {
 
   const pathResult = await createForecastModePath(momentId);
   if ("error" in pathResult) {
-    return { error: pathResult.error, momentId: null };
+    return { error: pathResult.error, momentId };
   }
 
   return { error: null, momentId };
@@ -472,7 +463,9 @@ export async function generateForecastForMomentAction(
   if (typeof momentId !== "string" || !momentId.trim()) return;
 
   const momentResult = await getMoment(momentId);
-  if ("error" in momentResult) return;
+  if ("error" in momentResult) {
+    redirect("/moments");
+  }
 
   const { moment } = momentResult;
 
@@ -482,10 +475,20 @@ export async function generateForecastForMomentAction(
     momentId,
   });
 
-  if (forecastResponse.error || !forecastResponse.result) return;
+  // Failures land on the situation page, which shows the error and keeps its
+  // generate actions available — never a silent no-op the user can't see.
+  if (forecastResponse.error || !forecastResponse.result) {
+    redirect(
+      `/moments/${momentId}?error=${encodeURIComponent(
+        forecastResponse.error ?? "Forecast generation returned no result.",
+      )}`,
+    );
+  }
 
   const pathResult = await createForecastModePath(momentId);
-  if ("error" in pathResult) return;
+  if ("error" in pathResult) {
+    redirect(`/moments/${momentId}?error=${encodeURIComponent(pathResult.error)}`);
+  }
 
   redirect(withJustChosenPathFlag(`/moments/${momentId}`));
 }

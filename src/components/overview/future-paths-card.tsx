@@ -4,18 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import {
+  BRANCH_ACCENTS as ACCENTS,
+  BRANCH_EASE as EASE,
+  BRANCH_STROKE,
+  branchCurve as sharedBranchCurve,
+  type BranchCurve as SharedBranchCurve,
+} from "@/components/futures/branch-language";
 import { OverviewCard } from "@/components/overview/overview-card";
 import type { FutureSelf } from "@/types/database";
-
-// Per-slot accents. Decorative and stable per layout position so the chart
-// always reads the same way; meaning lives in the label text, not the color.
-const ACCENTS = [
-  { color: "#6366f1", soft: "#eef2ff" },
-  { color: "#22c55e", soft: "#f0fdf4" },
-  { color: "#ef4444", soft: "#fff5f5" },
-  { color: "#3b82f6", soft: "#eff6ff" },
-  { color: "#f59e0b", soft: "#fffbeb" },
-];
 
 // Geometry lives in a fixed 800×440 coordinate space. The SVG stretches to
 // fill the chart area (preserveAspectRatio="none", non-scaling strokes), and
@@ -54,7 +51,7 @@ const SLOTS: Record<string, Slot> = {
   },
   midLeft: {
     end: [148, 268],
-    bend: -26,
+    bend: -34,
     labelStyle: {
       right: 20,
       top: "50%",
@@ -64,7 +61,7 @@ const SLOTS: Record<string, Slot> = {
   },
   midRight: {
     end: [662, 240],
-    bend: 24,
+    bend: 32,
     labelStyle: { left: 20, top: "50%", transform: "translateY(-50%)" },
   },
   bottomLeft: {
@@ -110,41 +107,15 @@ function establishedFraction(pct: number): number {
   return 1;
 }
 
-type BranchGeometry = {
-  d: string;
-  control: readonly [number, number];
-  end: readonly [number, number];
-};
-
-function branchCurve(slot: Slot): BranchGeometry {
-  const [ex, ey] = slot.end;
-  const dx = ex - CX;
-  const dy = ey - CY;
-  const len = Math.hypot(dx, dy);
-  const cx = (CX + ex) / 2 + (-dy / len) * slot.bend;
-  const cy = (CY + ey) / 2 + (dx / len) * slot.bend;
-  return {
-    d: `M ${CX} ${CY} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${ex} ${ey}`,
-    control: [cx, cy],
-    end: slot.end,
-  };
-}
-
-function pointOnCurve(geometry: BranchGeometry, t: number): [number, number] {
-  const [cx, cy] = geometry.control;
-  const [ex, ey] = geometry.end;
-  const u = 1 - t;
-  return [
-    u * u * CX + 2 * u * t * cx + t * t * ex,
-    u * u * CY + 2 * u * t * cy + t * t * ey,
-  ];
+// Branch curvature comes from the shared branch language, so the overview
+// card and the dedicated explorer always bow their branches the same way.
+function branchCurve(slot: Slot): SharedBranchCurve {
+  return sharedBranchCurve([CX, CY], slot.end, slot.bend);
 }
 
 function toPercent([x, y]: readonly [number, number]): React.CSSProperties {
   return { left: `${(x / VIEW_W) * 100}%`, top: `${(y / VIEW_H) * 100}%` };
 }
-
-const EASE = "200ms ease-out";
 
 type FuturePathsCardProps = {
   futureSelves: FutureSelf[];

@@ -16,10 +16,13 @@ import { getUserIdentity } from "@/lib/user-identity";
 import type { Moment } from "@/types/database";
 
 // Object states, not task states — actions live on the Workspace page.
-// These are the same three lifecycle stages MomentCard has always derived
-// from chosen-path and check-in data. No new AI states.
+// The same three lifecycle stages the cards have always derived from
+// chosen-path and check-in data. "Exploring options" is the most common
+// state, so it stays neutral; color marks progress (accent for a made
+// forecast, green for lived check-ins), keeping the grid calm rather than
+// a wall of blue.
 const STATUSES = {
-  exploring: { label: "Exploring options", color: "#3b82f6", soft: "#eff6ff" },
+  exploring: { label: "Exploring options", color: "#666666", soft: "#f4f4f6" },
   forecast: { label: "Forecast", color: "#6366f1", soft: "#eef2ff" },
   checkingIn: { label: "Checking in", color: "#22c55e", soft: "#f0fdf4" },
 } satisfies Record<string, SituationStatus>;
@@ -102,12 +105,6 @@ export default async function MomentsPage() {
     return `Exploring options · updated ${formatRelativeTime(moment.updated_at)}`;
   };
 
-  const filterPills = [
-    { label: "All", href: null },
-    { label: "Active", href: "#active" },
-    ...(archived.length > 0 ? [{ label: "Resolved", href: "#resolved" }] : []),
-  ];
-
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
       <AppSidebar
@@ -156,29 +153,6 @@ export default async function MomentsPage() {
             </OverviewCard>
           ) : (
             <div className="flex flex-col gap-8 pb-14">
-              {/* Filters — visual structure; pills jump to their section. */}
-              <div className="flex items-center gap-2">
-                {filterPills.map((pill) =>
-                  pill.href ? (
-                    <a
-                      key={pill.label}
-                      href={pill.href}
-                      className="rounded-full border border-[#ececf0] bg-white px-4 py-2 text-[13px] font-medium text-[#666666] transition-colors duration-150 hover:bg-[#f5f5f5] hover:text-[#111]"
-                    >
-                      {pill.label}
-                    </a>
-                  ) : (
-                    <span
-                      key={pill.label}
-                      aria-current="true"
-                      className="rounded-full bg-[#111] px-4 py-2 text-[13px] font-semibold text-white"
-                    >
-                      {pill.label}
-                    </span>
-                  ),
-                )}
-              </div>
-
               {/* Active Situations — the state of each, not its to-dos. */}
               <section id="active" className="scroll-mt-6">
                 <div className="mb-4">
