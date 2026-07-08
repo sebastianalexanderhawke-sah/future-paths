@@ -11,8 +11,10 @@ export type MockCurrentSelfDraft = {
   title: string;
   summary: string;
   themes: CheckInThemeName[];
-  observations: string[];    // core traits — short bullets about who this person is
-  recent_growth: string[];   // exactly 3 bullets about what is currently shifting
+  values: string[];              // exactly 3 — "Name\nEvidence paragraph" pairs naming a tradeoff, strongest first
+  afraid_of_becoming: string[];  // 1–3, derived from avoidance signals independent of the values above
+  core_tension: string;          // the single most important recurring contradiction
+  recent_growth: string[];       // up to 3 sentences describing how identity is evolving
 };
 
 const THEME_COUNT_MIN = 4;
@@ -159,30 +161,67 @@ export function generateMockCurrentSelf(input: {
 
   const summary = [para1, para2, para3].filter(Boolean).join("\n\n");
 
-  // Core traits: 2–5 word timeless labels
-  const observations: string[] = [
-    difficultTheme ? `Sits with ${difficultTheme.toLowerCase()}` : "Acts before certainty",
-    `Drawn toward ${futureLabel}`,
-    "Learns through action",
-    recentUpdate ? "Adapts when things shift" : "Trusts own judgment",
+  // What You Value — exactly 3, each naming a tradeoff (what competed, what
+  // repeatedly won) rather than a theme tag. Not derived from `themes`.
+  const values = [
+    "Freedom\nWhen certainty and autonomy compete, you keep giving up the certainty, and that choice shows up across very different situations, not one repeated one. When a path offers more security but less room to decide for yourself, you consistently pass on it.",
+    `Growth\nYou keep accepting discomfort over comfort because ${futureLabel} matters more than the easier option sitting right next to it — the same call, made again, in situations that otherwise have nothing in common.`,
+    "Momentum\nWhen waiting and acting compete, acting keeps winning — you consistently choose to move before every condition is settled, across enough different decisions that it reads as a pattern rather than a single choice.",
   ];
 
-  // Recent growth: 3–6 word present-tense movement phrases
+  // What You Fear Becoming — derived independently from actual avoidance
+  // signals (a real competing pull, real friction actually present, real
+  // movement away from an old position), NOT by negating the values above.
+  // Two people with the same values above could produce different fears
+  // here depending on what their evidence actually shows them avoiding.
+  const afraidCandidates: string[] = [];
+
+  if (secondaryLabel) {
+    afraidCandidates.push(
+      `Settling for ${futureLabel} just to make the pull toward ${secondaryLabel} stop, instead of actually resolving it.`,
+    );
+  }
+  if (difficultTheme) {
+    afraidCandidates.push(
+      `Letting ${difficultTheme.toLowerCase()} quietly decide the direction instead of deciding it yourself.`,
+    );
+  }
+  if (recentUpdate) {
+    afraidCandidates.push(
+      "Staying somewhere you've already outgrown because leaving feels riskier than staying.",
+    );
+  }
+
+  // Every account has at least one groundable avoidance pattern from the
+  // base action-oriented evidence, so this never returns empty.
+  const afraid_of_becoming =
+    afraidCandidates.length > 0
+      ? afraidCandidates.slice(0, 3)
+      : ["Waiting for certainty until the moment to act has already passed."];
+
+  // Your Biggest Tension — the single most important recurring contradiction.
+  const core_tension = secondaryLabel
+    ? `You want ${futureLabel}. You also want ${secondaryLabel}. Nearly every major decision you've recorded has required choosing one over the other.`
+    : `You trust your own judgment deeply. You still wish someone understood what building toward ${futureLabel} has actually cost you.`;
+
+  // What's Changing: up to 3 sentences describing evolution, not isolated phrases.
   const recent_growth = [
-    `Trusting ${primaryTheme} more`,
+    `Recently you've become noticeably more comfortable trusting ${primaryTheme} without waiting for outside confirmation.`,
     secondaryLabel
-      ? `Weighing ${futureLabel} against ${secondaryLabel}`
-      : `Committing more fully to ${futureLabel}`,
+      ? `You're increasingly willing to sit with the pull between ${futureLabel} and ${secondaryLabel} instead of forcing an early resolution.`
+      : `You're committing more fully to ${futureLabel} with less deliberation than before.`,
     difficultTheme
-      ? `Sitting with ${difficultTheme.toLowerCase()} longer`
-      : "Deciding with less deliberation",
-  ];
+      ? `You're starting to name ${difficultTheme.toLowerCase()} directly instead of only sitting with it privately.`
+      : null,
+  ].filter((item): item is string => item !== null);
 
   return {
     title,
     summary,
     themes,
-    observations,
+    values,
+    afraid_of_becoming,
+    core_tension,
     recent_growth,
   };
 }

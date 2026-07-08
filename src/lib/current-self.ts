@@ -1,11 +1,64 @@
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { currentSelfNullableOutputSchema } from "@/lib/ai/schemas/current-self";
 import {
+  deriveFearsFromThemes,
+  deriveValuesFromThemes,
+} from "@/lib/current-self-inference";
+import {
   reportDiscardedResultError,
   swallowReporting,
 } from "@/lib/observability";
 import { createClient } from "@/lib/supabase/server";
 import type { CurrentSelf } from "@/types/database";
+
+// Legacy rows — created before these columns existed, or read through a
+// partially-applied migration — can come back from Supabase with values,
+// afraid_of_becoming, core_tension, themes, or recent_growth missing
+// entirely rather than defaulted to '[]'/''. Every field this module
+// touches is normalized here before anything iterates over it. The return
+// type narrows values/afraid_of_becoming/core_tension to non-null so the
+// rest of this file never needs another null check on them.
+type NormalizedCurrentSelf = CurrentSelf & {
+  values: string[];
+  afraid_of_becoming: string[];
+  core_tension: string;
+};
+
+function normalizeCurrentSelf(row: CurrentSelf): NormalizedCurrentSelf {
+  return {
+    ...row,
+    themes: row.themes ?? [],
+    values: row.values ?? [],
+    afraid_of_becoming: row.afraid_of_becoming ?? [],
+    core_tension: row.core_tension ?? "",
+    recent_growth: row.recent_growth ?? [],
+  };
+}
+
+// Backfills "What You Value" / "What You Fear Becoming" for rows generated
+// before those fields existed, or where generation returned them empty —
+// derived from the same theme evidence already on the record, never
+// persisted, so a real regeneration always supersedes it. Normalizes first,
+// so a legacy row missing these columns entirely never crashes here.
+function withInferredValuesAndFears(row: CurrentSelf): NormalizedCurrentSelf {
+  const currentSelf = normalizeCurrentSelf(row);
+
+  if (currentSelf.values.length > 0 && currentSelf.afraid_of_becoming.length > 0) {
+    return currentSelf;
+  }
+
+  return {
+    ...currentSelf,
+    values:
+      currentSelf.values.length > 0
+        ? currentSelf.values
+        : deriveValuesFromThemes(currentSelf.themes),
+    afraid_of_becoming:
+      currentSelf.afraid_of_becoming.length > 0
+        ? currentSelf.afraid_of_becoming
+        : deriveFearsFromThemes(currentSelf.themes),
+  };
+}
 
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
@@ -46,7 +99,7 @@ export async function getCurrentSelf(): Promise<
     return { error: error.message };
   }
 
-  return { currentSelf: data };
+  return { currentSelf: data ? withInferredValuesAndFears(data) : data };
 }
 
 type GenerationInput =
@@ -179,7 +232,9 @@ export async function generateCurrentSelf(
         title: draft.title,
         summary: draft.summary,
         themes: draft.themes,
-        observations: draft.observations,
+        values: draft.values,
+        afraid_of_becoming: draft.afraid_of_becoming,
+        core_tension: draft.core_tension,
         recent_growth: draft.recent_growth,
         updated_at: now,
       })
@@ -202,7 +257,9 @@ export async function generateCurrentSelf(
       title: draft.title,
       summary: draft.summary,
       themes: draft.themes,
-      observations: draft.observations,
+      values: draft.values,
+      afraid_of_becoming: draft.afraid_of_becoming,
+      core_tension: draft.core_tension,
       recent_growth: draft.recent_growth,
     })
     .select("*")

@@ -67,7 +67,10 @@ export type IdentityContextBundle = {
     FutureSelf,
     "name" | "summary" | "percentage" | "evidence_strength" | "themes"
   >[];
-  currentSelf?: Pick<CurrentSelf, "title" | "summary" | "themes" | "observations" | "recent_growth">;
+  currentSelf?: Pick<
+    CurrentSelf,
+    "title" | "summary" | "themes" | "values" | "afraid_of_becoming" | "core_tension" | "recent_growth"
+  >;
   // Richer Current Self evidence — recent situations, chosen path details,
   // and full check-in narratives (reflection/reality/reflection Q&A), so the
   // generated snapshot can cite specific evidence rather than just themes.

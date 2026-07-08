@@ -13,15 +13,15 @@ type CurrentSelfPageProps = {
   searchParams: Promise<{ error?: string }>;
 };
 
-// "Trait\nStrength note" → chip label + optional detail for the tooltip.
-function parseTrait(observation: string): { trait: string; detail: string | null } {
-  const newlineIndex = observation.indexOf("\n");
+// "Name\nEvidence sentence" → value name + the pattern of choices behind it.
+function parseValue(value: string): { name: string; evidence: string | null } {
+  const newlineIndex = value.indexOf("\n");
   if (newlineIndex === -1) {
-    return { trait: observation, detail: null };
+    return { name: value, evidence: null };
   }
   return {
-    trait: observation.slice(0, newlineIndex),
-    detail: observation.slice(newlineIndex + 1),
+    name: value.slice(0, newlineIndex),
+    evidence: value.slice(newlineIndex + 1),
   };
 }
 
@@ -65,8 +65,9 @@ export default async function CurrentSelfPage({
     : [];
   const conciseSummary = paragraphs[0] ?? null;
   const remainingParagraphs = paragraphs.slice(1);
-  const recentGrowth = (currentSelf?.recent_growth ?? []).slice(0, 4);
-  const traits = (currentSelf?.observations ?? []).map(parseTrait);
+  const recentGrowth = currentSelf?.recent_growth ?? [];
+  const values = (currentSelf?.values ?? []).map(parseValue);
+  const afraidOfBecoming = currentSelf?.afraid_of_becoming ?? [];
 
   // Oldest → newest so the chain reads chronologically, ending at today.
   const timelineSteps = [...identityUpdates].reverse().map((update) => ({
@@ -163,59 +164,9 @@ export default async function CurrentSelfPage({
                 <AnalysisDisclosure paragraphs={remainingParagraphs} />
               </OverviewCard>
 
+              {/* What You Value / What You Fear Becoming — complementary,
+                  equal-weight sibling cards. */}
               <div className="grid grid-cols-2 gap-5">
-                {/* What's Changing */}
-                <OverviewCard className="flex flex-col px-8 py-7">
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2">
-                      <span
-                        aria-hidden="true"
-                        className="text-[20px] leading-none text-[#22c55e]"
-                      >
-                        ↗
-                      </span>
-                      <h2 className="text-[17px] font-bold text-[#111]">
-                        What&apos;s Changing
-                      </h2>
-                    </div>
-                    <p className="mt-[3px] text-[13px] text-[#888888]">
-                      Recent movement in your identity
-                    </p>
-                  </div>
-
-                  {recentGrowth.length === 0 ? (
-                    <p className="py-6 text-[13px] leading-relaxed text-[#888888]">
-                      Nothing has shifted yet. Keep checking in and movement
-                      will show up here.
-                    </p>
-                  ) : (
-                    <div>
-                      {recentGrowth.map((item, i) => (
-                        <div
-                          key={item}
-                          className={[
-                            "flex items-start gap-3.5 py-3.5",
-                            i < recentGrowth.length - 1
-                              ? "border-b border-[#f5f5f5]"
-                              : "",
-                          ].join(" ")}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f0fdf4] text-[18px] text-[#22c55e]"
-                          >
-                            ↑
-                          </span>
-                          <span className="pt-2 text-[14px] font-medium leading-snug text-[#111]">
-                            {item}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </OverviewCard>
-
-                {/* Core Traits */}
                 <OverviewCard className="flex flex-col px-8 py-7">
                   <div className="mb-6">
                     <div className="flex items-center gap-2">
@@ -226,33 +177,162 @@ export default async function CurrentSelfPage({
                         ◈
                       </span>
                       <h2 className="text-[17px] font-bold text-[#111]">
-                        Core Traits
+                        What You Value
                       </h2>
                     </div>
                     <p className="mt-[3px] text-[13px] text-[#888888]">
-                      Stable patterns in how you act
+                      What your repeated choices consistently protect
                     </p>
                   </div>
 
-                  {traits.length === 0 ? (
+                  {values.length === 0 ? (
                     <p className="py-6 text-[13px] leading-relaxed text-[#888888]">
-                      No traits identified yet.
+                      Not clear yet — this fills in as patterns repeat.
                     </p>
                   ) : (
-                    <div className="flex flex-wrap content-start gap-2">
-                      {traits.map(({ trait, detail }) => (
-                        <span
-                          key={trait}
-                          title={detail ?? undefined}
-                          className="inline-flex rounded-full border border-[#ececf0] bg-[#f8f8fa] px-3.5 py-1.5 text-[13px] font-medium text-[#333333]"
+                    <div>
+                      {values.map(({ name, evidence }, i) => (
+                        <div
+                          key={`${i}-${name}`}
+                          className={[
+                            "flex items-start gap-3.5 py-3.5",
+                            i < values.length - 1 ? "border-b border-[#f5f5f5]" : "",
+                          ].join(" ")}
                         >
-                          {trait}
-                        </span>
+                          <span
+                            aria-hidden="true"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f5ff] text-[15px] text-[#6366f1]"
+                          >
+                            ◈
+                          </span>
+                          <div className="pt-1.5">
+                            <p className="text-[14px] font-bold leading-snug text-[#111]">
+                              {name}
+                            </p>
+                            {evidence ? (
+                              <p className="mt-1 text-[13px] leading-relaxed text-[#777777]">
+                                {evidence}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </OverviewCard>
+
+                <OverviewCard className="flex flex-col px-8 py-7">
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="text-[18px] leading-none text-[#94a3b8]"
+                      >
+                        ○
+                      </span>
+                      <h2 className="text-[17px] font-bold text-[#111]">
+                        What You Fear Becoming
+                      </h2>
+                    </div>
+                    <p className="mt-[3px] text-[13px] text-[#888888]">
+                      Not anxiety — the identity your choices move away from
+                    </p>
+                  </div>
+
+                  {afraidOfBecoming.length === 0 ? (
+                    <p className="py-6 text-[13px] leading-relaxed text-[#888888]">
+                      Not clear yet — this fills in as patterns repeat.
+                    </p>
+                  ) : (
+                    <div>
+                      {afraidOfBecoming.map((item, i) => (
+                        <div
+                          key={item}
+                          className={[
+                            "flex items-start gap-3.5 py-3.5",
+                            i < afraidOfBecoming.length - 1
+                              ? "border-b border-[#f5f5f5]"
+                              : "",
+                          ].join(" ")}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8fafc] text-[15px] text-[#94a3b8]"
+                          >
+                            ○
+                          </span>
+                          <p className="pt-1.5 text-[14px] font-medium leading-snug text-[#111]">
+                            {item}
+                          </p>
+                        </div>
                       ))}
                     </div>
                   )}
                 </OverviewCard>
               </div>
+
+              {/* Your Biggest Tension — the emotional center of the page. */}
+              {currentSelf.core_tension ? (
+                <OverviewCard className="bg-[#f8f7ff] px-9 py-9">
+                  <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[#6366f1]">
+                    Your Biggest Tension
+                  </p>
+                  <p className="font-voice mt-3 max-w-[36em] text-[26px] font-medium leading-[1.4] tracking-[-0.3px] text-[#111]">
+                    {currentSelf.core_tension}
+                  </p>
+                </OverviewCard>
+              ) : null}
+
+              {/* What's Changing — how the identity is currently evolving. */}
+              <OverviewCard className="px-9 py-7">
+                <div className="mb-6">
+                  <div className="flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="text-[20px] leading-none text-[#22c55e]"
+                    >
+                      ↗
+                    </span>
+                    <h2 className="text-[17px] font-bold text-[#111]">
+                      What&apos;s Changing
+                    </h2>
+                  </div>
+                  <p className="mt-[3px] text-[13px] text-[#888888]">
+                    How your identity is changing right now
+                  </p>
+                </div>
+
+                {recentGrowth.length === 0 ? (
+                  <p className="py-6 text-[13px] leading-relaxed text-[#888888]">
+                    Nothing has shifted yet. Keep checking in and movement
+                    will show up here.
+                  </p>
+                ) : (
+                  <div>
+                    {recentGrowth.map((item, i) => (
+                      <div
+                        key={item}
+                        className={[
+                          "flex items-start gap-3.5 py-3.5",
+                          i < recentGrowth.length - 1
+                            ? "border-b border-[#f5f5f5]"
+                            : "",
+                        ].join(" ")}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f0fdf4] text-[16px] text-[#22c55e]"
+                        >
+                          ↑
+                        </span>
+                        <p className="pt-1.5 text-[14px] leading-snug text-[#111]">
+                          {item}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </OverviewCard>
 
               {/* Why this identity? — the evidence behind the read. */}
               <OverviewCard className="px-9 py-7">

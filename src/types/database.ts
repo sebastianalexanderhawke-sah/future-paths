@@ -184,7 +184,12 @@ export type CurrentSelf = {
   title: string;
   summary: string;
   themes: CheckInThemeName[];
-  observations: string[];
+  // Nullable: rows created before this migration, or read through a
+  // partially-applied one, can come back without these columns at all —
+  // never assume they're arrays/strings without normalizing first.
+  values: string[] | null;
+  afraid_of_becoming: string[] | null;
+  core_tension: string | null;
   recent_growth: string[];
   created_at: string;
   updated_at: string;
@@ -481,12 +486,24 @@ export type CurrentSelfInsert = Pick<
   "user_id" | "title" | "summary"
 > & {
   themes?: CheckInThemeName[];
-  observations?: string[];
+  values?: string[];
+  afraid_of_becoming?: string[];
+  core_tension?: string;
   recent_growth?: string[];
 };
 
 export type CurrentSelfUpdate = Partial<
-  Pick<CurrentSelf, "title" | "summary" | "themes" | "observations" | "recent_growth" | "updated_at">
+  Pick<
+    CurrentSelf,
+    | "title"
+    | "summary"
+    | "themes"
+    | "values"
+    | "afraid_of_becoming"
+    | "core_tension"
+    | "recent_growth"
+    | "updated_at"
+  >
 >;
 
 export type IdentityPromptInsert = Pick<

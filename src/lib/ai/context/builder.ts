@@ -309,7 +309,7 @@ async function loadFutureSelfContext(
       .limit(CONTEXT_LIMITS.COUNTS.futureSelves),
     supabase
       .from("current_self")
-      .select("title, summary, themes, observations, recent_growth")
+      .select("title, summary, themes, values, afraid_of_becoming, core_tension, recent_growth")
       .eq("user_id", base.userId)
       .maybeSingle(),
   ]);
@@ -455,7 +455,7 @@ async function loadIdentityPromptContext(
   const [{ data: currentSelf }, { data: identityUpdates }] = await Promise.all([
     supabase
       .from("current_self")
-      .select("title, summary, themes, observations, recent_growth")
+      .select("title, summary, themes, values, afraid_of_becoming, core_tension, recent_growth")
       .eq("user_id", base.userId)
       .maybeSingle(),
     supabase
@@ -635,7 +635,7 @@ async function loadTimelineContext(
       .order("updated_at", { ascending: false }),
     supabase
       .from("current_self")
-      .select("title, summary, themes, observations, recent_growth")
+      .select("title, summary, themes, values, afraid_of_becoming, core_tension, recent_growth")
       .eq("user_id", base.userId)
       .maybeSingle(),
   ]);

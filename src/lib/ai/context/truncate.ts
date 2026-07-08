@@ -148,9 +148,15 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
       ...bundle.currentSelf,
       title: truncateText(bundle.currentSelf.title, limits.title),
       summary: truncateText(bundle.currentSelf.summary, limits.summary),
-      observations: bundle.currentSelf.observations.map((observation) =>
-        truncateText(observation, limits.observation),
+      // Legacy current_self rows can come back missing these columns
+      // entirely rather than defaulted to '[]' — never assume they're arrays.
+      values: (bundle.currentSelf.values ?? []).map((item) =>
+        truncateText(item, limits.observation),
       ),
+      afraid_of_becoming: (bundle.currentSelf.afraid_of_becoming ?? []).map((item) =>
+        truncateText(item, limits.observation),
+      ),
+      core_tension: truncateText(bundle.currentSelf.core_tension ?? "", limits.observation),
       recent_growth: (bundle.currentSelf.recent_growth ?? []).map((item) =>
         truncateText(item, limits.observation),
       ),
