@@ -8,8 +8,10 @@ import type { CheckInThemeName } from "@/types/enums";
  * from. They are NOT values and NOT personality traits: they are drawn from
  * the same theme evidence the rest of the portrait uses, phrased as identity
  * anchors, exactly the way values and fears are each derived from themes
- * independently (see deriveValuesFromThemes / deriveFearsFromThemes). Display
- * only — never persisted — so a richer AI generation would simply supersede it.
+ * independently (see deriveValuesFromThemes / deriveFearsFromThemes). They are
+ * no longer rendered in the hero — they now serve only as the consistency
+ * signal (distinct stable anchors) feeding identity confidence below. Never
+ * persisted.
  *
  * Identity confidence is a qualitative read of how settled the portrait is,
  * computed from evidence volume and consistency. It never exposes counts.

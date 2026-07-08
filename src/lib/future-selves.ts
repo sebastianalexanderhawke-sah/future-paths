@@ -15,6 +15,7 @@ import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { reportError, swallowReporting } from "@/lib/observability";
 import { createClient } from "@/lib/supabase/server";
 import type { FutureSelf, FutureSelfEvent } from "@/types/database";
+import type { FutureSelfEvidenceStrength } from "@/types/enums";
 
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
@@ -232,7 +233,24 @@ async function recordFutureSelfEvent(input: {
   });
 }
 
-const MAX_RECOGNIZED_IDENTITIES = 5;
+const MIN_FUTURE_SELVES = 2;
+
+/**
+ * v3: the number of Future Selves follows the evidence, never a fixed count.
+ * The strongest match's evidence tier sets the ceiling — weak evidence
+ * surfaces 2 possible lives, moderate up to 4, strong up to 5. Never more
+ * than 5; never fewer than 2 as long as the engine can ground a second one
+ * (a future is never fabricated to hit the floor — see the fallback in
+ * generateFutureSelves).
+ */
+export function maxFutureSelvesForEvidence(
+  matches: readonly { evidenceStrength: FutureSelfEvidenceStrength }[],
+): number {
+  const strongest = matches[0]?.evidenceStrength;
+  if (strongest === "Strong") return 5;
+  if (strongest === "Moderate") return 4;
+  return MIN_FUTURE_SELVES;
+}
 
 /**
  * Identifies the lived-evidence event that triggered a generation run, so
@@ -378,15 +396,21 @@ export async function generateFutureSelves(
   const recognizedIdentities = recognizeIdentitiesWithAttribution(observations);
 
   // The Identity Engine is the sole source of Future Selves — never fall
-  // back to legacy rows. If nothing clears the normal threshold, use the
-  // single highest-ranked identity the engine actually found instead of
-  // fabricating anything. Its likelihood is necessarily below the threshold,
-  // so evidenceStrengthFromLikelihood (untouched) already labels it
-  // "Emerging" — no separate marking step is needed.
+  // back to legacy rows. The count follows the evidence (2 for weak, up to 4
+  // for moderate, up to 5 for strong — see maxFutureSelvesForEvidence). When
+  // fewer than two identities clear the normal threshold, ask the same,
+  // unmodified engine for its top two regardless of threshold instead of
+  // fabricating anything: those matches are still evidence-grounded, their
+  // sub-threshold likelihoods already label them "Emerging", and if only one
+  // identity has any positive evidence at all, only one is surfaced — the
+  // two-minimum never invents a life the evidence doesn't support.
   const topIdentities =
-    recognizedIdentities.length > 0
-      ? recognizedIdentities.slice(0, MAX_RECOGNIZED_IDENTITIES)
-      : recognizeIdentitiesWithAttribution(observations, { minLikelihood: 0, maxResults: 1 });
+    recognizedIdentities.length >= MIN_FUTURE_SELVES
+      ? recognizedIdentities.slice(0, maxFutureSelvesForEvidence(recognizedIdentities))
+      : recognizeIdentitiesWithAttribution(observations, {
+          minLikelihood: 0,
+          maxResults: MIN_FUTURE_SELVES,
+        });
 
   // Step 5: Load existing future_selves rows for continuity matching.
   const { data: existingRows, error: existingError } = await supabase
@@ -408,11 +432,17 @@ export async function generateFutureSelves(
     const profile = getIdentityById(match.identityId);
     if (!profile) return [];
 
-    // Match first by identity_id (new-pipeline rows), then by canonical name
-    // (legacy rows that happen to share a name with this identity).
+    // Match first by identity_id (new-pipeline rows), then by canonical or
+    // legacy name (legacy rows that happen to share a name this identity has
+    // ever displayed under — see IdentityProfile.legacy_names).
     const existing =
       allExisting.find((r) => r.identity_id === match.identityId) ??
-      allExisting.find((r) => !r.identity_id && r.name === profile.canonical_name);
+      allExisting.find(
+        (r) =>
+          !r.identity_id &&
+          (r.name === profile.canonical_name ||
+            profile.legacy_names?.includes(r.name)),
+      );
 
     return [
       {
@@ -424,7 +454,7 @@ export async function generateFutureSelves(
     ];
   });
 
-  // Step 6b: Future Self narratives are stable archetype descriptions, not
+  // Step 6b: Future Self narratives are stable future-identity portraits, not
   // per-situation output — the AI is invoked only for identities with no
   // existing row, identities whose stored narrative is a fallback awaiting
   // repair, and identities whose evidence tier has increased since the

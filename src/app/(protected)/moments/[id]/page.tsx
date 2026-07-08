@@ -5,6 +5,7 @@ import { generatePathsAction, choosePathAction } from "@/actions/paths";
 import { generateForecastForMomentAction } from "@/actions/future-forecast";
 import { CheckInCard } from "@/components/check-ins/check-in-card";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
+import { AlternatePathsDisclosure } from "@/components/moments/alternate-paths-disclosure";
 import { ChosenPathPanel } from "@/components/moments/chosen-path-panel";
 import { SituationForecastSection } from "@/components/moments/situation-forecast-section";
 import { SummaryDisclosure } from "@/components/moments/summary-disclosure";
@@ -135,20 +136,15 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
         </p>
       </div>
       <ChosenPathPanel path={chosenPath} />
+      {/* Alternate paths are supporting information, never equal to the
+          chosen path — collapsed by default behind the quiet inline
+          disclosure so the lived story reads uninterrupted. */}
       {!isArchived && unchosePaths.length > 0 ? (
-        <div className="mt-9 border-t border-[#f5f5f5] pt-7">
-          <h3 className="text-[15px] font-semibold text-[#111]">
-            Alternative Paths
-          </h3>
-          <p className="mt-[3px] text-[13px] text-[#999999]">
-            Directions you considered but didn&apos;t take
-          </p>
-          <div className="mt-5 flex flex-col gap-4">
-            {unchosePaths.map((path, i) => (
-              <OtherPathCard key={path.id} path={path} index={i} />
-            ))}
-          </div>
-        </div>
+        <AlternatePathsDisclosure>
+          {unchosePaths.map((path, i) => (
+            <OtherPathCard key={path.id} path={path} index={i} />
+          ))}
+        </AlternatePathsDisclosure>
       ) : null}
     </OverviewCard>
   ) : null;

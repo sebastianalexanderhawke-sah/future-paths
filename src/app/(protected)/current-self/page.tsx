@@ -194,9 +194,9 @@ export default async function CurrentSelfPage({
             </OverviewCard>
           ) : (
             <div className="flex flex-col gap-5 pb-14">
-              {/* Hero — leads with what the identity is anchored to, not the
-                  written portrait. The full portrait moves behind
-                  "Read Full Portrait" at the bottom of the card. */}
+              {/* Hero — one central idea: the portrait itself. The title and
+                  its lead observation carry the card; the deeper analysis
+                  stays behind "Read Full Portrait". */}
               <OverviewCard className="px-9 pb-7 pt-7">
                 <div className="mb-6">
                   <h2 className="text-[22px] font-bold tracking-[-0.3px] text-[#111]">
@@ -217,7 +217,6 @@ export default async function CurrentSelfPage({
                     <IdentityStrengthBadge
                       level={confidence.level}
                       label={confidence.label}
-                      explanation={confidence.explanation}
                     />
                   </div>
 
@@ -295,7 +294,7 @@ export default async function CurrentSelfPage({
                         aria-hidden="true"
                         className="text-[18px] leading-none text-[#ef4444]"
                       >
-                        ●
+                        ↘
                       </span>
                       <h2 className="text-[17px] font-bold text-[#111]">
                         What You Fear Becoming
@@ -326,7 +325,7 @@ export default async function CurrentSelfPage({
                             aria-hidden="true"
                             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-[15px] text-[#ef4444]"
                           >
-                            ●
+                            ↘
                           </span>
                           <div className="pt-1.5">
                             <p className="text-[14px] font-bold leading-snug text-[#111]">
@@ -346,8 +345,9 @@ export default async function CurrentSelfPage({
               </div>
 
               {/* The Tradeoff You Live With — full-width card directly below
-                  the Value/Fear grid. No icons; not expandable. Renders the
-                  three existing parts of core_tradeoff (behavioral pattern,
+                  the Value/Fear grid, styled like the sibling cards (warm
+                  amber accent, icon chips, sectioned rows). Renders the three
+                  existing parts of core_tradeoff (behavioral pattern,
                   recurring consequence, Reflection's observation). Omitted
                   entirely when the evidence didn't support one. */}
               {tradeoff ? (

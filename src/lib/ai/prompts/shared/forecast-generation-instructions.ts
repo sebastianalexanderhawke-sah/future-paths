@@ -23,7 +23,7 @@ This output answers: "Based on what I keep choosing and doing, what kind of pers
 - Identities may be positive, negative, or mixed.
 - movement_direction: whether this identity's likelihood is moving since the last generation — positive, negative, or unchanged. Base this on whether behavior, identity, circumstances, or direction have actually changed, not on routine activity alone. The exact size of the movement is calculated separately — focus only on which way it is heading, including for a future self appearing for the first time (use positive, never unchanged, for a newly emerging or returning trajectory).
 - evidence_strength: one of Emerging, Moderate, or Strong.
-- name: an identity label — who this person is becoming. Archetype-style names are appropriate ("Self-Reliant Builder", "Community Builder", "Reflective Practitioner"). Keep it under 8 words and specific to this person's actual evidence, not generic. Avoid abstract nouns or spiritual/therapeutic framing.
+- name: an identity label — who this person is becoming. Identity-style names are appropriate ("Self-Reliant Builder", "Community Builder", "Reflective Practitioner"). Keep it under 8 words and specific to this person's actual evidence, not generic. Avoid abstract nouns or spiritual/therapeutic framing.
   Good: "Self-Reliant Architect", "Community Builder", "Courageous Risk-Taker", "Quiet Rebuilder", "Natural Leader".
   Avoid: "Achiever", "Seeker of Truth", "Embodied Presence", "Authentic Self".
 - summary: 1-2 sentences maximum. Explain why this identity is emerging — the recurring pattern and direction, not a recap of every event. Do not write a biography.
@@ -43,7 +43,7 @@ Writing style:
 - Do not repeat the same evidence unnecessarily across identities.
 - The reader should finish reading a Future Self and think "I can see how I could become that person" — not "the AI described my personality."
 
-Avoid: vague archetypes, generic motivational language, personality typing, diagnosing the user, event forecasting, repeating the same identity under different names, ignoring contradictory evidence.`;
+Avoid: vague identity labels, generic motivational language, personality typing, diagnosing the user, event forecasting, repeating the same identity under different names, ignoring contradictory evidence.`;
 
 export const FUTURE_SELF_FORECAST_RULES = `${FUTURE_SELF_DISCOVER_RULES}
 

@@ -16,6 +16,20 @@ import type {
 } from "@/lib/identity-recognition";
 import type { FutureSelfEvidenceStrength } from "@/types/enums";
 
+/**
+ * The narrative layer of one Future Self, encoded into the existing
+ * future_selves columns (newline-encoded multi-part strings, the same idiom
+ * current_self uses for values/fears/tradeoff):
+ *
+ * - why_emerging — "Why this future is becoming more likely": exactly three
+ *   evidence bullets, one per line, newline-separated.
+ * - growth_opportunities — legacy column, no longer generated or rendered;
+ *   persisted as [] on regeneration.
+ * - blind_spots — "The Cost of Becoming Them": a single prose paragraph in a
+ *   one-element array (pre-v2 rows hold three short risk labels instead).
+ * - likely_evolution — "Where this path leads" narrative, then a newline,
+ *   then the card's closing reflective question (always the last line).
+ */
 export type IdentityExplanation = {
   why_emerging: string;
   growth_opportunities: string[];
@@ -43,6 +57,7 @@ export type IdentityExplanationResult = {
 export type ExplanationRegenerationReason =
   | "new"
   | "fallback_repair"
+  | "format_upgrade"
   | "evidence_tier_increased"
   | "stable";
 
@@ -67,6 +82,7 @@ function evidenceTierRank(value: string | null | undefined): number | null {
 export type ExistingNarrativeRow = {
   narrative_source?: string | null;
   narrative_evidence_strength?: string | null;
+  likely_evolution?: string | null;
 };
 
 /**
@@ -79,17 +95,21 @@ export type ExistingNarrativeRow = {
  * recognition engine and persisted every run regardless of this decision —
  * see generateFutureSelves.
  *
- * Future Selves narratives are archetypes, not per-situation output, so
- * stability is the default: percentage movement, reactivation after fading,
- * and ordinary situations never regenerate. A narrative regenerates in
- * exactly three cases:
+ * Future Selves narratives are stable future-identity portraits, not
+ * per-situation output, so stability is the default: percentage movement,
+ * reactivation after fading, and ordinary situations never regenerate. A
+ * narrative regenerates in exactly four cases:
  *
  *   1. "new" — the identity has no row at all.
  *   2. "fallback_repair" — the stored narrative came from the hard-coded
  *      fallback (the AI call failed when it was written). Without this, a
  *      transient failure at first emergence made generic boilerplate the
  *      identity's permanent narrative.
- *   3. "evidence_tier_increased" — the evidence tier is now HIGHER than the
+ *   3. "format_upgrade" — the stored narrative predates the v2 "possible
+ *      lives" format. A v2 narrative always carries its closing reflective
+ *      question as a final newline-separated line of likely_evolution, so a
+ *      stored narrative without a newline is pre-v2 and regenerates once.
+ *   4. "evidence_tier_increased" — the evidence tier is now HIGHER than the
  *      tier the narrative was written at (Emerging → Moderate → Strong).
  *      A narrative written at Emerging says the evidence is limited; once
  *      the identity is Strong that framing contradicts the numbers shown
@@ -110,6 +130,13 @@ export function needsExplanationRegeneration(
     return { regenerate: true, reason: "fallback_repair" };
   }
 
+  if (
+    typeof existing.likely_evolution === "string" &&
+    !existing.likely_evolution.includes("\n")
+  ) {
+    return { regenerate: true, reason: "format_upgrade" };
+  }
+
   const writtenAtRank = evidenceTierRank(existing.narrative_evidence_strength);
   const currentRank = evidenceTierRank(currentEvidenceStrength);
 
@@ -124,16 +151,24 @@ export function needsExplanationRegeneration(
 // Validation
 // ---------------------------------------------------------------------------
 
+// The model responds in the v2 "possible lives" shape; the mapping below
+// encodes it into the existing IdentityExplanation columns. Caps are headroom,
+// not targets (the prompt asks for less) — the model overshoots in large
+// batches, and a few long sentences shouldn't discard an otherwise valid batch.
 const explanationItemSchema = z.object({
   identity_id: z.string().trim().min(1),
-  why_emerging: z.string().trim().min(1).max(1000),
-  growth_opportunities: z.array(z.string().trim().min(1).max(200)).min(1).max(4),
-  // Trade-offs and predictions: the prompt asks for ≤180/≤550 chars, but the
-  // model overshoots in large batches — the caps below are headroom, not
-  // targets, so a few long sentences don't discard an otherwise valid batch.
-  blind_spots: z.array(z.string().trim().min(1).max(300)).min(1).max(4),
-  likely_evolution: z.string().trim().min(1).max(900),
+  becoming_likely: z.array(z.string().trim().min(1).max(260)).min(2).max(4),
+  cost_of_becoming: z.string().trim().min(1).max(1200),
+  where_path_leads: z.string().trim().min(1).max(1200),
+  reflective_question: z.string().trim().min(1).max(320),
 });
+
+// The v2 fields are prose paragraphs; the card's format contract (question =
+// last newline-separated line of likely_evolution, one bullet per line of
+// why_emerging) requires each part to be single-line.
+function singleLine(text: string): string {
+  return text.replace(/\s*\n+\s*/g, " ").trim();
+}
 
 const batchResponseSchema = z.object({
   identities: z.array(explanationItemSchema),
@@ -148,36 +183,32 @@ export function fallbackExplanation(
 ): IdentityExplanation {
   if (evidenceStrength === "Emerging") {
     return {
-      why_emerging:
-        "This identity is beginning to emerge from a small number of specific behavioral choices. The pattern is real, but it has not yet repeated across enough situations to call it established.",
-      growth_opportunities: [
-        "Seek out situations that would let this pattern show up again.",
-        "Notice when a choice lines up with this identity and what made it possible.",
-      ],
+      why_emerging: [
+        "A small number of recent choices have started pointing in this direction.",
+        "The pattern has appeared in more than one situation, though not yet across many.",
+        "Nothing you've recorded so far pushes against it.",
+      ].join("\n"),
+      growth_opportunities: [],
       blind_spots: [
-        "Mistaking a moment for a direction",
-        "Crowding out other ways of being before they get room",
-        "Building on a pattern that hasn't been tested yet",
+        "Every future asks for something, and this one would be no exception — the price would come from the same place as the strength, paid slowly, in trades small enough to feel reasonable one at a time. It's too early to say exactly what this version of you would give up; that becomes visible as the pattern repeats.",
       ],
       likely_evolution:
-        "A person shaped by this becomes someone whose days, relationships, and decisions gradually reorganize around it — quietly at first, in small choices that begin to point the same way.",
+        "It's early. If the recent pattern keeps repeating, your days would begin to reorganize around it — quietly at first, in small choices that start to point the same way, long before anyone else would call it who you are.\nIf this direction kept pulling at you, would you follow it on purpose — or only notice it years later?",
     };
   }
 
   return {
-    why_emerging:
-      "This identity pattern is appearing across your recent situations and behavioral choices.",
-    growth_opportunities: [
-      "Engage deliberately in situations that call for this pattern.",
-      "Notice when this identity is active and what enables it.",
-    ],
+    why_emerging: [
+      "This pattern has repeated across several of your recorded situations.",
+      "Your recent decisions keep resolving in the direction this future points.",
+      "The behavior shows up in different contexts, not just one recurring one.",
+    ].join("\n"),
+    growth_opportunities: [],
     blind_spots: [
-      "Losing what this strength displaces",
-      "A narrowing range of who you can be",
-      "People outside this pattern receiving less of you",
+      "Becoming this version of yourself would cost something real, and the cost would come from the same strengths that built it — paid gradually, in trades that each feel reasonable on the day you make them. What exactly this life would ask you to give up becomes clearer as more of your decisions are recorded.",
     ],
     likely_evolution:
-      "A person defined by this becomes recognizable for it — it shapes what they take on, how they decide, and what the people around them come to rely on them for.",
+      "A person shaped by this becomes recognizable for it — it slowly decides what they take on, how they spend ordinary days, and what the people around them come to count on them for.\nIf this became your life, what would you hope you never lost along the way?",
   };
 }
 
@@ -215,11 +246,13 @@ function extractJson(text: string): unknown {
 // ---------------------------------------------------------------------------
 
 function buildSystemPrompt(): string {
-  return `You explain a set of recognized behavioral identity patterns together.
+  return `You write Future Selves — believable versions of one person ten years from now, grown from their actual recorded behavior.
 
-These patterns were identified deterministically from the user's behavioral data. Your role is strictly interpretive — explain existing evidence. You must never invent identities, rename them, or adjust any numerical values.
+These future identities were recognized deterministically from the user's behavioral data. Your role is strictly interpretive — you never invent identities, rename them, or adjust any numerical values. Each identity answers exactly one question: "If nothing changes, who does this person slowly become?"
 
-Multiple identities coexisting in one person is normal. They may reinforce each other or represent different dimensions of how this person operates. Each explanation should feel aware of the broader identity profile. Distinctness is a hard requirement: no sentence you write should be transplantable to another identity in this response. Vary sentence openers across identities — if two explanations begin the same way, rewrite one.
+Write like a letter from ten years in the future: emotionally honest, psychologically insightful, calm, vivid, deeply human. Never melodramatic, never manipulative, never moralizing. Never imply one future is objectively better than another — every future contains both beauty and sacrifice. Address the user as "you". This is a possible life, not a personality assessment, and it must never read like one: no traits, no types, no diagnoses. When someone finishes reading, they should think "I understand exactly who I would become if I kept living like this" — and feel either "I could actually become this person" or "I really don't want to become this version of myself". Both reactions are success; steering them toward either is failure.
+
+Multiple futures coexisting is normal — one person could grow into any of them. But they are DIFFERENT LIVES, not different descriptions of the same person: if all the futures in this response sat around one table, they must read as completely different people — different things matter to them, different people rely on them, their ordinary Tuesdays look nothing alike. Distinctness is a hard requirement: no sentence you write should be transplantable to another identity in this response, and no two futures may reduce to the same trait ("ambitious", "independent", "resilient") wearing different names. Vary sentence openers across identities — if two begin the same way, rewrite one.
 
 Return a JSON object with exactly this shape:
 
@@ -227,22 +260,22 @@ Return a JSON object with exactly this shape:
   "identities": [
     {
       "identity_id": "<exactly as provided — no changes>",
-      "why_emerging": "<2-4 sentences>",
-      "growth_opportunities": ["<2-4 strings>"],
-      "blind_spots": ["<exactly 3 short risks>"],
-      "likely_evolution": "<2-4 sentences>"
+      "becoming_likely": ["<exactly 3 short evidence bullets>"],
+      "cost_of_becoming": "<one prose paragraph>",
+      "where_path_leads": "<one prose paragraph>",
+      "reflective_question": "<one question>"
     }
   ]
 }
 
 Rules for each field:
 - identity_id: copy exactly from the input. Any change makes the result unusable.
-- why_emerging: 2-4 sentences. Reference specific situations and observation types. Begin with what the evidence shows: "Across several situations...", "The evidence shows...", "In multiple contexts..."
-- growth_opportunities: 2-4 strings. Each is a concrete behavior (8-20 words). Start each with a verb: Start, Practice, Seek, Build, Create, Take, Develop, Invest, Pursue.
-- blind_spots: exactly 3 strings, rendered to the user under the heading "What You Risk". Each is a short, emotionally recognizable risk (2-8 words, noun phrase preferred) that emerges if this identity becomes dominant — the register of "Burnout", "Isolation", "Never feeling settled", "Carrying everything alone". Each must be a direct consequence of THIS archetype, felt from inside the life, not observed from outside it. No advice, no mechanisms, no explanations, no moral judgments, no full sentences of analysis ("watch for", "can make it harder to", "means that" are banned). If a risk could appear under a different identity in this response, replace it.
-- likely_evolution: 2-4 sentences. This is a prediction, and it must answer: if this identity became one of the defining patterns of this person's life, who would they gradually become? Before writing, decide what KIND of future this archetype most naturally produces — a career trajectory, a relationship trajectory, a reputation, a lifestyle, an inner life, a leadership arc, a craft, a community role — and write that kind, chosen from where this identity's consequences actually concentrate. Different identities in the same response must not all describe the same kind of future. Ground the future in this user's actual evidence: project their specific situations and behaviors forward, so that another person with the same archetype but different evidence would get a visibly different future. It should read as "this is MY version of this identity", never a generic description of the archetype. Write about the person, never the pattern: any sentence about patterns continuing, identities strengthening, evidence accumulating, or repetition of choices is a system mechanic and is banned ("If these patterns continue", "this identity will strengthen", "if similar choices repeat" must not appear). Never mention the measurement machinery: the words "score", "dimension", "percentage", "likelihood", and "evidence strength" must not appear — the user sees the life, never the instrument. Do not open more than one prediction in this response with the same construction (e.g. "This person becomes..."). At most 550 characters.
+- becoming_likely: exactly 3 bullets, rendered under "Why this future is becoming more likely". Each is one concise sentence (8–16 words) naming a RECURRING pattern observed across multiple situations — the register of "You repeatedly choose ownership over certainty." or "You keep returning to difficult work after setbacks." Evidence, not personality traits, not summaries: every bullet must be traceable to the supporting observations and situations provided, and must describe repetition ("repeatedly", "keep", "consistently"), never a one-time event. Second person, present tense, no hedging. Single line each — no newline characters anywhere.
+- cost_of_becoming: one prose paragraph (3–5 sentences, at most 700 characters), rendered under "The Cost of Becoming Them". This is the emotional center of the card. It reveals what this person slowly loses by becoming this version of themselves — and the loss must grow out of the SAME strengths that build the future, never out of a separate flaw. Quiet, believable, cumulative — the register of "One day you'll realize every time someone offered to help, you said 'I've got it.' At first it made you capable. Eventually it made you alone." Never catastrophic, never a warning, never advice, never a failure — a hidden price, paid gradually. Banned: bullet lists, one-word risk labels ("Burnout", "Isolation", "Overthinking"), the words "risk" and "blind spot". No newline characters.
+- where_path_leads: one prose paragraph (3–5 sentences, at most 700 characters), rendered under "Where this path leads". Describe the LIFE this person gradually builds — what becomes important to them, how the people around them come to experience them, what ordinary days turn into — so the reader feels like meeting that future version of themselves. Ground it in this user's actual evidence: project their specific situations forward, so another person with the same future identity but different evidence would get a visibly different life. Write about the person, never the pattern: sentences about patterns continuing, identities strengthening, evidence accumulating, or choices repeating are system mechanics and are banned ("If these patterns continue", "this identity will strengthen" must not appear). Never mention the measurement machinery: the words "score", "dimension", "percentage", "likelihood", and "evidence strength" must not appear — the user sees the life, never the instrument. Do not open more than one of these in the same response with the same construction. No newline characters.
+- reflective_question: exactly one question (at most 200 characters) that closes the card. It must make the reader decide whether they actually WANT this future, by naming the real trade this specific life makes — the register of "Would you still choose this path if success required trusting other people as much as yourself?" or "At what point does freedom stop feeling like distance?". Unique to this identity: it must not be reusable under any other identity in this response, and generic questions ("Is this what you want?") are banned. Genuinely open — not rhetorical, not leading, not moralizing. Must end with "?". No newline characters.
 
-When an identity's evidence strength is "Emerging", frame why_emerging around an identity beginning to emerge, not an established one: acknowledge that the evidence so far is limited. likely_evolution stays a person-level prediction even for Emerging identities — temper it by describing a quieter or earlier version of the future person, never by discussing evidence quantity or pattern mechanics. Keep the tone confident and observational — never hedging or apologetic ("might", "possibly", "hard to say", "not sure yet"). This is a distinct framing from Moderate or Strong identities, not a weaker version of the same explanation.
+When an identity's evidence strength is "Emerging", let becoming_likely acknowledge that the pattern is young — real, but seen in only a few situations so far. where_path_leads stays a person-level portrait even for Emerging identities — temper it by describing a quieter or earlier version of the future person, never by discussing evidence quantity or pattern mechanics. Keep the tone confident and observational — never hedging or apologetic ("might", "possibly", "hard to say", "not sure yet"). This is a distinct framing from Moderate or Strong identities, not a weaker version of the same portrait.
 
 Include one entry per identity provided — do not add or omit any. Do not use generic coaching language. Be specific to the evidence provided. Do not add fields beyond those specified.`;
 }
@@ -387,8 +420,9 @@ export async function explainIdentities(
     const response = await client.messages.create(
       {
         model,
-        // Sized for a 5-identity batch of Phase 7B narratives (3-4 trade-offs
-        // and person-level predictions per identity) — 2048 truncated these.
+        // Sized for a 5-identity batch of possible-life portraits (evidence
+        // bullets, cost paragraph, life paragraph, closing question per
+        // identity) — 2048 truncated the older, smaller format already.
         max_tokens: 8192,
         temperature: 0.3,
         // Static system prompt marked as a cacheable prefix — cost only,
@@ -437,15 +471,16 @@ export async function explainIdentities(
 
     // Index by identity_id so we can merge back in input order.
     // Any identity the model omitted gets a fallback — partial failures
-    // don't block the rest.
+    // don't block the rest. The v2 response shape is encoded here into the
+    // existing columns (see the IdentityExplanation doc comment).
     const byIdentityId = new Map(
       parsed.identities.map((item) => [
         item.identity_id,
         {
-          why_emerging: item.why_emerging,
-          growth_opportunities: item.growth_opportunities,
-          blind_spots: item.blind_spots,
-          likely_evolution: item.likely_evolution,
+          why_emerging: item.becoming_likely.map(singleLine).join("\n"),
+          growth_opportunities: [],
+          blind_spots: [singleLine(item.cost_of_becoming)],
+          likely_evolution: `${singleLine(item.where_path_leads)}\n${singleLine(item.reflective_question)}`,
         } satisfies IdentityExplanation,
       ]),
     );

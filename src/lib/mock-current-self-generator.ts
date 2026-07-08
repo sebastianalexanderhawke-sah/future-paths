@@ -147,8 +147,10 @@ export function generateMockCurrentSelf(input: {
     ? `Moving toward ${futureLabel}`
     : `Building toward ${futureLabel}`;
 
-  // Summary: 2-3 short paragraphs, second person, character-driven
-  const para1 = `You tend to move before you have everything figured out. ${themes[0] ? `${themes[0]} runs through most of your decisions` : "Action tends to come before certainty"}.`;
+  // Summary: paragraph 1 is the hero insight — the hidden belief behind the
+  // repeated choices, not the behavior itself (mirrors prompt v10); the
+  // remaining paragraphs are the deeper portrait behind "Read Full Portrait".
+  const para1 = `You seem to believe that a wrong turn costs less than standing still — that hesitation, left alone, quietly makes decisions for you. Acting on that belief, over and over, has made you someone who treats uncertainty as something to move through rather than wait out. It isn't recklessness; it's a refusal to let doubt do the choosing.`;
 
   const para2 = secondaryFuture
     ? `You seem pulled in two directions — toward ${futureLabel} and toward ${secondaryLabel}. That tension isn't confusion; it's just where you are right now.`

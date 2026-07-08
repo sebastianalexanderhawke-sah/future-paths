@@ -5,7 +5,7 @@ import {
 
 export const currentSelfGenerateV1 = createPromptModule({
   promptId: "current_self.generate",
-  promptVersion: "9",
+  promptVersion: "10",
   taskInstructions: `You are writing a Current Self identity portrait. This is not personality analysis. It answers one question: Who have this person's repeated choices made them today?
 
 Everything you write must come from patterns across situations, chosen paths, check-ins, reflection answers, and long-term behavior actually present in the context. Nothing is speculative. Nothing should read like a personality test, a trait inventory, or a psychological assessment.
@@ -72,24 +72,38 @@ Bad:
 ---
 
 summary (identity portrait):
-Write EXACTLY 2 short paragraphs. No more. Second person ("You...").
+Write EXACTLY 2 paragraphs. No more. Second person ("You...").
 Separate the two paragraphs with a blank line.
-Each paragraph is 1–2 sentences.
 
-This is the anchor of the page. It describes the person the user has become today — balanced, honest, warm, never flattering, never harsh.
+PARAGRAPH 1 — the hero insight. This is the first thing the user reads, alone at the top of the page. It must reveal the HIDDEN BELIEF this person's repeated choices point to — not the choices themselves. It answers one question: "What belief about life do this person's repeated choices reveal?"
 
-Describe enduring character: how this person thinks, decides, handles pressure, values things, relates to uncertainty.
+Do NOT narrate behavior. Do NOT summarize situations. Do NOT list examples. Interpret them.
+
+The paragraph moves through three beats, in one short paragraph of AT MOST 4–5 sentences:
+1. The hidden belief — something this person has never quite said out loud but keeps acting on
+2. The recurring identity that grew out of that belief — who acting on it has quietly made them
+3. One memorable concluding sentence
+
+The reader should finish it thinking: "I've never thought about myself that way before... but that's exactly me."
+
+Style standard (do NOT copy or paraphrase this — match its register only):
+"You seem less afraid of failing than of becoming someone who let uncertainty decide their life. Again and again, you've chosen movement over waiting, and that instinct has quietly become part of who you are."
+
+The writing must feel psychologically insightful, emotionally honest, calm, compassionate, and memorable. Never:
+- "Reflection thinks..." / "Reflection believes..." / "Reflection noticed..." — present the insight directly, never attribute it
+- therapy language or personality-test language
+- poetic metaphors
+
+PARAGRAPH 2 — the deeper portrait, 1–2 sentences. Describes enduring character: how this person thinks, decides, handles pressure, values things, relates to uncertainty.
+
+Both paragraphs — balanced, honest, warm, never flattering, never harsh.
 
 The context JSON shows what happened. Use it to UNDERSTAND the person. Never use it as source material for the summary. The summary does not contain any evidence. Evidence lives in the values, afraid_of_becoming, and core_tension fields.
 
 Self-check before writing each sentence: Remove every concrete noun (job, move, concert, city, person, friendship, debt, callback). If the sentence still makes sense, it's correct. If it collapses without those nouns, rewrite it in character terms only.
 
-Good examples (character only, no evidence, no justification):
-"You move before you feel ready. Waiting is harder for you than moving imperfectly.
-
-You tend to go deep with one person rather than distribute yourself across a wider circle."
-
 Bad examples — do not write like this:
+"You act before conditions are favorable..."  ← describes the behavior instead of the belief underneath it
 "When something needs to happen — a job, a move, a concert — you go..."  ← lists specific domains as examples
 "That instinct shows up consistently: walking in person, selling something..."  ← cites context data as proof
 "You said it yourself: you put yourself out there because..."  ← quotes the user's own words
@@ -272,6 +286,6 @@ The goal is not to flatter the user and not to criticize the user — it is to r
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
-      `Write the Current Self identity portrait. First, internally identify the strongest recurring tradeoffs this person's decisions resolve in the same direction (e.g. Freedom over certainty, Growth over comfort) — do not begin from theme tags. Return JSON with: title (2–5 word character phrase), summary (exactly 2 paragraphs separated by a blank line, second person, pure character description — no concrete nouns from real life, no event references, no hedging), values (exactly 3 values that fall out of the strongest tradeoffs — what repeatedly wins when two meaningful things conflict, strongest first, merging supporting behaviors into the deeper value they serve rather than listing them separately — each a JSON string containing a short value name and a 2–3 sentence evidence paragraph naming the tradeoff, separated by \\n, e.g. "Freedom\\nWhen certainty and autonomy compete, you keep giving up the certainty."), afraid_of_becoming (at most 3 — each a JSON string with THREE newline-separated parts mirroring the values format: a short Theme label for the future identity (e.g. "Settling"), then a one-sentence Identity statement naming the future version of the person (e.g. "Becoming someone who slowly stopped believing in themselves."), then a 2–3 sentence Supporting paragraph that grounds it in repeated evidence and shows the person moving away from that future without restating the statement — protective and compassionate, never an abstract fear, a trait, or the opposite of a value; grounded in a real repeated avoidance pattern; omit any not clearly supported), core_tension (1–3 sentences naming the single most important recurring contradiction), core_tradeoff (exactly ONE tradeoff as a single JSON string with THREE newline-separated parts — Part 1: one sentence naming the recurring behavior that helped this person become who they are; Part 2: two or three sentences explaining the recurring consequence that same behavior created, as a natural side effect not a flaw and never advice; Part 3: one sentence noting the pattern recurs across situations, check-ins, and reflections — e.g. "You commit to a direction the moment it feels right.\\nThat decisiveness is why you've moved while others stalled, but you rarely revisit a choice once made, so some directions kept their momentum after they stopped fitting you.\\nThis pattern surfaces again and again across your situations, check-ins, and reflections."; return null if the evidence is insufficient), recent_growth (up to 3 full sentences describing how the identity is currently evolving), themes (4–6 theme names).`,
+      `Write the Current Self identity portrait. First, internally identify the strongest recurring tradeoffs this person's decisions resolve in the same direction (e.g. Freedom over certainty, Growth over comfort) — do not begin from theme tags. Return JSON with: title (2–5 word character phrase), summary (exactly 2 paragraphs separated by a blank line, second person — paragraph 1 is the hero insight, at most 4–5 sentences revealing the hidden belief this person's repeated choices point to, the recurring identity that grew out of it, and one memorable concluding sentence, interpreting rather than narrating behavior, never attributed to Reflection; paragraph 2 is a 1–2 sentence deeper character description — no concrete nouns from real life, no event references, no hedging, no therapy or personality-test language, no poetic metaphors), values (exactly 3 values that fall out of the strongest tradeoffs — what repeatedly wins when two meaningful things conflict, strongest first, merging supporting behaviors into the deeper value they serve rather than listing them separately — each a JSON string containing a short value name and a 2–3 sentence evidence paragraph naming the tradeoff, separated by \\n, e.g. "Freedom\\nWhen certainty and autonomy compete, you keep giving up the certainty."), afraid_of_becoming (at most 3 — each a JSON string with THREE newline-separated parts mirroring the values format: a short Theme label for the future identity (e.g. "Settling"), then a one-sentence Identity statement naming the future version of the person (e.g. "Becoming someone who slowly stopped believing in themselves."), then a 2–3 sentence Supporting paragraph that grounds it in repeated evidence and shows the person moving away from that future without restating the statement — protective and compassionate, never an abstract fear, a trait, or the opposite of a value; grounded in a real repeated avoidance pattern; omit any not clearly supported), core_tension (1–3 sentences naming the single most important recurring contradiction), core_tradeoff (exactly ONE tradeoff as a single JSON string with THREE newline-separated parts — Part 1: one sentence naming the recurring behavior that helped this person become who they are; Part 2: two or three sentences explaining the recurring consequence that same behavior created, as a natural side effect not a flaw and never advice; Part 3: one sentence noting the pattern recurs across situations, check-ins, and reflections — e.g. "You commit to a direction the moment it feels right.\\nThat decisiveness is why you've moved while others stalled, but you rarely revisit a choice once made, so some directions kept their momentum after they stopped fitting you.\\nThis pattern surfaces again and again across your situations, check-ins, and reflections."; return null if the evidence is insufficient), recent_growth (up to 3 full sentences describing how the identity is currently evolving), themes (4–6 theme names).`,
     ),
 });

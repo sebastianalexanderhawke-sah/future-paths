@@ -359,7 +359,7 @@ describe("/moments/[id] page — choosing between generated paths", () => {
     expect((html.match(/Choose this path/g) ?? []).length).toBe(2);
   });
 
-  it("shows the chosen path and remaining alternatives once one is chosen", async () => {
+  it("shows the chosen path with alternatives collapsed behind a disclosure", async () => {
     listPathsForMomentMock.mockResolvedValue({
       paths: [
         makePath({
@@ -375,7 +375,12 @@ describe("/moments/[id] page — choosing between generated paths", () => {
     const html = await renderMomentPage();
 
     expect(html).toContain("Chosen Path");
-    expect(html).toContain("Alternative Paths");
+    // Alternate paths are secondary: collapsed by default behind the quiet
+    // inline disclosure, so the unchosen path's content is absent from the
+    // initial render — only the disclosure invitation is present.
+    expect(html).toContain("Alternate Paths You Didn");
+    expect(html).toContain("Explore Alternate Paths");
+    expect(html).not.toContain("Negotiate remote work instead.");
     expect(html).not.toContain("Choose this path");
   });
 });

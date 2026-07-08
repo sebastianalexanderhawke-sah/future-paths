@@ -57,8 +57,12 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => getActiveStub()!.client),
 }));
 
-const { generateFutureSelves, queueFutureSelvesGeneration, loadFutureSelfImpactByPath } =
-  await import("@/lib/future-selves");
+const {
+  generateFutureSelves,
+  queueFutureSelvesGeneration,
+  loadFutureSelfImpactByPath,
+  maxFutureSelvesForEvidence,
+} = await import("@/lib/future-selves");
 
 // ---------------------------------------------------------------------------
 // Stub helpers
@@ -215,7 +219,7 @@ describe("generateFutureSelves", () => {
     expect(writes).toHaveLength(0);
   });
 
-  it("uses the highest-ranked identity as an Emerging fallback when nothing passes the normal threshold", async () => {
+  it("uses the highest-ranked identities as an Emerging fallback when fewer than two pass the normal threshold", async () => {
     const fallbackMatch = {
       ...MATCH,
       score: 3,
@@ -223,9 +227,11 @@ describe("generateFutureSelves", () => {
       evidenceStrength: "Emerging" as const,
     };
     // The normal (thresholded) call returns nothing; only the explicit
-    // minLikelihood: 0 / maxResults: 1 fallback call returns the best match.
+    // minLikelihood: 0 / maxResults: 2 fallback call returns the best match.
     // This proves the fallback never lowers or bypasses the real threshold —
-    // it just asks the same, unmodified engine for its single top pick.
+    // it just asks the same, unmodified engine for its top two. The engine
+    // grounds only one here, so only one is surfaced: the two-minimum never
+    // fabricates a second life.
     recognizeMock.mockImplementation((..._args: unknown[]) => {
       const options = _args[1] as { minLikelihood?: number; maxResults?: number } | undefined;
       return options?.minLikelihood === 0 ? [fallbackMatch] : [];
@@ -257,7 +263,7 @@ describe("generateFutureSelves", () => {
     expect("error" in result).toBe(false);
     expect(recognizeMock).toHaveBeenLastCalledWith(expect.anything(), {
       minLikelihood: 0,
-      maxResults: 1,
+      maxResults: 2,
     });
 
     const inserts = stub.calls.filter(
@@ -290,7 +296,7 @@ describe("generateFutureSelves", () => {
   });
 
   it("inserts a new future self and records an emerged event when an identity is recognized for the first time", async () => {
-    recognizeMock.mockReturnValueOnce([MATCH]);
+    recognizeMock.mockReturnValue([MATCH]);
     getIdentityByIdMock.mockReturnValueOnce(PROFILE);
 
     const createdRow = {
@@ -336,7 +342,7 @@ describe("generateFutureSelves", () => {
   });
 
   it("updates an existing active future and records a grew event when its likelihood increases", async () => {
-    recognizeMock.mockReturnValueOnce([{ ...MATCH, likelihood: 75 }]);
+    recognizeMock.mockReturnValue([{ ...MATCH, likelihood: 75 }]);
     getIdentityByIdMock.mockReturnValueOnce(PROFILE);
 
     const existingRow = {
@@ -380,7 +386,7 @@ describe("generateFutureSelves", () => {
   });
 
   it("updates an existing active future without recording any event when likelihood does not increase", async () => {
-    recognizeMock.mockReturnValueOnce([{ ...MATCH, likelihood: 50 }]);
+    recognizeMock.mockReturnValue([{ ...MATCH, likelihood: 50 }]);
     getIdentityByIdMock.mockReturnValueOnce(PROFILE);
 
     const existingRow = {
@@ -419,7 +425,7 @@ describe("generateFutureSelves", () => {
   it("does not call the AI and keeps the existing narrative when evidence_strength tier is unchanged (Phase 6A)", async () => {
     // 22% -> 24%: both fall in the "Emerging" tier (< 30), so no regeneration
     // should occur even though the percentage moved.
-    recognizeMock.mockReturnValueOnce([{ ...MATCH, likelihood: 24, evidenceStrength: "Emerging" }]);
+    recognizeMock.mockReturnValue([{ ...MATCH, likelihood: 24, evidenceStrength: "Emerging" }]);
     getIdentityByIdMock.mockReturnValueOnce(PROFILE);
 
     const existingRow = {
@@ -433,7 +439,7 @@ describe("generateFutureSelves", () => {
       why_emerging: "Existing why_emerging text.",
       growth_opportunities: ["Existing growth opportunity."],
       blind_spots: ["Existing blind spot."],
-      likely_evolution: "Existing likely evolution text.",
+      likely_evolution: "Existing likely evolution text.\nWould you keep building it?",
     };
     const stub = createSupabaseStub({
       behavior_observations: OBSERVATIONS_RESPONSE,
@@ -462,13 +468,13 @@ describe("generateFutureSelves", () => {
     expect(payload.why_emerging).toBe("Existing why_emerging text.");
     expect(payload.growth_opportunities).toEqual(["Existing growth opportunity."]);
     expect(payload.blind_spots).toEqual(["Existing blind spot."]);
-    expect(payload.likely_evolution).toBe("Existing likely evolution text.");
+    expect(payload.likely_evolution).toBe("Existing likely evolution text.\nWould you keep building it?");
   });
 
   it("does not call the AI even when evidence_strength crosses a tier boundary (Phase 6C: narratives are stable archetypes, not per-situation output)", async () => {
     // 24% (Emerging) -> 42% (Moderate): a tier change, but Phase 6C no longer
     // treats this as a narrative-changing event — only a brand-new identity does.
-    recognizeMock.mockReturnValueOnce([{ ...MATCH, likelihood: 42, evidenceStrength: "Moderate" }]);
+    recognizeMock.mockReturnValue([{ ...MATCH, likelihood: 42, evidenceStrength: "Moderate" }]);
     getIdentityByIdMock.mockReturnValueOnce(PROFILE);
 
     const existingRow = {
@@ -482,7 +488,7 @@ describe("generateFutureSelves", () => {
       why_emerging: "Stable why_emerging text.",
       growth_opportunities: ["Stable growth opportunity."],
       blind_spots: ["Stable blind spot."],
-      likely_evolution: "Stable likely evolution text.",
+      likely_evolution: "Stable likely evolution text.\nWould you keep building it?",
     };
     const stub = createSupabaseStub({
       behavior_observations: OBSERVATIONS_RESPONSE,
@@ -518,7 +524,7 @@ describe("generateFutureSelves", () => {
     };
 
     it("Example 1: 22% -> 23%, supporting evidence slightly stronger — percentage updates, narrative unchanged", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 23, evidenceStrength: "Emerging" },
       ]);
       getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
@@ -534,7 +540,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Explorer's existing why_emerging.",
         growth_opportunities: ["Explorer's existing growth opportunity."],
         blind_spots: ["Explorer's existing blind spot."],
-        likely_evolution: "Explorer's existing likely evolution.",
+        likely_evolution: "Explorer's existing likely evolution.\nWould you keep exploring?",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -559,7 +565,7 @@ describe("generateFutureSelves", () => {
     });
 
     it("Example 2: 22% -> 39%, several new behaviors consistently reinforce the identity — percentage updates, narrative still unchanged (Phase 6C: only a brand-new identity generates a narrative)", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 39, evidenceStrength: "Moderate" },
       ]);
       getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
@@ -575,7 +581,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Explorer's existing why_emerging.",
         growth_opportunities: ["Explorer's existing growth opportunity."],
         blind_spots: ["Explorer's existing blind spot."],
-        likely_evolution: "Explorer's existing likely evolution.",
+        likely_evolution: "Explorer's existing likely evolution.\nWould you keep exploring?",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -601,7 +607,7 @@ describe("generateFutureSelves", () => {
 
     it("Example 3: Explorer disappears — fades using existing behavior, no AI call", async () => {
       // A different identity is recognized this run; Explorer isn't, so it fades.
-      recognizeMock.mockReturnValueOnce([{ ...MATCH, identityId: "other", canonicalName: "Other" }]);
+      recognizeMock.mockReturnValue([{ ...MATCH, identityId: "other", canonicalName: "Other" }]);
       getIdentityByIdMock.mockReturnValueOnce({ ...PROFILE, id: "other", canonical_name: "Other" });
 
       const explorerRow = {
@@ -651,7 +657,7 @@ describe("generateFutureSelves", () => {
     });
 
     it("Example 4: Explorer returns months later — reactivates using its existing archetype narrative, no AI call (Phase 6C)", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 35, evidenceStrength: "Moderate" },
       ]);
       getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
@@ -699,7 +705,7 @@ describe("generateFutureSelves", () => {
     };
 
     it("Situation 1: Explorer created for the first time — AI generates the narrative", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 22, evidenceStrength: "Emerging" },
       ]);
       getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
@@ -739,7 +745,7 @@ describe("generateFutureSelves", () => {
     });
 
     it("Situation 2: Explorer goes from 22% -> 28% — percentage updates, narrative unchanged, no AI call", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 28, evidenceStrength: "Emerging" },
       ]);
       getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
@@ -755,7 +761,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Explorer's archetype narrative.",
         growth_opportunities: ["Explorer's archetype growth opportunity."],
         blind_spots: ["Explorer's archetype blind spot."],
-        likely_evolution: "Explorer's archetype likely evolution.",
+        likely_evolution: "Explorer's archetype likely evolution.\nWould you keep exploring?",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -780,7 +786,7 @@ describe("generateFutureSelves", () => {
     });
 
     it("Situation 3: Explorer goes from 28% -> 41% (an evidence-strength tier crossing) — percentage updates, narrative unchanged, no AI call", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         { ...MATCH, identityId: "explorer", canonicalName: "Explorer", likelihood: 41, evidenceStrength: "Moderate" },
       ]);
       getIdentityByIdMock.mockReturnValueOnce(EXPLORER_PROFILE);
@@ -796,7 +802,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Explorer's archetype narrative.",
         growth_opportunities: ["Explorer's archetype growth opportunity."],
         blind_spots: ["Explorer's archetype blind spot."],
-        likely_evolution: "Explorer's archetype likely evolution.",
+        likely_evolution: "Explorer's archetype likely evolution.\nWould you keep exploring?",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -831,7 +837,7 @@ describe("generateFutureSelves", () => {
     };
 
     it("Situation 1: Adaptive Explorer appears for the first time — AI generates the narrative once", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         {
           ...MATCH,
           identityId: "adaptive-explorer",
@@ -873,7 +879,7 @@ describe("generateFutureSelves", () => {
     });
 
     it("Situation 2: 22% -> 28% — only dynamic fields update, no AI call", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         {
           ...MATCH,
           identityId: "adaptive-explorer",
@@ -895,7 +901,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Adaptive Explorer's archetype narrative.",
         growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
         blind_spots: ["Adaptive Explorer's archetype blind spot."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.",
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nWould you keep exploring?",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -918,7 +924,7 @@ describe("generateFutureSelves", () => {
     });
 
     it("Situation 3: 28% -> 46% (Emerging -> Moderate) — only dynamic fields update, no AI call", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         {
           ...MATCH,
           identityId: "adaptive-explorer",
@@ -940,7 +946,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Adaptive Explorer's archetype narrative.",
         growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
         blind_spots: ["Adaptive Explorer's archetype blind spot."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.",
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nWould you keep exploring?",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -964,7 +970,7 @@ describe("generateFutureSelves", () => {
     });
 
     it("Situation 4: Adaptive Explorer fades — percentage/status/evidence change, narrative unchanged (never written to the fade payload)", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         { ...MATCH, identityId: "other", canonicalName: "Other" },
       ]);
       getIdentityByIdMock.mockReturnValueOnce({ ...PROFILE, id: "other", canonical_name: "Other" });
@@ -1012,7 +1018,7 @@ describe("generateFutureSelves", () => {
     });
 
     it("Situation 5: Adaptive Explorer returns — reuses the existing narrative, no AI call", async () => {
-      recognizeMock.mockReturnValueOnce([
+      recognizeMock.mockReturnValue([
         {
           ...MATCH,
           identityId: "adaptive-explorer",
@@ -1034,7 +1040,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Adaptive Explorer's archetype narrative.",
         growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
         blind_spots: ["Adaptive Explorer's archetype blind spot."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.",
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nWould you keep exploring?",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -1061,7 +1067,7 @@ describe("generateFutureSelves", () => {
   });
 
   it("restores a faded future to active and records a returned event when the identity is recognized again", async () => {
-    recognizeMock.mockReturnValueOnce([MATCH]);
+    recognizeMock.mockReturnValue([MATCH]);
     getIdentityByIdMock.mockReturnValueOnce(PROFILE);
 
     const fadedRow = {
@@ -1113,7 +1119,7 @@ describe("generateFutureSelves", () => {
       id: "community-weaver",
       canonical_name: "Community Weaver",
     };
-    recognizeMock.mockReturnValueOnce([otherMatch]);
+    recognizeMock.mockReturnValue([otherMatch]);
     getIdentityByIdMock.mockReturnValueOnce(otherProfile);
 
     const unmatchedActiveRow = {
@@ -1167,7 +1173,7 @@ describe("generateFutureSelves", () => {
   });
 
   it("matches a legacy row by canonical name and updates it rather than inserting a duplicate", async () => {
-    recognizeMock.mockReturnValueOnce([MATCH]);
+    recognizeMock.mockReturnValue([MATCH]);
     getIdentityByIdMock.mockReturnValueOnce(PROFILE);
 
     const legacyRow = {
@@ -1238,7 +1244,7 @@ describe("generateFutureSelves", () => {
   });
 
   it("still persists the identity when explainIdentities returns a fallback explanation", async () => {
-    recognizeMock.mockReturnValueOnce([MATCH]);
+    recognizeMock.mockReturnValue([MATCH]);
     getIdentityByIdMock.mockReturnValueOnce(PROFILE);
     // explainIdentitiesMock already returns fallback explanations from beforeEach
 
@@ -1781,5 +1787,34 @@ describe("loadFutureSelfImpactByPath", () => {
     const impact = await loadFutureSelfImpactByPath();
 
     expect(impact.size).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// maxFutureSelvesForEvidence — the count follows the evidence
+// ---------------------------------------------------------------------------
+
+describe("maxFutureSelvesForEvidence", () => {
+  const match = (evidenceStrength: "Emerging" | "Moderate" | "Strong") => ({
+    evidenceStrength,
+  });
+
+  it("caps weak evidence at 2 possible lives", () => {
+    expect(maxFutureSelvesForEvidence([match("Emerging"), match("Emerging")])).toBe(2);
+    expect(maxFutureSelvesForEvidence([])).toBe(2);
+  });
+
+  it("caps moderate evidence at 4", () => {
+    expect(maxFutureSelvesForEvidence([match("Moderate"), match("Emerging")])).toBe(4);
+  });
+
+  it("caps strong evidence at 5 — never more", () => {
+    expect(
+      maxFutureSelvesForEvidence([match("Strong"), match("Strong"), match("Moderate")]),
+    ).toBe(5);
+  });
+
+  it("reads the strongest (top-ranked) match, not the weakest", () => {
+    expect(maxFutureSelvesForEvidence([match("Strong"), match("Emerging")])).toBe(5);
   });
 });

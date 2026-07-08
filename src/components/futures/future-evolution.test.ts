@@ -46,7 +46,7 @@ function makeFuture(overrides: Partial<FutureSelf>): FutureSelf {
     status: "active" as FutureSelf["status"],
     created_at: "2026-05-01T00:00:00Z",
     updated_at: "2026-07-02T00:00:00Z",
-    identity_id: "steady-foundation-builder",
+    identity_id: "the-guardian",
     confidence: 0.6,
     dimension_breakdown: null,
     supporting_observations: null,
@@ -60,13 +60,13 @@ function makeFuture(overrides: Partial<FutureSelf>): FutureSelf {
 
 const active = makeFuture({
   id: "a",
-  identity_id: "steady-foundation-builder",
+  identity_id: "the-guardian",
   name: "The Steady Builder",
 });
 
 const fadedExplorer = makeFuture({
   id: "b",
-  identity_id: "adaptive-explorer",
+  identity_id: "the-explorer",
   name: "The Explorer",
   status: "faded" as FutureSelf["status"],
   percentage: 0,
@@ -161,7 +161,7 @@ describe("Faded future card", () => {
   it("keeps the original identity behind the quiet inline disclosure, closed at first", () => {
     expect(html).toContain("View original Future Self");
     // The original card renders only on request — the fade story leads.
-    expect(html).not.toContain("Where this is heading");
+    expect(html).not.toContain("Where this path leads");
   });
 });
 
@@ -171,7 +171,7 @@ describe("The preserved original Future Self", () => {
       createElement(FutureCard, { futureSelf: asLastActive(fadedExplorer) }),
     );
     // The identity card is intact…
-    expect(html).toContain("Where this is heading");
+    expect(html).toContain("Where this path leads");
     expect(html).toContain("Becomes someone who finishes.");
     // …with its likelihood restored to the last active strength…
     expect(html).toContain("18 percent likely");
@@ -183,13 +183,46 @@ describe("The preserved original Future Self", () => {
 });
 
 describe("Active future card hierarchy", () => {
-  it("answers who this person is with the archetype's timeless identity statement", () => {
+  it("answers who this person becomes with the future identity's timeless identity statement", () => {
     const html = renderToString(
       createElement(FutureCard, { futureSelf: makeFuture({}) }),
     );
-    // steady-foundation-builder's hand-written statement from the library —
+    // the-guardian's hand-written statement from the library —
     // never AI-generated, identical on every render.
-    expect(html).toContain("Protects what has been patiently built.");
+    expect(html).toContain(
+      "One day everything and everyone you were trusted with will still be standing",
+    );
+  });
+
+  it("reads as a possible life — evidence bullets, the cost, the path, a closing question — never behavior vectors", () => {
+    const html = renderToString(
+      createElement(FutureCard, {
+        futureSelf: makeFuture({
+          why_emerging:
+            "You repeatedly choose ownership over certainty.\nYou keep returning to difficult work after setbacks.\nYour recent decisions favor long-term meaning over comfort.",
+          blind_spots: [
+            "At first the self-reliance made you capable. Eventually it made you hard to reach.",
+          ],
+          likely_evolution:
+            "You slowly become the person others plan around.\nWould you still choose this path if it required trusting others as much as yourself?",
+        }),
+      }),
+    );
+
+    // The three new sections, in the new language…
+    expect(html).toContain("Why this future is becoming more likely");
+    expect(html).toContain("You repeatedly choose ownership over certainty.");
+    expect(html).toContain("The Cost of Becoming Them");
+    expect(html).toContain("Eventually it made you hard to reach.");
+    expect(html).toContain("Where this path leads");
+    // …the card ends on its unique reflective question…
+    expect(html).toContain(
+      "Would you still choose this path if it required trusting others as much as yourself?",
+    );
+    // …and the implementation never leaks: no behavior vectors, no risk list.
+    expect(html).not.toContain("Core behaviors");
+    expect(html).not.toContain("Ships weekly");
+    expect(html).not.toContain("What You Risk");
   });
 
   it("explains an increase with a grounded sentence, receipts behind a quiet action", () => {

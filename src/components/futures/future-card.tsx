@@ -69,18 +69,23 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * The identity profile: a character introduction, not a report. It answers
- * four questions in a fixed order — who is this person (name + the
- * archetype's timeless identity statement), has this future changed (the
- * movement since the last update, receipts behind a quiet toggle), what
- * kind of person are they (behaviors and trade-offs, side by side), and
- * where does this path ultimately lead (the narrative, deliberately last:
- * the emotional conclusion).
+ * A possible life, not a report. The card answers five questions in a fixed
+ * order — who does this person slowly become (name + the future identity's
+ * timeless statement), has this future changed (the movement since the last
+ * update, receipts behind a quiet toggle), where does this path lead (the
+ * life itself), what does becoming them quietly cost (the emotional
+ * center), and why is it becoming more likely (three evidence bullets) —
+ * closed by one reflective question the reader has to answer for
+ * themselves.
  *
- * The identity statement is hand-written in the archetype library and never
- * changes between renders or regenerations; the narrative is AI-authored
- * and owns the future tense. Faded futures lead with FadedFutureCard, which
- * preserves this card behind its "View original Future Self" reveal.
+ * The identity statement is hand-written in the future identity library and
+ * never changes between renders or regenerations; the narrative fields are
+ * AI-authored and own the future tense. why_emerging carries one evidence
+ * bullet per line; likely_evolution carries the reflective question as its
+ * final line (pre-v2 rows lack both — they render without bullets/question
+ * until their one-time format_upgrade regeneration). Faded futures lead with
+ * FadedFutureCard, which preserves this card behind its "View original
+ * Future Self" reveal.
  */
 export function FutureCard({ futureSelf, accent }: FutureCardProps) {
   const tone = accent ?? NEUTRAL_ACCENT;
@@ -89,6 +94,28 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
   const identityStatement = futureSelf.identity_id
     ? getIdentityById(futureSelf.identity_id)?.identity_statement
     : undefined;
+
+  // v2 narrative encoding (see explain-identity): why_emerging carries one
+  // evidence bullet per line; blind_spots carries a single cost paragraph
+  // (pre-v2 rows hold short risk labels — joined into terse prose until
+  // their one-time format_upgrade regeneration); likely_evolution ends with
+  // the reflective question as its final line when one was written.
+  const evidenceBullets = futureSelf.why_emerging
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  const costParts = futureSelf.blind_spots.map((s) => s.trim()).filter(Boolean);
+  const cost = costParts.length === 1 ? costParts[0] : costParts.join(". ");
+  const evolutionLines = futureSelf.likely_evolution
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const closingQuestion =
+    evolutionLines.length > 1 && evolutionLines[evolutionLines.length - 1].endsWith("?")
+      ? evolutionLines[evolutionLines.length - 1]
+      : null;
+  const narrative = (closingQuestion ? evolutionLines.slice(0, -1) : evolutionLines).join(" ");
 
   // The receipts behind "What's changed": the recorded behavior that moved
   // this future when the pipeline attributed any, otherwise the situations,
@@ -107,8 +134,8 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
       <div aria-hidden="true" className="h-1" style={{ background: tone.color }} />
 
       <div className="p-8 sm:px-10 sm:py-9">
-        {/* 1 — Who is this person? Name in the product's serif voice, then
-            the archetype's timeless one-line answer. */}
+        {/* 1 — Who does this person become? Name in the product's serif
+            voice, then the future identity's timeless one-line answer. */}
         <header className="flex items-center gap-5">
           <span
             aria-hidden="true"
@@ -202,65 +229,66 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
           </div>
         ) : null}
 
-        {/* 3 — What kind of person are they? Behaviors and trade-offs, side
-            by side: these define the identity itself. */}
-        <div className="mt-9 grid gap-x-12 gap-y-8 md:grid-cols-2">
-          {futureSelf.core_behaviors.length > 0 ? (
-            <div>
-              <SectionLabel>Core behaviors</SectionLabel>
-              <ul className="mt-3 max-w-[60ch] space-y-2">
-                {/* Capped at 4 so the profile doesn't read as 5 strengths
-                    against a couple of trade-offs. */}
-                {futureSelf.core_behaviors.slice(0, 4).map((behavior) => (
-                  <li
-                    key={behavior}
-                    className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-600"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ background: tone.color, opacity: 0.45 }}
-                    />
-                    {behavior}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {/* Risks keep neutral markers: they aren't part of the branch's
-              color story. */}
-          {futureSelf.blind_spots.length > 0 ? (
-            <div>
-              <SectionLabel>What You Risk</SectionLabel>
-              <ul className="mt-3 max-w-[60ch] space-y-2">
-                {futureSelf.blind_spots.map((spot) => (
-                  <li
-                    key={spot}
-                    className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-600"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300"
-                    />
-                    {spot}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-
-        {/* 4 — Where does this path ultimately lead? The narrative closes
-            the profile, set in the serif voice: the emotional conclusion,
-            deliberately the last thing read. */}
-        {futureSelf.likely_evolution ? (
+        {/* 3 — Where does this path lead? Meeting the future person comes
+            first: the life this person gradually builds, set in the serif
+            voice. */}
+        {narrative ? (
           <div className="mt-9">
-            <SectionLabel>Where this is heading</SectionLabel>
+            <SectionLabel>Where this path leads</SectionLabel>
             <p className="font-voice mt-3 max-w-[58ch] text-[17px] leading-[1.65] text-zinc-800">
-              {futureSelf.likely_evolution}
+              {narrative}
             </p>
           </div>
+        ) : null}
+
+        {/* 4 — The Cost of Becoming Them: the emotional center. One quiet
+            prose paragraph — what this life slowly asks the person to give
+            up — never a list of risks. Set in the serif voice like the
+            narrative it balances. */}
+        {cost ? (
+          <div className="mt-9">
+            <SectionLabel>The Cost of Becoming Them</SectionLabel>
+            <p className="font-voice mt-3 max-w-[58ch] text-[16px] leading-[1.65] text-zinc-700">
+              {cost}
+            </p>
+          </div>
+        ) : null}
+
+        {/* 5 — Why is this future becoming more likely? Three recurring
+            patterns from the evidence — the receipts, after the life and its
+            price. One bullet per line of why_emerging (pre-v2 rows carry a
+            single sentence, which renders as one bullet until
+            regeneration). */}
+        {evidenceBullets.length > 0 ? (
+          <div className="mt-9">
+            <SectionLabel>Why this future is becoming more likely</SectionLabel>
+            <ul className="mt-3 max-w-[60ch] space-y-2">
+              {evidenceBullets.map((bullet) => (
+                <li
+                  key={bullet}
+                  className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-600"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="mt-px shrink-0 text-[13px] font-semibold"
+                    style={{ color: tone.color, opacity: 0.7 }}
+                  >
+                    ✓
+                  </span>
+                  {bullet}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {closingQuestion ? (
+          <p
+            className="font-voice mt-7 max-w-[58ch] border-t border-zinc-100 pt-6 text-[17px] italic leading-[1.6]"
+            style={{ color: tone.color }}
+          >
+            {closingQuestion}
+          </p>
         ) : null}
       </div>
     </article>

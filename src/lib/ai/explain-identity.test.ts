@@ -63,4 +63,29 @@ describe("needsExplanationRegeneration", () => {
     );
     expect(decision).toEqual({ regenerate: false, reason: "stable" });
   });
+
+  it("regenerates a pre-v2 narrative once — a stored likely_evolution without the newline-separated reflective question is the old format", () => {
+    const decision = needsExplanationRegeneration(
+      {
+        narrative_source: "ai",
+        narrative_evidence_strength: "Strong",
+        likely_evolution: "Becomes someone defined by steady output.",
+      },
+      "Strong",
+    );
+    expect(decision).toEqual({ regenerate: true, reason: "format_upgrade" });
+  });
+
+  it("does not regenerate a v2 narrative — the closing question's newline marks the current format", () => {
+    const decision = needsExplanationRegeneration(
+      {
+        narrative_source: "ai",
+        narrative_evidence_strength: "Strong",
+        likely_evolution:
+          "Becomes someone defined by steady output.\nWould you keep choosing it?",
+      },
+      "Strong",
+    );
+    expect(decision).toEqual({ regenerate: false, reason: "stable" });
+  });
 });

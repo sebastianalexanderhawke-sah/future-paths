@@ -49,7 +49,9 @@ export function getFutureSelfExplanation(
   }
 
   if (futureSelf.why_emerging !== "") {
-    return futureSelf.why_emerging;
+    // why_emerging is one evidence bullet per line (v2); this disclosure is a
+    // single explanatory line, so the strongest bullet speaks for it.
+    return futureSelf.why_emerging.split("\n")[0];
   }
 
   return delta > 0 ? FALLBACK_INCREASE_EXPLANATION : FALLBACK_DECREASE_EXPLANATION;

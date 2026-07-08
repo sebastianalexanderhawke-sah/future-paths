@@ -67,7 +67,9 @@ export function getMovementStory(futureSelf: FutureSelf): MovementStory | null {
           } — including “${situations[0]}” — strengthened this path.`
         : evidence.length > 0
           ? "Your recent recorded behavior reinforced this trajectory."
-          : futureSelf.why_emerging ||
+          : // why_emerging is one evidence bullet per line (v2); the lead is a
+            // single sentence, so the strongest bullet speaks for it.
+            futureSelf.why_emerging.split("\n")[0] ||
             "Recent patterns aligned more closely with this trajectory.";
     return {
       direction,

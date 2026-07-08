@@ -185,7 +185,7 @@ function hasExpansionText(
 }
 
 // Prefers Claude's own native title (stored alongside the path description)
-// whenever it is present and well-formed. The archetype/regex classifier in
+// whenever it is present and well-formed. The identity-name/regex classifier in
 // formatPathTitle is a safety net for when generation is missing or invalid
 // (e.g. a fragment, wrong word count, or banned phrase) — not the default
 // source of truth for display titles.

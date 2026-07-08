@@ -150,10 +150,12 @@ const REFLECTIVE_FORECAST_PATTERNS: RegExp[] = [
 const REFLECTIVE_ACTION_START =
   /^(gain|observe|reflect|learn|understand|explore|process|consider|think about|work on|focus on|notice|gather)\b/i;
 
-// Matches short Future-Self archetype names like "The Explorer" or
+// Matches short Future-Self identity names like "The Explorer" or
 // "The Stable Professional" (at most 2 words after "The"), NOT full
 // sentence-style forecast titles like "The Friendship Deepens First".
-const ARCHETYPE_NAME_PATTERN = /^the [a-z]+(\s[a-z]+)?$/i;
+// The v2 future identity library uses exactly this shape ("The Builder",
+// "The Wanderer"), so library names are always suppressed here by design.
+const FUTURE_IDENTITY_NAME_PATTERN = /^the [a-z]+(\s[a-z]+)?$/i;
 
 const OUTCOME_INDICATOR_PATTERNS: RegExp[] = [
   /\b(relationship|friendship|friend group|dating|crush|partner|significant other)\b/i,
@@ -390,7 +392,7 @@ function shouldPreserveForecastTitle(title: string, bundle: GroundingBundle): bo
     return false;
   }
 
-  if (ARCHETYPE_NAME_PATTERN.test(normalized)) {
+  if (FUTURE_IDENTITY_NAME_PATTERN.test(normalized)) {
     return false;
   }
 
@@ -494,7 +496,7 @@ export function formatForecastTitle(text: string): string {
   phrase = toFirstSentence(phrase, MAX_TITLE_LENGTH).replace(/[.!?]+$/, "").trim();
   phrase = phrase.replace(/^to /i, "");
 
-  if (ARCHETYPE_NAME_PATTERN.test(phrase)) {
+  if (FUTURE_IDENTITY_NAME_PATTERN.test(phrase)) {
     return "";
   }
 
@@ -794,7 +796,7 @@ function buildBlindSpotRealityFuture(
   const detailCandidates = [
     path.future_shift,
     ...path.consequences,
-    ...(futureSelf && !ARCHETYPE_NAME_PATTERN.test(futureSelf.name) ? [futureSelf.name] : []),
+    ...(futureSelf && !FUTURE_IDENTITY_NAME_PATTERN.test(futureSelf.name) ? [futureSelf.name] : []),
     ...(futureSelf ? [futureSelf.summary] : []),
   ].filter(
     (candidate) => candidate.trim().length > 0 && isGroundedFutureText(candidate, bundle),

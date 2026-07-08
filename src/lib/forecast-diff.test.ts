@@ -440,9 +440,9 @@ describe("/moments/[id] page — section order", () => {
   });
 });
 
-describe("/moments/[id] page — alternative paths", () => {
-  it("presents unchosen paths as Alternative Paths", () => {
-    expect(PAGE_SOURCE).toContain("Alternative Paths");
+describe("/moments/[id] page — alternate paths", () => {
+  it("presents unchosen paths behind the collapsed AlternatePathsDisclosure", () => {
+    expect(PAGE_SOURCE).toContain("<AlternatePathsDisclosure");
     expect(PAGE_SOURCE).not.toContain("See other paths considered");
   });
 

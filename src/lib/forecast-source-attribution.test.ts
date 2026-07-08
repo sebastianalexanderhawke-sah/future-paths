@@ -121,7 +121,7 @@ describe("forecast source attribution", () => {
 
     // All 5 active inputs now survive the reality filter as claude-sourced futures.
     // "The Ask Happens Over Lunch" was previously dropped by the over-broad
-    // ARCHETYPE_NAME_PATTERN and replaced by a recovery slot; the fixed pattern
+    // FUTURE_IDENTITY_NAME_PATTERN and replaced by a recovery slot; the fixed pattern
     // lets it pass through correctly.
     expect(audit.active.filter((item) => item.source === "claude").length).toBe(5);
     expect(audit.active.find((item) => item.source === "recovery")).toBeUndefined();
