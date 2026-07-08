@@ -190,6 +190,9 @@ export type CurrentSelf = {
   values: string[] | null;
   afraid_of_becoming: string[] | null;
   core_tension: string | null;
+  // "strength\ntradeoff\nobservation" — the recurring cost of this identity.
+  // Empty string (or null on a partially-applied read) means omitted.
+  core_tradeoff: string | null;
   recent_growth: string[];
   created_at: string;
   updated_at: string;
@@ -489,6 +492,7 @@ export type CurrentSelfInsert = Pick<
   values?: string[];
   afraid_of_becoming?: string[];
   core_tension?: string;
+  core_tradeoff?: string;
   recent_growth?: string[];
 };
 
@@ -501,6 +505,7 @@ export type CurrentSelfUpdate = Partial<
     | "values"
     | "afraid_of_becoming"
     | "core_tension"
+    | "core_tradeoff"
     | "recent_growth"
     | "updated_at"
   >

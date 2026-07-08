@@ -12,8 +12,9 @@ export type MockCurrentSelfDraft = {
   summary: string;
   themes: CheckInThemeName[];
   values: string[];              // exactly 3 — "Name\nEvidence paragraph" pairs naming a tradeoff, strongest first
-  afraid_of_becoming: string[];  // 1–3, derived from avoidance signals independent of the values above
+  afraid_of_becoming: string[];  // 1–3 "Theme\nStatement\nParagraph" feared-future portraits, derived from avoidance signals independent of the values above
   core_tension: string;          // the single most important recurring contradiction
+  core_tradeoff?: string | null;  // "Strength\nTradeoff\nObservation" — the recurring cost of this identity, or null/omitted when evidence is too weak
   recent_growth: string[];       // up to 3 sentences describing how identity is evolving
 };
 
@@ -169,26 +170,43 @@ export function generateMockCurrentSelf(input: {
     "Momentum\nWhen waiting and acting compete, acting keeps winning — you consistently choose to move before every condition is settled, across enough different decisions that it reads as a pattern rather than a single choice.",
   ];
 
-  // What You Fear Becoming — derived independently from actual avoidance
-  // signals (a real competing pull, real friction actually present, real
-  // movement away from an old position), NOT by negating the values above.
-  // Two people with the same values above could produce different fears
-  // here depending on what their evidence actually shows them avoiding.
+  // What You Fear Becoming — the sibling of the values list, same three-part
+  // shape: "Theme\nIdentity statement\nSupporting paragraph". Each fear is a
+  // FUTURE VERSION OF THIS PERSON the reader can picture becoming, not an
+  // abstract trait or the opposite of a value. Derived independently from
+  // actual avoidance signals (a real competing pull, real friction present,
+  // real movement away from an old position), NOT by negating the values
+  // above. Tone is protective, not frightening.
+  const encodeFear = (theme: string, statement: string, paragraph: string) =>
+    `${theme}\n${statement}\n${paragraph}`;
+
   const afraidCandidates: string[] = [];
 
   if (secondaryLabel) {
     afraidCandidates.push(
-      `Settling for ${futureLabel} just to make the pull toward ${secondaryLabel} stop, instead of actually resolving it.`,
+      encodeFear(
+        "Resignation",
+        `Becoming someone who picked ${futureLabel} just to make the pull toward ${secondaryLabel} finally go quiet.`,
+        `You keep holding both directions open instead of collapsing the tension early, and that patience shows up across different decisions. Each time you refuse to resolve the pull prematurely, you steer away from the version of you who chose the quiet life over the honest one and spent years wondering about the road not taken.`,
+      ),
     );
   }
   if (difficultTheme) {
     afraidCandidates.push(
-      `Letting ${difficultTheme.toLowerCase()} quietly decide the direction instead of deciding it yourself.`,
+      encodeFear(
+        "Passivity",
+        `Becoming someone who let ${difficultTheme.toLowerCase()} quietly make the big decisions for them.`,
+        `When ${difficultTheme.toLowerCase()} surfaces you tend to name it and sit with it rather than let it steer, and that keeps happening. This is the version of you who mistook a hard feeling for a verdict — and your habit of deciding for yourself is exactly what keeps that future from taking hold.`,
+      ),
     );
   }
   if (recentUpdate) {
     afraidCandidates.push(
-      "Staying somewhere you've already outgrown because leaving feels riskier than staying.",
+      encodeFear(
+        "Inertia",
+        "Becoming someone who stayed somewhere they'd already outgrown because leaving felt riskier than staying.",
+        "You've shown a pattern of moving on once a chapter is genuinely finished, rather than clinging to the familiar. The version of you who confused comfort for home doesn't arrive in one decision — they get there one deferred leap at a time, and you keep declining that trade.",
+      ),
     );
   }
 
@@ -197,12 +215,29 @@ export function generateMockCurrentSelf(input: {
   const afraid_of_becoming =
     afraidCandidates.length > 0
       ? afraidCandidates.slice(0, 3)
-      : ["Waiting for certainty until the moment to act has already passed."];
+      : [
+          encodeFear(
+            "Hesitation",
+            "Becoming someone who waited for certainty until the moment worth moving for had already passed.",
+            "You consistently choose to act before every condition is settled, across enough different decisions that it reads as who you are. That instinct is what keeps this future at a distance — the version of you who waited so long that life quietly made the choices instead.",
+          ),
+        ];
 
   // Your Biggest Tension — the single most important recurring contradiction.
   const core_tension = secondaryLabel
     ? `You want ${futureLabel}. You also want ${secondaryLabel}. Nearly every major decision you've recorded has required choosing one over the other.`
     : `You trust your own judgment deeply. You still wish someone understood what building toward ${futureLabel} has actually cost you.`;
+
+  // The Tradeoff You Live With — exactly ONE tradeoff, encoded
+  // "Recurring pattern\nThe tradeoff\nReflection's observation". Both halves
+  // describe the same behavior: not a flaw, the natural consequence of a
+  // recurring pattern. Grounded in the same action-oriented pattern the rest of
+  // the portrait is built from, so it's always at least weakly supported here.
+  const core_tradeoff = [
+    "You commit to a direction as soon as it feels right, before you've fully weighed it.",
+    "That decisiveness is a real part of how you've moved forward while others stalled. But it also means you rarely reopen a choice once it's made, so a direction can keep its momentum well after it has stopped fitting who you're becoming.",
+    "This same pattern surfaces again and again across your situations, check-ins, and reflections, not in any single decision alone.",
+  ].join("\n");
 
   // What's Changing: up to 3 sentences describing evolution, not isolated phrases.
   const recent_growth = [
@@ -222,6 +257,7 @@ export function generateMockCurrentSelf(input: {
     values,
     afraid_of_becoming,
     core_tension,
+    core_tradeoff,
     recent_growth,
   };
 }

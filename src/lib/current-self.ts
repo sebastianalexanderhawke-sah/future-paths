@@ -31,6 +31,7 @@ function normalizeCurrentSelf(row: CurrentSelf): NormalizedCurrentSelf {
     values: row.values ?? [],
     afraid_of_becoming: row.afraid_of_becoming ?? [],
     core_tension: row.core_tension ?? "",
+    core_tradeoff: row.core_tradeoff ?? "",
     recent_growth: row.recent_growth ?? [],
   };
 }
@@ -235,6 +236,7 @@ export async function generateCurrentSelf(
         values: draft.values,
         afraid_of_becoming: draft.afraid_of_becoming,
         core_tension: draft.core_tension,
+        core_tradeoff: draft.core_tradeoff ?? "",
         recent_growth: draft.recent_growth,
         updated_at: now,
       })
@@ -260,6 +262,7 @@ export async function generateCurrentSelf(
       values: draft.values,
       afraid_of_becoming: draft.afraid_of_becoming,
       core_tension: draft.core_tension,
+      core_tradeoff: draft.core_tradeoff ?? "",
       recent_growth: draft.recent_growth,
     })
     .select("*")

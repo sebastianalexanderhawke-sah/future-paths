@@ -55,6 +55,17 @@ describe("deriveFearsFromThemes", () => {
     expect(deriveFearsFromThemes([])).toEqual([]);
   });
 
+  it("encodes each fear as a Theme\\nStatement\\nParagraph portrait", () => {
+    const [fear] = deriveFearsFromThemes(["Growth"]);
+    const [theme, statement, paragraph] = fear.split("\n");
+
+    expect(theme).toBe("Stagnation");
+    expect(statement).toMatch(/^Becoming someone/);
+    expect(paragraph.length).toBeGreaterThan(0);
+    // The paragraph is the third part, not merged into the statement line.
+    expect(fear.split("\n")).toHaveLength(3);
+  });
+
   it("is not a mirror of deriveValuesFromThemes — it draws from the full theme list independently", () => {
     // Same themes produce both a value and a fear, but the fear text is not
     // a mechanical negation of the value's evidence, and difficult themes
@@ -63,7 +74,7 @@ describe("deriveFearsFromThemes", () => {
     const fears = deriveFearsFromThemes(["Growth"]);
 
     expect(values[0]).toMatch(/^Growth\n/);
-    expect(fears[0]).toBe("Becoming comfortable before becoming capable.");
+    expect(fears[0]).toMatch(/^Stagnation\n/);
     expect(fears[0]).not.toContain(values[0]);
   });
 
@@ -72,16 +83,15 @@ describe("deriveFearsFromThemes", () => {
     const fears = deriveFearsFromThemes(["Uncertainty"]);
 
     expect(values).toEqual([]);
-    expect(fears).toEqual([
-      "Letting uncertainty make the decision for you instead of making it yourself.",
-    ]);
+    expect(fears).toHaveLength(1);
+    expect(fears[0]).toMatch(/^Passivity\n/);
+    expect(fears[0]).toContain("uncertainty");
   });
 
   it("prioritizes difficult themes over positive-theme fears", () => {
     const fears = deriveFearsFromThemes(["Growth", "Uncertainty", "Stability"]);
-    expect(fears[0]).toBe(
-      "Letting uncertainty make the decision for you instead of making it yourself.",
-    );
+    // Uncertainty (difficult) is surfaced before Growth/Stability (positive).
+    expect(fears[0]).toMatch(/^Passivity\n/);
   });
 
   it("two theme lists that produce the same value can produce different fears", () => {
@@ -91,8 +101,8 @@ describe("deriveFearsFromThemes", () => {
     const fearsB = deriveFearsFromThemes(["Curiosity", "Frustration"]);
 
     expect(deriveValuesFromThemes(["Curiosity"])[0]).toMatch(/^Growth\n/);
-    expect(fearsA[0]).toBe("Convincing yourself you don't need anyone.");
-    expect(fearsB[0]).toBe("Letting frustration talk you out of things that still matter to you.");
+    expect(fearsA[0]).toMatch(/^Isolation\n/);
+    expect(fearsB[0]).toMatch(/^Surrender\n/);
     expect(fearsA).not.toEqual(fearsB);
   });
 
@@ -105,6 +115,14 @@ describe("deriveFearsFromThemes", () => {
       "Uncertainty",
     ]);
     expect(fears).toHaveLength(3);
+  });
+
+  it("de-dups by future-identity theme, not by source theme", () => {
+    // Loneliness and Connection both surface the "Isolation" identity — the
+    // card must not show two rows under the same theme label.
+    const fears = deriveFearsFromThemes(["Loneliness", "Connection"]);
+    expect(fears).toHaveLength(1);
+    expect(fears[0]).toMatch(/^Isolation\n/);
   });
 
   it("never returns duplicate fear text", () => {

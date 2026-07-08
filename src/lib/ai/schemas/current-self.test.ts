@@ -92,6 +92,25 @@ describe("current self output", () => {
     ).toThrow();
   });
 
+  it("accepts a 3-part core_tradeoff string", () => {
+    const result = parseCurrentSelfOutput({
+      ...VALID_DRAFT,
+      core_tradeoff:
+        "You decide fast.\nThat speed can outrun your own second thoughts.\nThis has recurred across many decisions.",
+    });
+    expect(result?.core_tradeoff?.split("\n")).toHaveLength(3);
+  });
+
+  it("accepts a null core_tradeoff — the section is omitted when evidence is weak", () => {
+    const result = parseCurrentSelfOutput({ ...VALID_DRAFT, core_tradeoff: null });
+    expect(result?.core_tradeoff ?? null).toBeNull();
+  });
+
+  it("accepts a draft with no core_tradeoff key at all", () => {
+    const { ...withoutTradeoff } = VALID_DRAFT;
+    expect(() => parseCurrentSelfOutput(withoutTradeoff)).not.toThrow();
+  });
+
   it("rejects empty core_tension", () => {
     expect(() =>
       parseCurrentSelfOutput({ ...VALID_DRAFT, core_tension: "" }),

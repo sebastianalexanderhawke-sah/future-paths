@@ -5,7 +5,7 @@ import {
 
 export const currentSelfGenerateV1 = createPromptModule({
   promptId: "current_self.generate",
-  promptVersion: "5",
+  promptVersion: "9",
   taskInstructions: `You are writing a Current Self identity portrait. This is not personality analysis. It answers one question: Who have this person's repeated choices made them today?
 
 Everything you write must come from patterns across situations, chosen paths, check-ins, reflection answers, and long-term behavior actually present in the context. Nothing is speculative. Nothing should read like a personality test, a trait inventory, or a psychological assessment.
@@ -150,36 +150,43 @@ Rules:
 ---
 
 afraid_of_becoming (What You Fear Becoming):
-Do NOT generate fears by taking the opposite of a value. That produces a template, not a person — "Freedom → losing autonomy" is generic and could apply to anyone who values freedom. Reflection should never feel templated.
+This is the twin of the values section, and it must read as its sibling — same three-part shape, opposite direction. Where a value is a life this person is building, a fear is a life they are quietly leaving behind. It is NOT a list of anxieties, and it is NOT the opposite of the values above. It answers one question: if this person's deepest values slowly went quiet, who would they wake up as?
 
-Instead ask: "What future does this person repeatedly avoid through their choices?" Look for repeated avoidance, not just the mirror image of what they pursue — a specific direction they keep steering away from across the evidence, not the logical opposite of a value you already wrote.
+Do NOT negate a value to make a fear. "Freedom → losing autonomy" is a concept, not a person — it could belong to anyone, and Reflection should never feel templated. "Losing autonomy," "becoming comfortable," "playing it safe" all describe ideas. Nobody can picture themselves inside an idea. Start instead from the futures this person's choices repeatedly steer away from: a specific direction they keep refusing across the evidence.
 
-This matters because two people can hold the identical value and still fear different things, because they've lived different lives:
+Each fear is a FUTURE VERSION OF THIS PERSON — someone the reader can picture meeting. This is the mirror image of a Future Self. Future Selves asks "who could I become?"; this asks "who do my repeated choices keep quietly ensuring I never let myself become?"
+
+The tone is PROTECTIVE, not frightening. The reader should finish each fear thinking "I understand why this future matters to me" — never "this app is trying to scare me." Compassionate, reflective, personal. You are showing someone the life they keep refusing, and honoring the choices by which they refuse it — not threatening them with it.
+
+FORMAT — each item is a SINGLE JSON string containing THREE parts separated by newline characters (\\n), exactly like the values field but with three lines instead of two:
+Line 1 — Theme: a one-word (occasionally two-word) label for the future identity. It is NOT the fear itself; it is the name of the version of them. E.g. Settling, Regret, Dependence, Conformity, Isolation, Stagnation, Disconnection, Cynicism, Resignation.
+Line 2 — Identity statement: ONE vivid sentence naming the future version of the person. This is the emotional centerpiece — it should create an immediate image. Forms like "Becoming someone who…" or "Building a life that…" or "Looking back and…". Not a label, not a trait, not a diagnosis.
+Line 3 — Supporting paragraph: 2–3 sentences explaining why Reflection believes this future matters, grounded in the repeated evidence. Do NOT restate the identity statement. Instead explain how this person's repeated choices show them actively moving AWAY from this future — so the fear reads as something their own pattern is already protecting them from. Compassionate and personal.
+
+Two people can hold the identical value and still fear becoming completely different people, because they've avoided different futures:
 Two people both value Freedom.
-One repeatedly avoids external expectations — their fear: "Living someone else's life."
-Another repeatedly avoids dependence — their fear: "Becoming someone who cannot stand on their own."
-Same value. Different fear, because the avoidance pattern in their actual evidence is different.
+One keeps refusing other people's expectations. Their fear (theme / statement / paragraph):
+"Conformity\\nWaking up years from now inside a life you never actually chose.\\nYou keep making the unpopular call when the expected one would be easier, and that pattern repeats across decisions that have nothing else in common. Each time you choose your own read over the approved one, you steer further from the version of you who simply did what was expected until it became a life."
+The other keeps refusing to lean on anyone. Their fear:
+"Isolation\\nBecoming someone so self-sufficient that no one is left close enough to reach.\\nYou've built real strength around handling things on your own — which is exactly why this version is a genuine risk, not a remote one. The moments you let something be shared instead of shouldered are what keep that future from quietly becoming permanent."
+Same value. Different feared person, because the avoidance pattern in their actual evidence is different. (These are illustrative — do not reuse them.)
 
-Return AT MOST 3 items, and only the ones clearly supported by a genuine, repeated avoidance pattern in the evidence — fewer is fine, never forced to hit 3.
+Return AT MOST 3, and only the futures clearly supported by a genuine, repeated avoidance pattern in the evidence — fewer is better than forced.
 
-Do NOT describe psychological fears or anxieties ("afraid of failure," "worried about money"). Describe the identity this person's choices consistently move away from.
-
-Good (grounded in what's actually avoided, not a mechanical inversion):
-"Living someone else's life."
-"Becoming someone who cannot stand on their own."
-"Staying somewhere you've already outgrown because leaving feels riskier than staying."
-
-Bad:
-"Afraid of failure" — anxiety, not an avoided identity
-"Worried about disappointing people" — a feeling, not an identity
-"Losing freedom" written simply because "Freedom" is a value — that's the opposite-of-value template this section exists to avoid
-"Being unsuccessful" — vague, not a real identity
+Bad (and why):
+"Afraid of failure" — an anxiety, and not even a person
+"Losing your freedom" — the opposite-of-value template this section exists to kill
+A statement line reading "Becoming comfortable" or "Playing it safe" — a concept, not a future you can see yourself standing inside
+A paragraph that just restates the statement in different words — it must add the evidence and the direction of movement, not echo
 
 Rules:
-- At most 3, never padded to a target count — omit any fear that isn't clearly supported
-- Phrased as an avoided identity or trajectory, not a feeling
-- Each fear must be traceable to a specific, repeated avoidance pattern in the evidence — not derived by negating a value
-- The values and fears should together explain the person's identity, but a fear does not need to correspond to any single value one-for-one
+- Exactly three newline-separated parts per item: Theme, Identity statement, Supporting paragraph
+- At most 3 items, never padded to a target count — omit any feared future that isn't clearly supported by repeated avoidance in the evidence
+- The identity statement is a future IDENTITY the reader can picture becoming — never a value, an opposite, a trait, or a psychological diagnosis
+- Traceable to a specific, repeated avoidance pattern in the evidence — not derived by negating a value
+- Protective and compassionate, never melodramatic, never a scare tactic
+- The supporting paragraph names the evidence and shows the person moving away from this future; it never repeats the statement
+- The values and fears together reveal the person; a fear need not correspond one-for-one to any single value
 
 ---
 
@@ -197,6 +204,36 @@ Rules:
 - Name a genuine contradiction between two real, evidence-grounded pulls — not a vague generality
 - Do not resolve the tension or advise on it — name it and stop
 - Choose the ONE tension that recurs most widely, not every tension you can find
+
+---
+
+core_tradeoff (The Tradeoff You Live With):
+Generate exactly ONE tradeoff — the recurring cost of this person's single most consistent behavioral pattern. Not several. Not a weakness. Not advice. It answers one question and only this question: "What recurring behavior has helped this person become who they are, and what recurring consequence has that same behavior created?"
+
+The behavior in Part 1 is something that has genuinely helped them — it is why they are who they are. The consequence in Part 2 is the natural, repeated side effect of that same behavior, never framed as a flaw and never something to fix. Both halves describe the SAME behavior: one hand gives, the same hand costs.
+
+Only produce this when a real, repeated pattern supports it across situations, check-ins, and reflections. If the evidence is insufficient, return null — omit the section entirely rather than inventing a cost. A fabricated tradeoff is worse than none.
+
+FORMAT — a single JSON string with exactly THREE newline-separated parts (\\n), or null:
+Part 1 — The recurring pattern: ONE sentence naming the behavior this person consistently repeats, in plain second person. It should read as something that has helped them become who they are.
+Part 2 — The tradeoff: TWO or THREE concise sentences explaining the recurring consequence that same behavior has created. The natural side effect of the pattern, not a defect and not something to correct.
+Part 3 — Reflection's observation: ONE sentence noting that this pattern has appeared repeatedly across their situations, check-ins, and reflections — not in a single moment. Do not advise, resolve, or tell them what to do.
+
+Good (illustrative only — never reuse):
+"You commit to a direction the moment it feels right, before you've fully weighed it.\\nThat decisiveness is why you've moved forward while others stalled, but it also means you rarely revisit a choice once it's made. Some directions that stopped fitting you kept their momentum simply because you'd already committed to them.\\nThis same pattern surfaces again and again across your situations, check-ins, and reflections, not in any one decision alone."
+
+Bad:
+"You are impatient" — a flaw stated as a flaw; no behavior, no both-sides
+"You should learn to slow down" — advice; this section never prescribes
+Two or more tradeoffs — return exactly one
+A tradeoff with no clear repeated support in the evidence — return null instead
+
+Rules:
+- Exactly ONE tradeoff, in three newline-separated parts (recurring pattern, the tradeoff, Reflection's observation) — or null when the evidence is insufficient
+- Part 1 is one sentence; Part 2 is two or three sentences; Part 3 is one sentence
+- Both halves describe the same behavior — never a flaw, never criticism, never "you should"
+- Grounded only in a pattern that repeats across situations, check-ins, and reflections
+- Do not resolve the tradeoff or prescribe anything — reveal it and stop
 
 ---
 
@@ -235,6 +272,6 @@ The goal is not to flatter the user and not to criticize the user — it is to r
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
-      `Write the Current Self identity portrait. First, internally identify the strongest recurring tradeoffs this person's decisions resolve in the same direction (e.g. Freedom over certainty, Growth over comfort) — do not begin from theme tags. Return JSON with: title (2–5 word character phrase), summary (exactly 2 paragraphs separated by a blank line, second person, pure character description — no concrete nouns from real life, no event references, no hedging), values (exactly 3 values that fall out of the strongest tradeoffs — what repeatedly wins when two meaningful things conflict, strongest first, merging supporting behaviors into the deeper value they serve rather than listing them separately — each a JSON string containing a short value name and a 2–3 sentence evidence paragraph naming the tradeoff, separated by \\n, e.g. "Freedom\\nWhen certainty and autonomy compete, you keep giving up the certainty."), afraid_of_becoming (at most 3 short phrases naming a repeatedly avoided future — derived from actual avoidance patterns in the evidence, NOT from negating a value — omit any that aren't clearly supported), core_tension (1–3 sentences naming the single most important recurring contradiction), recent_growth (up to 3 full sentences describing how the identity is currently evolving), themes (4–6 theme names).`,
+      `Write the Current Self identity portrait. First, internally identify the strongest recurring tradeoffs this person's decisions resolve in the same direction (e.g. Freedom over certainty, Growth over comfort) — do not begin from theme tags. Return JSON with: title (2–5 word character phrase), summary (exactly 2 paragraphs separated by a blank line, second person, pure character description — no concrete nouns from real life, no event references, no hedging), values (exactly 3 values that fall out of the strongest tradeoffs — what repeatedly wins when two meaningful things conflict, strongest first, merging supporting behaviors into the deeper value they serve rather than listing them separately — each a JSON string containing a short value name and a 2–3 sentence evidence paragraph naming the tradeoff, separated by \\n, e.g. "Freedom\\nWhen certainty and autonomy compete, you keep giving up the certainty."), afraid_of_becoming (at most 3 — each a JSON string with THREE newline-separated parts mirroring the values format: a short Theme label for the future identity (e.g. "Settling"), then a one-sentence Identity statement naming the future version of the person (e.g. "Becoming someone who slowly stopped believing in themselves."), then a 2–3 sentence Supporting paragraph that grounds it in repeated evidence and shows the person moving away from that future without restating the statement — protective and compassionate, never an abstract fear, a trait, or the opposite of a value; grounded in a real repeated avoidance pattern; omit any not clearly supported), core_tension (1–3 sentences naming the single most important recurring contradiction), core_tradeoff (exactly ONE tradeoff as a single JSON string with THREE newline-separated parts — Part 1: one sentence naming the recurring behavior that helped this person become who they are; Part 2: two or three sentences explaining the recurring consequence that same behavior created, as a natural side effect not a flaw and never advice; Part 3: one sentence noting the pattern recurs across situations, check-ins, and reflections — e.g. "You commit to a direction the moment it feels right.\\nThat decisiveness is why you've moved while others stalled, but you rarely revisit a choice once made, so some directions kept their momentum after they stopped fitting you.\\nThis pattern surfaces again and again across your situations, check-ins, and reflections."; return null if the evidence is insufficient), recent_growth (up to 3 full sentences describing how the identity is currently evolving), themes (4–6 theme names).`,
     ),
 });
