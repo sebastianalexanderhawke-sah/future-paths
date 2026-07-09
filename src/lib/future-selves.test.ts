@@ -439,7 +439,7 @@ describe("generateFutureSelves", () => {
       why_emerging: "Existing why_emerging text.",
       growth_opportunities: ["Existing growth opportunity."],
       blind_spots: ["Existing blind spot."],
-      likely_evolution: "Existing likely evolution text.\nWould you keep building it?",
+      likely_evolution: "Existing likely evolution text.\nOne day you notice you never stopped building.",
     };
     const stub = createSupabaseStub({
       behavior_observations: OBSERVATIONS_RESPONSE,
@@ -468,7 +468,7 @@ describe("generateFutureSelves", () => {
     expect(payload.why_emerging).toBe("Existing why_emerging text.");
     expect(payload.growth_opportunities).toEqual(["Existing growth opportunity."]);
     expect(payload.blind_spots).toEqual(["Existing blind spot."]);
-    expect(payload.likely_evolution).toBe("Existing likely evolution text.\nWould you keep building it?");
+    expect(payload.likely_evolution).toBe("Existing likely evolution text.\nOne day you notice you never stopped building.");
   });
 
   it("does not call the AI even when evidence_strength crosses a tier boundary (Phase 6C: narratives are stable archetypes, not per-situation output)", async () => {
@@ -488,7 +488,7 @@ describe("generateFutureSelves", () => {
       why_emerging: "Stable why_emerging text.",
       growth_opportunities: ["Stable growth opportunity."],
       blind_spots: ["Stable blind spot."],
-      likely_evolution: "Stable likely evolution text.\nWould you keep building it?",
+      likely_evolution: "Stable likely evolution text.\nOne day you notice you never stopped building.",
     };
     const stub = createSupabaseStub({
       behavior_observations: OBSERVATIONS_RESPONSE,
@@ -540,7 +540,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Explorer's existing why_emerging.",
         growth_opportunities: ["Explorer's existing growth opportunity."],
         blind_spots: ["Explorer's existing blind spot."],
-        likely_evolution: "Explorer's existing likely evolution.\nWould you keep exploring?",
+        likely_evolution: "Explorer's existing likely evolution.\nOne day leaving feels like arriving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -581,7 +581,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Explorer's existing why_emerging.",
         growth_opportunities: ["Explorer's existing growth opportunity."],
         blind_spots: ["Explorer's existing blind spot."],
-        likely_evolution: "Explorer's existing likely evolution.\nWould you keep exploring?",
+        likely_evolution: "Explorer's existing likely evolution.\nOne day leaving feels like arriving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -673,7 +673,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Explorer's pre-fade why_emerging.",
         // Current-format narrative (question line + pull line), so
         // reactivation reuses it instead of triggering a format upgrade.
-        likely_evolution: "Explorer's pre-fade evolution.\nWould you keep leaving?",
+        likely_evolution: "Explorer's pre-fade evolution.\nOne day the door out is the familiar one.",
         growth_opportunities: ["The unfamiliar stopped feeling like risk."],
       };
       const stub = createSupabaseStub({
@@ -765,7 +765,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Explorer's archetype narrative.",
         growth_opportunities: ["Explorer's archetype growth opportunity."],
         blind_spots: ["Explorer's archetype blind spot."],
-        likely_evolution: "Explorer's archetype likely evolution.\nWould you keep exploring?",
+        likely_evolution: "Explorer's archetype likely evolution.\nOne day leaving feels like arriving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -806,7 +806,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Explorer's archetype narrative.",
         growth_opportunities: ["Explorer's archetype growth opportunity."],
         blind_spots: ["Explorer's archetype blind spot."],
-        likely_evolution: "Explorer's archetype likely evolution.\nWould you keep exploring?",
+        likely_evolution: "Explorer's archetype likely evolution.\nOne day leaving feels like arriving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -905,7 +905,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Adaptive Explorer's archetype narrative.",
         growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
         blind_spots: ["Adaptive Explorer's archetype blind spot."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nWould you keep exploring?",
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nOne day leaving feels like arriving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -950,7 +950,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Adaptive Explorer's archetype narrative.",
         growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
         blind_spots: ["Adaptive Explorer's archetype blind spot."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nWould you keep exploring?",
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nOne day leaving feels like arriving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -1044,7 +1044,7 @@ describe("generateFutureSelves", () => {
         why_emerging: "Adaptive Explorer's archetype narrative.",
         growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
         blind_spots: ["Adaptive Explorer's archetype blind spot."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nWould you keep exploring?",
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nOne day leaving feels like arriving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,

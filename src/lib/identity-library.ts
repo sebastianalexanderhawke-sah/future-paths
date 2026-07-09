@@ -40,15 +40,28 @@ export type IdentityProfile = {
  * removed at design time, not patched at runtime. This library was built
  * from scratch for v3; the pre-v3 identities were retired, so their rows
  * fade naturally and the new lives emerge from the same evidence.
+ *
+ * v4/v5 naming: each canonical_name names the REPUTATION this person
+ * gradually earns — a phrase another person would naturally use to describe
+ * them ("she's become a quiet authority") — never an occupation ("The
+ * Builder"), a bare noun with "The" in front of it, a LinkedIn title, or a
+ * personality-test archetype. Earlier names live on in legacy_names so
+ * pre-rename rows keep carrying forward, and a rename regenerates the row's
+ * narrative once (see needsExplanationRegeneration, "identity_renamed").
+ * Names must keep the "The " + at-most-two-words shape (hyphenated words
+ * count as one): forecast surfaces suppress bare identity names via
+ * FUTURE_IDENTITY_NAME_PATTERN in forecast-reality.ts, and a longer name
+ * would leak through that filter.
  */
 export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   {
     id: "the-builder",
-    canonical_name: "The Builder",
+    canonical_name: "The Self-Reliant Builder",
     identity_statement:
       "One day you'll look around at a life that exists because you refused to wait for permission to build it.",
     short_description:
-      "The version of you who turned restlessness into things that exist — ventures started, systems stood up, rooms wired, lives constructed — because waiting for someone else to build it never felt like an option.",
+      "The version of you people learned to trust with making things real — the one who starts without permission, keeps ownership of what matters, and treats risk as the ordinary price of a life built rather than waited for.",
+    legacy_names: ["The Builder", "The Independent Operator"],
     dimension_weights: {
       Initiative: 1.0,
       Independence: 0.7,
@@ -67,11 +80,12 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   },
   {
     id: "the-explorer",
-    canonical_name: "The Explorer",
+    canonical_name: "The Threshold Crosser",
     identity_statement:
       "One day your life will read like a map of places most people only wonder about.",
     short_description:
       "The version of you whose life kept getting wider — new places, new domains, new selves — because whatever was interesting always outranked whatever was settled.",
+    legacy_names: ["The Explorer"],
     dimension_weights: {
       Adaptability: 1.0,
       Curiosity: 0.9,
@@ -89,11 +103,12 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   },
   {
     id: "the-mentor",
-    canonical_name: "The Mentor",
+    canonical_name: "The Trusted Guide",
     identity_statement:
       "One day you'll be measured by a roomful of people who became themselves under your attention.",
     short_description:
       "The version of you people grew up around — the one who kept showing up in other people's turning points, telling the truth about your own mistakes so theirs would cost less.",
+    legacy_names: ["The Mentor"],
     dimension_weights: {
       Connection: 0.7,
       Vulnerability: 0.7,
@@ -111,11 +126,12 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   },
   {
     id: "the-craftsman",
-    canonical_name: "The Craftsman",
+    canonical_name: "The Sure Hand",
     identity_statement:
       "One day people will hand you the work that has to be done right, because your name has come to mean exactly that.",
     short_description:
       "The version of you who chose one discipline and went all the way down — decades of quiet hours compounding into work almost no one else can do.",
+    legacy_names: ["The Craftsman"],
     dimension_weights: {
       Consistency: 0.9,
       Reflection: 0.7,
@@ -134,11 +150,12 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   },
   {
     id: "the-guardian",
-    canonical_name: "The Guardian",
+    canonical_name: "The Promise Keeper",
     identity_statement:
       "One day everything and everyone you were trusted with will still be standing — because you were.",
     short_description:
       "The version of you who kept things safe — the people, the home, the promises — a life built like a wall other people get to relax behind.",
+    legacy_names: ["The Guardian"],
     dimension_weights: {
       Consistency: 0.9,
       Connection: 0.5,
@@ -156,11 +173,12 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   },
   {
     id: "the-connector",
-    canonical_name: "The Connector",
+    canonical_name: "The Bridge Builder",
     identity_statement:
       "One day you'll realize half the friendships in the room exist because you introduced the two people in them.",
     short_description:
       "The version of you who became the reason people know each other — the introducer, the host, the one who noticed who was missing and went to get them.",
+    legacy_names: ["The Connector"],
     dimension_weights: {
       Connection: 1.0,
       Initiative: 0.5,
@@ -178,11 +196,12 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   },
   {
     id: "the-competitor",
-    canonical_name: "The Competitor",
+    canonical_name: "The Relentless Contender",
     identity_statement:
       "One day you'll know exactly how good you are, because you never stopped finding out.",
     short_description:
       "The version of you who kept score honestly and played anyway — a life of arenas entered, standards raised, and a self measured against real opposition rather than imagination.",
+    legacy_names: ["The Competitor"],
     dimension_weights: {
       Initiative: 0.7,
       "Risk Tolerance": 0.6,
@@ -201,11 +220,12 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   },
   {
     id: "the-reformer",
-    canonical_name: "The Reformer",
+    canonical_name: "The Truth Teller",
     identity_statement:
       "One day the things you couldn't leave broken will be the things everyone else gets to take for granted.",
     short_description:
       "The version of you who couldn't walk past what was broken — who named uncomfortable things out loud, took the friction, and left every system better than you found it.",
+    legacy_names: ["The Reformer"],
     dimension_weights: {
       "Conflict Tolerance": 1.0,
       Initiative: 0.6,
@@ -222,11 +242,12 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   },
   {
     id: "the-scholar",
-    canonical_name: "The Scholar",
+    canonical_name: "The Quiet Authority",
     identity_statement:
       "One day you'll understand things so deeply that people will bring you their hardest questions just to watch you take them apart.",
     short_description:
       "The version of you who followed questions further than anyone around you cared to — a life of understanding built slowly, alone with the problem, until the problem gave in.",
+    legacy_names: ["The Scholar"],
     dimension_weights: {
       Reflection: 1.0,
       Curiosity: 0.8,
@@ -244,11 +265,12 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
   },
   {
     id: "the-creator",
-    canonical_name: "The Creator",
+    canonical_name: "The Original Voice",
     identity_statement:
       "One day there will be work in the world that could only have come from you — and everyone who sees it will know.",
     short_description:
       "The version of you with a body of work — original things carried from private notebooks into public view, each one costing a little exposure and paying back a voice.",
+    legacy_names: ["The Creator"],
     dimension_weights: {
       Curiosity: 0.7,
       Vulnerability: 0.6,

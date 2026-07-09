@@ -449,7 +449,14 @@ export async function generateFutureSelves(
         match,
         profile,
         existing,
-        decision: needsExplanationRegeneration(existing, match.evidenceStrength),
+        // canonical_name detects rename epochs: a row still carrying an old
+        // name gets its narrative rewritten once under the current library
+        // (the update below renames the row in the same run).
+        decision: needsExplanationRegeneration(
+          existing,
+          match.evidenceStrength,
+          profile.canonical_name,
+        ),
       },
     ];
   });
@@ -457,8 +464,9 @@ export async function generateFutureSelves(
   // Step 6b: Future Self narratives are stable future-identity portraits, not
   // per-situation output — the AI is invoked only for identities with no
   // existing row, identities whose stored narrative is a fallback awaiting
-  // repair, and identities whose evidence tier has increased since the
-  // narrative was written (see needsExplanationRegeneration). Every other
+  // repair, identities whose row still carries a pre-rename name, and
+  // identities whose evidence tier has increased since the narrative was
+  // written (see needsExplanationRegeneration). Every other
   // identity keeps its existing why_emerging / growth_opportunities /
   // blind_spots / likely_evolution — only percentage, evidence, and
   // supporting data update below regardless of this decision.

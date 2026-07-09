@@ -150,12 +150,14 @@ const REFLECTIVE_FORECAST_PATTERNS: RegExp[] = [
 const REFLECTIVE_ACTION_START =
   /^(gain|observe|reflect|learn|understand|explore|process|consider|think about|work on|focus on|notice|gather)\b/i;
 
-// Matches short Future-Self identity names like "The Explorer" or
-// "The Stable Professional" (at most 2 words after "The"), NOT full
-// sentence-style forecast titles like "The Friendship Deepens First".
-// The v2 future identity library uses exactly this shape ("The Builder",
-// "The Wanderer"), so library names are always suppressed here by design.
-const FUTURE_IDENTITY_NAME_PATTERN = /^the [a-z]+(\s[a-z]+)?$/i;
+// Matches short Future-Self identity names like "The Threshold Crosser" or
+// "The Self-Reliant Builder" (at most 2 words after "The", where a
+// hyphenated word counts as one), NOT full sentence-style forecast titles
+// like "The Friendship Deepens First". The future identity library keeps
+// every canonical name (and legacy name) in exactly this shape so library
+// names are always suppressed here by design — see the naming note on
+// IDENTITY_LIBRARY.
+const FUTURE_IDENTITY_NAME_PATTERN = /^the [a-z]+(?:-[a-z]+)*(\s[a-z]+(?:-[a-z]+)*)?$/i;
 
 const OUTCOME_INDICATOR_PATTERNS: RegExp[] = [
   /\b(relationship|friendship|friend group|dating|crush|partner|significant other)\b/i,

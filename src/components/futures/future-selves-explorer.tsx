@@ -123,6 +123,12 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
               closing ? "modal-backdrop-out" : "modal-backdrop-in"
             }`}
           />
+          {/* The dialog is two layers: a non-scrolling shell that owns the
+              radius, shadow, and close button (so the corner never clips the
+              scrollbar and the close never scrolls away), and a scrolling
+              body with the platform's quiet thin scrollbar. The width is a
+              reading column, not a panel — the card's ~58ch prose should sit
+              centered, not float in dead space. */}
           <div
             ref={dialogRef}
             role="dialog"
@@ -130,7 +136,7 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
             aria-label={openFuture.name}
             onClick={(event) => event.stopPropagation()}
             onKeyDown={trapTab}
-            className={`relative max-h-[85vh] w-full max-w-[960px] overflow-y-auto rounded-2xl shadow-xl ${
+            className={`relative flex max-h-[85vh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl ${
               closing ? "modal-out" : "modal-in"
             }`}
           >
@@ -139,11 +145,13 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
               type="button"
               aria-label={`Close ${openFuture.name}`}
               onClick={close}
-              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
+              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-lg leading-none text-zinc-400 backdrop-blur-sm transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
             >
               ×
             </button>
-            <FutureCard futureSelf={openFuture} accent={openBranch?.accent} />
+            <div className="dialog-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <FutureCard futureSelf={openFuture} accent={openBranch?.accent} />
+            </div>
           </div>
         </div>
       ) : null}

@@ -73,10 +73,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
  * order — who does this person slowly become (name + the future identity's
  * timeless statement), why does this life keep calling them back (the pull,
  * directly under the statement), has this future changed (the movement since
- * the last update, receipts behind a quiet toggle), where does this path
- * lead (the life itself), what does becoming them quietly cost, and why is
- * it becoming more likely (three evidence bullets) — closed by one
- * reflective question the reader has to answer for themselves.
+ * the last update, receipts behind a quiet toggle), who do they become (the
+ * transformation itself), what do they leave behind (the interior price),
+ * and why Reflection believes this (three evidence bullets) — closed not by
+ * a question but by "You'll Know You're Here When...": one ordinary moment
+ * the reader will recognize from inside if this future ever becomes real.
  *
  * The identity statement is hand-written in the future identity library and
  * never changes between renders or regenerations; the narrative fields are
@@ -84,9 +85,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
  * bullet per line; growth_opportunities carries the "What keeps pulling you
  * here" sentence as its first element (v3 format — earlier rows render
  * without it until their one-time format_upgrade regeneration);
- * likely_evolution carries the reflective question as its final line. Faded
- * futures lead with FadedFutureCard, which preserves this card behind its
- * "View original Future Self" reveal.
+ * likely_evolution carries the recognition moment as its final line (v2–v5
+ * rows carry a reflective question there instead, rendered in the legacy
+ * style until their one-time regeneration). Faded futures lead with
+ * FadedFutureCard, which preserves this card behind its "View original
+ * Future Self" reveal.
  */
 export function FutureCard({ futureSelf, accent }: FutureCardProps) {
   const tone = accent ?? NEUTRAL_ACCENT;
@@ -100,7 +103,7 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
   // evidence bullet per line; blind_spots carries a single cost paragraph
   // (pre-v2 rows hold short risk labels — joined into terse prose until
   // their one-time format_upgrade regeneration); likely_evolution ends with
-  // the reflective question as its final line when one was written.
+  // a final closing line when one was written.
   const evidenceBullets = futureSelf.why_emerging
     .split("\n")
     .map((line) => line.trim())
@@ -116,11 +119,14 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  const closingQuestion =
-    evolutionLines.length > 1 && evolutionLines[evolutionLines.length - 1].endsWith("?")
-      ? evolutionLines[evolutionLines.length - 1]
-      : null;
-  const narrative = (closingQuestion ? evolutionLines.slice(0, -1) : evolutionLines).join(" ");
+  // The final line is the card's closing beat. v6 rows carry the "You'll
+  // Know You're Here When..." recognition moment there; v2–v5 rows carry the
+  // old reflective question (always "?"-terminated — exactly what marks them
+  // for regeneration), rendered in the legacy style until they regenerate.
+  const closingLine = evolutionLines.length > 1 ? evolutionLines[evolutionLines.length - 1] : null;
+  const legacyClosingQuestion = closingLine?.endsWith("?") ? closingLine : null;
+  const recognitionMoment = closingLine && !legacyClosingQuestion ? closingLine : null;
+  const narrative = (closingLine ? evolutionLines.slice(0, -1) : evolutionLines).join(" ");
 
   // The receipts behind "What's changed": the recorded behavior that moved
   // this future when the pipeline attributed any, otherwise the situations,
@@ -169,7 +175,7 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
             directly under the identity statement: one or two sentences of
             emotional gravity, before any numbers. */}
         {pull ? (
-          <div className="mt-7">
+          <div className="mt-8">
             <SectionLabel>What keeps pulling you here</SectionLabel>
             <p className="font-voice mt-3 max-w-[58ch] text-[16px] leading-[1.65] text-zinc-700">
               {pull}
@@ -246,39 +252,38 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
           </div>
         ) : null}
 
-        {/* 3 — Where does this path lead? Meeting the future person comes
-            first: the life this person gradually builds, set in the serif
-            voice. */}
+        {/* 3 — Who You Become: meeting the future person — the
+            transformation itself, set in the serif voice. A hairline marks
+            where the status zone ends and the reading begins. */}
         {narrative ? (
-          <div className="mt-9">
-            <SectionLabel>Where this path leads</SectionLabel>
+          <div className="mt-9 border-t border-zinc-100 pt-8">
+            <SectionLabel>Who You Become</SectionLabel>
             <p className="font-voice mt-3 max-w-[58ch] text-[17px] leading-[1.65] text-zinc-800">
               {narrative}
             </p>
           </div>
         ) : null}
 
-        {/* 4 — The Cost of Becoming Them: the emotional center. One quiet
-            prose paragraph — what this life slowly asks the person to give
-            up — never a list of risks. Set in the serif voice like the
-            narrative it balances. */}
+        {/* 4 — What You Leave Behind: the emotional center. One quiet
+            prose paragraph — what slowly changes inside the person — never a
+            list of risks. Set in the serif voice like the narrative it
+            balances. */}
         {cost ? (
           <div className="mt-9">
-            <SectionLabel>The Cost of Becoming Them</SectionLabel>
+            <SectionLabel>What You Leave Behind</SectionLabel>
             <p className="font-voice mt-3 max-w-[58ch] text-[16px] leading-[1.65] text-zinc-700">
               {cost}
             </p>
           </div>
         ) : null}
 
-        {/* 5 — Why is this future becoming more likely? Three recurring
-            patterns from the evidence — the receipts, after the life and its
-            price. One bullet per line of why_emerging (pre-v2 rows carry a
-            single sentence, which renders as one bullet until
-            regeneration). */}
+        {/* 5 — Why Reflection Believes This: three recurring patterns from
+            the evidence — the receipts, after the life and its price. One
+            bullet per line of why_emerging (pre-v2 rows carry a single
+            sentence, which renders as one bullet until regeneration). */}
         {evidenceBullets.length > 0 ? (
           <div className="mt-9">
-            <SectionLabel>Why this future is becoming more likely</SectionLabel>
+            <SectionLabel>Why Reflection Believes This</SectionLabel>
             <ul className="mt-3 max-w-[60ch] space-y-2">
               {evidenceBullets.map((bullet) => (
                 <li
@@ -299,12 +304,29 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
           </div>
         ) : null}
 
-        {closingQuestion ? (
+        {/* 6 — You'll Know You're Here When...: the card ends on recognition,
+            not interrogation — one ordinary moment the reader will live
+            through if this future becomes real. */}
+        {recognitionMoment ? (
+          <div className="mt-9 border-t border-zinc-100 pt-8">
+            <SectionLabel>{"You'll Know You're Here When..."}</SectionLabel>
+            <p
+              className="font-voice mt-3 max-w-[58ch] text-[17px] italic leading-[1.6]"
+              style={{ color: tone.color }}
+            >
+              {recognitionMoment}
+            </p>
+          </div>
+        ) : null}
+
+        {/* Legacy (pre-v6) rows close with their reflective question until
+            their one-time regeneration replaces it. */}
+        {legacyClosingQuestion ? (
           <p
-            className="font-voice mt-7 max-w-[58ch] border-t border-zinc-100 pt-6 text-[17px] italic leading-[1.6]"
+            className="font-voice mt-9 max-w-[58ch] border-t border-zinc-100 pt-8 text-[17px] italic leading-[1.6]"
             style={{ color: tone.color }}
           >
-            {closingQuestion}
+            {legacyClosingQuestion}
           </p>
         ) : null}
       </div>

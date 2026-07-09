@@ -161,7 +161,7 @@ describe("Faded future card", () => {
   it("keeps the original identity behind the quiet inline disclosure, closed at first", () => {
     expect(html).toContain("View original Future Self");
     // The original card renders only on request — the fade story leads.
-    expect(html).not.toContain("Where this path leads");
+    expect(html).not.toContain("Who You Become");
   });
 });
 
@@ -171,7 +171,7 @@ describe("The preserved original Future Self", () => {
       createElement(FutureCard, { futureSelf: asLastActive(fadedExplorer) }),
     );
     // The identity card is intact…
-    expect(html).toContain("Where this path leads");
+    expect(html).toContain("Who You Become");
     expect(html).toContain("Becomes someone who finishes.");
     // …with its likelihood restored to the last active strength…
     expect(html).toContain("18 percent likely");
@@ -194,7 +194,7 @@ describe("Active future card hierarchy", () => {
     );
   });
 
-  it("reads as a possible life — evidence bullets, the cost, the path, a closing question — never behavior vectors", () => {
+  it("reads as a possible life — evidence bullets, the price, the becoming, a recognition moment — never behavior vectors", () => {
     const html = renderToString(
       createElement(FutureCard, {
         futureSelf: makeFuture({
@@ -204,25 +204,42 @@ describe("Active future card hierarchy", () => {
             "At first the self-reliance made you capable. Eventually it made you hard to reach.",
           ],
           likely_evolution:
-            "You slowly become the person others plan around.\nWould you still choose this path if it required trusting others as much as yourself?",
+            "You slowly become the person others plan around.\nSomeone offers to carry part of the weight, and you realize you have forgotten how to let them.",
         }),
       }),
     );
 
-    // The three new sections, in the new language…
-    expect(html).toContain("Why this future is becoming more likely");
+    // The sections, in the v6 language…
+    expect(html).toContain("Why Reflection Believes This");
     expect(html).toContain("You repeatedly choose ownership over certainty.");
-    expect(html).toContain("The Cost of Becoming Them");
+    expect(html).toContain("What You Leave Behind");
     expect(html).toContain("Eventually it made you hard to reach.");
-    expect(html).toContain("Where this path leads");
-    // …the card ends on its unique reflective question…
+    expect(html).toContain("Who You Become");
+    // …the card ends on recognition, not interrogation…
+    expect(html).toContain("Here When...");
     expect(html).toContain(
-      "Would you still choose this path if it required trusting others as much as yourself?",
+      "Someone offers to carry part of the weight, and you realize you have forgotten how to let them.",
     );
     // …and the implementation never leaks: no behavior vectors, no risk list.
     expect(html).not.toContain("Core behaviors");
     expect(html).not.toContain("Ships weekly");
     expect(html).not.toContain("What You Risk");
+  });
+
+  it("renders a not-yet-regenerated pre-v6 row's closing question in the legacy style, without the recognition label", () => {
+    const html = renderToString(
+      createElement(FutureCard, {
+        futureSelf: makeFuture({
+          likely_evolution:
+            "You slowly become the person others plan around.\nWould you still choose this path if it required trusting others as much as yourself?",
+        }),
+      }),
+    );
+
+    expect(html).toContain(
+      "Would you still choose this path if it required trusting others as much as yourself?",
+    );
+    expect(html).not.toContain("Here When...");
   });
 
   it("explains an increase with a grounded sentence, receipts behind a quiet action", () => {

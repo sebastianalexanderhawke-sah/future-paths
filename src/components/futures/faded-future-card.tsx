@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { FutureCard } from "@/components/futures/future-card";
 import { OverviewCard } from "@/components/overview/overview-card";
@@ -25,6 +25,19 @@ type FadedFutureCardProps = {
 export function FadedFutureCard({ futureSelf, events = [] }: FadedFutureCardProps) {
   const story = getFadeStory(futureSelf, events);
   const [showOriginal, setShowOriginal] = useState(false);
+  const originalRef = useRef<HTMLDivElement | null>(null);
+
+  // The preserved card is far taller than the disclosure link that reveals
+  // it, and it mounts above that link — without this, opening it leaves the
+  // reader partway down a card whose beginning is off-screen. Walking its
+  // top into the viewport makes the reveal feel intentional (the page's
+  // global scroll-behavior keeps it smooth, and instant under
+  // prefers-reduced-motion).
+  useEffect(() => {
+    if (showOriginal) {
+      originalRef.current?.scrollIntoView({ block: "start" });
+    }
+  }, [showOriginal]);
 
   const subtitleFacts = [
     "A path that faded",
@@ -87,7 +100,7 @@ export function FadedFutureCard({ futureSelf, events = [] }: FadedFutureCardProp
           same quiet inline disclosure the Current Self analysis uses. */}
       <div className="mt-6">
         {showOriginal ? (
-          <div className="mb-5">
+          <div ref={originalRef} className="mb-5 scroll-mt-6">
             <FutureCard futureSelf={asLastActive(futureSelf)} />
           </div>
         ) : null}
