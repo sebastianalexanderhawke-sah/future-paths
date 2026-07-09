@@ -257,12 +257,19 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
       Adaptability: 0.3,
       Consistency: -0.3,
     },
+    // Identity Engine v2: these behaviors are written as observable acts the
+    // extractor can tag (creates_original_work, shares_original_work,
+    // sets_own_terms, explores_new_topic). The last one deliberately says
+    // "begins the next piece" rather than "keeps going" — continuing-through-
+    // indifference expressed as a commitment maps to Consistency, which this
+    // identity weights negatively; expressed as the next act of creation it
+    // maps to the dimensions that actually define a creator.
     typical_behaviors: [
       "Makes original things instead of only consuming or optimizing what exists",
-      "Puts personal work in front of other people despite the exposure",
+      "Puts their own work in front of people who could judge it, despite the exposure",
       "Chooses the path that allows self-expression over the conventional one",
       "Starts new work from their own obsessions rather than external briefs",
-      "Keeps creating through indifference — the work continues whether or not anyone claps",
+      "Begins the next piece whether or not the last one was applauded — the body of work keeps growing",
     ],
   },
 ];

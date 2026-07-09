@@ -671,6 +671,10 @@ describe("generateFutureSelves", () => {
         evidence_strength: "Moderate",
         identity_id: "explorer",
         why_emerging: "Explorer's pre-fade why_emerging.",
+        // Current-format narrative (question line + pull line), so
+        // reactivation reuses it instead of triggering a format upgrade.
+        likely_evolution: "Explorer's pre-fade evolution.\nWould you keep leaving?",
+        growth_opportunities: ["The unfamiliar stopped feeling like risk."],
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,

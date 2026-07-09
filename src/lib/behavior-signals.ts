@@ -22,6 +22,15 @@ export const SIGNAL_SLUGS = [
   "maintains_commitment",
   "opens_up_about_weakness",
   "engages_conflict_directly",
+  "enters_competitive_arena",
+  "seeks_stronger_challenge",
+  "returns_after_setback",
+  "tracks_own_performance",
+  "creates_original_work",
+  "shares_original_work",
+  "guides_someones_growth",
+  "declines_risky_opportunity",
+  "leaves_completed_chapter",
 ] as const;
 
 export type SignalSlug = (typeof SIGNAL_SLUGS)[number];
@@ -192,6 +201,101 @@ export const SIGNAL_DEFINITIONS: Record<SignalSlug, SignalDefinition> = {
     description:
       "Addressed a disagreement, confrontation, or unpopular position head-on rather than deferring or withdrawing.",
     dimensions: [{ dimension: "Conflict Tolerance", weight: 2 }],
+  },
+  // Identity Engine v2: vocabulary expansion. The v3 library audit showed two
+  // identities whose defining behavior the extractor had no words for — a
+  // canonical competitor's evidence ranked The Builder first, and a canonical
+  // creator's ranked third behind Builder and Competitor — plus three card
+  // behaviors (mentoring, risk-declining, chapter-leaving) that mapped to no
+  // signal at all. Every signal below is an observable act ("entered",
+  // "declined", "shared"), never an inferred motive, and maps only to the
+  // existing ten dimensions. The self-recognition test in
+  // identity-self-recognition.test.ts pins the resulting geometry: every
+  // identity must rank #1 on the evidence its own typical_behaviors produce.
+  enters_competitive_arena: {
+    slug: "enters_competitive_arena",
+    label: "Enters competitive arena",
+    description:
+      "Voluntarily entered a contest, ranking, audition, tryout, or other setting where performance is measured against others or a public standard.",
+    dimensions: [
+      { dimension: "Risk Tolerance", weight: 1 },
+      { dimension: "Conflict Tolerance", weight: 1 },
+    ],
+  },
+  seeks_stronger_challenge: {
+    slug: "seeks_stronger_challenge",
+    label: "Seeks stronger challenge",
+    description:
+      "Chose the harder opponent, standard, or goal when an easier one was clearly available.",
+    dimensions: [{ dimension: "Risk Tolerance", weight: 2 }],
+  },
+  returns_after_setback: {
+    slug: "returns_after_setback",
+    label: "Returns after setback",
+    description:
+      "Re-entered the same activity soon after a loss, failure, or rejection instead of withdrawing from it.",
+    dimensions: [
+      { dimension: "Consistency", weight: 1 },
+      { dimension: "Risk Tolerance", weight: 1 },
+    ],
+  },
+  tracks_own_performance: {
+    slug: "tracks_own_performance",
+    label: "Tracks own performance",
+    description:
+      "Recorded, measured, or reviewed their own results against a defined standard over time.",
+    dimensions: [
+      { dimension: "Consistency", weight: 1 },
+      { dimension: "Reflection", weight: 1 },
+    ],
+  },
+  creates_original_work: {
+    slug: "creates_original_work",
+    label: "Creates original work",
+    description:
+      "Made an original piece of their own — writing, music, art, code, a design, or another creation that did not exist before and was not assigned to them.",
+    dimensions: [
+      { dimension: "Curiosity", weight: 1 },
+      { dimension: "Initiative", weight: 1 },
+    ],
+  },
+  shares_original_work: {
+    slug: "shares_original_work",
+    label: "Shares original work",
+    description:
+      "Showed, published, performed, or otherwise put a piece of their own making in front of other people.",
+    dimensions: [
+      { dimension: "Vulnerability", weight: 2 },
+      { dimension: "Independence", weight: 1 },
+    ],
+  },
+  guides_someones_growth: {
+    slug: "guides_someones_growth",
+    label: "Guides someone's growth",
+    description:
+      "Taught, coached, reviewed, or advised another person to help them develop, without being obligated to.",
+    dimensions: [
+      { dimension: "Connection", weight: 1 },
+      { dimension: "Reflection", weight: 1 },
+    ],
+  },
+  // Risk Tolerance previously had no negative signal, so deliberate caution —
+  // the Guardian's defining move — was invisible: it registered only as an
+  // absence of risk evidence. This is the same one-sided-dimension repair as
+  // engages_conflict_directly (Phase 8H), on the opposite side.
+  declines_risky_opportunity: {
+    slug: "declines_risky_opportunity",
+    label: "Declines risky opportunity",
+    description:
+      "Turned down an opportunity because of the risk it carried to something or someone they were responsible for.",
+    dimensions: [{ dimension: "Risk Tolerance", weight: -2 }],
+  },
+  leaves_completed_chapter: {
+    slug: "leaves_completed_chapter",
+    label: "Leaves completed chapter",
+    description:
+      "Left a role, place, or project that had reached its natural end and moved on to something unfamiliar.",
+    dimensions: [{ dimension: "Adaptability", weight: 2 }],
   },
 };
 

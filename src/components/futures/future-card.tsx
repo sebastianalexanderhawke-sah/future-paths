@@ -69,23 +69,24 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * A possible life, not a report. The card answers five questions in a fixed
+ * A possible life, not a report. The card answers six questions in a fixed
  * order — who does this person slowly become (name + the future identity's
- * timeless statement), has this future changed (the movement since the last
- * update, receipts behind a quiet toggle), where does this path lead (the
- * life itself), what does becoming them quietly cost (the emotional
- * center), and why is it becoming more likely (three evidence bullets) —
- * closed by one reflective question the reader has to answer for
- * themselves.
+ * timeless statement), why does this life keep calling them back (the pull,
+ * directly under the statement), has this future changed (the movement since
+ * the last update, receipts behind a quiet toggle), where does this path
+ * lead (the life itself), what does becoming them quietly cost, and why is
+ * it becoming more likely (three evidence bullets) — closed by one
+ * reflective question the reader has to answer for themselves.
  *
  * The identity statement is hand-written in the future identity library and
  * never changes between renders or regenerations; the narrative fields are
  * AI-authored and own the future tense. why_emerging carries one evidence
- * bullet per line; likely_evolution carries the reflective question as its
- * final line (pre-v2 rows lack both — they render without bullets/question
- * until their one-time format_upgrade regeneration). Faded futures lead with
- * FadedFutureCard, which preserves this card behind its "View original
- * Future Self" reveal.
+ * bullet per line; growth_opportunities carries the "What keeps pulling you
+ * here" sentence as its first element (v3 format — earlier rows render
+ * without it until their one-time format_upgrade regeneration);
+ * likely_evolution carries the reflective question as its final line. Faded
+ * futures lead with FadedFutureCard, which preserves this card behind its
+ * "View original Future Self" reveal.
  */
 export function FutureCard({ futureSelf, accent }: FutureCardProps) {
   const tone = accent ?? NEUTRAL_ACCENT;
@@ -107,6 +108,10 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
     .slice(0, 3);
   const costParts = futureSelf.blind_spots.map((s) => s.trim()).filter(Boolean);
   const cost = costParts.length === 1 ? costParts[0] : costParts.join(". ");
+  // v3: the quiet reason this life keeps becoming more likely. Rows from the
+  // identity engine only carry it after their v3 (re)generation; absent, the
+  // section simply doesn't render.
+  const pull = futureSelf.growth_opportunities?.map((s) => s.trim()).find(Boolean) ?? null;
   const evolutionLines = futureSelf.likely_evolution
     .split("\n")
     .map((line) => line.trim())
@@ -159,6 +164,18 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
             )}
           </div>
         </header>
+
+        {/* 2 — Why does this life keep calling them back? The pull sits
+            directly under the identity statement: one or two sentences of
+            emotional gravity, before any numbers. */}
+        {pull ? (
+          <div className="mt-7">
+            <SectionLabel>What keeps pulling you here</SectionLabel>
+            <p className="font-voice mt-3 max-w-[58ch] text-[16px] leading-[1.65] text-zinc-700">
+              {pull}
+            </p>
+          </div>
+        ) : null}
 
         {/* Likelihood: one quiet line — the same signal the tree encodes as
             branch reach, restated in the branch's own color. */}
