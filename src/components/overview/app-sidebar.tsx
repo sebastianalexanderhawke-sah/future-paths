@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { signOut } from "@/actions/auth";
+import { IconSparkle } from "@/components/icons";
 import { SidebarNav, type SidebarNavItem } from "@/components/overview/sidebar-nav";
 import { getNavActivity } from "@/lib/nav-activity";
 
@@ -20,17 +21,17 @@ type AppSidebarProps = {
 // reader last opened them.
 function baseNavItems(unansweredReflections: number): SidebarNavItem[] {
   return [
-    { label: "Overview", href: "/overview", icon: "⌂" },
-    { label: "Current Self", href: "/current-self", icon: "◈" },
-    { label: "Situations", href: "/moments", icon: "◧" },
+    { label: "Overview", href: "/overview", icon: "overview" },
+    { label: "Current Self", href: "/current-self", icon: "current-self" },
+    { label: "Situations", href: "/moments", icon: "situations" },
     {
       label: "Workspace",
       href: "/reflections",
-      icon: "✎",
+      icon: "workspace",
       hasUpdates: unansweredReflections > 0,
     },
-    { label: "Timeline", href: "/timeline", icon: "◷" },
-    { label: "Settings", href: "/settings", icon: "⚙" },
+    { label: "Timeline", href: "/timeline", icon: "timeline" },
+    { label: "Settings", href: "/settings", icon: "settings" },
   ];
 }
 
@@ -65,16 +66,18 @@ export function AppSidebar({
 
   return (
     <aside className="sticky top-0 flex h-screen w-[200px] shrink-0 flex-col overflow-hidden border-r border-[#eeeeee] bg-white py-6">
-      {/* Logo */}
+      {/* Logo — a gradient ring, not a filled disc. */}
       <div className="mx-0 mb-6 flex items-center gap-2.5 border-b border-[#f2f2f4] px-5 pb-6 pt-0.5">
         <span
           aria-hidden="true"
-          className="h-8 w-8 shrink-0 rounded-full"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
           style={{
             background:
               "conic-gradient(#6366f1, #8b5cf6, #10b981, #f59e0b, #6366f1)",
           }}
-        />
+        >
+          <span className="h-[18px] w-[18px] rounded-full bg-white" />
+        </span>
         <span className="text-[15px] font-semibold text-[#111]">
           Future Paths
         </span>
@@ -88,19 +91,20 @@ export function AppSidebar({
       {/* Bottom section */}
       <div className="mt-auto border-t border-[#f2f2f4] px-3.5 pt-5">
         <div className="mb-4 rounded-xl bg-[#f8f7ff] p-4">
-          <div aria-hidden="true" className="mb-1.5 text-[18px] leading-none text-[#6366f1]">
-            ✦
+          <div aria-hidden="true" className="mb-2 text-[#7c3aed]">
+            <IconSparkle size={16} />
           </div>
           <p className="text-[11px] font-medium text-[#888888]">
-            Today&apos;s Focus
+            Needs your input
           </p>
           {unansweredReflections > 0 ? (
             <>
-              <p className="mb-0.5 text-[28px] font-extrabold leading-none tracking-[-1px] text-[#111]">
+              <p className="mb-0.5 mt-1 text-[28px] font-extrabold leading-none tracking-[-1px] text-[#111]">
                 {unansweredReflections}
               </p>
-              <p className="mb-2.5 text-[11px] text-[#888888]">
-                action{unansweredReflections !== 1 ? "s" : ""} waiting
+              <p className="mb-3 text-[11px] leading-snug text-[#888888]">
+                item{unansweredReflections !== 1 ? "s" : ""} need
+                {unansweredReflections === 1 ? "s" : ""} your attention
               </p>
               <Link
                 href="/reflections"
@@ -110,7 +114,7 @@ export function AppSidebar({
               </Link>
             </>
           ) : (
-            <p className="mt-0.5 text-[12px] leading-relaxed text-[#888888]">
+            <p className="mt-1 text-[12px] leading-relaxed text-[#888888]">
               You&apos;re all caught up.
             </p>
           )}

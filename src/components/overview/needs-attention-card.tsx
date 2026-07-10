@@ -1,37 +1,60 @@
 import Link from "next/link";
 
+import { IconBell, IconClock, IconCompass, IconSparkle } from "@/components/icons";
 import { OverviewCard } from "@/components/overview/overview-card";
+
+export type AttentionKind = "overdue" | "reflection" | "decision";
 
 export type AttentionRow = {
   key: string;
   situationName: string;
   status: string;
-  statusColor: string;
+  kind: AttentionKind;
   href: string;
 };
 
-// Category-aware chips: each row's icon wears its own status color over the
-// matching family soft — overdue reads urgent (rose), a due check-in reads
-// timely (amber), an open decision reads possible (violet) — while every
-// chip keeps the identical quiet shape and size. Unknown status colors fall
-// back to neutral so a new category never renders as a false alarm.
-const SOFT_BY_STATUS_COLOR: Record<string, string> = {
-  "#f43f5e": "#fff1f2",
-  "#e11d48": "#fff1f2",
-  "#f59e0b": "#fffbeb",
-  "#b45309": "#fffbeb",
-  "#8b5cf6": "#f5f3ff",
-  "#7c3aed": "#f5f3ff",
-  "#6366f1": "#eef2ff",
-  "#4f46e5": "#eef2ff",
-  "#10b981": "#ecfdf5",
-  "#047857": "#ecfdf5",
+// Category and urgency are SEPARATE channels, as in the reference design:
+// the chip says what kind of work the row is (its icon + a calm family
+// color), the status line says how urgent it is. Red appears only in the
+// status of the one genuinely overdue thing — never as a chip color — so a
+// full list can hold exactly one alarm. A reflection is an amber
+// opportunity under a violet insight chip; an open decision is blue
+// information end to end. Unknown kinds fall back to neutral so a new
+// category never renders as a false alarm.
+type ChipConfig = {
+  Icon: (props: { size?: number }) => React.JSX.Element;
+  bg: string;
+  color: string;
+  statusColor: string;
 };
 
-function chipStyleFor(statusColor: string): { bg: string; color: string } {
-  const bg = SOFT_BY_STATUS_COLOR[statusColor];
-  return bg ? { bg, color: statusColor } : { bg: "#f4f4f5", color: "#52525b" };
-}
+const KIND_CHIPS: Record<AttentionKind, ChipConfig> = {
+  overdue: {
+    Icon: IconClock,
+    bg: "#fffbeb",
+    color: "#f59e0b",
+    statusColor: "#f43f5e",
+  },
+  reflection: {
+    Icon: IconSparkle,
+    bg: "#f5f3ff",
+    color: "#8b5cf6",
+    statusColor: "#f59e0b",
+  },
+  decision: {
+    Icon: IconCompass,
+    bg: "#eff6ff",
+    color: "#3b82f6",
+    statusColor: "#3b82f6",
+  },
+};
+
+const NEUTRAL_CHIP: ChipConfig = {
+  Icon: IconBell,
+  bg: "#f4f4f5",
+  color: "#52525b",
+  statusColor: "#52525b",
+};
 
 type NeedsAttentionCardProps = {
   items: AttentionRow[];
@@ -40,42 +63,42 @@ type NeedsAttentionCardProps = {
 
 export function NeedsAttentionCard({ items, hiddenCount }: NeedsAttentionCardProps) {
   return (
-    <OverviewCard className="flex flex-col px-8 py-7">
-      <div className="mb-6">
+    <OverviewCard className="flex flex-col px-8 py-8">
+      <div className="mb-7">
         <div className="flex items-center gap-2">
-          <span aria-hidden="true" className="text-[18px] leading-none text-[#888888]">
-            🔔
+          <span aria-hidden="true" className="text-[#3f3f46]">
+            <IconBell size={16} />
           </span>
           <h2 className="text-[17px] font-bold text-[#111]">Needs Attention</h2>
         </div>
-        <p className="mt-[3px] text-[13px] text-[#888888]">
+        <p className="mt-1 text-[12px] text-[#aab0bb]">
           What needs your focus
         </p>
       </div>
 
       {items.length === 0 ? (
-        <p className="py-6 text-[13px] leading-relaxed text-[#888888]">
+        <p className="py-6 text-[13px] leading-relaxed text-[#9ca3af]">
           Nothing needs your attention right now.
         </p>
       ) : (
         <div>
           {items.map((item, i) => {
-            const chip = chipStyleFor(item.statusColor);
+            const chip = KIND_CHIPS[item.kind] ?? NEUTRAL_CHIP;
             return (
               <Link
                 key={item.key}
                 href={item.href}
                 className={[
-                  "flex items-center gap-3.5 py-3.5 transition-opacity duration-150 hover:opacity-80",
+                  "flex items-center gap-4 py-4 transition-opacity duration-150 hover:opacity-80",
                   i < items.length - 1 ? "border-b border-[#f5f5f5]" : "",
                 ].join(" ")}
               >
                 <span
                   aria-hidden="true"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[15px] font-semibold"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
                   style={{ background: chip.bg, color: chip.color }}
                 >
-                  {(item.situationName.charAt(0) || "•").toUpperCase()}
+                  <chip.Icon size={15} />
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-[14px] font-semibold text-[#111]">
@@ -83,7 +106,7 @@ export function NeedsAttentionCard({ items, hiddenCount }: NeedsAttentionCardPro
                   </span>
                   <span
                     className="mt-0.5 block text-[12px] font-medium"
-                    style={{ color: item.statusColor }}
+                    style={{ color: chip.statusColor }}
                   >
                     {item.status}
                   </span>
@@ -99,7 +122,7 @@ export function NeedsAttentionCard({ items, hiddenCount }: NeedsAttentionCardPro
 
       <Link
         href="/reflections"
-        className="mt-auto pt-4 text-[13px] font-medium text-[#888888] transition-colors duration-150 hover:text-[#6366f1]"
+        className="mt-auto pt-5 text-[13px] font-medium text-[#9ca3af] transition-colors duration-150 hover:text-[#6366f1]"
       >
         Open Workspace{hiddenCount > 0 ? ` (${hiddenCount} more)` : ""} →
       </Link>

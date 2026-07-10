@@ -3,9 +3,31 @@
 import Link from "next/link";
 import { useEffect, useSyncExternalStore } from "react";
 
+import {
+  IconBriefcase,
+  IconClock,
+  IconGear,
+  IconHome,
+  IconPenLine,
+  IconUser,
+} from "@/components/icons";
+
+// Icon components resolved here (client side) from a string key, because
+// the server-rendered AppSidebar can't pass component functions across the
+// client boundary.
+const NAV_ICONS: Record<string, (props: { size?: number }) => React.JSX.Element> = {
+  overview: IconHome,
+  "current-self": IconUser,
+  situations: IconBriefcase,
+  workspace: IconPenLine,
+  timeline: IconClock,
+  settings: IconGear,
+};
+
 export type SidebarNavItem = {
   label: string;
   href: string;
+  /** Key into the nav icon set (e.g. "overview", "timeline"). */
   icon: string;
   /**
    * When the page's content last changed (ISO). A subtle dot shows while
@@ -79,6 +101,7 @@ export function SidebarNav({ items, activeHref }: SidebarNavProps) {
     <nav className="flex flex-col gap-1 px-3">
       {items.map((item) => {
         const isActive = item.href === activeHref;
+        const Icon = NAV_ICONS[item.icon];
         return (
           <Link
             key={item.href}
@@ -87,15 +110,17 @@ export function SidebarNav({ items, activeHref }: SidebarNavProps) {
             className={[
               "flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13px] transition-colors duration-150",
               isActive
-                ? "bg-[#eef2ff] font-semibold text-[#6366f1]"
+                ? "bg-[#f5f3ff] font-semibold text-[#111]"
                 : "font-medium text-[#666666] hover:bg-[#f5f5f5] hover:text-[#111]",
             ].join(" ")}
           >
             <span
               aria-hidden="true"
-              className="w-[18px] shrink-0 text-center text-[15px] leading-none"
+              className={`flex w-[18px] shrink-0 justify-center ${
+                isActive ? "text-[#7c3aed]" : "text-[#9ca3af]"
+              }`}
             >
-              {item.icon}
+              {Icon ? <Icon size={16} /> : null}
             </span>
             {item.label}
             {showDot(item) ? (

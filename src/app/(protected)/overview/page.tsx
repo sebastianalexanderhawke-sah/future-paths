@@ -98,7 +98,7 @@ export default async function OverviewPage() {
         key: `checkin-${moment.id}`,
         situationName: moment.title,
         status: "Check-in overdue",
-        statusColor: "#f43f5e",
+        kind: "overdue",
         href: `/moments/${moment.id}#check-in`,
         priority: 0,
       });
@@ -109,7 +109,7 @@ export default async function OverviewPage() {
       key: `reflection-${reflectionSummary.pending.id}`,
       situationName: reflectionSummary.pending.moment.title,
       status: "Reflection available",
-      statusColor: "#f59e0b",
+      kind: "reflection",
       href: "/reflections",
       priority: 1,
     });
@@ -120,7 +120,7 @@ export default async function OverviewPage() {
         key: `unresolved-${moment.id}`,
         situationName: moment.title,
         status: "Still deciding",
-        statusColor: "#8b5cf6",
+        kind: "decision",
         href: `/moments/${moment.id}`,
         priority: 2,
       });
@@ -154,26 +154,26 @@ export default async function OverviewPage() {
           {/* Page header */}
           <div className="mb-10 flex items-start justify-between">
             <div>
-              <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
+              <h1 className="font-voice mb-1.5 text-[34px] font-medium tracking-[-0.5px] text-[#111]">
                 {getGreeting()}
                 {userIdentity.displayName ? `, ${userIdentity.displayName}` : ""}.
               </h1>
-              <p className="text-[15px] text-[#999999]">
+              <p className="text-[15px] text-[#9ca3af]">
                 Here&apos;s where your life is moving.
               </p>
             </div>
             <Link
               href="/moments/new"
-              className="shrink-0 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+              className="shrink-0 rounded-xl bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
             >
               + New situation
             </Link>
           </div>
 
-          <div className="flex flex-col gap-5 pb-14">
+          <div className="flex flex-col gap-6 pb-14">
             <FuturePathsCard futureSelves={futureSelves} />
 
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-2 gap-6">
               <WhatsChangedCard rows={changeRows} />
               <NeedsAttentionCard
                 items={visibleAttentionItems}

@@ -7,6 +7,7 @@ import {
   layoutBranches,
   RENDER_H,
   RENDER_W,
+  TERRITORY,
   VIEW_CENTER,
   VIEW_H,
   VIEW_W,
@@ -209,24 +210,28 @@ describe("composed stage casting", () => {
     expect(roleOf("b")).toBe("outlier");
   });
 
-  it("keeps the kin pair as the closest pair on the stage", () => {
+  it("keeps the kin pair reading as a pair, inside the territory contract", () => {
     // The one tension the old solver forbade: two kindred lives standing
-    // deliberately near. No other pair may stand closer.
+    // deliberately near. Under the territory system, "near" is a BAND, not
+    // a strict minimum: the kin gap stays within [minKinGap, maxKinGap] —
+    // recognizably a pair, never a blur — while every pair on stage
+    // (kin included) honors its territory floor. Exhaustive sweeps across
+    // all likelihood combinations live in stage-territory.test.ts.
     const placed = layoutBranches(five);
-    let closest: [string, string] = ["", ""];
-    let smallest = Number.POSITIVE_INFINITY;
+    const byRole = (role: string) => placed.find((b) => b.role === role)!;
+    const kinGap = renderedGap(byRole("kin-a").tip, byRole("kin-b").tip);
+    expect(kinGap).toBeGreaterThanOrEqual(TERRITORY.minKinGap);
+    expect(kinGap).toBeLessThanOrEqual(TERRITORY.maxKinGap);
     for (let i = 0; i < placed.length; i++) {
       for (let j = i + 1; j < placed.length; j++) {
         const gap = renderedGap(placed[i].tip, placed[j].tip);
-        if (gap < smallest) {
-          smallest = gap;
-          closest = [placed[i].futureSelf.id, placed[j].futureSelf.id];
-        }
+        const kinPair =
+          [placed[i].role, placed[j].role].sort().join("+") === "kin-a+kin-b";
+        expect(gap).toBeGreaterThanOrEqual(
+          kinPair ? TERRITORY.minKinGap : TERRITORY.minPairGap,
+        );
       }
     }
-    expect(closest.sort()).toEqual(["c", "s"]);
-    // Close, but never colliding.
-    expect(smallest).toBeGreaterThan(40);
   });
 
   it("tiers reach by role: the protagonist stands farthest, the challenger second", () => {

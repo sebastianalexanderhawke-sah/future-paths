@@ -281,15 +281,41 @@ export function establishedFraction(pct: number): number {
   return 1;
 }
 
-// A future never renders at its station's doorstep nor back at the center:
-// arrival maps establishedFraction onto [ARRIVAL_MIN, 1] of the branch
-// curve. Growing likelihood advances the node along its own unchanged
+// THE TERRITORY SYSTEM. Every station owns a bubble of influence: arrival
+// maps establishedFraction onto [ARRIVAL_MIN, ARRIVAL_MAX] of the branch
+// curve — a deliberately COMPACT window, so a future performs near its
+// authored station and can never wander back toward the center clutter
+// (where every branch converges) nor overshoot into a neighbor's ground.
+// Growing likelihood still advances the node along its own unchanged
 // approach — the same slide-along-the-branch motion the map has always
-// animated — while the station itself never moves. The band is wide on
-// purpose: a tentative future hangs back near HALF its approach while an
-// established one stands at its station, so likelihood is legible from
-// distance alone, before any percentage is read.
-const ARRIVAL_MIN = 0.5;
+// animated — and still drives stroke, dot, and halo weight, so likelihood
+// stays legible; but POSITION is bounded territory, whatever the data
+// does. Stations are authored so that across the ENTIRE window, for every
+// cast size, every pair of performed tips keeps the separations in
+// TERRITORY below — pinned by stage-territory.test.ts, so no future
+// coordinate edit can silently give one user's mix of likelihoods a
+// crowded map.
+export const ARRIVAL_MIN = 0.68;
+export const ARRIVAL_MAX = 0.9;
+
+/**
+ * The territory contract, in RENDERED pixels on the canonical 966×260
+ * card: minimum separations that must hold between performed tips for
+ * every pair of stations on every stage, at every combination of arrivals
+ * in the performance window. The kin pair is the one sanctioned closeness
+ * — nearer than strangers, still never a blur. Enforced at design time by
+ * stage-territory.test.ts; the runtime stays a pure lookup.
+ */
+export const TERRITORY = {
+  /** Any two unrelated stations' performed tips. */
+  minPairGap: 92,
+  /** The kin pair's performed tips — nearer than strangers, never a blur. */
+  minKinGap: 84,
+  /** The kin pair still reads as a pair: its gap never exceeds this. */
+  maxKinGap: 140,
+  /** Every performed tip's distance from the "You" node center. */
+  minCenterGap: 60,
+} as const;
 
 // ---------------------------------------------------------------------------
 // The stage library — authored compositions
@@ -304,7 +330,7 @@ export type StageRole =
   | "kin-b"
   | "outlier";
 
-type Station = {
+export type Station = {
   role: StageRole;
   /** The destination — the branch's full-curve endpoint, in view coords. */
   anchor: readonly [number, number];
@@ -321,8 +347,9 @@ const LABEL_MID: CSSProperties = { top: "50%", transform: "translateY(-50%)" };
  * rendered 966×260 card (remember the vertical squash) and judged as
  * pictures, not solved as constraints. Shared composition rules:
  *
- *   - REACH IS HIERARCHY. Station reach is tiered by role — protagonist
- *     ≈313 rendered px, challenger ≈260, kin/outlier 135–215 — and since
+ *   - REACH IS HIERARCHY. Station reach is tiered by role — full chords of
+ *     ≈314 rendered px for the protagonist, ≈258 for the challenger,
+ *     ≈134–248 for kin/outlier, performed at 0.68–0.90 of them — and since
  *     casting sends the two strongest futures to the two longest stations,
  *     distance tracks likelihood before any number is read. Arrival
  *     refines it within a tier.
@@ -346,9 +373,13 @@ const LABEL_MID: CSSProperties = { top: "50%", transform: "translateY(-50%)" };
  *
  * Stages are authored protagonist-right and MIRROR horizontally when the
  * protagonist's compass leans left, so the compass still whispers.
- * Adjust these by looking at the rendered card — never by computing.
+ * Adjust these by looking at the rendered card — and every adjustment must
+ * keep the TERRITORY contract: stage-territory.test.ts sweeps the full
+ * performance window and fails any composition that lets two futures
+ * crowd each other, for any cast size, at any likelihoods.
+ * (Exported for that contract test only — runtime consumes layoutBranches.)
  */
-const STAGES: Record<number, readonly Station[]> = {
+export const STAGES: Record<number, readonly Station[]> = {
   1: [
     {
       role: "solo",
@@ -374,7 +405,7 @@ const STAGES: Record<number, readonly Station[]> = {
   3: [
     {
       role: "protagonist",
-      anchor: [655, 160],
+      anchor: [648, 160],
       bend: -40,
       labelStyle: { left: 20, ...LABEL_MID },
     },
@@ -394,32 +425,34 @@ const STAGES: Record<number, readonly Station[]> = {
   4: [
     {
       role: "protagonist",
-      anchor: [672, 152],
+      anchor: [658, 152],
       bend: -40,
       labelStyle: { left: 20, ...LABEL_MID },
     },
-    // The kin pair is composed at its PERFORMED position, not its anchors:
-    // kin futures are always the weakest on stage, so their tips render at
-    // ~0.6–0.75 arrival — the anchors sit ~130px apart so the tips land at
-    // the intended ~90px closeness: unmistakably a pair, never a blur.
-    // Opposite bows splay the two approaches apart instead of nesting
-    // them, and both labels aim outward, away from the corridor between
-    // the pair.
+    // The kin pair performs at its stations, deliberately nearer to each
+    // other than any stranger pair but never a blur: the compact arrival
+    // window bounds the pair's closeness by construction across ALL
+    // likelihoods (see TERRITORY + stage-territory.test.ts), and kin-b's
+    // bubble stays clearly in the upper-LEFT: its dot cannot cross into
+    // the top-center void even at maximum arrival, so the protagonist's
+    // wing keeps its clear approach. Opposite bows splay the two
+    // approaches apart instead of nesting them, and both labels aim
+    // outward, away from the corridor between the pair.
     {
       role: "kin-a",
-      anchor: [212, 138],
-      bend: 22,
+      anchor: [200, 124],
+      bend: 18,
       labelStyle: { right: 16, bottom: 4, textAlign: "right" },
     },
     {
       role: "kin-b",
-      anchor: [316, 78],
-      bend: -16,
+      anchor: [322, 58],
+      bend: -10,
       labelStyle: { left: 16, bottom: 6 },
     },
     {
       role: "challenger",
-      anchor: [192, 366],
+      anchor: [198, 362],
       bend: 34,
       labelStyle: { right: 20, textAlign: "right", ...LABEL_MID },
     },
@@ -427,32 +460,29 @@ const STAGES: Record<number, readonly Station[]> = {
   5: [
     {
       role: "protagonist",
-      anchor: [672, 152],
+      anchor: [658, 152],
       bend: -40,
       labelStyle: { left: 20, ...LABEL_MID },
     },
-    // The kin pair is composed at its PERFORMED position, not its anchors:
-    // kin futures are always the weakest on stage, so their tips render at
-    // ~0.6–0.75 arrival — the anchors sit ~130px apart so the tips land at
-    // the intended ~90px closeness: unmistakably a pair, never a blur.
-    // Opposite bows splay the two approaches apart instead of nesting
-    // them, and both labels aim outward, away from the corridor between
-    // the pair.
+    // Same kin composition as the 4-cast stage (same bounded closeness,
+    // same upper-left bubble for kin-b); the challenger sits a touch
+    // deeper than on the 4-cast stage so the full five-station arc still
+    // reads as one diagonal sweep around the protagonist's cleared wing.
     {
       role: "kin-a",
-      anchor: [212, 138],
-      bend: 22,
+      anchor: [200, 124],
+      bend: 18,
       labelStyle: { right: 16, bottom: 4, textAlign: "right" },
     },
     {
       role: "kin-b",
-      anchor: [316, 78],
-      bend: -16,
+      anchor: [322, 58],
+      bend: -10,
       labelStyle: { left: 16, bottom: 6 },
     },
     {
       role: "challenger",
-      anchor: [184, 372],
+      anchor: [194, 362],
       bend: 34,
       labelStyle: { right: 20, textAlign: "right", ...LABEL_MID },
     },
@@ -619,7 +649,7 @@ export function layoutBranches(futureSelves: FutureSelf[]): PlacedBranch[] {
     const pct = Math.max(0, Math.min(100, futureSelf.percentage));
     const weight = establishedFraction(pct);
     const curve = branchCurve(VIEW_CENTER, station.anchor, station.bend);
-    const reach = ARRIVAL_MIN + (1 - ARRIVAL_MIN) * weight;
+    const reach = ARRIVAL_MIN + (ARRIVAL_MAX - ARRIVAL_MIN) * weight;
     return {
       futureSelf,
       pct,

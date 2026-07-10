@@ -8,11 +8,13 @@ import {
   BRANCH_STROKE,
   RENDER_H,
   RENDER_W,
+  VIEW_CENTER,
   VIEW_H,
   VIEW_W,
   layoutBranches,
   type PlacedBranch,
 } from "@/components/futures/branch-language";
+import { FutureIcon } from "@/components/icons";
 import type { FutureSelf } from "@/types/database";
 
 /**
@@ -159,6 +161,26 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
         className="absolute inset-0 h-full w-full"
         aria-hidden="true"
       >
+        {/* Each branch fades in from the center and arrives saturated at
+            its destination — the journey gains conviction as it travels.
+            User-space gradients along the center→tip chord, so the ramp
+            follows the branch at any rendered size. */}
+        <defs>
+          {branches.map(({ futureSelf, accent, tip }) => (
+            <linearGradient
+              key={futureSelf.id}
+              id={`branch-grad-${futureSelf.id}`}
+              gradientUnits="userSpaceOnUse"
+              x1={VIEW_CENTER[0]}
+              y1={VIEW_CENTER[1]}
+              x2={tip[0]}
+              y2={tip[1]}
+            >
+              <stop offset="0" stopColor={accent.color} stopOpacity={0.22} />
+              <stop offset="1" stopColor={accent.color} />
+            </linearGradient>
+          ))}
+        </defs>
         {branches.map((branch) => {
           const { futureSelf, accent, curve, reach, weight } = branch;
           const isActive = activeId === futureSelf.id;
@@ -201,10 +223,10 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
               <path
                 d={grownD}
                 fill="none"
-                stroke={accent.color}
+                stroke={`url(#branch-grad-${futureSelf.id})`}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
-                opacity={isActive || isOpen ? 1 : 0.55 + 0.35 * weight}
+                opacity={isActive || isOpen ? 1 : 0.62 + 0.3 * weight}
                 vectorEffect="non-scaling-stroke"
                 style={{ d: `path('${grownD}')` } as React.CSSProperties}
                 className="[transition:d_600ms_cubic-bezier(0.22,1,0.36,1),stroke-width_600ms_cubic-bezier(0.22,1,0.36,1),opacity_200ms_ease-out] motion-reduce:[transition:none]"
@@ -266,22 +288,38 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
                   : `0 0 0 2px #fff, 0 0 0 ${Math.round(4 + 3.5 * weight)}px ${accent.soft}, 0 3px ${Math.round(8 + 8 * weight)}px ${accent.color}55`,
               }}
             />
-            {/* Label anchored to the dot, extending outward. */}
-            <span className="absolute block whitespace-nowrap" style={labelStyle}>
+            {/* Label anchored to the dot, extending outward — an icon chip
+                leading the name block, so each label reads as a destination
+                marker, not a graph annotation. The chip always leads
+                (icon → text), the same reading order at every station. */}
+            <span
+              className="absolute flex items-center gap-2.5 whitespace-nowrap"
+              style={labelStyle}
+            >
               <span
-                className="block text-[15px] leading-tight transition-colors duration-200 ease-out motion-reduce:transition-none"
-                style={{
-                  color: isActive ? "#000" : isLeading ? "#111" : "#3f3f46",
-                  fontWeight: isActive || isLeading ? 600 : 500,
-                }}
+                aria-hidden="true"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]"
+                style={{ background: accent.soft, color: accent.color }}
               >
-                {futureSelf.name}
+                <FutureIcon identityId={futureSelf.identity_id} size={15} />
               </span>
-              <span
-                className="mt-0.5 block text-[12px] font-medium"
-                style={{ color: accent.color }}
-              >
-                {branch.pct}% • {futureSelf.evidence_strength}
+              <span className="block">
+                <span
+                  className="block text-[15px] leading-tight transition-colors duration-200 ease-out motion-reduce:transition-none"
+                  style={{
+                    color: isActive ? "#000" : isLeading ? "#111" : "#3f3f46",
+                    fontWeight: isActive || isLeading ? 600 : 500,
+                  }}
+                >
+                  {futureSelf.name}
+                </span>
+                <span className="mt-0.5 block text-[12px] font-medium">
+                  <span style={{ color: accent.color }}>{branch.pct}%</span>
+                  <span className="text-[#9ca3af]">
+                    {" "}
+                    • {futureSelf.evidence_strength}
+                  </span>
+                </span>
               </span>
             </span>
           </>
