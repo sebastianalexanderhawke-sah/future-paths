@@ -213,6 +213,10 @@ export async function submitReflectionAnswer(
             answer: trimmedAnswer,
             checkInReflection: checkIn.reflection,
             momentTitle: moment?.title ?? "Untitled situation",
+            // Brief-mode Current Self extracts this answer's observations
+            // before building the Identity Brief (idempotent; the Future
+            // Selves run below then finds them already extracted).
+            checkInId: checkIn.id,
           },
         },
       });

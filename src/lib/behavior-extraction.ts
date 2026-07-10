@@ -14,6 +14,7 @@ import {
   behaviorExtractV1,
   type SituationInput,
 } from "@/lib/ai/prompts/behavior_extract.v1";
+import { runBehaviorLedgerShadow } from "@/lib/behavior-ledger-shadow";
 import { createClient } from "@/lib/supabase/server";
 import type { BehaviorObservationInsert } from "@/types/database";
 
@@ -316,6 +317,11 @@ async function persistObservations(input: {
   if (insertError) {
     return { ok: false, inserted: 0, error: insertError.message };
   }
+
+  // Behavior Engine v4, phase 1 (shadow mode): fold the updated ledger and
+  // compare it against the legacy aggregation. Read-only, never throws, and
+  // nothing consumes the result — the legacy engine stays the source of truth.
+  await runBehaviorLedgerShadow({ supabase, userId });
 
   return { ok: true, inserted: rows.length };
 }

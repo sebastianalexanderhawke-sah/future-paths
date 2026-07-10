@@ -98,6 +98,13 @@ export type IdentityMatchWithAttribution = IdentityMatch & {
   opposingObservations: ObservationContribution[];
   /** Up to 5 situations (moments) with the highest total positive contribution. */
   supportingSituations: SituationContribution[];
+  /** TOTAL observations with positive contribution — uncapped, unlike the
+   *  top-5 supportingObservations list. Already computed for the confidence
+   *  formula; exposed (v4.3) so the Identity Brief can carry it. */
+  supportingObservationCount: number;
+  /** TOTAL distinct situations with net positive contribution — uncapped,
+   *  unlike the top-5 supportingSituations list. Exposed for v4.3. */
+  supportingSituationCount: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -424,9 +431,13 @@ function buildAttribution(
     }
   }
 
-  const supportingSituations: SituationContribution[] = [...situationMap.entries()]
+  // Every positive situation, sorted — the top 5 become supportingSituations,
+  // the full length is the (v4.3-exposed) supportingSituationCount.
+  const positiveSituations = [...situationMap.entries()]
     .filter(([, data]) => data.contribution > 0)
-    .sort(([, a], [, b]) => b.contribution - a.contribution)
+    .sort(([, a], [, b]) => b.contribution - a.contribution);
+
+  const supportingSituations: SituationContribution[] = positiveSituations
     .slice(0, 5)
     .map(([momentId, data]) => ({
       momentId,
@@ -443,6 +454,8 @@ function buildAttribution(
     supportingObservations,
     opposingObservations,
     supportingSituations,
+    supportingObservationCount: supportingCount,
+    supportingSituationCount: positiveSituations.length,
   };
 }
 

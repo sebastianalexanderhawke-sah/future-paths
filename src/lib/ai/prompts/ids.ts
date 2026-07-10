@@ -8,6 +8,10 @@ export const PROMPT_MIGRATION_ORDER = [
   "future_self.discover",
   "forecast.generate",
   "current_self.generate",
+  // Behavior Engine v4 (phase 4): Current Self generated from the Identity
+  // Brief. "current_self.generate" above stays registered as the reversible
+  // legacy path (CURRENT_SELF_ENGINE=legacy).
+  "current_self.generate_from_brief",
   "identity_prompt.generate",
   "contradiction.detect",
   "past_path.generate",

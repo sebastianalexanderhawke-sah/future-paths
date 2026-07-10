@@ -22,6 +22,7 @@ export type ForecastPathContext = {
   themes: ThemeName[];
 };
 
+import type { IdentityBrief } from "@/lib/identity-brief";
 import type { AnsweredPromptResponse } from "@/lib/mock-contradiction-generator";
 import type { MockLifeChapterDraft } from "@/lib/mock-timeline-generator";
 import type { MonthlyIdentityEvolution } from "@/lib/monthly-identity-evolution";
@@ -128,6 +129,10 @@ export type IdentityContextBundle = {
   // a title/summary/identity-changes narrative, not re-deriving the
   // aggregation itself.
   monthlyIdentityEvolution?: MonthlyIdentityEvolution[];
+  // Behavior Engine v4 (phase 4): the deterministic Identity Brief — the ONLY
+  // identity input for brief-based profiles (current_self_brief). When this is
+  // set, no raw situations, check-ins, or reflections belong in the bundle.
+  identityBrief?: IdentityBrief;
   discoveryGoal?: "decision" | "forecast";
   discoveryAdditionalContext?: string;
   checkInSummaries?: string[];

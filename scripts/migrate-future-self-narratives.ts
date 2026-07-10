@@ -129,7 +129,7 @@ function rebuildMatch(row: FutureSelf): IdentityMatchWithAttribution | null {
     }))
     .sort((a, b) => a.contribution - b.contribution);
 
-  return {
+  const rebuilt = {
     identityId: row.identity_id!,
     canonicalName: profile.canonical_name,
     score: 0, // not used by the prompt
@@ -146,6 +146,15 @@ function rebuildMatch(row: FutureSelf): IdentityMatchWithAttribution | null {
       (row.opposing_observations as unknown as IdentityMatchWithAttribution["opposingObservations"]) ?? [],
     supportingSituations:
       (row.supporting_situations as unknown as IdentityMatchWithAttribution["supportingSituations"]) ?? [],
+  };
+
+  // The uncapped v4.3 counts aren't persisted on old rows; the capped lists
+  // are the best reconstruction available (and this script's prompt never
+  // reads them).
+  return {
+    ...rebuilt,
+    supportingObservationCount: rebuilt.supportingObservations.length,
+    supportingSituationCount: rebuilt.supportingSituations.length,
   };
 }
 

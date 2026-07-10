@@ -60,3 +60,30 @@ export function parseCurrentSelfOutput(data: unknown): MockCurrentSelfDraft | nu
 
   return currentSelfOutputSchema.parse(data);
 }
+
+// ---------------------------------------------------------------------------
+// Behavior Engine v4 (phase 4): brief-based generation
+// ---------------------------------------------------------------------------
+
+/** The brief-based prompt's output: identical to the legacy contract except
+ *  themes, which are derived deterministically from the Identity Brief
+ *  (deriveThemesFromBrief in current-self-brief.ts) instead of generated —
+ *  the brief context carries no theme vocabulary for the model to copy. */
+export const currentSelfFromBriefOutputSchema = currentSelfOutputSchema.omit({
+  themes: true,
+});
+
+export type CurrentSelfFromBriefDraft = Omit<MockCurrentSelfDraft, "themes">;
+
+export const currentSelfFromBriefNullableOutputSchema =
+  currentSelfFromBriefOutputSchema.nullable();
+
+export function parseCurrentSelfFromBriefOutput(
+  data: unknown,
+): CurrentSelfFromBriefDraft | null {
+  if (data === null) {
+    return null;
+  }
+
+  return currentSelfFromBriefOutputSchema.parse(data);
+}

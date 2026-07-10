@@ -2,6 +2,9 @@ import { enforceContextLimits } from "@/lib/ai/context/truncate";
 import type { IdentityContextBundle } from "@/lib/ai/context/slices";
 import type { BuildContextOptions } from "@/lib/ai/context/profiles";
 import { CONTEXT_LIMITS } from "@/lib/ai/context/limits";
+import { stripRankedFutureAttribution } from "@/lib/current-self-brief";
+import { buildIdentityBrief } from "@/lib/identity-brief";
+import { getIdentityBriefForUser } from "@/lib/identity-brief-source";
 import { createClient } from "@/lib/supabase/server";
 import type { ThemeName } from "@/types/enums";
 import type { AnsweredPromptResponse } from "@/lib/mock-contradiction-generator";
@@ -46,6 +49,8 @@ export async function buildIdentityContext(
       return enforceContextLimits(await loadForecastContext(supabase, base, options));
     case "current_self":
       return enforceContextLimits(await loadCurrentSelfContext(supabase, base, options));
+    case "current_self_brief":
+      return enforceContextLimits(await loadCurrentSelfBriefContext(supabase, base, options));
     case "identity_prompt":
       return enforceContextLimits(await loadIdentityPromptContext(supabase, base));
     case "contradiction":
@@ -443,6 +448,43 @@ async function loadCurrentSelfContext(
     ...(options?.overrides?.reflectionQA
       ? { reflectionQA: options.overrides.reflectionQA }
       : {}),
+  };
+}
+
+/**
+ * Behavior Engine v4 (phase 4): the brief-based Current Self context. The
+ * bundle carries ONLY the Identity Brief — no situations, check-ins,
+ * reflections, or prior AI output — so the portrait prompt physically cannot
+ * cite raw life data. The caller usually passes a pre-built brief via
+ * overrides (generateCurrentSelf builds one for its empty-ledger check);
+ * otherwise the ledger is folded here.
+ */
+async function loadCurrentSelfBriefContext(
+  supabase: SupabaseClient,
+  base: IdentityContextBundle,
+  options: BuildContextOptions,
+): Promise<IdentityContextBundle> {
+  // Current Self's view hides the v4.3 per-identity attribution: the
+  // portrait treats rankedFutures as directional context only, and the
+  // attribution payload exists for the Future Selves migration. Filtering
+  // here keeps the Current Self prompt byte-identical to pre-v4.3.
+  if (options.overrides?.identityBrief) {
+    return {
+      ...base,
+      identityBrief: stripRankedFutureAttribution(options.overrides.identityBrief),
+    };
+  }
+
+  const result = await getIdentityBriefForUser(supabase, base.userId);
+
+  // A read failure surfaces as an empty brief rather than a hard failure —
+  // the caller's empty-ledger guard (generateCurrentSelf) treats it as "not
+  // enough evidence" and falls back to the legacy pipeline.
+  return {
+    ...base,
+    identityBrief: stripRankedFutureAttribution(
+      result.ok ? result.brief : buildIdentityBrief([]),
+    ),
   };
 }
 

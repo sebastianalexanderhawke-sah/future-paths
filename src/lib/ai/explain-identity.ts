@@ -7,6 +7,7 @@ import {
   getGenerationTimeoutMs,
   resolveProviderForMode,
 } from "@/lib/ai/config";
+import type { RankedFuture } from "@/lib/identity-brief";
 import type { IdentityProfile } from "@/lib/identity-library";
 import type {
   DimensionContribution,
@@ -282,12 +283,17 @@ export function fallbackExplanation(
   };
 }
 
-function fallbackResults(
-  entries: Array<{ profile: IdentityProfile; match: IdentityMatchWithAttribution }>,
-): IdentityExplanationResult[] {
-  return entries.map(({ match }) => ({
-    identityId: match.identityId,
-    explanation: fallbackExplanation(match.evidenceStrength),
+/** What the shared batch runner needs to know about each identity: enough to
+ *  merge results back in order and to build a tier-appropriate fallback. */
+type ExplanationTarget = {
+  identityId: string;
+  evidenceStrength: FutureSelfEvidenceStrength;
+};
+
+function fallbackResults(targets: ExplanationTarget[]): IdentityExplanationResult[] {
+  return targets.map((target) => ({
+    identityId: target.identityId,
+    explanation: fallbackExplanation(target.evidenceStrength),
     source: "fallback",
   }));
 }
@@ -456,13 +462,108 @@ Opposing observations:
 ${opposingObsText}`;
 }
 
-function buildUserPrompt(
+// Exported for tests and prompt-size measurement only — production callers
+// go through explainIdentities / explainIdentitiesFromBrief.
+export function buildUserPrompt(
   entries: Array<{ profile: IdentityProfile; match: IdentityMatchWithAttribution }>,
 ): string {
   const total = entries.length;
   const label = total === 1 ? "identity" : "identities";
   const blocks = entries
     .map(({ profile, match }, i) => buildIdentityBlock(i, total, profile, match))
+    .join("\n\n");
+
+  return `${total} recognized ${label} to explain:\n\n${blocks}\n\nReturn the JSON object with explanations for all ${total} ${label}.`;
+}
+
+// ---------------------------------------------------------------------------
+// Brief-based prompt builders (Behavior Engine v4, phase 5)
+// ---------------------------------------------------------------------------
+//
+// The brief-mode counterpart of buildIdentityBlock: the same block structure,
+// built from RankedFuture's re-exposed attribution instead of a live
+// IdentityMatchWithAttribution. Two deliberate differences:
+//   - evidence lines carry no situation titles (the brief never inspects
+//     moments; observation texts are written to stand alone), and
+//   - the per-situation list is replaced by the uncapped breadth counts.
+// The system prompt is shared — it was already explanation-only, and the
+// narrative quality rules must stay identical across both modes.
+
+export type BriefExplanationEntry = {
+  profile: IdentityProfile;
+  future: RankedFuture;
+};
+
+function formatBriefEvidence(evidence: RankedFuture["supportingEvidence"]): string {
+  if (!evidence?.length) return "  None recorded yet.";
+  return evidence
+    .slice(0, 5)
+    .map((item) => `  - "${item.observation}"`)
+    .join("\n");
+}
+
+function buildIdentityBlockFromBrief(
+  index: number,
+  total: number,
+  profile: IdentityProfile,
+  future: RankedFuture,
+): string {
+  const behaviors = profile.typical_behaviors.map((b, i) => `  ${i + 1}. ${b}`).join("\n");
+  const supportingDims = future.supportingDimensions ?? [];
+  const opposingDims = future.opposingDimensions ?? [];
+  const opposingEvidence = future.opposingEvidence ?? [];
+
+  const situationCount = future.supportingSituationCount ?? 0;
+  const observationCount = future.supportingObservationCount ?? 0;
+
+  return `--- Identity ${index + 1} of ${total} ---
+identity_id: ${future.identityId}
+Name: ${profile.canonical_name}
+Description: ${profile.short_description}
+
+Typical behaviors:
+${behaviors}
+
+Recognition data (report these values exactly — do not change them):
+  Likelihood: ${future.likelihood}%
+  Confidence: ${future.confidence}%
+  Evidence strength: ${future.evidenceStrength}
+
+Supporting dimensions (${supportingDims.length} contributing positively):
+${supportingDims.length ? formatDimensions(supportingDims) : "  None."}
+
+Supporting behavioral observations (top ${Math.min(future.supportingEvidence?.length ?? 0, 5)} of ${observationCount} total):
+${formatBriefEvidence(future.supportingEvidence)}
+
+Pattern breadth: observed across ${situationCount} distinct situation${situationCount !== 1 ? "s" : ""}.
+
+Opposing dimensions (working against this pattern):
+${
+  opposingDims.length
+    ? opposingDims
+        .slice(0, 3)
+        .map((d) => `  ${d.dimension}: contribution ${d.contribution.toFixed(1)}`)
+        .join("\n")
+    : "  None."
+}
+
+Opposing observations:
+${
+  opposingEvidence.length
+    ? opposingEvidence
+        .slice(0, 3)
+        .map((item) => `  - "${item.observation}"`)
+        .join("\n")
+    : "  None."
+}`;
+}
+
+// Exported for tests and prompt-size measurement only.
+export function buildUserPromptFromBrief(entries: BriefExplanationEntry[]): string {
+  const total = entries.length;
+  const label = total === 1 ? "identity" : "identities";
+  const blocks = entries
+    .map(({ profile, future }, i) => buildIdentityBlockFromBrief(i, total, profile, future))
     .join("\n\n");
 
   return `${total} recognized ${label} to explain:\n\n${blocks}\n\nReturn the JSON object with explanations for all ${total} ${label}.`;
@@ -486,15 +587,56 @@ export async function explainIdentities(
     return [];
   }
 
+  return runExplanationBatch({
+    targets: entries.map(({ match }) => ({
+      identityId: match.identityId,
+      evidenceStrength: match.evidenceStrength,
+    })),
+    userPrompt: buildUserPrompt(entries),
+    promptId: "explain_identity.batch",
+  });
+}
+
+/**
+ * Brief-mode narrative generation (Behavior Engine v4, phase 5): identical
+ * batch semantics, fallback behavior, and system prompt as explainIdentities,
+ * but the per-identity evidence block is built from RankedFuture's
+ * attribution — the consumer never touches raw observations or the
+ * recognition engine.
+ */
+export async function explainIdentitiesFromBrief(
+  entries: BriefExplanationEntry[],
+): Promise<IdentityExplanationResult[]> {
+  if (entries.length === 0) {
+    return [];
+  }
+
+  return runExplanationBatch({
+    targets: entries.map(({ future }) => ({
+      identityId: future.identityId,
+      evidenceStrength: future.evidenceStrength,
+    })),
+    userPrompt: buildUserPromptFromBrief(entries),
+    promptId: "explain_identity.batch_from_brief",
+  });
+}
+
+async function runExplanationBatch(input: {
+  targets: ExplanationTarget[];
+  userPrompt: string;
+  promptId: string;
+}): Promise<IdentityExplanationResult[]> {
+  const { targets, userPrompt, promptId } = input;
+
   const providerMode = resolveProviderForMode();
 
   if (providerMode === "mock") {
-    return fallbackResults(entries);
+    return fallbackResults(targets);
   }
 
   const apiKey = getAnthropicApiKey();
   if (!apiKey) {
-    return fallbackResults(entries);
+    return fallbackResults(targets);
   }
 
   const model = getClaudeModel();
@@ -522,7 +664,7 @@ export async function explainIdentities(
             cache_control: { type: "ephemeral" },
           },
         ],
-        messages: [{ role: "user", content: buildUserPrompt(entries) }],
+        messages: [{ role: "user", content: userPrompt }],
       },
       { signal: controller.signal },
     );
@@ -531,11 +673,11 @@ export async function explainIdentities(
 
     console.log(
       `[ai-usage] ${JSON.stringify({
-        promptId: "explain_identity.batch",
+        promptId,
         provider: "claude",
         success: true,
         durationMs: Date.now() - startedAt,
-        entryCount: entries.length,
+        entryCount: targets.length,
         inputTokens: response.usage?.input_tokens,
         outputTokens: response.usage?.output_tokens,
         cacheCreationInputTokens: response.usage?.cache_creation_input_tokens ?? undefined,
@@ -551,7 +693,7 @@ export async function explainIdentities(
 
     if (!text) {
       console.warn("[explainIdentities] Empty response — using fallback narratives.");
-      return fallbackResults(entries);
+      return fallbackResults(targets);
     }
 
     const raw = extractJson(text);
@@ -578,13 +720,13 @@ export async function explainIdentities(
       } satisfies IdentityExplanation);
     }
 
-    return entries.map(({ match }) => {
-      const explanation = byIdentityId.get(match.identityId);
+    return targets.map((target) => {
+      const explanation = byIdentityId.get(target.identityId);
       return explanation
-        ? { identityId: match.identityId, explanation, source: "ai" as const }
+        ? { identityId: target.identityId, explanation, source: "ai" as const }
         : {
-            identityId: match.identityId,
-            explanation: fallbackExplanation(match.evidenceStrength),
+            identityId: target.identityId,
+            explanation: fallbackExplanation(target.evidenceStrength),
             source: "fallback" as const,
           };
     });
@@ -598,6 +740,6 @@ export async function explainIdentities(
           ? error.message
           : String(error);
     console.error(`[explainIdentities] Generation failed — using fallback narratives: ${detail}`);
-    return fallbackResults(entries);
+    return fallbackResults(targets);
   }
 }

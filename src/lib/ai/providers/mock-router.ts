@@ -11,6 +11,7 @@ import { generateMockContradictions } from "@/lib/mock-contradiction-generator";
 import { generateMockCrossroads } from "@/lib/mock-crossroad-generator";
 import { generateMockDiscoveryQuestions } from "@/lib/mock-discovery-question-generator";
 import { generateMockCurrentSelf } from "@/lib/mock-current-self-generator";
+import { generateMockCurrentSelfFromBrief } from "@/lib/mock-current-self-from-brief-generator";
 import { generateMockForecast } from "@/lib/mock-forecast-generator";
 import { generateMockFutureSelves } from "@/lib/mock-future-self-generator";
 import { generateMockIdentityPrompts } from "@/lib/mock-identity-prompt-generator";
@@ -127,6 +128,13 @@ export function runMockGenerator(
           "title" | "summary" | "themes"
         >[],
       });
+
+    case "current_self.generate_from_brief":
+      if (!context.identityBrief) {
+        throw new Error("Brief-based Current Self generation requires an Identity Brief.");
+      }
+
+      return generateMockCurrentSelfFromBrief(context.identityBrief);
 
     case "identity_prompt.generate":
       return generateMockIdentityPrompts({

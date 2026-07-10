@@ -57,6 +57,11 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => getActiveStub()!.client),
 }));
 
+// This suite pins the LEGACY pipeline (direct recognition), which phase 5
+// kept intact behind FUTURE_SELVES_ENGINE as the reversible migration
+// boundary. Brief-mode behavior is pinned in future-selves-brief.test.ts.
+process.env.FUTURE_SELVES_ENGINE = "legacy";
+
 const {
   generateFutureSelves,
   queueFutureSelvesGeneration,

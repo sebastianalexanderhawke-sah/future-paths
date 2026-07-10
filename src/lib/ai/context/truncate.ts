@@ -1,6 +1,40 @@
 import { CONTEXT_LIMITS } from "@/lib/ai/context/limits";
 import type { IdentityContextBundle } from "@/lib/ai/context/slices";
+import type { IdentityBrief } from "@/lib/identity-brief";
 import type { MonthlyIdentityEvolution } from "@/lib/monthly-identity-evolution";
+
+// An established profile's Identity Brief (10 signals × 5 evidence entries)
+// can exceed TOTAL_JSON_CHARS on its own. When the budget forces a reduction,
+// the brief is trimmed — evidence lists shortened, texts truncated — never
+// dropped: for brief-based profiles it is the only identity input, and a
+// bundle without it would generate a portrait from nothing.
+function trimIdentityBrief(
+  brief: IdentityBrief | undefined,
+  evidencePerSignal: number,
+): IdentityBrief | undefined {
+  if (!brief) {
+    return brief;
+  }
+
+  const limits = CONTEXT_LIMITS.TEXT;
+  const trimEvidence = (evidence: IdentityBrief["topSignals"][number]["representativeEvidence"]) =>
+    evidence.slice(0, evidencePerSignal).map((item) => ({
+      ...item,
+      observation: truncateText(item.observation, limits.observation),
+    }));
+
+  return {
+    ...brief,
+    topSignals: brief.topSignals.map((signal) => ({
+      ...signal,
+      representativeEvidence: trimEvidence(signal.representativeEvidence),
+    })),
+    signalRelations: brief.signalRelations.map((relation) => ({
+      ...relation,
+      evidence: trimEvidence(relation.evidence).slice(0, 1),
+    })),
+  };
+}
 
 // Evidence arrays here are unbounded at the source (every chosen path / identity
 // update ever recorded for the month), so they're the one part of this profile's
@@ -305,6 +339,7 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
   const reduced: IdentityContextBundle = {
     userId: bundle.userId,
     profile: bundle.profile,
+    identityBrief: trimIdentityBrief(bundle.identityBrief, 3),
     moment: bundle.moment,
     chosenPath: bundle.chosenPath,
     mostRecentChosenPath: bundle.mostRecentChosenPath,
@@ -342,6 +377,7 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
   return {
     userId: bundle.userId,
     profile: bundle.profile,
+    identityBrief: trimIdentityBrief(bundle.identityBrief, 2),
     moment: bundle.moment,
     chosenPath: bundle.chosenPath,
     mostRecentChosenPath: bundle.mostRecentChosenPath,

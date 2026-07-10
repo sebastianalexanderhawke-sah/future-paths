@@ -1,9 +1,22 @@
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
-import { currentSelfNullableOutputSchema } from "@/lib/ai/schemas/current-self";
+import {
+  currentSelfFromBriefNullableOutputSchema,
+  currentSelfNullableOutputSchema,
+} from "@/lib/ai/schemas/current-self";
+import { extractAndPersistCheckInObservations } from "@/lib/behavior-extraction";
+import {
+  compareCurrentSelfDrafts,
+  deriveThemesFromBrief,
+  getCurrentSelfEngine,
+  isCurrentSelfShadowCompareEnabled,
+  type CurrentSelfEngine,
+} from "@/lib/current-self-brief";
 import {
   deriveFearsFromThemes,
   deriveValuesFromThemes,
 } from "@/lib/current-self-inference";
+import { getIdentityBriefForUser } from "@/lib/identity-brief-source";
+import type { MockCurrentSelfDraft } from "@/lib/mock-current-self-generator";
 import {
   reportDiscardedResultError,
   swallowReporting,
@@ -168,8 +181,167 @@ export type GenerateCurrentSelfInput = {
     answer: string;
     checkInReflection: string;
     momentTitle: string;
+    /** The check-in the answer was written on. Brief mode uses it to make
+     *  sure the answer's observations are in the ledger before the brief is
+     *  built (extraction is idempotent per check-in and source). */
+    checkInId?: string;
   };
 };
+
+type CurrentSelfDraftResult =
+  | { ok: true; draft: MockCurrentSelfDraft | null }
+  | { ok: false; error: string };
+
+/** The pre-phase-4 pipeline, byte-for-byte: raw context profile, v10 prompt.
+ *  Kept intact as the reversible migration boundary (CURRENT_SELF_ENGINE=
+ *  legacy) and as the automatic fallback for empty ledgers. */
+async function generateLegacyCurrentSelfDraft(
+  userId: string,
+  reflectionInput?: GenerateCurrentSelfInput,
+): Promise<CurrentSelfDraftResult> {
+  const reflection = reflectionInput?.reflection;
+
+  const generationResult = await runStructuredGeneration({
+    userId,
+    profile: "current_self",
+    promptId: "current_self.generate",
+    schema: currentSelfNullableOutputSchema,
+    // checkInId is brief-mode metadata — strip it so the legacy prompt's
+    // serialized context stays identical to what it was before phase 4.
+    overrides: reflection
+      ? {
+          reflectionQA: {
+            question: reflection.question,
+            answer: reflection.answer,
+            checkInReflection: reflection.checkInReflection,
+            momentTitle: reflection.momentTitle,
+          },
+        }
+      : undefined,
+  });
+
+  if (!generationResult.ok) {
+    return { ok: false, error: generationResult.error };
+  }
+
+  return { ok: true, draft: generationResult.data };
+}
+
+/**
+ * Behavior Engine v4 (phase 4): the brief-based pipeline. The prompt receives
+ * ONLY the Identity Brief; themes are derived deterministically from the same
+ * brief. Returns `fallbackToLegacy` when the ledger holds no observations —
+ * extraction failures and mock-mode accounts (mock extraction produces no
+ * observations) keep generating exactly as before this migration.
+ */
+async function generateBriefCurrentSelfDraft(
+  userId: string,
+  reflectionInput?: GenerateCurrentSelfInput,
+): Promise<CurrentSelfDraftResult | { fallbackToLegacy: true }> {
+  const supabase = await createClient();
+
+  // Sequencing (audit gap G4): this regeneration may be reacting to a
+  // just-answered reflection whose extraction normally runs later, inside
+  // Future Selves generation. Run it first (idempotent per check-in/source)
+  // so the answer's evidence is in the ledger the brief is built from.
+  const checkInId = reflectionInput?.reflection?.checkInId;
+  if (checkInId) {
+    const { data: existing } = await supabase
+      .from("behavior_observations")
+      .select("id")
+      .eq("check_in_id", checkInId)
+      .eq("source_type", "reflection_answer")
+      .eq("user_id", userId)
+      .limit(1);
+
+    if (!existing?.length) {
+      await extractAndPersistCheckInObservations(
+        userId,
+        checkInId,
+        "reflection_answer",
+      ).catch(
+        swallowReporting("generateCurrentSelf: reflection extraction failed", {
+          userId,
+          checkInId,
+        }),
+      );
+    }
+  }
+
+  const briefResult = await getIdentityBriefForUser(supabase, userId);
+
+  if (!briefResult.ok || briefResult.observationCount === 0) {
+    return { fallbackToLegacy: true };
+  }
+
+  const { brief } = briefResult;
+
+  const generationResult = await runStructuredGeneration({
+    userId,
+    profile: "current_self_brief",
+    promptId: "current_self.generate_from_brief",
+    schema: currentSelfFromBriefNullableOutputSchema,
+    overrides: { identityBrief: brief },
+  });
+
+  if (!generationResult.ok) {
+    return { ok: false, error: generationResult.error };
+  }
+
+  if (!generationResult.data) {
+    return { ok: true, draft: null };
+  }
+
+  return {
+    ok: true,
+    draft: { ...generationResult.data, themes: deriveThemesFromBrief(brief) },
+  };
+}
+
+/**
+ * Development-only shadow comparison (CURRENT_SELF_SHADOW_COMPARE=true):
+ * generates the other engine's draft for the same user, logs a structural
+ * diff plus both drafts, and discards the result. Never runs in production,
+ * never persists anything, never throws.
+ */
+async function runCurrentSelfShadowComparison(
+  userId: string,
+  primaryEngine: CurrentSelfEngine,
+  primaryDraft: MockCurrentSelfDraft,
+  reflectionInput?: GenerateCurrentSelfInput,
+): Promise<void> {
+  if (!isCurrentSelfShadowCompareEnabled()) {
+    return;
+  }
+
+  try {
+    let legacyDraft: MockCurrentSelfDraft;
+    let briefDraft: MockCurrentSelfDraft;
+
+    if (primaryEngine === "brief") {
+      const shadow = await generateLegacyCurrentSelfDraft(userId, reflectionInput);
+      if (!shadow.ok || !shadow.draft) return;
+      legacyDraft = shadow.draft;
+      briefDraft = primaryDraft;
+    } else {
+      const shadow = await generateBriefCurrentSelfDraft(userId, reflectionInput);
+      if ("fallbackToLegacy" in shadow || !shadow.ok || !shadow.draft) return;
+      legacyDraft = primaryDraft;
+      briefDraft = shadow.draft;
+    }
+
+    console.log(
+      `[current-self-shadow] ${JSON.stringify({
+        primaryEngine,
+        comparison: compareCurrentSelfDrafts(legacyDraft, briefDraft, briefDraft.themes),
+        legacyDraft,
+        briefDraft,
+      })}`,
+    );
+  } catch {
+    // Shadow comparison must never affect the primary generation.
+  }
+}
 
 export async function generateCurrentSelf(
   reflectionInput?: GenerateCurrentSelfInput,
@@ -194,24 +366,40 @@ export async function generateCurrentSelf(
     return { error: CURRENT_SELF_PREREQUISITE_ERROR };
   }
 
-  const generationResult = await runStructuredGeneration({
-    userId: auth.userId,
-    profile: "current_self",
-    promptId: "current_self.generate",
-    schema: currentSelfNullableOutputSchema,
-    overrides: reflectionInput?.reflection
-      ? { reflectionQA: reflectionInput.reflection }
-      : undefined,
-  });
-
-  if (!generationResult.ok) {
-    return { error: generationResult.error };
+  let engine: CurrentSelfEngine;
+  try {
+    engine = getCurrentSelfEngine();
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Current Self engine is misconfigured.",
+    };
   }
 
-  const draft = generationResult.data;
+  let usedEngine: CurrentSelfEngine = engine;
+  let draftResult: CurrentSelfDraftResult;
+
+  if (engine === "brief") {
+    const briefResult = await generateBriefCurrentSelfDraft(auth.userId, reflectionInput);
+    if ("fallbackToLegacy" in briefResult) {
+      usedEngine = "legacy";
+      draftResult = await generateLegacyCurrentSelfDraft(auth.userId, reflectionInput);
+    } else {
+      draftResult = briefResult;
+    }
+  } else {
+    draftResult = await generateLegacyCurrentSelfDraft(auth.userId, reflectionInput);
+  }
+
+  if (!draftResult.ok) {
+    return { error: draftResult.error };
+  }
+
+  const draft = draftResult.draft;
   if (!draft) {
     return { error: CURRENT_SELF_PREREQUISITE_ERROR };
   }
+
+  await runCurrentSelfShadowComparison(auth.userId, usedEngine, draft, reflectionInput);
 
   const supabase = await createClient();
   const now = new Date().toISOString();

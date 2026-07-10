@@ -5,7 +5,18 @@ import {
   extractAndPersistCheckInObservations,
   type CheckInObservationSource,
 } from "@/lib/behavior-extraction";
-import { explainIdentities, needsExplanationRegeneration } from "@/lib/ai/explain-identity";
+import {
+  explainIdentities,
+  explainIdentitiesFromBrief,
+  needsExplanationRegeneration,
+  type IdentityExplanationResult,
+} from "@/lib/ai/explain-identity";
+import {
+  getFutureSelvesEngine,
+  isFutureSelvesShadowCompareEnabled,
+  selectFuturesFromBrief,
+  type RecognizedFutureInput,
+} from "@/lib/future-selves-brief";
 import { getIdentityById } from "@/lib/identity-library";
 import {
   recognizeIdentitiesWithAttribution,
@@ -341,6 +352,73 @@ async function ensureCheckInObservations(
  * @param momentId - When provided, behavior observations are extracted for
  *   this moment before recognition runs (skipped if already extracted).
  */
+/**
+ * Development-only (FUTURE_SELVES_SHADOW_COMPARE=true): after a brief-mode
+ * selection, run the legacy recognition path read-only and log a numeric
+ * side-by-side. The deterministic layers are equal by construction (the
+ * brief's rankedFutures ARE the recognition output; pinned by tests) — this
+ * log verifies it end-to-end on live accounts and surfaces the evidence each
+ * mode would hand the narrative prompt. No AI call, no persistence, never
+ * throws, never runs in production.
+ */
+async function runFutureSelvesShadowComparison(
+  userId: string,
+  recognized: RecognizedFutureInput[],
+): Promise<void> {
+  if (!isFutureSelvesShadowCompareEnabled()) {
+    return;
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("behavior_observations")
+      .select("id, observation, signals, moment_id, extracted_at, moments(title)")
+      .eq("user_id", userId)
+      .order("extracted_at", { ascending: true });
+
+    if (!data?.length) {
+      return;
+    }
+
+    const observations: AttributableObservation[] = data.map((row) => ({
+      id: row.id,
+      observation: row.observation,
+      signals: row.signals,
+      momentId: row.moment_id,
+      momentTitle: (row.moments as { title: string } | null)?.title ?? "Untitled situation",
+      extractedAt: row.extracted_at ?? undefined,
+    }));
+
+    const legacyMatches = recognizeIdentitiesWithAttribution(observations);
+    const legacyTop =
+      legacyMatches.length >= MIN_FUTURE_SELVES
+        ? legacyMatches.slice(0, maxFutureSelvesForEvidence(legacyMatches))
+        : recognizeIdentitiesWithAttribution(observations, {
+            minLikelihood: 0,
+            maxResults: MIN_FUTURE_SELVES,
+          });
+
+    const summarize = (items: { identityId: string; likelihood: number; confidence: number; evidenceStrength: string; supportingObservations: unknown[] }[]) =>
+      items.map((item) => ({
+        identityId: item.identityId,
+        likelihood: item.likelihood,
+        confidence: item.confidence,
+        evidenceStrength: item.evidenceStrength,
+        supportingEvidenceCount: item.supportingObservations.length,
+      }));
+
+    console.log(
+      `[future-selves-shadow] ${JSON.stringify({
+        brief: summarize(recognized),
+        legacy: summarize(legacyTop),
+      })}`,
+    );
+  } catch {
+    // Shadow comparison must never affect the primary generation.
+  }
+}
+
 export async function generateFutureSelves(
   momentId?: string,
   trigger?: FutureSelvesGenerationTrigger,
@@ -366,51 +444,110 @@ export async function generateFutureSelves(
     await ensureCheckInObservations(auth.userId, trigger);
   }
 
-  // Step 2: Load all behavior observations for this user, joined with moment titles.
-  const { data: rawObservations, error: obsError } = await supabase
-    .from("behavior_observations")
-    .select("id, observation, signals, moment_id, extracted_at, moments(title)")
-    .eq("user_id", auth.userId)
-    .order("extracted_at", { ascending: true });
-
-  if (obsError) {
-    return { error: obsError.message };
+  // Steps 2–4: obtain this run's recognized futures. Brief mode (Behavior
+  // Engine v4, phase 5) reads the shared Identity Brief and never touches
+  // raw observations or the recognition engine; the legacy path below stays
+  // byte-for-byte as the reversible migration boundary
+  // (FUTURE_SELVES_ENGINE=legacy) and as the automatic fallback for accounts
+  // the brief can't serve (see selectFuturesFromBrief).
+  let engine: "brief" | "legacy";
+  try {
+    engine = getFutureSelvesEngine();
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Future Selves engine is misconfigured.",
+    };
   }
 
-  // No observations yet — leave existing active futures untouched.
-  if (!rawObservations?.length) {
-    return listFutureSelves({ status: "active" });
+  let recognized: RecognizedFutureInput[] | null = null;
+  let usedEngine: "brief" | "legacy" = "legacy";
+
+  if (engine === "brief") {
+    const selection = await selectFuturesFromBrief({
+      supabase,
+      userId: auth.userId,
+      maxCount: maxFutureSelvesForEvidence,
+    });
+
+    if (selection.kind === "empty") {
+      // No observations yet — leave existing active futures untouched
+      // (identical to the legacy early return).
+      return listFutureSelves({ status: "active" });
+    }
+
+    if (selection.kind === "ok") {
+      recognized = selection.recognized;
+      usedEngine = "brief";
+      await runFutureSelvesShadowComparison(auth.userId, recognized);
+    }
+    // selection.kind === "fallback": the legacy path below handles it —
+    // sub-threshold accounts need the two-minimum recognition re-run the
+    // brief cannot express, and a brief read failure must not block
+    // generation.
   }
 
-  // Step 3: Build AttributableObservation array for the recognition engine.
-  const observations: AttributableObservation[] = rawObservations.map((row) => ({
-    id: row.id,
-    observation: row.observation,
-    signals: row.signals,
-    momentId: row.moment_id,
-    momentTitle: (row.moments as { title: string } | null)?.title ?? "Untitled situation",
-    extractedAt: row.extracted_at ?? undefined,
-  }));
+  if (!recognized) {
+    // ---- Legacy path (pre-phase-5, unchanged) ----
 
-  // Step 4: Deterministic identity recognition — no AI involved.
-  const recognizedIdentities = recognizeIdentitiesWithAttribution(observations);
+    // Step 2: Load all behavior observations for this user, joined with moment titles.
+    const { data: rawObservations, error: obsError } = await supabase
+      .from("behavior_observations")
+      .select("id, observation, signals, moment_id, extracted_at, moments(title)")
+      .eq("user_id", auth.userId)
+      .order("extracted_at", { ascending: true });
 
-  // The Identity Engine is the sole source of Future Selves — never fall
-  // back to legacy rows. The count follows the evidence (2 for weak, up to 4
-  // for moderate, up to 5 for strong — see maxFutureSelvesForEvidence). When
-  // fewer than two identities clear the normal threshold, ask the same,
-  // unmodified engine for its top two regardless of threshold instead of
-  // fabricating anything: those matches are still evidence-grounded, their
-  // sub-threshold likelihoods already label them "Emerging", and if only one
-  // identity has any positive evidence at all, only one is surfaced — the
-  // two-minimum never invents a life the evidence doesn't support.
-  const topIdentities =
-    recognizedIdentities.length >= MIN_FUTURE_SELVES
-      ? recognizedIdentities.slice(0, maxFutureSelvesForEvidence(recognizedIdentities))
-      : recognizeIdentitiesWithAttribution(observations, {
-          minLikelihood: 0,
-          maxResults: MIN_FUTURE_SELVES,
-        });
+    if (obsError) {
+      return { error: obsError.message };
+    }
+
+    // No observations yet — leave existing active futures untouched.
+    if (!rawObservations?.length) {
+      return listFutureSelves({ status: "active" });
+    }
+
+    // Step 3: Build AttributableObservation array for the recognition engine.
+    const observations: AttributableObservation[] = rawObservations.map((row) => ({
+      id: row.id,
+      observation: row.observation,
+      signals: row.signals,
+      momentId: row.moment_id,
+      momentTitle: (row.moments as { title: string } | null)?.title ?? "Untitled situation",
+      extractedAt: row.extracted_at ?? undefined,
+    }));
+
+    // Step 4: Deterministic identity recognition — no AI involved.
+    const recognizedIdentities = recognizeIdentitiesWithAttribution(observations);
+
+    // The Identity Engine is the sole source of Future Selves — never fall
+    // back to legacy rows. The count follows the evidence (2 for weak, up to 4
+    // for moderate, up to 5 for strong — see maxFutureSelvesForEvidence). When
+    // fewer than two identities clear the normal threshold, ask the same,
+    // unmodified engine for its top two regardless of threshold instead of
+    // fabricating anything: those matches are still evidence-grounded, their
+    // sub-threshold likelihoods already label them "Emerging", and if only one
+    // identity has any positive evidence at all, only one is surfaced — the
+    // two-minimum never invents a life the evidence doesn't support.
+    const topIdentities =
+      recognizedIdentities.length >= MIN_FUTURE_SELVES
+        ? recognizedIdentities.slice(0, maxFutureSelvesForEvidence(recognizedIdentities))
+        : recognizeIdentitiesWithAttribution(observations, {
+            minLikelihood: 0,
+            maxResults: MIN_FUTURE_SELVES,
+          });
+
+    recognized = topIdentities.map((match) => ({
+      identityId: match.identityId,
+      likelihood: match.likelihood,
+      confidence: match.confidence,
+      evidenceStrength: match.evidenceStrength,
+      dimensionBreakdown: match.dimensionBreakdown,
+      supportingObservations: match.supportingObservations,
+      supportingSituations: match.supportingSituations,
+      opposingObservations: match.opposingObservations,
+      narrative: { kind: "legacy", match },
+    }));
+  }
 
   // Step 5: Load existing future_selves rows for continuity matching.
   const { data: existingRows, error: existingError } = await supabase
@@ -428,15 +565,15 @@ export async function generateFutureSelves(
   // each with its existing row (if any) so the regeneration decision below
   // can see whether this identity has ever been persisted before the AI call
   // goes out.
-  const entries = topIdentities.flatMap((match) => {
-    const profile = getIdentityById(match.identityId);
+  const entries = recognized.flatMap((input) => {
+    const profile = getIdentityById(input.identityId);
     if (!profile) return [];
 
     // Match first by identity_id (new-pipeline rows), then by canonical or
     // legacy name (legacy rows that happen to share a name this identity has
     // ever displayed under — see IdentityProfile.legacy_names).
     const existing =
-      allExisting.find((r) => r.identity_id === match.identityId) ??
+      allExisting.find((r) => r.identity_id === input.identityId) ??
       allExisting.find(
         (r) =>
           !r.identity_id &&
@@ -446,7 +583,7 @@ export async function generateFutureSelves(
 
     return [
       {
-        match,
+        input,
         profile,
         existing,
         // canonical_name detects rename epochs: a row still carrying an old
@@ -454,7 +591,7 @@ export async function generateFutureSelves(
         // (the update below renames the row in the same run).
         decision: needsExplanationRegeneration(
           existing,
-          match.evidenceStrength,
+          input.evidenceStrength,
           profile.canonical_name,
         ),
       },
@@ -470,10 +607,24 @@ export async function generateFutureSelves(
   // identity keeps its existing why_emerging / growth_opportunities /
   // blind_spots / likely_evolution — only percentage, evidence, and
   // supporting data update below regardless of this decision.
+  // A run is engine-homogeneous: brief mode invokes the brief-based prompt
+  // builder, legacy mode the original one (its []-call is preserved so the
+  // no-regeneration case behaves exactly as before phase 5).
   const entriesNeedingRegeneration = entries.filter((e) => e.decision.regenerate);
-  const explanationResults = await explainIdentities(
-    entriesNeedingRegeneration.map(({ match, profile }) => ({ match, profile })),
-  );
+  let explanationResults: IdentityExplanationResult[];
+  if (usedEngine === "brief") {
+    explanationResults = await explainIdentitiesFromBrief(
+      entriesNeedingRegeneration.flatMap(({ input, profile }) =>
+        input.narrative.kind === "brief" ? [{ profile, future: input.narrative.future }] : [],
+      ),
+    );
+  } else {
+    explanationResults = await explainIdentities(
+      entriesNeedingRegeneration.flatMap(({ input, profile }) =>
+        input.narrative.kind === "legacy" ? [{ profile, match: input.narrative.match }] : [],
+      ),
+    );
+  }
   const explanationById = new Map(explanationResults.map((r) => [r.identityId, r]));
 
   const now = new Date().toISOString();
@@ -482,12 +633,12 @@ export async function generateFutureSelves(
   let hasMeaningfulTransition = false;
 
   // Step 7: Persist each identity.
-  for (const { match, profile, existing, decision } of entries) {
+  for (const { input, profile, existing, decision } of entries) {
     // Regenerated identities use the fresh AI explanation; unchanged ones
     // keep their existing narrative fields untouched — only percentage,
     // evidence, and supporting data are refreshed below regardless.
     const regenerated = decision.regenerate
-      ? explanationById.get(match.identityId)
+      ? explanationById.get(input.identityId)
       : undefined;
     const explanation = regenerated
       ? regenerated.explanation
@@ -498,8 +649,8 @@ export async function generateFutureSelves(
           likely_evolution: existing!.likely_evolution,
         };
 
-    const percentage = match.likelihood;
-    const evidenceStrength = match.evidenceStrength;
+    const percentage = input.likelihood;
+    const evidenceStrength = input.evidenceStrength;
 
     // Narrative provenance travels with the narrative: written only when the
     // narrative itself is (re)written, so an untouched narrative keeps the
@@ -514,12 +665,12 @@ export async function generateFutureSelves(
       : {};
 
     const attributionFields = {
-      identity_id: match.identityId,
-      confidence: match.confidence,
-      dimension_breakdown: match.dimensionBreakdown as unknown as Record<string, unknown>[],
-      supporting_observations: match.supportingObservations as unknown as Record<string, unknown>[],
-      supporting_situations: match.supportingSituations as unknown as Record<string, unknown>[],
-      opposing_observations: match.opposingObservations as unknown as Record<string, unknown>[],
+      identity_id: input.identityId,
+      confidence: input.confidence,
+      dimension_breakdown: input.dimensionBreakdown as unknown as Record<string, unknown>[],
+      supporting_observations: input.supportingObservations as unknown as Record<string, unknown>[],
+      supporting_situations: input.supportingSituations as unknown as Record<string, unknown>[],
+      opposing_observations: input.opposingObservations as unknown as Record<string, unknown>[],
     };
 
     const contentFields = {
@@ -529,7 +680,7 @@ export async function generateFutureSelves(
       // core_behaviors carries the library's canonical behaviors for this identity.
       core_behaviors: profile.typical_behaviors,
       // behavioral_evidence carries the user's actual supporting observations.
-      behavioral_evidence: match.supportingObservations.map((o) => o.observationText),
+      behavioral_evidence: input.supportingObservations.map((o) => o.observationText),
       growth_opportunities: explanation.growth_opportunities,
       blind_spots: explanation.blind_spots,
       likely_evolution: explanation.likely_evolution,
