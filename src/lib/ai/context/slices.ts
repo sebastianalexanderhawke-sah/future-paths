@@ -22,6 +22,7 @@ export type ForecastPathContext = {
   themes: ThemeName[];
 };
 
+import type { DecisionMakerSnapshot } from "@/lib/decision-maker-snapshot";
 import type { IdentityBrief } from "@/lib/identity-brief";
 import type { AnsweredPromptResponse } from "@/lib/mock-contradiction-generator";
 import type { MockLifeChapterDraft } from "@/lib/mock-timeline-generator";
@@ -133,6 +134,22 @@ export type IdentityContextBundle = {
   // identity input for brief-based profiles (current_self_brief). When this is
   // set, no raw situations, check-ins, or reflections belong in the bundle.
   identityBrief?: IdentityBrief;
+  // Situations v3: compact "who is making this decision?" projection of the
+  // Identity Brief for the crossroad profile — slugs, enums, and identity
+  // names only, never prose. Absent when the behavior ledger is too thin.
+  decisionMaker?: DecisionMakerSnapshot;
+  // Situations v3: present only on a diversity-rejected regeneration —
+  // plain-language reasons the previous path set was rejected, so the second
+  // attempt fixes them instead of resubmitting near-identical paths.
+  regenerationFeedback?: string;
+  // Situations v3.1: candidate paths under internal destination audit
+  // (path_set.audit only). Assembled in code by the semantic auditor — never
+  // loaded by the context builder, never shown to the user.
+  pathSetCandidates?: {
+    title: string;
+    direction: string;
+    description: string;
+  }[];
   discoveryGoal?: "decision" | "forecast";
   discoveryAdditionalContext?: string;
   checkInSummaries?: string[];

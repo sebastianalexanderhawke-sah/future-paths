@@ -3,6 +3,10 @@ import type { IdentityContextBundle } from "@/lib/ai/context/slices";
 import type { BuildContextOptions } from "@/lib/ai/context/profiles";
 import { CONTEXT_LIMITS } from "@/lib/ai/context/limits";
 import { stripRankedFutureAttribution } from "@/lib/current-self-brief";
+import {
+  buildDecisionMakerSnapshot,
+  type DecisionMakerSnapshot,
+} from "@/lib/decision-maker-snapshot";
 import { buildIdentityBrief } from "@/lib/identity-brief";
 import { getIdentityBriefForUser } from "@/lib/identity-brief-source";
 import { createClient } from "@/lib/supabase/server";
@@ -161,7 +165,23 @@ async function loadCrossroadContext(
     .eq("user_id", options.userId)
     .maybeSingle();
 
-  return { ...base, moment: moment ?? undefined };
+  // Situations v3: who is making this decision. A thin structured projection
+  // of the Identity Brief so directions can be personal. Identity is an
+  // enhancement here, not a requirement — any failure (or a too-thin ledger)
+  // degrades to situation-only generation, which is exactly the pre-v3
+  // behavior.
+  let decisionMaker: DecisionMakerSnapshot | undefined;
+  const briefResult = await getIdentityBriefForUser(supabase, options.userId);
+  if (briefResult.ok) {
+    decisionMaker = buildDecisionMakerSnapshot(briefResult.brief) ?? undefined;
+  }
+
+  return {
+    ...base,
+    moment: moment ?? undefined,
+    decisionMaker,
+    regenerationFeedback: options.overrides.diversityFeedback,
+  };
 }
 
 async function loadCheckInContext(

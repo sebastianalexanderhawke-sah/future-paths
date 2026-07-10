@@ -32,7 +32,6 @@ describe("forecast slot integrity", () => {
 
   it("preserves all surviving active futures without adding fallback replacements", () => {
     const generated = {
-      wild_card: [],
       active: [
         {
           title: "She Says Yes To Coffee",
@@ -43,16 +42,6 @@ describe("forecast slot integrity", () => {
           title: "She Declines But Stays Warm",
           why: "A clear question can keep the friendship workable.",
           impact: "Daily work stays friendly even if romance fades.",
-        },
-        {
-          title: "The Ask Happens Over Lunch",
-          why: "A low-pressure lunch invite can feel natural at work.",
-          impact: "The conversation moves outside the office routine.",
-        },
-        {
-          title: "She Asks A Clarifying Question",
-          why: "Mixed signals can prompt her to test interest directly.",
-          impact: "You know where you stand sooner.",
         },
         {
           title: "A First Date Gets Planned",
@@ -66,12 +55,28 @@ describe("forecast slot integrity", () => {
           why: "Workplace chemistry rarely stays invisible.",
           impact: "Small talk feels different for a few weeks.",
         },
-      ],
-      blind_spots: [
         {
           title: "She Assumes You're Not Interested",
           why: "Platonic behavior can read as disinterest when she initiates often.",
           impact: "She stops looking for signs because the friendship feels settled.",
+        },
+        {
+          title: "The Timing Never Aligns",
+          why: "Busy schedules can keep things polite but static.",
+          impact: "Months pass without a clear moment to act.",
+        },
+      ],
+      blind_spots: [],
+      wild_card: [
+        {
+          title: "She Transfers To Another Team",
+          why: "Internal moves change daily proximity without ending contact.",
+          impact: "You have to choose to stay in touch deliberately.",
+        },
+        {
+          title: "A Mutual Friend Changes The Dynamic",
+          why: "Shared social ties can shift how you both act at work.",
+          impact: "Group plans replace one-on-one contact.",
         },
       ],
     };
@@ -87,15 +92,14 @@ describe("forecast slot integrity", () => {
 
     const displayedTitles = result.activeFutures.map((future) => future.title);
 
-    expect(result.integrityAudit?.active.rawCount).toBe(5);
-    expect(result.integrityAudit?.active.displayedCount).toBe(5);
+    expect(result.integrityAudit?.active.rawCount).toBe(3);
+    expect(result.integrityAudit?.active.displayedCount).toBe(3);
     expect(result.integrityAudit?.active.replacements).toBe(0);
-    expect(displayedTitles.length).toBe(5);
+    expect(displayedTitles.length).toBe(3);
     expect(displayedTitles.length).toBeLessThanOrEqual(generated.active.length);
     expect(displayedTitles[0]).toBe("She Says Yes To Coffee");
     expect(displayedTitles[1]).toBe("She Declines But Stays Warm");
-    expect(displayedTitles[3]).toBe("She Asks A Clarifying Question");
-    expect(displayedTitles[4]).toBe("A First Date Gets Planned");
+    expect(displayedTitles[2]).toBe("A First Date Gets Planned");
     expect(
       displayedTitles.some((title) => title === "You Keep Talking Every Week But Nothing Changes"),
     ).toBe(false);

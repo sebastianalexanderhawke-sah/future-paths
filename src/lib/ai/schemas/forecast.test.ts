@@ -66,8 +66,31 @@ const VALID_WILD_CARD = {
   timeframe: "months",
 };
 
+const VALID_WILD_CARD_2 = {
+  title: "A Better Opportunity Appears",
+  why: "Being in motion attracts options that never find people still deciding.",
+  impact: "A choice you had not weighed becomes realistic.",
+  signals: ["Recruiter message arrives", "Friend mentions an opening", "Interview gets scheduled"],
+  timeframe: "months",
+};
+
 describe("forecast schema", () => {
-  it("parses dedicated forecast generation output", () => {
+  it("parses v2 section names onto the transport keys", () => {
+    const parsed = parseForecastOutput({
+      likely_developments: [VALID_ITEM_A, VALID_ITEM_D, VALID_ITEM_E],
+      failure_modes: [VALID_ITEM_B, VALID_ITEM_G, VALID_ITEM_F],
+      alternative_outcomes: [VALID_WILD_CARD, VALID_WILD_CARD_2],
+    });
+
+    expect(parsed.active).toHaveLength(3);
+    expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
+    expect(parsed.hidden).toHaveLength(3);
+    expect(parsed.blind_spots).toHaveLength(0);
+    expect(parsed.wild_card).toHaveLength(2);
+    expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
+  });
+
+  it("still parses legacy transport keys from cached payloads", () => {
     const parsed = parseForecastOutput({
       active: [VALID_ITEM_A, VALID_ITEM_D, VALID_ITEM_E, VALID_ITEM_F],
       hidden: [VALID_ITEM_B, VALID_ITEM_G],
@@ -75,8 +98,10 @@ describe("forecast schema", () => {
       wild_card: [VALID_WILD_CARD],
     });
 
-    expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
-    expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
+    // Legacy shapes parse (rendering old rows) even though a fresh v2
+    // generation would fail schema validation at these counts.
+    expect(parsed.active).toHaveLength(4);
+    expect(parsed.blind_spots).toHaveLength(2);
   });
 
   it("parsed forecast item includes a signals array of length 3", () => {
@@ -200,7 +225,7 @@ describe("forecast schema", () => {
     };
 
     const parsed = parseForecastOutput({
-      active: [
+      likely_developments: [
         VALID_ITEM_A,
         {
           title: "She Leaves The Team",
@@ -209,39 +234,24 @@ describe("forecast schema", () => {
           signals: ["Job posting noticed online", "Resignation handed in", "Last day approaches"],
           timeframe: "months",
         },
-        {
-          title: "You Get Coffee",
-          why: "A casual invite may land well.",
-          impact: "Plans happen quickly.",
-          signals: ["Casual invite extended", "Nearby coffee spot chosen", "Time slot agreed on"],
-          timeframe: "days",
-        },
-        {
-          title: "Timing Slips",
-          why: "Busy weeks can delay the moment.",
-          impact: "Months pass quietly.",
-          signals: ["Busy week starts again", "Planned moment delayed", "Calendar stays full"],
-          timeframe: "months",
-        },
         withBannedWhy,
       ],
-      hidden: [VALID_ITEM_B, VALID_ITEM_G],
-      blind_spots: [VALID_ITEM_C, VALID_ITEM_F],
-      wild_card: [VALID_WILD_CARD],
+      failure_modes: [VALID_ITEM_B, VALID_ITEM_G, VALID_ITEM_F],
+      alternative_outcomes: [VALID_WILD_CARD, VALID_WILD_CARD_2],
     });
 
-    // Item is sanitized and kept — all 5 survive.
-    expect(parsed.active).toHaveLength(5);
+    // Item is sanitized and kept — all 3 survive.
+    expect(parsed.active).toHaveLength(3);
     // Banned phrase removed; sentence re-capitalised at the start.
-    expect(parsed.active[4]?.why).toBe("Talk to her about how you feel.");
+    expect(parsed.active[2]?.why).toBe("Talk to her about how you feel.");
     expect(parsed.active.every((item) => !item.why.toLowerCase().includes("you should"))).toBe(true);
     expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
   });
 
   it("sanitizes directive language across all items in a section", () => {
     const parsed = parseForecastOutput({
-      active: [VALID_ITEM_A, VALID_ITEM_D, VALID_ITEM_E, VALID_ITEM_F],
-      hidden: [
+      likely_developments: [VALID_ITEM_A, VALID_ITEM_D, VALID_ITEM_E],
+      failure_modes: [
         {
           title: "First Hidden",
           why: "You must act now.",
@@ -264,8 +274,7 @@ describe("forecast schema", () => {
           timeframe: "weeks",
         },
       ],
-      blind_spots: [VALID_ITEM_C, VALID_ITEM_G],
-      wild_card: [VALID_WILD_CARD],
+      alternative_outcomes: [VALID_WILD_CARD, VALID_WILD_CARD_2],
     });
 
     // All three items are sanitized and preserved — the section is no longer empty.
@@ -276,9 +285,9 @@ describe("forecast schema", () => {
     expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
   });
 
-  it("parses a fully valid forecast without regression", () => {
+  it("parses a fully valid v2 forecast without regression", () => {
     const input = {
-      active: [
+      likely_developments: [
         VALID_ITEM_A,
         {
           title: "She Leaves The Team",
@@ -288,18 +297,17 @@ describe("forecast schema", () => {
           timeframe: "months",
         },
         VALID_ITEM_D,
-        VALID_ITEM_E,
       ],
-      hidden: [VALID_ITEM_B, VALID_ITEM_G],
-      blind_spots: [VALID_ITEM_C, VALID_ITEM_F],
-      wild_card: [VALID_WILD_CARD],
+      failure_modes: [VALID_ITEM_B, VALID_ITEM_G, VALID_ITEM_C],
+      alternative_outcomes: [VALID_WILD_CARD, VALID_WILD_CARD_2],
     };
 
     const parsed = parseForecastOutput(input);
 
-    expect(parsed.active).toHaveLength(4);
-    expect(parsed.hidden).toHaveLength(2);
-    expect(parsed.blind_spots).toHaveLength(2);
+    expect(parsed.active).toHaveLength(3);
+    expect(parsed.hidden).toHaveLength(3);
+    expect(parsed.blind_spots).toHaveLength(0);
+    expect(parsed.wild_card).toHaveLength(2);
     expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
     expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
   });

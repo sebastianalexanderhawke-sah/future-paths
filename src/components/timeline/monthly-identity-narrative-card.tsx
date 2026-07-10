@@ -10,8 +10,8 @@ type MonthlyIdentityNarrativeCardProps = {
 // the statement's own fixed wording ("You became more/less …") — the text
 // itself is never altered.
 const CHANGE_STYLES = {
-  up: { bg: "#f0fdf4", color: "#22c55e", glyph: "↑" },
-  down: { bg: "#fff5f5", color: "#ef4444", glyph: "↓" },
+  up: { bg: "#ecfdf5", color: "#10b981", glyph: "↑" },
+  down: { bg: "#fff1f2", color: "#f43f5e", glyph: "↓" },
 };
 
 function changeKind(statement: string): keyof typeof CHANGE_STYLES {

@@ -4,6 +4,10 @@ import type { ThemeName } from "@/types/enums";
 export type MockPathDraft = {
   title: string;
   description: string;
+  /** Situations v3: where this road leads (destination label). Validation-only — never persisted. */
+  direction?: string;
+  /** Situations v3: the framing assumption this path rejects, when it is the challenger. */
+  challenges_assumption?: string;
   benefits: string[];
   consequences: string[];
   future_shift: string;
@@ -30,6 +34,8 @@ export function generateMockCrossroads(
   const paths: MockPathDraft[] = [
     {
       title: "Take The Leap",
+      direction: "full commitment to this change",
+      challenges_assumption: "",
       description: `Move forward with "${title}" and commit to seeing it through.`,
       benefits: [
         "Clarity may come from decisive action rather than prolonged uncertainty.",
@@ -44,6 +50,8 @@ export function generateMockCrossroads(
     },
     {
       title: "Wait And Observe",
+      direction: "a deliberately slower decision",
+      challenges_assumption: "",
       description: `Pause on "${title}" and gather more information before acting.`,
       benefits: [
         "Space to notice patterns in what you truly want versus what you fear.",
@@ -58,6 +66,8 @@ export function generateMockCrossroads(
     },
     {
       title: "Test A Smaller Step",
+      direction: "a scaled-down experiment first",
+      challenges_assumption: "That this has to be an all-or-nothing decision.",
       description: `Reframe "${title}" and pursue a smaller, experimental version first.`,
       benefits: [
         "Lower stakes may make it easier to learn without overcommitting.",
@@ -72,6 +82,8 @@ export function generateMockCrossroads(
     },
     {
       title: "Build Closer Ties",
+      direction: "change shaped with other people",
+      challenges_assumption: "",
       description: `Choose a path adjacent to "${title}" that honors connection and shared context.`,
       benefits: [
         "Important relationships may stay intact through the transition.",
@@ -86,6 +98,8 @@ export function generateMockCrossroads(
     },
     {
       title: "Go Your Own Way",
+      direction: "independence on your own terms",
+      challenges_assumption: "",
       description: `Step back from "${title}" and prioritize independence on your own terms.`,
       benefits: [
         "Freedom to define success without external expectations.",

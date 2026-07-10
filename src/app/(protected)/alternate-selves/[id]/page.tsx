@@ -45,7 +45,7 @@ export default async function AlternateSelfDetailPage({
       <div className="mb-10">
         <Link
           href="/alternate-selves"
-          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
+          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#7c3aed]"
         >
           ← Alternate Selves
         </Link>

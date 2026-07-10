@@ -14,6 +14,16 @@ export type ForecastFutureDraft = {
   timeframe?: "days" | "weeks" | "months" | "longer_term";
 };
 
+// Forecasts v2: a forecast is a believable timeline of the chosen path —
+// exactly 8 moments. The MODEL outputs the v2 section names
+// (likely_developments / failure_modes / alternative_outcomes);
+// parseForecastOutput maps them onto these legacy transport keys so storage,
+// rendering, diffing, and audit plumbing stay byte-compatible with every
+// previously saved forecast:
+//   active      ← likely_developments (3) — how the path naturally unfolds
+//   hidden      ← failure_modes (3) — believable ways this path struggles
+//   blind_spots ← (empty for v2 generations; still read from old rows)
+//   wild_card   ← alternative_outcomes (2) — plausible unexpected turns
 export type ForecastOutput = {
   /** Concise plain-language summary of what the system understands about the
    *  situation. Optional so cached data and test fixtures predating this
@@ -37,24 +47,31 @@ export const forecastFutureSchema = z.object({
   timeframe: z.enum(["days", "weeks", "months", "longer_term"]).optional(),
 }) satisfies z.ZodType<ForecastFutureDraft>;
 
-// Target distribution for the unified 9-11 future list: active 4-5,
-// hidden 2-3, blind_spots 2-3, wild_card 1-2 (total 9-13 before any
-// fallback/cap trimming). A section falling short of its min fails the
-// whole generation (surfaced as an error by runFutureForecastAction)
-// rather than silently shipping a thin or fallback-padded forecast.
+// Forecasts v2: exactly 8 futures — 3 likely developments (active), 3
+// failure modes (hidden), 2 alternative outcomes (wild_card). A section
+// missing its exact count fails the whole generation (surfaced as an error
+// by runFutureForecastAction) rather than silently shipping a thin or
+// fallback-padded timeline. blind_spots is retired for new generations but
+// remains a valid (empty) transport key so stored v1 forecasts still parse.
 export const forecastOutputSchema = z.object({
   current_understanding: tentativeTextSchema.optional(),
-  active: z.array(forecastFutureSchema).min(4).max(5),
-  hidden: z.array(forecastFutureSchema).min(2).max(3),
-  blind_spots: z.array(forecastFutureSchema).min(2).max(3),
-  wild_card: z.array(forecastFutureSchema).min(1).max(2),
+  active: z.array(forecastFutureSchema).length(3),
+  hidden: z.array(forecastFutureSchema).length(3),
+  blind_spots: z.array(forecastFutureSchema).max(0),
+  wild_card: z.array(forecastFutureSchema).length(2),
 }) satisfies z.ZodType<ForecastOutput>;
 
+// Accepts BOTH the v2 model keys and the legacy transport keys, so cached
+// v1 payloads and old fixtures keep parsing while new generations use the
+// semantically named sections.
 const looseForecastShape = z.object({
   current_understanding: z.unknown().optional(),
-  active: z.array(z.unknown()),
-  hidden: z.array(z.unknown()),
-  blind_spots: z.array(z.unknown()),
+  likely_developments: z.array(z.unknown()).optional(),
+  failure_modes: z.array(z.unknown()).optional(),
+  alternative_outcomes: z.array(z.unknown()).optional(),
+  active: z.array(z.unknown()).optional(),
+  hidden: z.array(z.unknown()).optional(),
+  blind_spots: z.array(z.unknown()).optional(),
   wild_card: z.array(z.unknown()).optional(),
 });
 
@@ -80,7 +97,7 @@ function filterItems(raw: unknown[]): ForecastFutureDraft[] {
 }
 
 export function parseForecastOutput(data: unknown): ForecastOutput {
-  // Throw on malformed top-level structure (not an object with the three arrays).
+  // Throw on malformed top-level structure (not an object).
   const shape = looseForecastShape.parse(data);
 
   const understandingResult =
@@ -88,11 +105,15 @@ export function parseForecastOutput(data: unknown): ForecastOutput {
       ? tentativeTextSchema.safeParse(shape.current_understanding)
       : null;
 
+  // v2 section names take precedence; legacy keys are the fallback for
+  // cached payloads and old fixtures. A v2 generation therefore lands as:
+  // active=likely (3), hidden=failure modes (3), blind_spots=[],
+  // wild_card=alternatives (2).
   return {
     ...(understandingResult?.success ? { current_understanding: understandingResult.data } : {}),
-    active: filterItems(shape.active),
-    hidden: filterItems(shape.hidden),
-    blind_spots: filterItems(shape.blind_spots),
-    wild_card: filterItems(shape.wild_card ?? []),
+    active: filterItems(shape.likely_developments ?? shape.active ?? []),
+    hidden: filterItems(shape.failure_modes ?? shape.hidden ?? []),
+    blind_spots: filterItems(shape.blind_spots ?? []),
+    wild_card: filterItems(shape.alternative_outcomes ?? shape.wild_card ?? []),
   };
 }

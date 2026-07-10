@@ -34,10 +34,10 @@ export function PatternEmergingCard({
   );
 
   return (
-    <OverviewCard className="px-9 pb-6 pt-6">
+    <OverviewCard className="!border-[#e0e7ff] !bg-[#f8f9ff] px-9 pb-6 pt-6">
       <div className="mb-4">
         <div className="flex items-center gap-2">
-          <span aria-hidden="true" className="text-[18px] leading-none text-[#6366f1]">
+          <span aria-hidden="true" className="text-[18px] leading-none text-[#4f46e5]">
             ✦
           </span>
           <h2 className="text-[17px] font-bold text-[#111]">
@@ -62,7 +62,7 @@ export function PatternEmergingCard({
           ) : null}
           <Link
             href="/future-selves"
-            className="mt-3 inline-flex items-center gap-1 text-[13px] font-medium text-[#6366f1] transition-opacity duration-150 hover:opacity-80"
+            className="mt-3 inline-flex items-center gap-1 text-[13px] font-medium text-[#4f46e5] transition-opacity duration-150 hover:opacity-80"
           >
             Read more about this pattern →
           </Link>
@@ -88,7 +88,7 @@ export function PatternEmergingCard({
                 key={i}
                 className="h-4 w-4 rounded-full"
                 style={{
-                  background: i < supportingCount ? "#6366f1" : "#ececf0",
+                  background: i < supportingCount ? "#6366f1" : "#e4e4ec",
                 }}
               />
             ))}
@@ -116,7 +116,7 @@ export function PatternEmergingCard({
                   </span>
                   <span
                     className="ml-3 whitespace-nowrap text-[13px] font-bold"
-                    style={{ color: impact.delta >= 0 ? "#22c55e" : "#ef4444" }}
+                    style={{ color: impact.delta >= 0 ? "#10b981" : "#f43f5e" }}
                   >
                     {impact.delta > 0 ? "+" : ""}
                     {impact.delta}%

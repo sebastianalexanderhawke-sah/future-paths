@@ -103,8 +103,8 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
     : !hasChosenPath
       ? { label: "Exploring options", color: "#666666", soft: "#f4f4f6" }
       : !hasCheckIns
-        ? { label: "Forecast", color: "#6366f1", soft: "#eef2ff" }
-        : { label: "Checking in", color: "#22c55e", soft: "#f0fdf4" };
+        ? { label: "Forecast", color: "#b45309", soft: "#eef2ff" }
+        : { label: "Checking in", color: "#10b981", soft: "#ecfdf5" };
 
   const summaryCard = situationUnderstanding ? (
     <OverviewCard className="px-9 py-7">
@@ -186,7 +186,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
           <div className="mb-10">
             <Link
               href="/moments"
-              className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
+              className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#b45309]"
             >
               ← All situations
             </Link>

@@ -98,7 +98,7 @@ export default async function OverviewPage() {
         key: `checkin-${moment.id}`,
         situationName: moment.title,
         status: "Check-in overdue",
-        statusColor: "#ef4444",
+        statusColor: "#f43f5e",
         href: `/moments/${moment.id}#check-in`,
         priority: 0,
       });
@@ -120,7 +120,7 @@ export default async function OverviewPage() {
         key: `unresolved-${moment.id}`,
         situationName: moment.title,
         status: "Still deciding",
-        statusColor: "#3b82f6",
+        statusColor: "#8b5cf6",
         href: `/moments/${moment.id}`,
         priority: 2,
       });

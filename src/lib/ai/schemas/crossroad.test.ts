@@ -131,37 +131,62 @@ describe("crossroad schema", () => {
     expect(parsed.paths[0]?.title).toBe("Tell Her Directly And Honestly That");
   });
 
-  it("accepts exactly 6 paths", () => {
+  it("accepts exactly 3 paths", () => {
     const parsed = parseCrossroadOutput({
       current_understanding: CURRENT_UNDERSTANDING,
-      paths: makePaths(6),
+      paths: makePaths(3),
     });
-    expect(parsed.paths).toHaveLength(6);
+    expect(parsed.paths).toHaveLength(3);
   });
 
-  it("accepts exactly 7 paths", () => {
+  it("accepts exactly 5 paths", () => {
     const parsed = parseCrossroadOutput({
       current_understanding: CURRENT_UNDERSTANDING,
-      paths: makePaths(7),
+      paths: makePaths(5),
     });
-    expect(parsed.paths).toHaveLength(7);
+    expect(parsed.paths).toHaveLength(5);
   });
 
-  it("rejects fewer than 5 paths", () => {
+  it("rejects fewer than 3 paths", () => {
     expect(() =>
       parseCrossroadOutput({
         current_understanding: CURRENT_UNDERSTANDING,
-        paths: makePaths(4),
+        paths: makePaths(2),
       }),
     ).toThrow();
   });
 
-  it("rejects more than 7 paths", () => {
+  it("rejects more than 5 paths", () => {
     expect(() =>
       parseCrossroadOutput({
         current_understanding: CURRENT_UNDERSTANDING,
-        paths: makePaths(8),
+        paths: makePaths(6),
       }),
     ).toThrow();
+  });
+
+  it("defaults direction and challenges_assumption when the model omits them", () => {
+    const parsed = parseCrossroadOutput({
+      current_understanding: CURRENT_UNDERSTANDING,
+      paths: makePaths(3),
+    });
+    expect(parsed.paths[0]?.direction).toBe("");
+    expect(parsed.paths[0]?.challenges_assumption).toBe("");
+  });
+
+  it("carries direction and challenges_assumption through parsing", () => {
+    const parsed = parseCrossroadOutput({
+      current_understanding: CURRENT_UNDERSTANDING,
+      paths: makePaths(3).map((path, index) => ({
+        ...path,
+        direction: `destination ${index + 1}`,
+        challenges_assumption: index === 0 ? "That the choice must be made now." : "",
+      })),
+    });
+    expect(parsed.paths[0]?.direction).toBe("destination 1");
+    expect(parsed.paths[0]?.challenges_assumption).toBe(
+      "That the choice must be made now.",
+    );
+    expect(parsed.paths[1]?.challenges_assumption).toBe("");
   });
 });

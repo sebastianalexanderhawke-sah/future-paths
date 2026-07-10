@@ -48,7 +48,7 @@ export default async function TimelineDetailPage({ params }: TimelineDetailPageP
       <div className="mb-10">
         <Link
           href="/timeline"
-          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
+          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857]"
         >
           ← Timeline
         </Link>

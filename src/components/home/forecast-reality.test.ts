@@ -73,12 +73,13 @@ describe("forecast reality", () => {
         (future) => !/run club|fitness|gym|athletic/i.test(future.title),
       ),
     ).toBe(true);
-    expect(sections.activeFutures.length).toBeGreaterThanOrEqual(4);
-    expect(sections.hiddenFutures.length).toBeGreaterThanOrEqual(2);
-    expect(sections.blindSpotFutures.length).toBeGreaterThanOrEqual(2);
+    // Forecasts v2: 3 likely developments, 3 failure modes, no blind spots.
+    expect(sections.activeFutures.length).toBe(3);
+    expect(sections.hiddenFutures.length).toBe(3);
+    expect(sections.blindSpotFutures.length).toBe(0);
   });
 
-  it("builds specific blind spot futures from selected path context", () => {
+  it("surfaces path-context insights as failure modes (v2: blind spots retired)", () => {
     const sections = buildRealityForecastSections(
       [],
       [],
@@ -96,10 +97,11 @@ describe("forecast reality", () => {
     );
 
     expect(
-      sections.blindSpotFutures.some((future) => future.title === "She Assumes You're Not Interested"),
+      sections.hiddenFutures.some((future) => future.title === "She Assumes You're Not Interested"),
     ).toBe(true);
+    expect(sections.blindSpotFutures).toHaveLength(0);
     expect(
-      sections.blindSpotFutures.every(
+      sections.hiddenFutures.every(
         (future) => !/clarity|reflect|understanding|patterns|insight/i.test(future.title),
       ),
     ).toBe(true);
@@ -123,7 +125,6 @@ describe("forecast reality", () => {
   it("processes dedicated forecast generation through safeguards", () => {
     const sections = processGeneratedForecastSections(
       {
-        wild_card: [],
         active: [
           {
             title: "She Says Yes To Coffee",
@@ -131,19 +132,14 @@ describe("forecast reality", () => {
             impact: "You meet outside work within the week.",
           },
           {
-            title: "She Says No But Stays Friendly",
-            why: "A clear question can end uncertainty without ending contact.",
-            impact: "Daily work stays workable even if the crush fades.",
+            title: "You Start Spending Time Together Outside Work",
+            why: "One plan tends to lead to another once the first invitation lands.",
+            impact: "Weekends start including her instead of just workdays.",
           },
           {
             title: "Coworkers Learn About The Ask",
             why: "Workplace moments rarely stay fully private.",
             impact: "Small talk feels strained for a few weeks.",
-          },
-          {
-            title: "The Friendship Deepens First",
-            why: "More time together can build comfort before romance.",
-            impact: "You talk every week but nothing romantic happens yet.",
           },
         ],
         hidden: [
@@ -158,26 +154,22 @@ describe("forecast reality", () => {
             impact: "Months pass without a clear moment to act.",
           },
           {
-            title: "You Receive Mixed Signals",
-            why: "Friendly behavior can be hard to read over time.",
-            impact: "You hesitate longer than planned.",
-          },
-        ],
-        blind_spots: [
-          {
             title: "She Assumes You're Not Interested",
             why: "Platonic behavior can read as disinterest when she initiates often.",
             impact: "She stops looking for signs because the friendship feels settled.",
           },
+        ],
+        blind_spots: [],
+        wild_card: [
           {
             title: "A Mutual Friend Changes The Dynamic",
             why: "Shared social ties can shift how you both act at work.",
             impact: "Group plans replace one-on-one contact.",
           },
           {
-            title: "A One-On-One Opportunity Appears Naturally",
-            why: "Shared projects or social plans can create private time.",
-            impact: "You finally talk outside the usual work routine.",
+            title: "She Transfers To Another Team",
+            why: "Internal moves change daily proximity without ending contact.",
+            impact: "You have to choose to stay in touch deliberately.",
           },
         ],
       },
@@ -187,12 +179,229 @@ describe("forecast reality", () => {
       ["Ask her out directly after work."],
     );
 
-    expect(sections.activeFutures.length).toBeGreaterThanOrEqual(4);
-    expect(sections.hiddenFutures.length).toBeGreaterThanOrEqual(3);
-    expect(sections.blindSpotFutures.length).toBeGreaterThanOrEqual(3);
+    // Forecasts v2: 3 likely developments, 3 failure modes, 2 alternatives.
+    expect(sections.activeFutures.length).toBe(3);
+    expect(sections.hiddenFutures.length).toBe(3);
+    expect(sections.blindSpotFutures.length).toBe(0);
+    expect(sections.wildCardFutures.length).toBe(2);
     expect(
       sections.activeFutures.every((future) => !isReflectiveForecast(future.title)),
     ).toBe(true);
+  });
+
+  it("v2.1: keeps AI futures whose prose uses vocabulary v1 banned", () => {
+    // "think about", "insight", "patterns", "reflect" are legitimate v2
+    // lived-moment language. The structural filter must not remove them.
+    const sections = processGeneratedForecastSections(
+      {
+        active: [
+          {
+            title: "You Finally Have Time To Think About Growth",
+            why: "With tech handled, your attention shifts from firefighting to direction — you start thinking about where the site should go next instead of what broke today.",
+            impact: "Watching user replies gives you insight into what actually helps people who overthink.",
+          },
+          {
+            title: "AI Content Drafts Start Sounding Like You",
+            why: "After prompt iteration the drafts arrive closer to publishable.",
+            impact: "The bottleneck shifts from writing to reviewing.",
+          },
+          {
+            title: "The Site Starts Running Without Your Daily Attention",
+            why: "You notice patterns in which posts resonate, and that changes what you write.",
+            impact: "The work starts to reflect what your readers actually need.",
+          },
+        ],
+        hidden: [
+          {
+            title: "You Become The Bottleneck Between Two Systems",
+            why: "Both threads route back through you for context.",
+            impact: "You spend time managing handoffs.",
+          },
+          {
+            title: "The Site's Voice Slowly Becomes Unrecognizable",
+            why: "Reliance makes the writing more generic without recalibration.",
+            impact: "Content publishes on schedule while losing quality.",
+          },
+          {
+            title: "You Stop Asking For Help",
+            why: "Working solo makes self-reliance the habit.",
+            impact: "Problems others solved months ago eat your weekends.",
+          },
+        ],
+        blind_spots: [],
+        wild_card: [
+          {
+            title: "The Content Process Reveals A New Revenue Direction",
+            why: "Systematic production surfaces what people actually pay attention to.",
+            impact: "A format becomes a product.",
+          },
+          {
+            title: "The Contractor Spots A Bigger Opportunity",
+            why: "Outside pattern recognition notices what you're too close to see.",
+            impact: "You redirect where you focus next.",
+          },
+        ],
+      },
+      "managing my business",
+      "i want to find a better way to manage my business, i have a website that helps people with overthinking; content and tech take the most time",
+      "Separate Content From Tech",
+      ["Treat content and tech as two distinct problems."],
+    );
+
+    // Exactly 8 survive — nothing removed for narrative vocabulary.
+    expect(sections.activeFutures).toHaveLength(3);
+    expect(sections.hiddenFutures).toHaveLength(3);
+    expect(sections.wildCardFutures).toHaveLength(2);
+    // Titles preserved verbatim — no title-case mangling ("AI" stays "AI"),
+    // no scene-title substitution.
+    expect(sections.activeFutures.map((f) => f.title)).toEqual([
+      "You Finally Have Time To Think About Growth",
+      "AI Content Drafts Start Sounding Like You",
+      "The Site Starts Running Without Your Daily Attention",
+    ]);
+    // Impact text is the model's own writing, untouched.
+    expect(sections.activeFutures[0]?.futureImpact).toBe(
+      "Watching user replies gives you insight into what actually helps people who overthink.",
+    );
+  });
+
+  it("v2.2: preserves long descriptions verbatim instead of templating them", () => {
+    // 462 chars — over the old 400-char cap that used to trigger the
+    // "Because you described…" replacement. The model's paragraph must now
+    // reach the user exactly as written.
+    const longWhy =
+      "Once the tech side is handled and content production becomes more systematic, you may find that the content itself — not the site infrastructure — is where the real leverage lives. A post that resonates with people who overthink could reach far beyond your current audience through sharing, newsletters, or other formats. Separating content from tech may reveal that content deserves more investment, not less, and that the site is just one distribution channel.";
+
+    const sections = processGeneratedForecastSections(
+      {
+        active: [
+          {
+            title: "You Realize Content Is The Real Business",
+            why: longWhy,
+            impact: "You shift investment toward content formats and distribution.",
+            signals: ["A Post Outperforms Everything Else", "Newsletter Signups Accelerate", "AI Output Needs Less Editing"],
+          },
+          {
+            title: "AI Content Drafts Start Sounding Like You",
+            why: "After prompt iteration the drafts arrive closer to publishable.",
+            impact: "The bottleneck shifts from writing to reviewing.",
+          },
+          {
+            title: "A Freelancer Takes The Tech Off Your Plate",
+            why: "Handing off a real problem shifts the mental load.",
+            impact: "A site error gets fixed without your hours.",
+          },
+        ],
+        hidden: [
+          {
+            title: "You Become The Bottleneck",
+            why: "Both threads route back through you.",
+            impact: "You manage handoffs.",
+          },
+          {
+            title: "The Freelancer Misreads The Audience",
+            why: "A quickly-briefed contractor treats it as generic web work.",
+            impact: "Small decisions undermine the experience.",
+          },
+          {
+            title: "Content Volume Rises But Connection Drops",
+            why: "Scale without recalibration flattens the voice.",
+            impact: "Readers notice before you do.",
+          },
+        ],
+        blind_spots: [],
+        wild_card: [
+          {
+            title: "The Contractor Spots A Bigger Opportunity",
+            why: "Outside eyes see what you're too close to see.",
+            impact: "You redirect focus.",
+          },
+          {
+            title: "A Reader Becomes A Collaborator",
+            why: "Shipping consistently makes strangers offer more than feedback.",
+            impact: "You stop building alone.",
+          },
+        ],
+      },
+      "managing my business",
+      "i have a website that helps people with overthinking; content and tech take the most time",
+      "Separate Content From Tech",
+      [],
+    );
+
+    // The 462-char paragraph survives verbatim — no "Because you described…".
+    expect(sections.activeFutures[0]?.whyItMightHappen).toBe(longWhy);
+    expect(
+      [...sections.activeFutures, ...sections.hiddenFutures, ...sections.wildCardFutures].every(
+        (f) => !/^because you described/i.test(f.whyItMightHappen),
+      ),
+    ).toBe(true);
+    // Model-supplied signals keep their exact casing ("AI" is not mangled).
+    expect(sections.activeFutures[0]?.signals).toContain("AI Output Needs Less Editing");
+  });
+
+  it("v2.1: anti-fabrication still removes futures about invented topics", () => {
+    const sections = processGeneratedForecastSections(
+      {
+        active: [
+          {
+            title: "Your Dallas Office Opens",
+            why: "Expansion could follow growth.",
+            impact: "The business gets a second base.",
+          },
+          {
+            title: "AI Content Drafts Start Sounding Like You",
+            why: "After prompt iteration the drafts arrive closer to publishable.",
+            impact: "The bottleneck shifts from writing to reviewing.",
+          },
+          {
+            title: "A Freelancer Takes The Tech Off Your Plate",
+            why: "Handing off a real problem shifts the mental load.",
+            impact: "A site error gets fixed without your hours.",
+          },
+        ],
+        hidden: [
+          {
+            title: "You Become The Bottleneck",
+            why: "Both threads route back through you.",
+            impact: "You manage handoffs.",
+          },
+          {
+            title: "The Freelancer Misreads The Audience",
+            why: "A quickly-briefed contractor treats it as generic web work.",
+            impact: "Small decisions undermine the experience.",
+          },
+          {
+            title: "Content Volume Rises But Connection Drops",
+            why: "Scale without recalibration flattens the voice.",
+            impact: "Readers notice before you do.",
+          },
+        ],
+        blind_spots: [],
+        wild_card: [
+          {
+            title: "The Contractor Spots A Bigger Opportunity",
+            why: "Outside eyes see what you're too close to see.",
+            impact: "You redirect focus.",
+          },
+          {
+            title: "A Reader Becomes A Collaborator",
+            why: "Shipping consistently is what makes strangers offer more than feedback.",
+            impact: "You stop building alone.",
+          },
+        ],
+      },
+      "managing my business",
+      "i have a website that helps people with overthinking; content and tech take the most time",
+      "Separate Content From Tech",
+      [],
+    );
+
+    // "Dallas" is a fabricated topic for this situation — still removed.
+    expect(
+      sections.activeFutures.some((future) => /dallas/i.test(future.title)),
+    ).toBe(false);
+    expect(sections.hiddenFutures).toHaveLength(3);
   });
 
   it("uses Claude-supplied signals directly when present on the draft", () => {
@@ -280,11 +489,12 @@ describe("forecast reality", () => {
 
     const future = sections.activeFutures.find((f) => f.title === "She Says Yes To Coffee");
     expect(future).toBeDefined();
-    // Signals come directly from Claude's output, title-cased.
+    // v2.2: signals come directly from Claude's output, verbatim — no
+    // title-casing pass (it mangled acronyms like "AI").
     expect(future?.signals).toEqual([
-      "Pay Jumps From $12 To $20",
-      "Notice Period At Current Job",
-      "Moving Logistics Begin",
+      "Pay jumps from $12 to $20",
+      "Notice period at current job",
+      "Moving logistics begin",
     ]);
   });
 

@@ -15,12 +15,14 @@ import { parseIdentityPromptOutput } from "@/lib/ai/schemas/identity-prompt";
 import { parseIdentityUpdateOutput } from "@/lib/ai/schemas/identity-update";
 import { parseMonthlyIdentityNarrativeOutput } from "@/lib/ai/schemas/monthly-identity-narrative";
 import { parsePastAlternativePathOutput } from "@/lib/ai/schemas/past-alternative-path";
+import { parsePathSetAuditOutput } from "@/lib/ai/schemas/path-set-audit";
 import { parseReflectionQuestionOutput } from "@/lib/ai/schemas/reflection-question";
 import { parseTimelineOutput } from "@/lib/ai/schemas/timeline";
 import type { PromptId } from "@/lib/ai/prompts/ids";
 
 const OUTPUT_PARSERS: Record<PromptId, (data: unknown) => unknown> = {
   "crossroad.generate": parseCrossroadOutput,
+  "path_set.audit": parsePathSetAuditOutput,
   "discovery_question.generate": parseDiscoveryQuestionOutput,
   "check_in.generate": parseCheckInOutput,
   "identity_update.generate": parseIdentityUpdateOutput,

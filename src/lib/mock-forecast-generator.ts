@@ -6,23 +6,10 @@ type ForecastPathContext = {
   description: string;
 };
 
-const DEFAULT_WILD_CARDS: ForecastOutput["wild_card"] = [
-  {
-    title: "A Mutual Friend Changes Everything",
-    why: "Shared connections can create unexpected openings.",
-    impact: "The situation shifts through someone neither of you planned on.",
-  },
-  {
-    title: "She Reaches Out First After Silence",
-    why: "Long pauses sometimes end with an unexpected message.",
-    impact: "The dynamic reverses without you making the next move.",
-  },
-  {
-    title: "A Small Coincidence Reopens The Door",
-    why: "Everyday overlap can restart contact when timing aligns.",
-    impact: "A chance encounter changes what felt settled.",
-  },
-];
+// Forecasts v2 mock: exactly 8 moments per forecast — 3 likely developments
+// (active), 3 failure modes (hidden), 2 alternative outcomes (wild_card) —
+// shaped as one believable year of the chosen path. blind_spots is always
+// empty for v2 generations.
 
 function buildWorkCrushForecast(selectedPathTitle?: string): ForecastOutput {
   const direct = /ask her out|direct approach|change the context/i.test(selectedPathTitle ?? "");
@@ -31,83 +18,68 @@ function buildWorkCrushForecast(selectedPathTitle?: string): ForecastOutput {
     active: direct
       ? [
           {
-            title: "She Says Yes To Coffee",
-            why: "A clear ask after daily rapport can turn into plans quickly.",
-            impact: "You meet outside work within the week.",
+            title: "You Finally Ask Her To Coffee",
+            why: "Weeks of daily rapport build to a moment where the question feels natural rather than forced. Actually asking changes the story from wondering to knowing.",
+            impact: "You meet outside work for the first time within the month.",
           },
           {
-            title: "She Says No But Stays Friendly",
-            why: "A direct question can end uncertainty without ending contact.",
-            impact: "Daily work stays workable even if the crush fades.",
+            title: "You Start Spending Time Together Outside Work",
+            why: "One plan tends to lead to another once the first invitation lands. The relationship stops depending on shift schedules.",
+            impact: "Weekends start including her instead of just workdays.",
           },
           {
-            title: "Coworkers Learn About The Ask",
-            why: "Workplace moments rarely stay fully private.",
-            impact: "Small talk feels strained for a few weeks.",
-          },
-          {
-            title: "The Friendship Deepens First",
-            why: "More time together can build comfort before romance.",
-            impact: "You talk every week but nothing romantic happens yet.",
+            title: "Coworkers Notice The Change",
+            why: "Workplace dynamics rarely stay private, and the way you two act around each other becomes visible before either of you announces anything.",
+            impact: "The team starts treating you as a pair at social events.",
           },
         ]
       : [
           {
-            title: "You Keep Talking Every Week",
-            why: "Daily shifts keep contact easy without a decisive move.",
-            impact: "The friendship stays steady but nothing changes romantically.",
+            title: "The Friendship Deepens First",
+            why: "Choosing patience means the connection grows through ordinary shifts and small favors. Comfort builds before anything is named.",
+            impact: "She starts seeking you out instead of the other way around.",
           },
           {
             title: "She Starts Texting Outside Work",
-            why: "Comfort at work can spill into off-hours messages.",
+            why: "Comfort at work eventually spills past it. The first off-hours message marks the friendship crossing into personal territory.",
             impact: "Contact moves beyond the office for the first time.",
           },
           {
             title: "A Team Event Creates Alone Time",
-            why: "After-work plans or projects can create a private moment.",
-            impact: "You finally talk outside the usual routine.",
-          },
-          {
-            title: "Someone Else Makes A Move First",
-            why: "Shared proximity puts others in the same position.",
-            impact: "She starts spending breaks with someone else.",
+            why: "After-work plans eventually produce the private moment daily shifts never quite allow. What you do with it shapes the next months.",
+            impact: "You finally talk without the usual audience.",
           },
         ],
     hidden: [
       {
-        title: "She Leaves The Company",
-        why: "Job changes can remove the situation entirely.",
-        impact: "The crush fades because daily contact disappears.",
+        title: "The Ambiguity Outlasts Your Patience",
+        why: "Waiting for the perfect moment can quietly become the plan itself. Months of friendly routine make the question harder to ask, not easier.",
+        impact: "The situation feels the same in spring as it did in autumn.",
       },
-      {
-        title: "The Timing Never Aligns",
-        why: "Busy schedules can keep things polite but static.",
-        impact: "Months pass without a clear moment to act.",
-      },
-      {
-        title: "You Receive Mixed Signals",
-        why: "Friendly behavior can be hard to read over time.",
-        impact: "You hesitate longer than planned.",
-      },
-    ],
-    blind_spots: [
       {
         title: "She Assumes You're Not Interested",
-        why: "Platonic behavior can read as disinterest when she initiates often.",
-        impact: "She stops looking for signs because the friendship feels settled.",
+        why: "Consistent platonic behavior reads as an answer even when you never meant to give one. She stops looking for signs because the friendship feels settled.",
+        impact: "She starts talking to you about other people she likes.",
       },
       {
-        title: "A Mutual Friend Changes The Dynamic",
-        why: "Shared social ties can shift how you both act at work.",
-        impact: "Group plans replace one-on-one contact.",
-      },
-      {
-        title: "A One-On-One Opportunity Appears Naturally",
-        why: "Shared projects or social plans can create private time.",
-        impact: "You finally talk outside the usual work routine.",
+        title: "Work Gets Complicated Before The Answer Comes",
+        why: "Sharing a workplace means every step happens in front of the same people you both see daily. The stakes of an awkward outcome grow the longer things stay undefined.",
+        impact: "You start editing yourself at work to protect the dynamic.",
       },
     ],
-    wild_card: DEFAULT_WILD_CARDS,
+    blind_spots: [],
+    wild_card: [
+      {
+        title: "She Leaves The Company",
+        why: "Job changes end the daily proximity the whole situation rests on — and force the question of whether this was a work friendship or something more.",
+        impact: "You have to decide whether to pursue contact deliberately.",
+      },
+      {
+        title: "A Mutual Friend Changes Everything",
+        why: "Someone who knows you both can reframe the situation in one conversation — because you chose to stay close enough for others to see what's there.",
+        impact: "The dynamic shifts through someone neither of you planned on.",
+      },
+    ],
   };
 }
 
@@ -115,61 +87,51 @@ function buildBusinessForecast(): ForecastOutput {
   return {
     active: [
       {
-        title: "The First 10 Users Arrive",
-        why: "Early outreach can convert faster than expected.",
-        impact: "Real usage feedback arrives within weeks.",
+        title: "The First Real Users Arrive",
+        why: "Committing to the build turns the idea into something strangers actually touch. Their first reactions carry more information than months of planning.",
+        impact: "Real usage feedback starts steering the roadmap.",
       },
       {
-        title: "Launch Slips By Several Months",
-        why: "School, work, or scope can push the first release back.",
-        impact: "The launch moves to nights and weekends.",
-      },
-      {
-        title: "An Early User Becomes Your Biggest Advocate",
-        why: "Strong believers sometimes spread the product organically.",
-        impact: "One user introduces several others.",
+        title: "The Work Becomes Part Of Your Routine",
+        why: "The project stops being a burst of excitement and becomes the thing your evenings quietly organize around. That shift is what makes it real.",
+        impact: "Friends start asking how the business is going, not whether.",
       },
       {
         title: "The Product Solves A Different Problem Than Expected",
-        why: "Real usage reveals a different pain point worth solving.",
-        impact: "The MVP pivots after the first tests.",
+        why: "Real usage reveals what people actually need, which is rarely exactly what you built first. Following that signal is how the business finds its shape.",
+        impact: "The pitch you give in month six sounds different from month one.",
       },
     ],
     hidden: [
       {
-        title: "A Competitor Launches First",
-        why: "Similar ideas often appear on overlapping timelines.",
-        impact: "You rush differentiation before your own launch.",
+        title: "Nobody Uses The Product At First",
+        why: "The launch moment you imagined often lands quietly. The silence isn't a verdict — but it tests whether the commitment was to the idea or to the outcome.",
+        impact: "You face weeks of building without applause.",
       },
       {
-        title: "A Job Offer Delays The Launch",
-        why: "Income pressure can push the business behind employment.",
-        impact: "Building becomes a side project for months.",
+        title: "You Stop Asking For Help",
+        why: "Building alone makes self-reliance the habit, and the habit slowly closes the doors that feedback and collaborators would have opened.",
+        impact: "Problems that others solved months ago eat your weekends.",
       },
       {
         title: "The Business Becomes A Side Project",
-        why: "Split focus can shrink available build time.",
+        why: "Income pressure and daily obligations shrink the build hours without any single decision to quit. Drift, not failure, is the likelier ending.",
         impact: "Progress slows to weekends only.",
       },
     ],
-    blind_spots: [
+    blind_spots: [],
+    wild_card: [
       {
-        title: "Graduation Creates More Time Than Expected",
-        why: "A major transition can open more focused build hours.",
-        impact: "The project gets more attention after the transition.",
-      },
-      {
-        title: "An Early User Wants To Help Build It",
-        why: "Power users sometimes offer more than feedback.",
-        impact: "A user becomes part of the build process.",
-      },
-      {
-        title: "A Co-Founder Joins The Project",
-        why: "Shared excitement can turn a supporter into a partner.",
+        title: "An Early User Wants To Build It With You",
+        why: "Shipping something real is what makes a stranger care enough to offer more than feedback — the path itself creates the partnership.",
         impact: "You split responsibilities and ship faster.",
       },
+      {
+        title: "The Product Evolves Into Something Else",
+        why: "Following real demand can carry the project somewhere the original plan never pointed. The business you end up running may not be the one you started.",
+        impact: "A feature becomes the product.",
+      },
     ],
-    wild_card: DEFAULT_WILD_CARDS,
   };
 }
 
@@ -177,123 +139,104 @@ function buildRelocationForecast(): ForecastOutput {
   return {
     active: [
       {
+        title: "The New City Starts Feeling Familiar",
+        why: "Somewhere in the first months, navigation stops requiring thought and a few places become yours. Familiarity arrives quietly, before belonging does.",
+        impact: "You stop describing the move as an experiment.",
+      },
+      {
         title: "Most New Friendships Begin At Work",
-        why: "A new job becomes the main place you meet people after a move.",
-        impact: "Your social life starts revolving around colleagues.",
+        why: "A new job becomes the main place you meet people after a move. The colleagues you click with shape what the city feels like.",
+        impact: "Your social life starts revolving around a few coworkers.",
       },
       {
-        title: "You Renew Your Lease After One Year",
-        why: "A good fit can turn a trial move into a longer chapter.",
-        impact: "What felt temporary starts to feel permanent.",
-      },
-      {
-        title: "Homesickness Hits After The Move",
-        why: "Novelty fades before new roots feel solid.",
-        impact: "Visits home become more frequent than planned.",
-      },
-      {
-        title: "The Job Lasts Longer Than Planned",
-        why: "Promotion paths and local ties can extend the stay.",
-        impact: "The move stops feeling temporary.",
+        title: "You Renew Your Lease",
+        why: "The renewal is the first moment the move stops being temporary in your own head. Signing again is choosing the city on purpose this time.",
+        impact: "What felt like a trial quietly becomes a chapter.",
       },
     ],
     hidden: [
       {
-        title: "Visiting Home Gets More Expensive Than Expected",
-        why: "Distance makes every trip cost more time and money.",
-        impact: "You visit less often than you first imagined.",
+        title: "Loneliness Lasts Longer Than Expected",
+        why: "New friendships take months to carry real weight, and the gap between arriving and belonging is where most moves get hard. Knowing it's coming makes it survivable.",
+        impact: "Weekends feel emptier than weekdays for a while.",
       },
       {
-        title: "The Role Ends Sooner Than Expected",
-        why: "Fit issues or company changes can shorten the chapter.",
-        impact: "You start looking again within the first year.",
+        title: "The Job Isn't What You Expected",
+        why: "The role that justified the move reveals its real shape only after you're living inside it. The gap between the offer and the reality tests why you actually came.",
+        impact: "You separate what the job gives you from what the city does.",
       },
       {
         title: "Old Friendships Fade From Distance",
-        why: "Less spontaneous contact makes some ties quieter.",
-        impact: "Home starts to feel farther away emotionally.",
+        why: "Without spontaneous contact, some ties quietly go dormant. The fading is gradual enough that you notice it only when you go to share news.",
+        impact: "Home starts to feel farther away emotionally than physically.",
       },
     ],
-    blind_spots: [
+    blind_spots: [],
+    wild_card: [
       {
-        title: "The Job Matters Less Than The New Life You Build",
-        why: "Daily routines outside the office can become the reason you stay.",
-        impact: "Weekend plans matter more than the role itself.",
+        title: "You Decide To Stay For A Completely Different Reason",
+        why: "The job may have brought you here, but a relationship, a community, or a life you built on weekends can become the real anchor.",
+        impact: "The role becomes replaceable; the city doesn't.",
       },
       {
-        title: "A Former Colleague Becomes A Close Friend",
-        why: "Shared work history can accelerate trust in a new city.",
-        impact: "One friendship anchors your social life.",
-      },
-      {
-        title: "You Move Again Within Two Years",
-        why: "A first relocation sometimes leads to a second opportunity.",
-        impact: "The city becomes a stepping stone, not a destination.",
+        title: "A Better Opportunity Appears Because You Moved",
+        why: "Being in a new market and a new network surfaces options that were invisible from home — the move itself widens what's possible.",
+        impact: "You field an offer you couldn't have gotten before.",
       },
     ],
-    wild_card: DEFAULT_WILD_CARDS,
   };
 }
 
 function buildGenericForecast(title: string): ForecastOutput {
+  void title;
   return {
     active: [
       {
-        title: "The Situation Resolves Within Months",
-        why: "Action or time can bring the decision to a head.",
-        impact: "You know where things stand by the end of the season.",
+        title: "The First Weeks Feel Like Progress",
+        why: "Committing to a direction replaces deliberation with motion, and early steps land quickly. The momentum makes the choice feel real.",
+        impact: "You stop revisiting the decision every day.",
       },
       {
-        title: "New Information Changes The Choice",
-        why: "Details often emerge once you move forward.",
+        title: "The Choice Starts Shaping Your Routine",
+        why: "A real commitment shows up in how ordinary weeks are spent. The path stops being a decision and becomes a life.",
+        impact: "People around you start treating the change as settled.",
+      },
+      {
+        title: "New Information Changes The Plan",
+        why: "Moving forward surfaces details that deliberation never could. Adjusting course is part of the path working, not failing.",
         impact: "You adjust plans based on what you learn.",
-      },
-      {
-        title: "An Outside Opportunity Appears",
-        why: "New options often show up once a decision is in motion.",
-        impact: "A path you had not weighed becomes realistic.",
-      },
-      {
-        title: "The Decision Takes Longer Than Expected",
-        why: "Important choices often echo longer than planned.",
-        impact: "The choice keeps shaping life after the first month.",
       },
     ],
     hidden: [
       {
-        title: "Someone Else Acts First",
-        why: "Other people involved may move before you do.",
-        impact: "The situation changes before you commit.",
+        title: "The Early Momentum Fades",
+        why: "Every commitment has a stretch where novelty is gone and results haven't arrived. This is where the path is most often quietly abandoned.",
+        impact: "The work feels like maintenance instead of progress.",
       },
       {
-        title: "The Opportunity Passes",
-        why: "Windows can close if the decision waits too long.",
-        impact: "You choose stability over the original option.",
+        title: "It Costs More Than You Budgeted For",
+        why: "Paths demand time, money, or energy from places you didn't plan to draw on. The overrun strains whatever you protected least.",
+        impact: "Something else in life gets less of you than it used to.",
       },
       {
-        title: "A Small Detail Becomes Central",
-        why: "Minor context can drive the real outcome.",
-        impact: "The future turns on something that seemed secondary.",
+        title: "Someone Close Doesn't Adjust With You",
+        why: "Your commitment changes routines that other people relied on. Their friction is usually about the change, not the choice.",
+        impact: "A relationship needs renegotiating you didn't expect.",
       },
     ],
-    blind_spots: [
+    blind_spots: [],
+    wild_card: [
       {
-        title: "A Relationship Shifts Because Of Timing",
-        why: "Schedules and life changes can alter how people respond.",
-        impact: "The same choice lands differently than expected.",
+        title: "A Better Opportunity Appears",
+        why: "Being visibly in motion attracts options that never find people who are still deciding. The path creates doors beside it.",
+        impact: "A choice you had not weighed becomes realistic.",
       },
       {
-        title: "An Unexpected Setback Appears",
-        why: "Real life rarely follows the first plan cleanly.",
-        impact: "You pause, adjust, and try again.",
-      },
-      {
-        title: "The Outcome Matters Less Over Time",
-        why: "Daily routines can reduce the weight of one decision.",
-        impact: "Other priorities start competing for attention.",
+        title: "The Reason You Started Stops Being The Reason You Continue",
+        why: "Living inside the path reveals what you actually value about it, which is often different from what made you choose it.",
+        impact: "You keep going, but for something you couldn't have named at the start.",
       },
     ],
-    wild_card: DEFAULT_WILD_CARDS,
   };
 }
 

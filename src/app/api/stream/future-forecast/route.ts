@@ -61,7 +61,18 @@ function sseData(event: unknown): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }
 
-const FORECAST_SECTION_KEYS = ["active", "hidden", "blind_spots", "wild_card"] as const;
+// Forecasts v2 model output keys, with the legacy keys kept as fallbacks so
+// a cached or older-model payload still streams item events. The client only
+// reads title/why/impact from each event; `section` rides along unused.
+const FORECAST_SECTION_KEYS = [
+  "likely_developments",
+  "failure_modes",
+  "alternative_outcomes",
+  "active",
+  "hidden",
+  "blind_spots",
+  "wild_card",
+] as const;
 
 // Long-running streamed AI generation: run on the Node.js runtime and allow up
 // to 60s so the request is not terminated before generation completes. The

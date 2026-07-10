@@ -13,7 +13,7 @@ export default function NewSituationPage() {
         <div className="mb-8">
           <Link
             href="/overview"
-            className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
+            className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#b45309]"
           >
             ← Overview
           </Link>

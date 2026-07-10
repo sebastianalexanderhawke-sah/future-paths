@@ -108,7 +108,7 @@ export function FadedFutureCard({ futureSelf, events = [] }: FadedFutureCardProp
           type="button"
           aria-expanded={showOriginal}
           onClick={() => setShowOriginal((current) => !current)}
-          className="cursor-pointer text-[13px] font-medium text-[#6366f1] transition-opacity duration-150 hover:opacity-80"
+          className="cursor-pointer text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80"
         >
           {showOriginal ? "Hide original Future Self" : "View original Future Self →"}
         </button>

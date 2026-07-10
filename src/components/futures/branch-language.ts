@@ -1,33 +1,49 @@
 import type { CSSProperties } from "react";
 
+import { getIdentityById } from "@/lib/identity-library";
+import type { IdentityDimension } from "@/types/behavior";
 import type { FutureSelf } from "@/types/database";
 
 /**
  * The one visual language AND the one layout model for Future Selves branch
  * renderings. The overview's Future Paths card and the dedicated Future
  * Selves explorer both render through the shared BranchMap component, which
- * consumes `layoutBranches` below — so branch angle, ordering, side,
- * curvature, node position, color, and label placement are computed exactly
- * once and can never drift apart. The overview card is the canonical design;
- * the dedicated page is the same picture at a larger scale.
+ * consumes `layoutBranches` below — so branch geometry, ordering, color,
+ * and label placement are computed exactly once and can never drift apart.
+ *
+ * v3 "composed stages": the picture is COMPOSED, not solved. A small
+ * library of hand-authored stages (one per cast size, 1–5) defines named
+ * stations with roles — a protagonist with open space in front of it, a
+ * challenger counterweighting it, a kin pair placed deliberately close, an
+ * outlier isolated across a void. The engine's data does not position
+ * futures; it CASTS them: likelihood rank chooses the protagonist and
+ * challenger, compass similarity chooses which two lives share the kin
+ * pair, and the whole stage mirrors to follow the protagonist's compass
+ * hemisphere. Likelihood then PERFORMS within the station — it decides how
+ * far along its approach a future has arrived — but never where the
+ * station is. Deterministic throughout: same futures, same picture; the
+ * intelligence is in the authored stages, the runtime only assigns.
  */
 
-// Per-slot accents. Decorative and stable per layout position so the picture
-// always reads the same way; meaning lives in the label text, not the color.
+// Per-branch accents, assigned by stable slotKey order: one DISTINCT hue
+// per future (blue, green, amber, rose, purple — the app's family 500s,
+// so they harmonize with everything else). Within this visualization they
+// are IDENTIFIERS, not the application's semantic feature colors: the map
+// needs each future to stay recognizably itself across the tree, the
+// dialog accent, and session-to-session memory, and five analogous shades
+// proved too ambiguous for that job. Semantics still live in the label
+// text and the stage role.
 export const BRANCH_ACCENTS = [
-  { color: "#6366f1", soft: "#eef2ff" },
-  { color: "#22c55e", soft: "#f0fdf4" },
-  { color: "#ef4444", soft: "#fff5f5" },
   { color: "#3b82f6", soft: "#eff6ff" },
+  { color: "#10b981", soft: "#ecfdf5" },
   { color: "#f59e0b", soft: "#fffbeb" },
+  { color: "#f43f5e", soft: "#fff1f2" },
+  { color: "#8b5cf6", soft: "#f5f3ff" },
 ] as const;
 
 export type BranchAccent = (typeof BRANCH_ACCENTS)[number];
 
-/** Shared motion: calm, quick settle for hover/focus state changes. */
-export const BRANCH_EASE = "200ms ease-out";
-
-/** Branch stroke weight, identical in both renderings. */
+/** Base branch stroke weight; the rendered stroke scales with visual weight. */
 export const BRANCH_STROKE = 3;
 
 export type BranchCurve = {
@@ -48,9 +64,14 @@ export type BranchCurve = {
 };
 
 /**
- * A branch is a quadratic curve bowed perpendicular to its chord — the same
- * gesture for every branch in the product. `bend` is the bow in view units;
- * its sign picks the side. A bend of 0 degrades to a straight line.
+ * A branch is a quadratic curve that DEPARTS at an angle to its chord and
+ * straightens toward its destination — the same gesture for every branch in
+ * the product. The control point sits early along the chord (38%) and
+ * `bend` view-units perpendicular to it; since a quadratic's departure
+ * tangent is start→control, this placement IS the departure direction, so
+ * trajectories separate right after leaving the start. The sign of `bend`
+ * picks the side; 0 degrades to a straight line. Stations author their own
+ * bend, so every branch carries its own gesture.
  */
 export function branchCurve(
   start: readonly [number, number],
@@ -62,8 +83,8 @@ export function branchCurve(
   const dx = ex - sx;
   const dy = ey - sy;
   const len = Math.hypot(dx, dy) || 1;
-  const cx = (sx + ex) / 2 + (-dy / len) * bend;
-  const cy = (sy + ey) / 2 + (dx / len) * bend;
+  const cx = sx + 0.38 * dx + (-dy / len) * bend;
+  const cy = sy + 0.38 * dy + (dx / len) * bend;
 
   const pointAt = (t: number): [number, number] => {
     const u = 1 - t;
@@ -89,105 +110,156 @@ export function branchCurve(
 }
 
 // ---------------------------------------------------------------------------
-// Canonical layout model
+// Coordinate spaces
 // ---------------------------------------------------------------------------
 
-// Geometry is AUTHORED in a fixed 800×440 coordinate space — the Overview
-// card's original one, unchanged — and RENDERED through the canonical
-// composition below. HTML elements — endpoint dots and labels — are placed
-// by converting the same coordinates to percentages, so branches, dots, and
-// labels stay visually connected at any rendered size.
+// Geometry is AUTHORED in a fixed 800×440 coordinate space and RENDERED
+// through the canonical composition below. HTML elements — endpoint dots and
+// labels — are placed by converting the same coordinates to percentages, so
+// branches, dots, and labels stay visually connected at any rendered size.
 export const VIEW_W = 800;
 export const VIEW_H = 440;
 export const VIEW_CENTER: readonly [number, number] = [VIEW_W / 2, VIEW_H / 2];
 
 // The canonical RENDERED shape — the Overview card's original chart box,
 // which is the product's visual source of truth: full card width × 260px in
-// the 1120px shell (1120 − 80 column padding − 72 card padding − 2 border =
-// 966). These are design pixels, not view units; only their RATIO matters.
-// Every BranchMap locks its chart area to this aspect ratio, so the authored
-// space is compressed vertically by the same fixed amount everywhere:
-// rendered angles are identical on every page and at every viewport width,
-// and the dedicated page is a faithful enlargement of the Overview — never a
-// reshaping of it. Width is the ONLY thing a renderer chooses.
-//
-// Do NOT re-derive these from any other surface. An earlier revision set the
-// ratio to 800/264 (a 968×320 box) — a composition the Overview never had —
-// which silently made the Overview chart ~23% taller. The Overview owns the
-// composition; other pages inherit it.
+// the 1120px shell. These are design pixels, not view units; only their
+// RATIO matters. Every BranchMap locks its chart area to this aspect ratio,
+// so rendered geometry is identical on every page and at every viewport
+// width, and the dedicated page is a faithful enlargement of the Overview.
+// Width is the ONLY thing a renderer chooses. Stages are authored with the
+// vertical squash (≈0.49× relative to x) in mind — judge them on the
+// rendered card, not in view coordinates.
 export const RENDER_W = 966;
 export const RENDER_H = 260;
 
-type Slot = {
-  /** Branch endpoint in view coordinates. */
-  end: readonly [number, number];
-  /** Perpendicular bow of the branch — gives each line its own gesture. */
-  bend: number;
-  /** Where the label block sits relative to its endpoint dot. */
-  labelStyle: CSSProperties;
+// ---------------------------------------------------------------------------
+// The dimension compass — casting hints, not coordinates
+// ---------------------------------------------------------------------------
+
+/**
+ * Fixed bearing (degrees, math convention: 0° = right, counterclockwise) for
+ * each identity dimension. A future's compass bearing is the normalized
+ * weighted sum of its identity's dimension weights over these bearings.
+ *
+ * In the composed-stage model the compass no longer positions anything.
+ * It provides the two semantic signals casting needs: WHICH pair of lives
+ * is most alike (smallest circular gap → they share the kin-pair stations)
+ * and which hemisphere the protagonist's life leans toward (the stage
+ * mirrors to follow it). The ordering was tuned against the real identity
+ * library (deterministic hill-climb over circular orderings): kindred lives
+ * sit near (craftsman↔scholar 17°, mentor↔connector 20°), opposed lives far
+ * (guardian↔explorer 176°). Adjust only by re-running that scoring against
+ * the library.
+ */
+export const DIMENSION_BEARINGS: Record<IdentityDimension, number> = {
+  Initiative: 0,
+  "Risk Tolerance": 36,
+  Vulnerability: 72,
+  Adaptability: 108,
+  Connection: 144,
+  Reflection: 180,
+  Consistency: 216,
+  "Conflict Tolerance": 252,
+  Curiosity: 288,
+  Independence: 324,
 };
 
-// Hand-curated layout — each slot is a permanent visual home, chosen by eye
-// rather than calculated. These are the Overview card's ORIGINAL slots: the
-// composition is deliberately a little irregular (no perfectly opposite
-// pairs, staggered heights, one slot left open at the bottom right) so the
-// eye travels around it naturally. This picture is the product's canonical
-// design — adjust it by looking at the Overview card, not by doing math, and
-// never redesign it to suit another surface.
-const SLOTS: Record<string, Slot> = {
-  topLeft: {
-    end: [192, 84],
-    bend: 30,
-    labelStyle: { right: 16, bottom: 12, textAlign: "right" },
-  },
-  topRight: {
-    end: [616, 72],
-    bend: -26,
-    labelStyle: { left: 16, bottom: 12 },
-  },
-  midLeft: {
-    end: [148, 268],
-    bend: -34,
-    labelStyle: {
-      right: 20,
-      top: "50%",
-      transform: "translateY(-50%)",
-      textAlign: "right",
-    },
-  },
-  midRight: {
-    end: [662, 240],
-    bend: 32,
-    labelStyle: { left: 20, top: "50%", transform: "translateY(-50%)" },
-  },
-  bottomLeft: {
-    end: [242, 372],
-    bend: -28,
-    labelStyle: { right: 14, top: 14, textAlign: "right" },
-  },
-};
+const DEG = Math.PI / 180;
 
-// The Overview's original curated slot sets for 1–5 futures. Not nested —
-// when a future emerges or fades the picture may recompose (accepted; see
-// the spatial-memory notes on slotKey below, which cover the common case of
-// likelihood changes within a stable set).
-const SLOT_SETS: Record<number, (keyof typeof SLOTS)[]> = {
-  1: ["midRight"],
-  2: ["midLeft", "midRight"],
-  3: ["topLeft", "topRight", "bottomLeft"],
-  4: ["topLeft", "topRight", "midLeft", "midRight"],
-  5: ["topLeft", "topRight", "midLeft", "midRight", "bottomLeft"],
-};
+function normalizeDeg(deg: number): number {
+  return ((deg % 360) + 360) % 360;
+}
+
+/** Resultant bearing of a weighted set of dimension directions, or null when
+ *  the weights cancel to (near) zero and no direction is meaningful. */
+function bearingFromWeights(
+  weights: Partial<Record<IdentityDimension, number>>,
+): number | null {
+  let x = 0;
+  let y = 0;
+  for (const [dimension, weight] of Object.entries(weights)) {
+    const bearing = DIMENSION_BEARINGS[dimension as IdentityDimension];
+    if (bearing === undefined || typeof weight !== "number") continue;
+    x += weight * Math.cos(bearing * DEG);
+    y += weight * Math.sin(bearing * DEG);
+  }
+  if (Math.hypot(x, y) < 0.05) return null;
+  return normalizeDeg(Math.atan2(y, x) / DEG);
+}
+
+/** FNV-1a — a stable, platform-independent string hash. Not randomness: the
+ *  same string maps to the same angle in every session forever. */
+function hashAngle(key: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return ((h >>> 0) % 3600) / 10;
+}
+
+/** Stable identity key — the same key the layout uses for ordering, accents,
+ *  and tie-breaks, so a future's treatment survives regenerations. */
+function slotKey(futureSelf: FutureSelf): string {
+  return futureSelf.identity_id ?? futureSelf.name;
+}
+
+/**
+ * The future's compass bearing, from the richest identity signal it
+ * carries: library dimension weights when the identity is known, the row's
+ * own persisted dimension_breakdown otherwise (legacy identities the library
+ * has retired), and a stable hash of the identity key as the final fallback
+ * so even a row with no dimensional data at all casts deterministically.
+ */
+export function identityBearing(futureSelf: FutureSelf): number {
+  const identity = futureSelf.identity_id
+    ? getIdentityById(futureSelf.identity_id)
+    : undefined;
+  if (identity) {
+    const bearing = bearingFromWeights(identity.dimension_weights);
+    if (bearing !== null) return bearing;
+  }
+
+  if (futureSelf.dimension_breakdown?.length) {
+    const weights: Partial<Record<IdentityDimension, number>> = {};
+    for (const row of futureSelf.dimension_breakdown) {
+      const dimension = row.dimension;
+      const weight =
+        typeof row.identityWeight === "number"
+          ? row.identityWeight
+          : typeof row.contribution === "number"
+            ? row.contribution
+            : null;
+      if (typeof dimension === "string" && weight !== null) {
+        weights[dimension as IdentityDimension] = weight;
+      }
+    }
+    const bearing = bearingFromWeights(weights);
+    if (bearing !== null) return bearing;
+  }
+
+  return hashAngle(slotKey(futureSelf));
+}
+
+function circularGap(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return Math.min(d, 360 - d);
+}
+
+// ---------------------------------------------------------------------------
+// Visual weight
+// ---------------------------------------------------------------------------
 
 /** The layout holds at most this many branches — the engine's identity cap. */
 export const MAX_BRANCHES = 5;
 
-// How established a future is → how far its branch reaches. Anchored, not
-// linear, and spanning the full 0–100% likelihood domain so growth stays
-// visually meaningful for the product's lifetime: today's engine outputs
-// (10–30%) land just past the midpoint, 40–50% futures clearly outreach
-// them, 60%+ reads as established, and only a certainty touches the rim.
-// Piecewise-linear between anchors keeps every band's slope intentional.
+// How established a future is, 0–1 — the map's VISUAL WEIGHT scale (stroke,
+// dot size, halo, opacity) and its ARRIVAL scale (how far along its approach
+// a future stands at its station). Anchored, not linear, spanning the full
+// 0–100% likelihood domain so both scales stay meaningful for the product's
+// lifetime. Piecewise-linear between anchors keeps every band's slope
+// intentional.
 const REACH_ANCHORS: readonly (readonly [number, number])[] = [
   [0, 0.18],
   [20, 0.55],
@@ -209,15 +281,293 @@ export function establishedFraction(pct: number): number {
   return 1;
 }
 
-// Slot assignment key. Stable across likelihood changes and regenerations
-// (identity_id survives both), so a check-in or reflection can only ever
-// grow or shrink a branch along its own curve — never move it to a
-// different slot, rotate the tree, or reshuffle siblings. Spatial memory is
-// the point: the same identity always lives in the same place, in the same
-// color, on both the overview and the dedicated page.
-function slotKey(futureSelf: FutureSelf): string {
-  return futureSelf.identity_id ?? futureSelf.name;
+// A future never renders at its station's doorstep nor back at the center:
+// arrival maps establishedFraction onto [ARRIVAL_MIN, 1] of the branch
+// curve. Growing likelihood advances the node along its own unchanged
+// approach — the same slide-along-the-branch motion the map has always
+// animated — while the station itself never moves. The band is wide on
+// purpose: a tentative future hangs back near HALF its approach while an
+// established one stands at its station, so likelihood is legible from
+// distance alone, before any percentage is read.
+const ARRIVAL_MIN = 0.5;
+
+// ---------------------------------------------------------------------------
+// The stage library — authored compositions
+// ---------------------------------------------------------------------------
+
+/** Casting roles. Every stage assigns each of its stations exactly one. */
+export type StageRole =
+  | "solo"
+  | "protagonist"
+  | "challenger"
+  | "kin-a"
+  | "kin-b"
+  | "outlier";
+
+type Station = {
+  role: StageRole;
+  /** The destination — the branch's full-curve endpoint, in view coords. */
+  anchor: readonly [number, number];
+  /** Authored departure bow (view units, signed) — each branch's gesture. */
+  bend: number;
+  /** Authored label placement relative to the node — composed, not solved. */
+  labelStyle: CSSProperties;
+};
+
+const LABEL_MID: CSSProperties = { top: "50%", transform: "translateY(-50%)" };
+
+/**
+ * The stages: one hand-composed scene per cast size, designed on the
+ * rendered 966×260 card (remember the vertical squash) and judged as
+ * pictures, not solved as constraints. Shared composition rules:
+ *
+ *   - REACH IS HIERARCHY. Station reach is tiered by role — protagonist
+ *     ≈313 rendered px, challenger ≈260, kin/outlier 135–215 — and since
+ *     casting sends the two strongest futures to the two longest stations,
+ *     distance tracks likelihood before any number is read. Arrival
+ *     refines it within a tier.
+ *   - The PROTAGONIST owns the right wing ALONE: the longest reach on the
+ *     stage and no other station past mid-canvas. The eye lands there
+ *     because the composition clears that entire side for it — never
+ *     because it is bigger or brighter.
+ *   - The CHALLENGER counterweights it from deep in the lower-left.
+ *   - The KIN PAIR (4–5 casts) sits deliberately close, high on the left —
+ *     near enough to read as related, the one tension the old solver used
+ *     to "fix". Their labels diverge outward from the pair.
+ *   - The OUTLIER (3 and 5 casts) stands apart — top-center-left when the
+ *     stage is sparse, anchoring the bottom-center when it is full — with
+ *     empty space around it in both.
+ *   - Supporting mass runs along a DIAGONAL, never a column: kin high,
+ *     challenger deep, so the left side arcs instead of stacking. Voids
+ *     stay at top-center and the lower-right quadrant — intentional,
+ *     load-bearing emptiness. Balance comes from counterweight (one long
+ *     lever right, distributed mass left), never from even spacing. No two
+ *     stations share a bend, so no two branches carry the same gesture.
+ *
+ * Stages are authored protagonist-right and MIRROR horizontally when the
+ * protagonist's compass leans left, so the compass still whispers.
+ * Adjust these by looking at the rendered card — never by computing.
+ */
+const STAGES: Record<number, readonly Station[]> = {
+  1: [
+    {
+      role: "solo",
+      anchor: [630, 180],
+      bend: -34,
+      labelStyle: { left: 20, ...LABEL_MID },
+    },
+  ],
+  2: [
+    {
+      role: "protagonist",
+      anchor: [648, 172],
+      bend: -38,
+      labelStyle: { left: 20, ...LABEL_MID },
+    },
+    {
+      role: "challenger",
+      anchor: [236, 330],
+      bend: 28,
+      labelStyle: { right: 20, textAlign: "right", ...LABEL_MID },
+    },
+  ],
+  3: [
+    {
+      role: "protagonist",
+      anchor: [655, 160],
+      bend: -40,
+      labelStyle: { left: 20, ...LABEL_MID },
+    },
+    {
+      role: "outlier",
+      anchor: [298, 92],
+      bend: 18,
+      labelStyle: { right: 18, bottom: 6, textAlign: "right" },
+    },
+    {
+      role: "challenger",
+      anchor: [215, 348],
+      bend: 32,
+      labelStyle: { right: 18, textAlign: "right", ...LABEL_MID },
+    },
+  ],
+  4: [
+    {
+      role: "protagonist",
+      anchor: [672, 152],
+      bend: -40,
+      labelStyle: { left: 20, ...LABEL_MID },
+    },
+    // The kin pair is composed at its PERFORMED position, not its anchors:
+    // kin futures are always the weakest on stage, so their tips render at
+    // ~0.6–0.75 arrival — the anchors sit ~130px apart so the tips land at
+    // the intended ~90px closeness: unmistakably a pair, never a blur.
+    // Opposite bows splay the two approaches apart instead of nesting
+    // them, and both labels aim outward, away from the corridor between
+    // the pair.
+    {
+      role: "kin-a",
+      anchor: [212, 138],
+      bend: 22,
+      labelStyle: { right: 16, bottom: 4, textAlign: "right" },
+    },
+    {
+      role: "kin-b",
+      anchor: [316, 78],
+      bend: -16,
+      labelStyle: { left: 16, bottom: 6 },
+    },
+    {
+      role: "challenger",
+      anchor: [192, 366],
+      bend: 34,
+      labelStyle: { right: 20, textAlign: "right", ...LABEL_MID },
+    },
+  ],
+  5: [
+    {
+      role: "protagonist",
+      anchor: [672, 152],
+      bend: -40,
+      labelStyle: { left: 20, ...LABEL_MID },
+    },
+    // The kin pair is composed at its PERFORMED position, not its anchors:
+    // kin futures are always the weakest on stage, so their tips render at
+    // ~0.6–0.75 arrival — the anchors sit ~130px apart so the tips land at
+    // the intended ~90px closeness: unmistakably a pair, never a blur.
+    // Opposite bows splay the two approaches apart instead of nesting
+    // them, and both labels aim outward, away from the corridor between
+    // the pair.
+    {
+      role: "kin-a",
+      anchor: [212, 138],
+      bend: 22,
+      labelStyle: { right: 16, bottom: 4, textAlign: "right" },
+    },
+    {
+      role: "kin-b",
+      anchor: [316, 78],
+      bend: -16,
+      labelStyle: { left: 16, bottom: 6 },
+    },
+    {
+      role: "challenger",
+      anchor: [184, 372],
+      bend: 34,
+      labelStyle: { right: 20, textAlign: "right", ...LABEL_MID },
+    },
+    {
+      role: "outlier",
+      anchor: [496, 396],
+      bend: -24,
+      labelStyle: { left: 18, bottom: 8 },
+    },
+  ],
+};
+
+/** Horizontal mirror of a station: position, bow side, and label side all
+ *  flip; vertical placement is unchanged. */
+function mirrorStation(station: Station): Station {
+  const { left, right, textAlign, ...rest } = station.labelStyle as {
+    left?: number;
+    right?: number;
+    textAlign?: CSSProperties["textAlign"];
+  } & CSSProperties;
+  const labelStyle: CSSProperties =
+    left !== undefined
+      ? { ...rest, right: left, textAlign: "right" }
+      : { ...rest, left: right };
+  void textAlign;
+  return {
+    role: station.role,
+    anchor: [VIEW_W - station.anchor[0], station.anchor[1]],
+    bend: -station.bend,
+    labelStyle,
+  };
 }
+
+// ---------------------------------------------------------------------------
+// Casting — data assigns, never positions
+// ---------------------------------------------------------------------------
+
+/**
+ * Deterministic casting:
+ *   - Likelihood rank casts the protagonist (highest) and challenger
+ *     (second); ties break on slotKey so arrival order never matters.
+ *   - Among the remaining futures, the pair with the smallest compass gap
+ *     — the two most kindred lives on stage — takes the kin stations,
+ *     ordered by bearing; with five cast, the future left out of that
+ *     pair is the outlier. With three cast, the third future is the
+ *     outlier outright.
+ *   - The whole stage mirrors when the protagonist's compass leans into
+ *     the left hemisphere, so direction still carries a whisper of the
+ *     identity engine.
+ */
+function castStations(displayed: FutureSelf[]): Map<FutureSelf, Station> {
+  const ranked = [...displayed].sort(
+    (a, b) =>
+      b.percentage - a.percentage || slotKey(a).localeCompare(slotKey(b)),
+  );
+  if (ranked.length === 0) return new Map();
+  const stage = STAGES[ranked.length] ?? STAGES[MAX_BRANCHES];
+  const mirrored = Math.cos(identityBearing(ranked[0]) * DEG) < 0;
+  const byRole = new Map(stage.map((station) => [station.role, station]));
+  const stationFor = (role: StageRole): Station => {
+    const station = byRole.get(role)!;
+    return mirrored ? mirrorStation(station) : station;
+  };
+
+  const cast = new Map<FutureSelf, Station>();
+  if (ranked.length === 1) {
+    cast.set(ranked[0], stationFor("solo"));
+    return cast;
+  }
+
+  cast.set(ranked[0], stationFor("protagonist"));
+  cast.set(ranked[1], stationFor("challenger"));
+  const rest = ranked.slice(2);
+
+  if (rest.length === 1) {
+    cast.set(rest[0], stationFor("outlier"));
+    return cast;
+  }
+
+  if (rest.length >= 2) {
+    // The most kindred pair among the rest shares the kin stations.
+    let kin: [FutureSelf, FutureSelf] = [rest[0], rest[1]];
+    if (rest.length === 3) {
+      let smallest = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < rest.length; i++) {
+        for (let j = i + 1; j < rest.length; j++) {
+          const gap = circularGap(
+            identityBearing(rest[i]),
+            identityBearing(rest[j]),
+          );
+          if (gap < smallest - 1e-9) {
+            smallest = gap;
+            kin = [rest[i], rest[j]];
+          }
+        }
+      }
+      const outlier = rest.find((f) => f !== kin[0] && f !== kin[1])!;
+      cast.set(outlier, stationFor("outlier"));
+    }
+    // Kin stations in bearing order, slotKey breaking ties.
+    const [a, b] = [...kin].sort(
+      (p, q) =>
+        identityBearing(p) - identityBearing(q) ||
+        slotKey(p).localeCompare(slotKey(q)),
+    );
+    cast.set(a, stationFor("kin-a"));
+    cast.set(b, stationFor("kin-b"));
+  }
+
+  return cast;
+}
+
+// ---------------------------------------------------------------------------
+// The canonical layout
+// ---------------------------------------------------------------------------
 
 export type PlacedBranch = {
   futureSelf: FutureSelf;
@@ -231,25 +581,45 @@ export type PlacedBranch = {
   tip: readonly [number, number];
   /** Where the label block sits relative to its endpoint dot. */
   labelStyle: CSSProperties;
+  /** The station this future was cast into. */
+  role: StageRole;
+  /**
+   * Visual weight 0–1, from likelihood alone: drives stroke width, node
+   * size, halo, and branch opacity so the strongest future draws the eye
+   * first — on top of the prominence its station already grants it.
+   */
+  weight: number;
 };
 
 /**
  * The single canonical layout: every renderer of Future Selves branches
  * consumes this. Pure and deterministic — the same futures always produce
  * the same picture, regardless of the order they arrive in.
+ *
+ * What drives what:
+ *   - POSITION: the authored stage for this cast size; data casts roles
+ *     (likelihood rank → protagonist/challenger, compass similarity → kin
+ *     pair, compass hemisphere → mirroring) but never computes a
+ *     coordinate.
+ *   - ARRIVAL: likelihood through establishedFraction onto the last stretch
+ *     of the branch's own approach — a likelihood change slides exactly
+ *     one node along its own unchanged curve. A RANK change is a scene
+ *     change: the cast reassigns, and the map visibly recomposes.
+ *   - WEIGHT: establishedFraction again, as stroke/dot/halo presence.
  */
 export function layoutBranches(futureSelves: FutureSelf[]): PlacedBranch[] {
   const displayed = futureSelves.slice(0, MAX_BRANCHES);
   const ordered = [...displayed].sort((a, b) =>
     slotKey(a).localeCompare(slotKey(b)),
   );
-  const slotNames = SLOT_SETS[ordered.length] ?? SLOT_SETS[MAX_BRANCHES];
+  const cast = castStations(displayed);
 
   return ordered.map((futureSelf, i) => {
-    const slot = SLOTS[slotNames[i]];
-    const curve = branchCurve(VIEW_CENTER, slot.end, slot.bend);
+    const station = cast.get(futureSelf)!;
     const pct = Math.max(0, Math.min(100, futureSelf.percentage));
-    const reach = establishedFraction(pct);
+    const weight = establishedFraction(pct);
+    const curve = branchCurve(VIEW_CENTER, station.anchor, station.bend);
+    const reach = ARRIVAL_MIN + (1 - ARRIVAL_MIN) * weight;
     return {
       futureSelf,
       pct,
@@ -257,7 +627,9 @@ export function layoutBranches(futureSelves: FutureSelf[]): PlacedBranch[] {
       curve,
       reach,
       tip: curve.pointAt(reach),
-      labelStyle: slot.labelStyle,
+      labelStyle: station.labelStyle,
+      role: station.role,
+      weight,
     };
   });
 }

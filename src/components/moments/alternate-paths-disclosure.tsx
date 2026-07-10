@@ -34,7 +34,7 @@ export function AlternatePathsDisclosure({ children }: AlternatePathsDisclosureP
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="mt-4 cursor-pointer text-[13px] font-medium text-[#6366f1] transition-opacity duration-150 hover:opacity-80"
+        className="mt-4 cursor-pointer text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80"
       >
         {open ? "Hide Alternate Paths" : "Explore Alternate Paths →"}
       </button>

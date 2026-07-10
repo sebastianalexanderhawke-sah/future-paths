@@ -58,7 +58,7 @@ export function SituationCard({
         <span className="text-[12px] text-[#999999]">
           Updated {updatedLabel}
         </span>
-        <span className="text-[13px] font-medium text-[#6366f1] transition-opacity duration-150 group-hover:opacity-80">
+        <span className="text-[13px] font-medium text-[#b45309] transition-opacity duration-150 group-hover:opacity-80">
           Open →
         </span>
       </div>

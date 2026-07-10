@@ -1,12 +1,12 @@
 import { after } from "next/server";
 import type { z } from "zod";
 
-import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import {
   decodeNativePathFields,
   encodePathDescriptionWithNativeTitle,
 } from "@/components/home/path-native-title";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
+import { generateDiverseCrossroadSet } from "@/lib/crossroad-generation";
 import { queueFutureSelvesGeneration } from "@/lib/future-selves";
 import {
   reportDiscardedResultError,
@@ -137,14 +137,12 @@ export async function generatePaths(
     return { error: "Paths have already been generated for this situation." };
   }
 
-  const generationResult = await runStructuredGeneration({
+  // Situations v3: generation + set-level diversity validation (with one
+  // feedback-driven regeneration) live behind this shared helper, so the
+  // sync flow and the streaming route enforce the same bar.
+  const generationResult = await generateDiverseCrossroadSet({
     userId: auth.userId,
-    profile: "crossroad",
-    promptId: "crossroad.generate",
-    schema: crossroadOutputSchema,
-    overrides: {
-      momentId,
-    },
+    momentId,
   });
 
   if (!generationResult.ok) {

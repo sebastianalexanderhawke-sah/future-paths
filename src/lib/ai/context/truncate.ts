@@ -340,6 +340,10 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     userId: bundle.userId,
     profile: bundle.profile,
     identityBrief: trimIdentityBrief(bundle.identityBrief, 3),
+    // Tiny and structural — never worth dropping: the crossroad profile's
+    // whole identity input (decisionMaker) and its retry reasons.
+    decisionMaker: bundle.decisionMaker,
+    regenerationFeedback: bundle.regenerationFeedback,
     moment: bundle.moment,
     chosenPath: bundle.chosenPath,
     mostRecentChosenPath: bundle.mostRecentChosenPath,
@@ -378,6 +382,8 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     userId: bundle.userId,
     profile: bundle.profile,
     identityBrief: trimIdentityBrief(bundle.identityBrief, 2),
+    decisionMaker: bundle.decisionMaker,
+    regenerationFeedback: bundle.regenerationFeedback,
     moment: bundle.moment,
     chosenPath: bundle.chosenPath,
     mostRecentChosenPath: bundle.mostRecentChosenPath,

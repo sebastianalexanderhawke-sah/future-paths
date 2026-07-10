@@ -23,8 +23,8 @@ import type { Moment } from "@/types/database";
 // a wall of blue.
 const STATUSES = {
   exploring: { label: "Exploring options", color: "#666666", soft: "#f4f4f6" },
-  forecast: { label: "Forecast", color: "#6366f1", soft: "#eef2ff" },
-  checkingIn: { label: "Checking in", color: "#22c55e", soft: "#f0fdf4" },
+  forecast: { label: "Forecast", color: "#b45309", soft: "#eef2ff" },
+  checkingIn: { label: "Checking in", color: "#10b981", soft: "#ecfdf5" },
 } satisfies Record<string, SituationStatus>;
 
 function summarize(moment: Moment): string | null {
@@ -186,7 +186,7 @@ export default async function MomentsPage() {
                     </div>
                     {moreActive.length > 0 ? (
                       <details className="group mt-4">
-                        <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1] [&::-webkit-details-marker]:hidden">
+                        <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#b45309] [&::-webkit-details-marker]:hidden">
                           <span className="group-open:hidden">
                             ▼ Show all active ({moreActive.length} more)
                           </span>
@@ -256,7 +256,7 @@ export default async function MomentsPage() {
                               className={[
                                 "h-[3px] w-4 rounded-full",
                                 step <= engagementStage(moment)
-                                  ? "bg-[#6366f1]"
+                                  ? "bg-[#b45309]"
                                   : "bg-[#ececf0]",
                               ].join(" ")}
                             />

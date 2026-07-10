@@ -64,7 +64,6 @@ describe("forecast source attribution", () => {
 
   it("tags surviving Claude futures during forecast processing", () => {
     const generated = {
-      wild_card: [],
       active: [
         {
           title: "She Says Yes To Coffee",
@@ -72,19 +71,9 @@ describe("forecast source attribution", () => {
           impact: "You meet outside work within the week.",
         },
         {
-          title: "She Declines But Stays Warm",
-          why: "A clear question can keep the friendship workable.",
-          impact: "Daily work stays friendly even if romance fades.",
-        },
-        {
           title: "The Ask Happens Over Lunch",
           why: "A low-pressure lunch invite can feel natural at work.",
           impact: "The conversation moves outside the office routine.",
-        },
-        {
-          title: "She Asks A Clarifying Question",
-          why: "Mixed signals can prompt her to test interest directly.",
-          impact: "You know where you stand sooner.",
         },
         {
           title: "A First Date Gets Planned",
@@ -98,12 +87,28 @@ describe("forecast source attribution", () => {
           why: "Workplace chemistry rarely stays invisible.",
           impact: "Small talk feels different for a few weeks.",
         },
-      ],
-      blind_spots: [
         {
           title: "She Assumes You're Not Interested",
           why: "Platonic behavior can read as disinterest when she initiates often.",
           impact: "She stops looking for signs because the friendship feels settled.",
+        },
+        {
+          title: "The Timing Never Aligns",
+          why: "Busy schedules can keep things polite but static.",
+          impact: "Months pass without a clear moment to act.",
+        },
+      ],
+      blind_spots: [],
+      wild_card: [
+        {
+          title: "She Transfers To Another Team",
+          why: "Internal moves change daily proximity without ending contact.",
+          impact: "You have to choose to stay in touch deliberately.",
+        },
+        {
+          title: "A Mutual Friend Changes The Dynamic",
+          why: "Shared social ties can shift how you both act at work.",
+          impact: "Group plans replace one-on-one contact.",
         },
       ],
     };
@@ -119,11 +124,11 @@ describe("forecast source attribution", () => {
     const audit = buildForecastSourceAttributionAudit(result);
     const metrics = computeForecastSourceMetricsFromSections(result);
 
-    // All 5 active inputs now survive the reality filter as claude-sourced futures.
+    // All 3 active inputs survive the reality filter as claude-sourced futures.
     // "The Ask Happens Over Lunch" was previously dropped by the over-broad
     // FUTURE_IDENTITY_NAME_PATTERN and replaced by a recovery slot; the fixed pattern
     // lets it pass through correctly.
-    expect(audit.active.filter((item) => item.source === "claude").length).toBe(5);
+    expect(audit.active.filter((item) => item.source === "claude").length).toBe(3);
     expect(audit.active.find((item) => item.source === "recovery")).toBeUndefined();
     expect(metrics.claude).toBeGreaterThan(0);
     expect(metrics.recovery).toBe(0);

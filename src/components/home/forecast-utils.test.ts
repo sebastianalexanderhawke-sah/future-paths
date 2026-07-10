@@ -87,7 +87,10 @@ describe("buildForecastSections", () => {
     );
 
     expect(sections.hiddenFutures[0]?.signals.length).toBeGreaterThan(0);
-    expect(sections.blindSpotFutures[0]?.title).toBeTruthy();
+    // Forecasts v2: blind spots retired — path-derived insights surface as
+    // failure modes (hidden) instead.
+    expect(sections.hiddenFutures[0]?.title).toBeTruthy();
+    expect(sections.blindSpotFutures).toHaveLength(0);
   });
 
   it("fills fallback sections when generation is sparse", () => {
@@ -98,7 +101,7 @@ describe("buildForecastSections", () => {
 
     expect(sections.activeFutures[0]?.signals.length).toBeGreaterThanOrEqual(3);
     expect(sections.hiddenFutures[0]?.futureImpact.length).toBeGreaterThan(0);
-    expect(sections.activeFutures.length).toBeGreaterThanOrEqual(4);
+    expect(sections.activeFutures.length).toBeGreaterThanOrEqual(3);
     expect(sections.activeFutures.some((future) => future.title === "Most Of Your New Friends Come From Work")).toBe(
       true,
     );

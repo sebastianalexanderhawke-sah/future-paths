@@ -11,9 +11,9 @@ const LEVEL_STYLES: Record<
   IdentityConfidenceLevel,
   { dot: string; text: string; bg: string }
 > = {
-  high: { dot: "bg-[#22c55e]", text: "text-[#15803d]", bg: "bg-[#f0fdf4]" },
+  high: { dot: "bg-[#10b981]", text: "text-[#15803d]", bg: "bg-[#ecfdf5]" },
   growing: { dot: "bg-[#d97706]", text: "text-[#b45309]", bg: "bg-[#fffbeb]" },
-  early: { dot: "bg-[#ef4444]", text: "text-[#b91c1c]", bg: "bg-[#fef2f2]" },
+  early: { dot: "bg-[#f43f5e]", text: "text-[#b91c1c]", bg: "bg-[#fef2f2]" },
 };
 
 // Compact identity-strength badge sitting inline beside the portrait title,

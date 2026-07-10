@@ -142,7 +142,6 @@ export type {
   ForecastExplanationPreservationItem,
   ForecastExplanationPreservationMetrics,
   ForecastExplanationPreservationStatus,
-  ForecastExplanationValidationResult,
 } from "@/lib/forecast-explanation-preservation";
 export type {
   ForecastSimplificationAudit,

@@ -1,5 +1,66 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Reflection semantic color system
+   ---------------------------------------------------------------------------
+   Five color families, each OWNED by one feature domain, over a zinc/ink
+   neutral base that carries ~90% of every screen. Color appears only where
+   it means something: a feature's interactive text, its soft chip/badge
+   surfaces, and data accents. One family per screen (the Overview shows all
+   five, muted). No rainbow: neutrals do the layout, families do the meaning.
+
+     indigo  → Current Self, Identity Prompts — and the app-level baseline
+               (nav, auth, settings): the "self + system" family.
+     violet  → Future Selves, Future Paths, Forecasts, Alternate Selves:
+               everything about possibility. The hero feature owns the most
+               distinctive family.
+     amber   → Moments, Situations, Check-ins: the live capture stream.
+     emerald → Timeline, Reflections, growth/positive movement.
+     rose    → Needs Attention, Contradictions, fading paths, errors,
+               destructive actions. Never celebratory, always sparing.
+
+   Interactive text on white uses the family's 600/700 step (all ≥ 4.5:1);
+   soft surfaces use 50 with 600+ text; icons/data accents use 500;
+   hover deepens one step. Components currently reference these values as
+   literals (codebase convention); this block is the system of record.
+   -------------------------------------------------------------------------*/
+:root {
+  /* indigo — Current Self + system */
+  --c-indigo-50: #eef2ff;  --c-indigo-100: #e0e7ff; --c-indigo-200: #c7d2fe;
+  --c-indigo-300: #a5b4fc; --c-indigo-400: #818cf8; --c-indigo-500: #6366f1;
+  --c-indigo-600: #4f46e5; --c-indigo-700: #4338ca; --c-indigo-800: #3730a3;
+  --c-indigo-900: #312e81;
+  /* violet — Futures / possibility */
+  --c-violet-50: #f5f3ff;  --c-violet-100: #ede9fe; --c-violet-200: #ddd6fe;
+  --c-violet-300: #c4b5fd; --c-violet-400: #a78bfa; --c-violet-500: #8b5cf6;
+  --c-violet-600: #7c3aed; --c-violet-700: #6d28d9; --c-violet-800: #5b21b6;
+  --c-violet-900: #4c1d95;
+  /* amber — Moments / capture */
+  --c-amber-50: #fffbeb;   --c-amber-100: #fef3c7;  --c-amber-200: #fde68a;
+  --c-amber-300: #fcd34d;  --c-amber-400: #fbbf24;  --c-amber-500: #f59e0b;
+  --c-amber-600: #d97706;  --c-amber-700: #b45309;  --c-amber-800: #92400e;
+  --c-amber-900: #78350f;
+  /* emerald — Timeline / growth */
+  --c-emerald-50: #ecfdf5; --c-emerald-100: #d1fae5; --c-emerald-200: #a7f3d0;
+  --c-emerald-300: #6ee7b9; --c-emerald-400: #34d399; --c-emerald-500: #10b981;
+  --c-emerald-600: #059669; --c-emerald-700: #047857; --c-emerald-800: #065f46;
+  --c-emerald-900: #064e3b;
+  /* rose — attention / tension */
+  --c-rose-50: #fff1f2;    --c-rose-100: #ffe4e6;   --c-rose-200: #fecdd3;
+  --c-rose-300: #fda4af;   --c-rose-400: #fb7185;   --c-rose-500: #f43f5e;
+  --c-rose-600: #e11d48;   --c-rose-700: #be123c;   --c-rose-800: #9f1239;
+  --c-rose-900: #881337;
+
+  /* Feature accents: the interactive-text step for each domain (AA on
+     white at 13px — amber and emerald need their 700). */
+  --accent-self: var(--c-indigo-600);
+  --accent-system: var(--c-indigo-500);
+  --accent-futures: var(--c-violet-600);
+  --accent-moments: var(--c-amber-700);
+  --accent-growth: var(--c-emerald-700);
+  --accent-attention: var(--c-rose-600);
+}
+
 @keyframes scrollBall {
   0%   { transform: translateX(-50%) translateY(0);   opacity: 1; }
   80%  { transform: translateX(-50%) translateY(8px); opacity: 0; }

@@ -12,9 +12,9 @@ export type ChangeRow = {
 };
 
 const KIND_STYLES: Record<ChangeRow["kind"], { bg: string; color: string; glyph: string }> = {
-  up: { bg: "#f0fdf4", color: "#22c55e", glyph: "↑" },
-  down: { bg: "#fff5f5", color: "#ef4444", glyph: "↓" },
-  added: { bg: "#eff6ff", color: "#3b82f6", glyph: "+" },
+  up: { bg: "#ecfdf5", color: "#10b981", glyph: "↑" },
+  down: { bg: "#fff1f2", color: "#f43f5e", glyph: "↓" },
+  added: { bg: "#f5f3ff", color: "#8b5cf6", glyph: "+" },
 };
 
 type WhatsChangedCardProps = {
@@ -26,7 +26,7 @@ export function WhatsChangedCard({ rows }: WhatsChangedCardProps) {
     <OverviewCard className="flex flex-col px-8 py-7">
       <div className="mb-6">
         <div className="flex items-center gap-2">
-          <span aria-hidden="true" className="text-[20px] leading-none text-[#22c55e]">
+          <span aria-hidden="true" className="text-[20px] leading-none text-[#10b981]">
             ↗
           </span>
           <h2 className="text-[17px] font-bold text-[#111]">
@@ -87,7 +87,7 @@ export function WhatsChangedCard({ rows }: WhatsChangedCardProps) {
 
       <Link
         href="/future-selves"
-        className="mt-auto pt-4 text-[13px] font-medium text-[#888888] transition-colors duration-150 hover:text-[#6366f1]"
+        className="mt-auto pt-4 text-[13px] font-medium text-[#888888] transition-colors duration-150 hover:text-[#047857]"
       >
         View all changes →
       </Link>

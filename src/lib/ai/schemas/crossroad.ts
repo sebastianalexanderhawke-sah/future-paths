@@ -7,6 +7,15 @@ import { tentativeTextSchema, themeNameSchema, themesSchema } from "@/lib/ai/sch
 export const pathDraftSchema = z.object({
   title: z.string().trim().max(80).default(""),
   description: tentativeTextSchema,
+  // Situations v3: the direction this road leads — the destination, not the
+  // first action. Used only by set-level diversity validation before persist;
+  // never stored. Defaulted so a missing field degrades to the lexical
+  // checks instead of failing the whole generation.
+  direction: z.string().trim().max(80).default(""),
+  // Situations v3: the assumption in the user's framing this path rejects,
+  // when it is the set's assumption-challenging path. Empty for paths that
+  // work within the user's framing. Validation-only; never stored.
+  challenges_assumption: z.string().trim().max(300).default(""),
   benefits: z.array(tentativeTextSchema).min(2).max(4),
   consequences: z.array(tentativeTextSchema).min(2).max(4),
   future_shift: tentativeTextSchema,
@@ -15,7 +24,11 @@ export const pathDraftSchema = z.object({
 
 export const crossroadOutputSchema = z.object({
   current_understanding: tentativeTextSchema,
-  paths: z.array(pathDraftSchema).min(5).max(7),
+  // Situations v3: 3-5 directions instead of 5-7 strategies (v3.1 lowered
+  // the ceiling from 6). The floor dropped because a forced minimum
+  // manufactures implementation variants; three genuinely different roads
+  // beat five variations.
+  paths: z.array(pathDraftSchema).min(3).max(5),
   // Situation polarity, generated alongside the candidate paths in this same
   // call: which approved themes this situation could strengthen versus
   // weaken, so a single situation can support some futures while working

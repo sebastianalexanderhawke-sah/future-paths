@@ -12,28 +12,55 @@ export const GENERATION_PREFERENCE_LIST = `Generation preference list (use these
 - rejections, commitments, turning points, messages sent, offers accepted or declined
 - concrete outcomes the user could observe in real life within months`;
 
-export const CROSSROAD_PATH_RULES = `Path rules (Decision Simulator):
+export const CROSSROAD_PATH_RULES = `Path rules (Situation Paths — direction generation):
 
-Path count — 5 minimum, 5 default, 7 maximum:
-- Generate five paths. Then evaluate whether the available evidence supports another genuinely distinct future not already represented. If so, generate a sixth path. Repeat this evaluation once more for a possible seventh path. Otherwise stop.
-- Do not generate an additional path unless the evidence justifies it. Never exceed 7. Five excellent paths are always better than seven repetitive ones.
+What a path is:
+- A path is a DIRECTION this person's life could take from here — not another way to implement the same plan.
+- Implementations change the first step. Directions change where the road leads.
+- You are not answering "What are different ways to solve this?" You are answering: "What fundamentally different directions could this person's life take from here?"
+- The test of distinctness: if two paths became reality, would this person's life look meaningfully different one year later? If both roads arrive at the same place, they are ONE path — merge them and look for a genuinely different direction.
 
-How to decide between 5, 6, or 7 — evaluate branching complexity, not apparent seriousness:
-- Do not judge the size or weight of the decision to determine path count. A seemingly small decision may have many genuinely distinct futures. A seemingly large decision may have only five.
-- Instead, evaluate how many meaningfully distinct futures are supported by: the specific situation, the user's follow-up answers, existing identity context, the uncertainty within the decision, and the number of plausible outcomes that lead somewhere different.
+Path count — 3 minimum, 5 maximum:
+- Start with the 3 most meaningful genuinely different directions the situation supports.
+- Add a 4th or 5th path ONLY if it is another genuinely different direction — never to reach a count. Stop as soon as another path would no longer introduce a genuinely different destination.
+- If only three truly different directions exist, return three. Three different roads are worth more than five variations of one road. Never generate filler.
+- Do not judge path count by how serious the decision seems. Judge it by how many genuinely different destinations the evidence supports.
 
-A sixth or seventh path is only justified if all three conditions are met:
-- It represents a meaningfully different future — a different underlying posture or strategy, not a variation of one already generated.
-- It would lead to materially different downstream outcomes — the forecasts, consequences, and future_shift it produces would differ substantially from every other path.
-- A user reading it would feel they are considering a genuinely different possibility, not another version of the same outcome.
+direction field (required on every path):
+- A 2-5 word label naming where this road leads — the destination, not the first action.
+- Good: "a bigger, team-led business", "a smaller, calmer business", "life after this friendship", "the same life, renegotiated", "a different city entirely".
+- Bad: "hire a freelancer" (an action, not a destination), "take action" (no destination at all).
+- Every path's direction must differ in substance, not wording. If two candidate paths would carry the same direction, they are the same path — merge them before responding.
 
-Do not justify an additional path through timing differences, confidence differences, wording, logistics, or minor variations of an existing path. Do not add filler paths. Do not create weaker versions of existing paths. Do not split one future into two nearly identical futures.
+Forbidden differentiation (strict): two paths must NEVER differ only by
+- tool or agent (AI vs freelancer vs contractor vs software)
+- timing (now vs later vs after a milestone)
+- scale or degree (a small step vs a big step of the same move)
+- sequence (the same steps in a different order)
+- confidence or wording
+Those are implementations of one direction. Collapse them into the single strongest version and use the freed slot for a different direction — or return fewer paths.
+
+Bad set (five implementations of "delegate the same work"): "Hire A Freelancer" / "Hire A Niche Freelancer" / "Use AI" / "Use AI Plus A Freelancer" / "Improve Your AI Workflow".
+Good set (five directions): "Build A Team" / "Simplify The Business" / "Change The Business Model" / "Stay Intentionally Solo" / "Pause Growth To Strengthen The Foundation".
+
+Assumption-challenge rule (required): at least one path must question an assumption embedded in the user's framing, and name that assumption in its challenges_assumption field as one plain sentence (e.g. "That the business should keep growing.", "That this friendship must either resume or be mourned.", "That the career has to be chosen now rather than tested."). All other paths set challenges_assumption to an empty string.
+- The challenging path must still be realistic and grounded in this person's actual situation — the goal is revealing a possibility the user may not have considered, never novelty for its own sake.
+- Whole categories the user's framing tends to hide: making the problem smaller instead of solving it, changing the objective itself, letting someone else own the problem entirely, changing the environment instead of the behavior, deliberately moving the decision to a later chapter of life.
+
+Who is making this decision (decisionMaker context, when present):
+- decisionMaker is stable behavioral evidence about this person: strongestPatterns (behavior patterns with stage and trend), recurringTradeoffs (which side of a recurring tension their behavior keeps favoring), stability (how settled their identity is right now), and topDirections (identities their life is already bending toward).
+- Use it to make directions personal. At least one direction should extend something this person already demonstrably does (a strong pattern or top direction). At least one should deliberately run against a recurring tradeoff — the road they keep not taking is often the direction they cannot see.
+- Express this in plain situation language. Never echo pattern slugs, identity names, or any system vocabulary in the output, and never treat decisionMaker as facts about this situation — it describes tendencies, not events.
+
+Regeneration (regenerationFeedback context, when present):
+- A previous path set for this situation was rejected for insufficient diversity, for the reasons given. Produce a genuinely NEW set that fixes every named issue — do not resubmit the same paths reworded.
+
 - Each path must include a native title and a description.
-- path.title must be 2-6 words, human-readable, strategy-oriented, and stand on its own.
-- Good titles: "Ask Her Out", "Friendship First", "Launch The MVP", "Find A Co-Founder", "Take The Job", "Stay Where You Are".
+- path.title must be 2-6 words, human-readable, direction-oriented, and stand on its own.
+- Good titles: "Build A Team", "Simplify The Business", "Stay Intentionally Solo", "Let The Friendship End", "A Different City Entirely".
 - Bad titles: sentence fragments, mid-sentence cuts, conjunction leftovers like "... And That", or titles copied from the description opening.
-- Each path.description must expand the title into one concrete sentence about the strategy.
-- Paths must read like distinct strategies someone could actually choose.
+- Each path.description must expand the title into one concrete sentence about the road this path takes.
+- Paths must read like distinct futures someone could actually choose to move toward.
 - Do not generate therapy paths, coaching paths, or reflection-only paths.
 - Do not generate sentence fragments or vague inner-work directions.
 
@@ -44,13 +71,7 @@ Do not justify an additional path through timing differences, confidence differe
   Good: user answer "An apology would not change anything" → a path about apologizing anyway frames it as "closure for yourself, not because it changes her mind" — consistent with what the user said.
   Before finalising, check each path against every context answer: does this path state or imply the opposite of something the user explicitly said? If so, rewrite the path to fit what the user actually said.
 
-- Distinct-strategy rule: Paths must represent genuinely different approaches, not the same underlying strategy said two different ways. Before finalising, check each pair of paths: if both paths would lead the user to do essentially the same thing (e.g. two variations of "reach out and explain yourself"), merge them and replace one with a path built on a different underlying posture — for example, when the situation involves another person, draw from a mix of postures like: re-engage/reconnect, confront/address directly, create distance, accept and let go, or seek closure without re-engaging. Not every situation supports all of these, but no two paths should land on the same posture.
-
-- Future-first rule: When evaluating whether paths are truly distinct, do not ask "is this a different action?" Ask: "If this path became reality, how would the person's life meaningfully differ one year from now?" Vary the future that follows, not only the decision being made. Two paths that take different actions but converge on the same life outcome are not distinct — merge them and replace one.
-
-- Reframe rule: At least one path should reframe the decision rather than simply choosing between the visible options. A reframe path asks: what if the user is solving the wrong problem, or taking a constraint for granted that is not actually fixed? This path must be realistic and grounded in the user's actual situation — not abstract advice, not a general life direction, not philosophical. If no genuine reframe exists in the evidence, do not manufacture one.
-
-- Insight rule: At least one path should surface something the user may not have considered. Do not force novelty. Do not invent unrealistic options. Do not be clever for its own sake. Look for an option that is genuinely available but not visible from the user's current framing of the problem. If the evidence does not support one, do not include it.
+- Final distinctness check (internal — never shown in the output): before responding, silently take every pair of paths and ask "If each became reality, would this person's life look meaningfully different one year from now?" Two paths that take different actions but converge on the same life outcome are not distinct — merge them, and either find a genuinely different direction or return fewer paths. Do not mention this verification anywhere in the response.
 
 - Move-on rule: When the situation centres on whether to reconnect, re-engage, or pursue something involving another person, at least one path must represent deliberately choosing NOT to pursue it — accepting the situation as it stands and moving forward without re-engaging. This is a distinct, dignified choice, not the same as "wait and see" (which is passive and temporary). Only include this if genuinely relevant to the situation; not all situations involve a relationship to disengage from.`;
 

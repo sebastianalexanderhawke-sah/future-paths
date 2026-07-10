@@ -29,7 +29,6 @@ import {
   type SlotFillAuditEntry,
 } from "@/lib/forecast-slot-integrity";
 import { tagForecastFuture } from "@/lib/forecast-source-attribution";
-import { resolveForecastExplanation } from "@/lib/forecast-explanation-preservation";
 import { isAiAuditEnabled } from "@/lib/ai-audit";
 import {
   buildForecastExplanationPreservationAudit,
@@ -43,13 +42,16 @@ import {
 
 const MIN_SIGNALS = 3;
 const MAX_SIGNALS = 5;
-const MIN_ACTIVE_FUTURES = 4;
-const MAX_ACTIVE_FUTURES = 5;
-const MIN_HIDDEN_FUTURES = 2;
+// Forecasts v2: exactly 8 moments — 3 likely developments (active), 3
+// failure modes (hidden), 2 alternative outcomes (wild_card). blind_spots is
+// retired for new generations (0/0) but stored v1 forecasts still render.
+const MIN_ACTIVE_FUTURES = 3;
+const MAX_ACTIVE_FUTURES = 3;
+const MIN_HIDDEN_FUTURES = 3;
 const MAX_HIDDEN_FUTURES = 3;
-const MIN_BLIND_SPOT_FUTURES = 2;
-const MAX_BLIND_SPOT_FUTURES = 3;
-const MIN_WILD_CARD_FUTURES = 1;
+const MIN_BLIND_SPOT_FUTURES = 0;
+const MAX_BLIND_SPOT_FUTURES = 0;
+const MIN_WILD_CARD_FUTURES = 2;
 const MAX_WILD_CARD_FUTURES = 2;
 const MAX_TITLE_LENGTH = 100;
 const MAX_SUMMARY_LENGTH = 160;
@@ -1475,14 +1477,28 @@ type FillSectionResult = {
   fallbackAdds: number;
 };
 
+// The per-slot validator fillSection applies to generated items. Legacy
+// crossroad-derived builders keep the v1 grounded filter (their input is
+// arbitrary path prose); the AI forecast pipeline passes the v2.1
+// structural filter instead.
+type SlotFilter = (
+  future: ScannableFuture,
+  bundle: GroundingBundle,
+  traceItem?: ForecastPipelineTraceItem,
+) => ScannableFuture | null;
+
 // Lightweight survivor count (no slots/trace/dedup bookkeeping) used to size
 // the shared global fallback budget before any section is actually filled.
-function countSurvivors(generated: ScannableFuture[], bundle: GroundingBundle): number {
+function countSurvivors(
+  generated: ScannableFuture[],
+  bundle: GroundingBundle,
+  slotFilter: SlotFilter = filterGroundedFutureAtSlot,
+): number {
   const seen = new Set<string>();
   let count = 0;
 
   for (const future of generated) {
-    const survivor = filterGroundedFutureAtSlot(future, bundle);
+    const survivor = slotFilter(future, bundle);
     if (!survivor) continue;
 
     const key = normalizeComparable(survivor.title);
@@ -1532,6 +1548,11 @@ function fillSection(
    * already long enough without generic padding.
    */
   fallbackBudget?: number,
+  /** v2.1: how generated slots are validated. Defaults to the legacy
+   *  grounded filter for the crossroad-derived builders; the AI pipeline
+   *  passes the structural filter. Fallback-pool candidates always go
+   *  through the legacy filter regardless — they are canned v1 content. */
+  slotFilter: SlotFilter = filterGroundedFutureAtSlot,
 ): FillSectionResult {
   const slots: (ScannableFuture | null)[] = [];
   const slotAudit: SlotFillAuditEntry[] = [];
@@ -1539,7 +1560,7 @@ function fillSection(
   for (let index = 0; index < generated.length; index += 1) {
     const traceItem = traceContext?.traceItems[index];
     const raw = traceItem?.original ?? generated[index]!.title;
-    const survivor = filterGroundedFutureAtSlot(generated[index]!, bundle, traceItem);
+    const survivor = slotFilter(generated[index]!, bundle, traceItem);
     const attributedSurvivor = survivor ? attributeSurvivorFuture(survivor, raw) : null;
     slots.push(attributedSurvivor);
     slotAudit.push({
@@ -1580,7 +1601,15 @@ function fillSection(
   let recoveryAdds = 0;
   let fallbackAdds = 0;
   const groundedFallback = filterGroundedFutures(fallback, bundle);
-  let fallbackBudgetRemaining = fallbackBudget ?? Math.max(0, limits.min - survivorCount);
+  // Never spend budget past this section's max: anything filled beyond it is
+  // sliced away below, and with a shared budget those discarded fills would
+  // silently starve the later sections (fallbackAdds is subtracted from the
+  // shared budget by the caller).
+  const sectionCapacity = Math.max(0, limits.max - survivorCount);
+  let fallbackBudgetRemaining = Math.min(
+    fallbackBudget ?? Math.max(0, limits.min - survivorCount),
+    sectionCapacity,
+  );
 
   const fillVacantSlots = (
     candidates: ScannableFuture[],
@@ -1737,6 +1766,8 @@ function fillSection(
 
 function buildSignalsFromGeneratedFuture(draft: ForecastFutureDraft): string[] {
   // Prefer Claude's own signals when present (schema-validated to exactly 3).
+  // v2.2: model-supplied signals are carried verbatim — the prompt already
+  // requires title case, and toTitleCase mangled acronyms ("AI" → "Ai").
   const draftSignals = draft.signals ?? [];
   if (draftSignals.length >= MIN_SIGNALS) {
     const seen = new Set<string>();
@@ -1746,7 +1777,7 @@ function buildSignalsFromGeneratedFuture(draft: ForecastFutureDraft): string[] {
       const key = normalizeComparable(signal);
       if (!seen.has(key)) {
         seen.add(key);
-        signals.push(toTitleCase(signal));
+        signals.push(signal.trim());
       }
       if (signals.length >= MAX_SIGNALS) break;
     }
@@ -1784,75 +1815,90 @@ function buildSignalsFromGeneratedFuture(draft: ForecastFutureDraft): string[] {
     : [...signals, "Named decision", "Current momentum", "Open timeline"].slice(0, MAX_SIGNALS);
 }
 
-function mapGeneratedFutureToScannableFuture(
+// Forecasts v2.1: the model's writing IS the product. AI-generated futures
+// are carried verbatim — no reflective-language judgment, no
+// isPhotographableFuture event-ness test, no TITLE_REWRITES /
+// SCENE_TITLE_BY_KEY / FUTURE_CONTENT_REWRITES substitutions. Those filters
+// enforced v1's isolated-observable-event model; v2 generates lived moments
+// over a connected timeline, and its prose legitimately uses the vocabulary
+// v1 banned ("think about", "insight", "patterns"). What remains here is
+// structural: anti-fabrication on signals (title/impact are checked at the
+// slot filter), signal derivation, and source attribution.
+function mapGeneratedFutureVerbatim(
   draft: ForecastFutureDraft,
   bundle: GroundingBundle,
   traceItem?: ForecastPipelineTraceItem,
 ): ScannableFuture {
   const original = draft.title.trim();
-  const preservedTitle = shouldPreserveForecastTitle(original, bundle)
-    ? normalizePreservableForecastTitle(original)
-    : "";
-  const realityTitle =
-    preservedTitle || upgradeToSceneTitle(formatForecastTitle(original));
+  const title = original.replace(/[.!?]+$/, "");
+  // Forecasts v2.2: the model is the sole author of forecast prose. The
+  // description is carried exactly as written — no length cap, no template
+  // reconstruction, no punctuation tidy-up. (v1 rebuilt "why" text via
+  // resolveForecastExplanation because its inputs were coaching fragments
+  // and truncated cache shapes; v2's schema-validated paragraphs need no
+  // rescue, and "Because you described…" replacements hid the model's
+  // writing from more than half of rendered forecasts.)
+  const rawWhy = draft.why.trim();
 
   if (traceItem) {
-    if (!realityTitle || isReflectiveForecast(realityTitle)) {
-      traceItem.afterReality = realityTitle || null;
-    } else {
-      traceItem.afterReality = realityTitle;
-    }
+    traceItem.afterReality = title;
+    traceItem.afterGrounding = title;
+    traceItem.afterRewrite = title;
+    traceItem.status = "preserved";
   }
 
-  const resolvedTitle =
-    preserveOrResolveForecastTitle(draft.title, bundle) || formatForecastTitle(draft.title);
-
-  if (traceItem) {
-    if (!resolvedTitle || !isGroundedFutureText(resolvedTitle, bundle)) {
-      traceItem.afterGrounding = resolvedTitle || null;
-      if (!resolvedTitle) {
-        traceItem.reason = "failed grounding: no evidence found in context";
-      } else if (mentionsInventedTopic(resolvedTitle, bundle)) {
-        traceItem.reason = "failed grounding: invented topic not found in context";
-      } else {
-        traceItem.reason = "failed grounding: no evidence found in context";
-      }
-    } else {
-      traceItem.afterGrounding = resolvedTitle;
-    }
-  }
-
-  const title = resolvedTitle || realityTitle || "";
-  const futureImpact =
-    formatForecastImpact(draft.impact, bundle) ||
-    recoverFutureImpact(draft.impact, bundle) ||
-    draft.impact.trim();
-  const explanationResult = resolveForecastExplanation(draft.why, title, bundle);
-
-  const sanitized = sanitizeFuture(
+  return tagForecastFuture(
     {
       title,
-      whyItMightHappen: explanationResult.displayedExplanation,
-      signals: buildSignalsFromGeneratedFuture(draft),
-      futureImpact,
+      whyItMightHappen: rawWhy,
+      signals: buildSignalsFromGeneratedFuture(draft).filter(
+        (signal) => !mentionsInventedTopic(signal, bundle),
+      ),
+      futureImpact: draft.impact.trim(),
       expansion: null,
       sourceTrace: buildSourceTrace(bundle),
-      explanationPreservation: explanationResult.trace,
+      explanationPreservation: { rawExplanation: rawWhy, status: "preserved" },
       ...(draft.timeframe ? { timeframe: draft.timeframe } : {}),
     },
-    bundle,
+    "claude",
+    "generation",
+    original,
   );
+}
 
-  if (traceItem) {
-    traceItem.afterRewrite = sanitized.title || null;
-    if (sanitized.title && normalizeComparable(sanitized.title) === normalizeComparable(original)) {
-      traceItem.status = "preserved";
-    } else if (sanitized.title) {
-      traceItem.status = "rewritten";
-    }
+// Forecasts v2.1 slot validation for AI-generated futures: structural checks
+// only. A future is removed solely for an empty title, a fabricated topic in
+// its title or impact (anti-fabrication is deliberately NOT weakened), or
+// having no signals. Duplicate-title removal stays in fillSection/dedupe.
+function filterStructuralFutureAtSlot(
+  future: ScannableFuture,
+  bundle: GroundingBundle,
+  traceItem?: ForecastPipelineTraceItem,
+): ScannableFuture | null {
+  const title = future.title.trim();
+
+  let reason: string | null = null;
+  if (!title) {
+    reason = "empty title";
+  } else if (mentionsInventedTopic(title, bundle)) {
+    reason = "invented topic not found in context";
+  } else if (mentionsInventedTopic(future.futureImpact, bundle)) {
+    reason = "impact references invented topic";
+  } else if (future.signals.length < 1) {
+    reason = "missing signals";
   }
 
-  return tagForecastFuture(sanitized, "claude", "generation", original);
+  if (reason === null) {
+    return future;
+  }
+
+  if (traceItem) {
+    traceItem.status = "removed";
+    traceItem.reason = reason;
+    traceItem.final = null;
+  }
+
+  return null;
 }
 
 export type ProcessedForecastSectionsResult = {
@@ -1911,17 +1957,19 @@ export function processGeneratedForecastSections(
     collector ? collector.beginGeneratedItem("wild_card", draft.title) : undefined,
   ) ?? [];
 
+  // v2.1: model output is mapped verbatim and judged structurally — see
+  // mapGeneratedFutureVerbatim / filterStructuralFutureAtSlot.
   const activeGenerated = generated.active.map((draft, index) =>
-    mapGeneratedFutureToScannableFuture(draft, bundle, activeTraceItems[index]),
+    mapGeneratedFutureVerbatim(draft, bundle, activeTraceItems[index]),
   );
   const hiddenGenerated = generated.hidden.map((draft, index) =>
-    mapGeneratedFutureToScannableFuture(draft, bundle, hiddenTraceItems[index]),
+    mapGeneratedFutureVerbatim(draft, bundle, hiddenTraceItems[index]),
   );
   const blindSpotGenerated = generated.blind_spots.map((draft, index) =>
-    mapGeneratedFutureToScannableFuture(draft, bundle, blindSpotTraceItems[index]),
+    mapGeneratedFutureVerbatim(draft, bundle, blindSpotTraceItems[index]),
   );
   const wildCardGenerated = (generated.wild_card ?? []).map((draft, index) =>
-    mapGeneratedFutureToScannableFuture(draft, bundle, wildCardTraceItems[index]),
+    mapGeneratedFutureVerbatim(draft, bundle, wildCardTraceItems[index]),
   );
 
   // Shared fallback budget for the unified list: only pad with generic
@@ -1930,11 +1978,13 @@ export function processGeneratedForecastSections(
   // GLOBAL_FALLBACK_FLOOR. A section is allowed to land under its own
   // min if there's already enough real content overall — see fillSection's
   // fallbackBudget parameter.
+  // blind_spots survivors are excluded: the section is capped at 0 for v2,
+  // so anything in it can never display and must not eat the budget that
+  // keeps the visible list above the floor.
   const totalSurvivorCount =
-    countSurvivors(activeGenerated, bundle) +
-    countSurvivors(hiddenGenerated, bundle) +
-    countSurvivors(blindSpotGenerated, bundle) +
-    countSurvivors(wildCardGenerated, bundle);
+    countSurvivors(activeGenerated, bundle, filterStructuralFutureAtSlot) +
+    countSurvivors(hiddenGenerated, bundle, filterStructuralFutureAtSlot) +
+    countSurvivors(wildCardGenerated, bundle, filterStructuralFutureAtSlot);
   let sharedFallbackBudget = Math.max(0, GLOBAL_FALLBACK_FLOOR - totalSurvivorCount);
 
   const activeFill = fillSection(
@@ -1954,6 +2004,7 @@ export function processGeneratedForecastSections(
         }
       : undefined,
     sharedFallbackBudget,
+    filterStructuralFutureAtSlot,
   );
   sharedFallbackBudget -= activeFill.fallbackAdds;
 
@@ -1974,6 +2025,7 @@ export function processGeneratedForecastSections(
         }
       : undefined,
     sharedFallbackBudget,
+    filterStructuralFutureAtSlot,
   );
   sharedFallbackBudget -= hiddenFill.fallbackAdds;
 
@@ -1994,6 +2046,7 @@ export function processGeneratedForecastSections(
         }
       : undefined,
     sharedFallbackBudget,
+    filterStructuralFutureAtSlot,
   );
   sharedFallbackBudget -= blindSpotFill.fallbackAdds;
 
@@ -2014,6 +2067,7 @@ export function processGeneratedForecastSections(
         }
       : undefined,
     sharedFallbackBudget,
+    filterStructuralFutureAtSlot,
   );
 
   const deduped = dedupeFuturesAcrossSections({
@@ -2304,6 +2358,10 @@ function buildSelectedPathForecastSections(
     )
     .filter((future): future is ScannableFuture => future !== null);
 
+  // Forecasts v2: the blind-spot section is retired (0/0). The path-context
+  // insights that used to fill it are exactly the "I hadn't considered that"
+  // material of v2 failure modes, so they now feed the hidden section
+  // instead of disappearing with the slot.
   const blindSpotGenerated = [
     ...buildContextBlindSpotFutures(contextSummary ?? null, situationTitle, selectedPathTitle),
     buildBlindSpotRealityFuture(selectedPath, null, bundle),
@@ -2315,6 +2373,8 @@ function buildSelectedPathForecastSections(
       null,
     ),
   ].filter((future): future is ScannableFuture => future !== null);
+
+  hiddenGenerated.push(...blindSpotGenerated);
 
   const recoveryInput: ForecastRecoveryInput = {
     situationTitle,
@@ -2399,6 +2459,9 @@ export function buildRealityForecastSections(
     )
     .filter((future): future is ScannableFuture => future !== null);
 
+  // Forecasts v2: the blind-spot section is retired (0/0); its path-derived
+  // "hadn't considered that" material now feeds the hidden (failure-mode)
+  // section instead of disappearing with the slot.
   const blindSpotGenerated = paths
     .flatMap((path, index) => [
       buildBlindSpotRealityFuture(path, futureSelves[index] ?? futureSelves[0] ?? null, bundle),
@@ -2408,6 +2471,8 @@ export function buildRealityForecastSections(
       ),
     ])
     .filter((future): future is ScannableFuture => future !== null);
+
+  hiddenGenerated.push(...blindSpotGenerated);
 
   const recoveryInput: ForecastRecoveryInput = {
     situationTitle,

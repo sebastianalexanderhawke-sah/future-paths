@@ -1,5 +1,8 @@
 export const PROMPT_MIGRATION_ORDER = [
   "crossroad.generate",
+  // Situations v3.1: internal set-level destination audit for generated
+  // paths. Validation-only — its output is never shown to the user.
+  "path_set.audit",
   "discovery_question.generate",
   "check_in.generate",
   "identity_update.generate",

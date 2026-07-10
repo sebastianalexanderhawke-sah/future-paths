@@ -78,7 +78,7 @@ export default async function TimelinePage() {
                     {/* Node on the rail, with the month as its label. */}
                     <span
                       aria-hidden="true"
-                      className="absolute left-0 top-[3px] h-4 w-4 rounded-full border-[3px] border-white bg-[#6366f1] shadow-[0_0_0_1px_#e8e8ee]"
+                      className="absolute left-0 top-[3px] h-4 w-4 rounded-full border-[3px] border-white bg-[#047857] shadow-[0_0_0_1px_#e8e8ee]"
                     />
                     <p className="text-[13px] font-semibold text-[#999999]">
                       {narrative.month}

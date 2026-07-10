@@ -71,7 +71,8 @@ export function AppSidebar({
           aria-hidden="true"
           className="h-8 w-8 shrink-0 rounded-full"
           style={{
-            background: "conic-gradient(#6366f1, #22c55e, #f59e0b, #6366f1)",
+            background:
+              "conic-gradient(#6366f1, #8b5cf6, #10b981, #f59e0b, #6366f1)",
           }}
         />
         <span className="text-[15px] font-semibold text-[#111]">

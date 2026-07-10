@@ -70,7 +70,11 @@ describe("prompt registry", () => {
 
     expect(systemPrompt).toContain("Never invent themes");
     expect(userPrompt).toContain("Never invent theme labels");
-    expect(systemPrompt).toContain("distinct strategies");
+    // Situations v3: paths are directions, not implementation strategies.
+    expect(systemPrompt).toContain("fundamentally different directions");
+    expect(systemPrompt).toContain("Implementations change the first step.");
+    expect(systemPrompt).toContain("challenges_assumption");
+    expect(userPrompt).toContain("paths (3–5 items)");
     expect(systemPrompt).toContain("inner landscape");
     expect(systemPrompt).toContain("What happens?");
   });
@@ -137,7 +141,7 @@ describe("prompt registry", () => {
     expect(systemPrompt).toContain("reuse its exact name");
   });
 
-  it("requires forecast.generate to produce dedicated future realities", () => {
+  it("requires forecast.generate to simulate a plausible year of the chosen path", () => {
     const definition = getPromptDefinition("forecast.generate");
     const systemPrompt = definition.buildSystemPrompt();
     const userPrompt = definition.buildUserPrompt({
@@ -145,11 +149,17 @@ describe("prompt registry", () => {
       profile: "forecast",
     });
 
-    expect(systemPrompt).toContain("observable event");
-    expect(systemPrompt).toContain("RULE 1");
-    expect(systemPrompt).toContain("blind_spots");
-    expect(userPrompt).toContain("active");
-    expect(userPrompt).toContain("hidden");
+    // Forecasts v2: exactly 8 moments — 3 likely developments, 3 failure
+    // modes, 2 alternative outcomes — as one connected timeline.
+    expect(systemPrompt).toContain("EXACTLY 8 FUTURES");
+    expect(systemPrompt).toContain("likely_developments: exactly 3");
+    expect(systemPrompt).toContain("failure_modes: exactly 3");
+    expect(systemPrompt).toContain("alternative_outcomes: exactly 2");
+    expect(systemPrompt).toContain("THE TIMELINE MUST FLOW");
+    expect(systemPrompt).toContain("not fear tactics");
+    expect(userPrompt).toContain("likely_developments (exactly 3)");
+    expect(userPrompt).toContain("failure_modes (exactly 3)");
+    expect(userPrompt).toContain("alternative_outcomes (exactly 2)");
   });
 
   it("requires check_in.generate to require theme and direction", () => {

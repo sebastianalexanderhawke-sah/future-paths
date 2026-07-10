@@ -1,22 +1,16 @@
-import type { GroundingBundle } from "@/components/home/forecast-grounding";
-import { buildGroundedWhy } from "@/components/home/forecast-grounding";
-import { isCompleteSentence } from "@/components/home/path-quality";
 import type { ScannableFuture } from "@/components/home/output-refinement";
-import { toFirstSentence } from "@/components/home/output-refinement";
+
+// Forecasts v2.2: this module no longer rewrites anything. The v1
+// resolveForecastExplanation/validateForecastExplanation machinery — which
+// replaced any "why" that was >400 chars, "generic", or an incomplete
+// sentence with an application-written "Because you described…" template —
+// was removed: the model is the sole author of forecast prose, and its
+// descriptions are carried verbatim (see mapGeneratedFutureVerbatim in
+// forecast-reality.ts). What remains here is the audit vocabulary for
+// preservation status, still used to report how stored forecasts (including
+// pre-v2.2 rows with reconstructed/fallback text) were produced.
 
 export type ForecastExplanationPreservationStatus = "preserved" | "reconstructed" | "fallback";
-
-export type ForecastExplanationValidationResult = {
-  valid: boolean;
-  reason?:
-    | "empty"
-    | "fragment"
-    | "too-long"
-    | "incomplete"
-    | "reflection-language"
-    | "template"
-    | "generic";
-};
 
 export type ForecastExplanationPreservationItem = {
   section: "active" | "hidden" | "blind_spots";
@@ -50,19 +44,9 @@ export type ForecastExplanationPreservationTrace = {
   status: ForecastExplanationPreservationStatus;
 };
 
-export type ForecastExplanationResolution = {
-  rawExplanation: string | null;
-  displayedExplanation: string;
-  status: ForecastExplanationPreservationStatus;
-  validation: ForecastExplanationValidationResult;
-  trace: ForecastExplanationPreservationTrace;
-};
-
-const MAX_FORECAST_EXPLANATION_LENGTH = 400;
-
-const REFLECTIVE_EXPLANATION_START =
-  /^(gain|observe|reflect|learn|understand|explore|process|consider|think about|become more self-aware|reflect more deeply)\b/i;
-
+// Recognizes application-written template text ("Because you described…") in
+// stored forecasts, so the audit can classify pre-v2.2 rows whose displayed
+// explanation was reconstructed rather than model-written.
 const GENERATED_EXPLANATION_TEMPLATES = [
   /^because you described/i,
   /^based on "/i,
@@ -70,136 +54,8 @@ const GENERATED_EXPLANATION_TEMPLATES = [
   /^this outcome follows naturally/i,
 ];
 
-function ensureTerminalPunctuation(text: string): string {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  if (/[.!?]$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  return `${trimmed}.`;
-}
-
-function isReflectiveExplanationViolation(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    return true;
-  }
-
-  if (/^gain clarity\.?$/i.test(trimmed)) {
-    return true;
-  }
-
-  if (/^become more self-aware\.?$/i.test(trimmed)) {
-    return true;
-  }
-
-  if (/^reflect more deeply\.?$/i.test(trimmed)) {
-    return true;
-  }
-
-  if (REFLECTIVE_EXPLANATION_START.test(trimmed) && trimmed.split(/\s+/).length < 12) {
-    return true;
-  }
-
-  return false;
-}
-
 function isGeneratedExplanationTemplate(text: string): boolean {
   return GENERATED_EXPLANATION_TEMPLATES.some((pattern) => pattern.test(text.trim()));
-}
-
-function isSituationSpecificExplanation(text: string): boolean {
-  const trimmed = text.trim();
-  if (trimmed.split(/\s+/).length >= 10) {
-    return true;
-  }
-
-  return /\b(she|he|they|you|work|colleague|office|conversation|initiat|interest|personality|refusal|directness|ambiguity|company|signal|friendly|extremely|friend|date|move|job|offer|city|dallas|crush|relationship|workplace|message|text|invite|coffee|lunch)\b/i.test(
-    trimmed,
-  );
-}
-
-export function validateForecastExplanation(text: string): ForecastExplanationValidationResult {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    return { valid: false, reason: "empty" };
-  }
-
-  if (trimmed.includes("…")) {
-    return { valid: false, reason: "fragment" };
-  }
-
-  if (trimmed.length > MAX_FORECAST_EXPLANATION_LENGTH) {
-    return { valid: false, reason: "too-long" };
-  }
-
-  if (isGeneratedExplanationTemplate(trimmed)) {
-    return { valid: false, reason: "template" };
-  }
-
-  if (isReflectiveExplanationViolation(trimmed)) {
-    return { valid: false, reason: "reflection-language" };
-  }
-
-  if (!isCompleteSentence(ensureTerminalPunctuation(trimmed))) {
-    return { valid: false, reason: "incomplete" };
-  }
-
-  if (!isSituationSpecificExplanation(trimmed)) {
-    return { valid: false, reason: "generic" };
-  }
-
-  return { valid: true };
-}
-
-export function shouldPreserveForecastExplanation(text: string): boolean {
-  return validateForecastExplanation(text).valid;
-}
-
-export function resolveForecastExplanation(
-  rawWhy: string | null | undefined,
-  title: string,
-  bundle: GroundingBundle,
-): ForecastExplanationResolution {
-  const raw = rawWhy?.trim() ?? "";
-  const validation = validateForecastExplanation(raw);
-
-  if (validation.valid) {
-    const displayedExplanation = ensureTerminalPunctuation(raw);
-    return {
-      rawExplanation: raw,
-      displayedExplanation,
-      status: "preserved",
-      validation,
-      trace: {
-        rawExplanation: raw,
-        status: "preserved",
-      },
-    };
-  }
-
-  const reconstructed = buildGroundedWhy(
-    title,
-    bundle,
-    raw ? toFirstSentence(raw, 160) : null,
-  );
-
-  const status: ForecastExplanationPreservationStatus = raw ? "reconstructed" : "fallback";
-
-  return {
-    rawExplanation: raw || null,
-    displayedExplanation: reconstructed,
-    status,
-    validation,
-    trace: {
-      rawExplanation: raw || null,
-      status,
-    },
-  };
 }
 
 function itemFromFuture(

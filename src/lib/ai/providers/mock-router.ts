@@ -53,6 +53,12 @@ export function runMockGenerator(
 
       return generateMockCrossroads(context.moment);
 
+    case "path_set.audit":
+      // Deterministic mock verdict: destination-level convergence needs real
+      // reasoning; duplicate direction labels are already caught upstream by
+      // the deterministic validator, so the mock reports a clean set.
+      return { convergent_pairs: [] };
+
     case "discovery_question.generate":
       if (!context.moment) {
         throw new Error("Discovery question generation requires moment context.");

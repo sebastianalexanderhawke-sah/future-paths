@@ -179,7 +179,7 @@ export function SituationForecastSection({
         {/* Pending reflection question — inline, directly after the form */}
         {pendingReflection?.reflection_question ? (
           <div className="mt-7 rounded-xl bg-[#f8f7ff] px-5 py-4">
-            <p className="text-[12px] font-semibold text-[#6366f1]">
+            <p className="text-[12px] font-semibold text-[#7c3aed]">
               A question worth sitting with
             </p>
             <p className="mt-2 text-[14px] leading-[1.7] text-[#111]">
@@ -291,7 +291,7 @@ export function SituationForecastSection({
 
         {remainingFutures.length > 0 ? (
           <details className="group">
-            <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1] [&::-webkit-details-marker]:hidden">
+            <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#7c3aed] [&::-webkit-details-marker]:hidden">
               <span className="group-open:hidden">
                 ▼ See all futures ({remainingFutures.length} more)
               </span>

@@ -19,6 +19,7 @@ import {
   type PromptId,
 } from "@/lib/ai/prompts/ids";
 import { pastPathGenerateV1 } from "@/lib/ai/prompts/past_path.generate.v1";
+import { pathSetAuditV1 } from "@/lib/ai/prompts/path_set.audit.v1";
 import {
   buildSystemPromptForModule,
   type PromptModule,
@@ -45,6 +46,7 @@ function registerPrompt(module: PromptModule): PromptDefinition {
 
 const PROMPT_REGISTRY: Record<PromptId, PromptDefinition> = {
   "crossroad.generate": registerPrompt(crossroadGenerateV1),
+  "path_set.audit": registerPrompt(pathSetAuditV1),
   "discovery_question.generate": registerPrompt(discoveryQuestionGenerateV1),
   "check_in.generate": registerPrompt(checkInGenerateV1),
   "identity_update.generate": registerPrompt(identityUpdateGenerateV1),

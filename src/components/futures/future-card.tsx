@@ -243,7 +243,7 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
                   type="button"
                   aria-expanded={showEvidence}
                   onClick={() => setShowEvidence((current) => !current)}
-                  className="cursor-pointer text-[13px] font-medium text-[#6366f1] transition-opacity duration-150 hover:opacity-80"
+                  className="cursor-pointer text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80"
                 >
                   {showEvidence ? "Hide supporting evidence" : "View supporting evidence →"}
                 </button>

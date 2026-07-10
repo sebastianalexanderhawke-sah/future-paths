@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createMoment } from "@/lib/moments";
 import { persistGeneratedPaths } from "@/lib/paths";
-import { runStreamingGeneration } from "@/lib/ai/stream";
-import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
+import { generateDiverseCrossroadSet } from "@/lib/crossroad-generation";
 import { createArrayItemParser } from "@/lib/ai/parse-stream";
 import { isAiAuditEnabled, toRawPathsAudit } from "@/lib/ai-audit";
 import {
@@ -80,16 +79,15 @@ export async function POST(request: Request) {
           enqueue({ type: "path", data: item });
         });
 
-        const generationResult = await runStreamingGeneration(
-          {
-            userId: user.id,
-            profile: "crossroad",
-            promptId: "crossroad.generate",
-            schema: crossroadOutputSchema,
-            overrides: { momentId: moment.id },
-          },
-          (text) => pathParser(text),
-        );
+        // Situations v3: shared generation + set-level diversity validation.
+        // Only the first attempt streams path events; if the set is rejected
+        // and regenerated, the final "result" event below replaces whatever
+        // the client rendered progressively.
+        const generationResult = await generateDiverseCrossroadSet({
+          userId: user.id,
+          momentId: moment.id,
+          onChunk: (text) => pathParser(text),
+        });
 
         // Failures past this point keep the situation: it holds the user's
         // full written context, and the client offers "Resume generation"

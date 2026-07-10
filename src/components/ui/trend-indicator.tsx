@@ -14,7 +14,8 @@ export function TrendIndicator({ futureSelf, className = "" }: TrendIndicatorPro
   }
 
   const arrow = direction === "up" ? "↑" : "↓";
-  const colorClass = direction === "up" ? "text-emerald-600" : "text-rose-600";
+  // Family 700s: the small trend glyph must clear AA contrast on white.
+  const colorClass = direction === "up" ? "text-emerald-700" : "text-rose-700";
 
   return (
     <span className={`${colorClass} ${className}`}>

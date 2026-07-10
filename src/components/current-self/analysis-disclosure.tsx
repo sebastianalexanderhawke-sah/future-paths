@@ -35,7 +35,7 @@ export function AnalysisDisclosure({ paragraphs }: AnalysisDisclosureProps) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="cursor-pointer text-[13px] font-medium text-[#6366f1] transition-opacity duration-150 hover:opacity-80"
+        className="cursor-pointer text-[13px] font-medium text-[#4f46e5] transition-opacity duration-150 hover:opacity-80"
       >
         {open ? "Hide Full Portrait" : "Read Full Portrait →"}
       </button>

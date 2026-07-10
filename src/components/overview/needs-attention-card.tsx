@@ -10,12 +10,28 @@ export type AttentionRow = {
   href: string;
 };
 
-// Soft chip backgrounds cycled by row; the letter picks up the same accent.
-const CHIP_STYLES = [
-  { bg: "#eef2ff", color: "#6366f1" },
-  { bg: "#f0fdf4", color: "#22c55e" },
-  { bg: "#eff6ff", color: "#3b82f6" },
-];
+// Category-aware chips: each row's icon wears its own status color over the
+// matching family soft — overdue reads urgent (rose), a due check-in reads
+// timely (amber), an open decision reads possible (violet) — while every
+// chip keeps the identical quiet shape and size. Unknown status colors fall
+// back to neutral so a new category never renders as a false alarm.
+const SOFT_BY_STATUS_COLOR: Record<string, string> = {
+  "#f43f5e": "#fff1f2",
+  "#e11d48": "#fff1f2",
+  "#f59e0b": "#fffbeb",
+  "#b45309": "#fffbeb",
+  "#8b5cf6": "#f5f3ff",
+  "#7c3aed": "#f5f3ff",
+  "#6366f1": "#eef2ff",
+  "#4f46e5": "#eef2ff",
+  "#10b981": "#ecfdf5",
+  "#047857": "#ecfdf5",
+};
+
+function chipStyleFor(statusColor: string): { bg: string; color: string } {
+  const bg = SOFT_BY_STATUS_COLOR[statusColor];
+  return bg ? { bg, color: statusColor } : { bg: "#f4f4f5", color: "#52525b" };
+}
 
 type NeedsAttentionCardProps = {
   items: AttentionRow[];
@@ -44,7 +60,7 @@ export function NeedsAttentionCard({ items, hiddenCount }: NeedsAttentionCardPro
       ) : (
         <div>
           {items.map((item, i) => {
-            const chip = CHIP_STYLES[i % CHIP_STYLES.length];
+            const chip = chipStyleFor(item.statusColor);
             return (
               <Link
                 key={item.key}

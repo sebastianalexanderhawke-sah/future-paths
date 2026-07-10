@@ -50,20 +50,27 @@ function toPercent([x, y]: readonly [number, number]): React.CSSProperties {
 }
 
 /**
- * The canonical Future Selves visualization: "You" at the center, one curved
- * branch per possible future, reach encoding how established each future is.
- * Both the overview's Future Paths card and the dedicated Future Selves page
- * render THIS component — identical angles, ordering, geometry, colors, and
- * growth behavior everywhere; only scale and interaction differ.
+ * The canonical Future Selves visualization — the composed stage: "You" at
+ * the center, one curved branch per possible future, each cast into an
+ * authored station (protagonist, challenger, kin pair, outlier — see
+ * branch-language.ts). The composition is designed, not solved: the leading
+ * future owns the open side of the card, kindred lives stand deliberately
+ * close, and one region always stays empty. Visual weight — stroke, dot
+ * size, halo, opacity — follows likelihood on top of the prominence the
+ * stage grants. Both the overview's Future Paths card and the dedicated
+ * Future Selves page render THIS component — identical geometry, ordering,
+ * colors, and motion everywhere; only scale and interaction differ.
  *
- * When a likelihood moves after a check-in or reflection, the branch stays
- * in its slot and the reach change animates: the stroke grows or shrinks
- * along the same curve and the endpoint dot glides with it. The tree never
- * rotates and branches never reshuffle — spatial memory holds.
+ * When a likelihood moves after a check-in or reflection WITHOUT changing
+ * rank order, the future advances or retreats along its own unchanged
+ * approach. A rank change recasts the scene — a deliberate, visible
+ * recomposition.
  */
 export function BranchMap({ futureSelves, interaction, widthClassName = "" }: BranchMapProps) {
   const router = useRouter();
   const branches = layoutBranches(futureSelves);
+  // The strongest future carries the most visual weight; its label leads too.
+  const leadingPct = branches.reduce((max, b) => Math.max(max, b.pct), 0);
 
   // Hovered or keyboard-focused branch: it brightens, siblings recede.
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -111,7 +118,7 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
         </p>
         <Link
           href="/moments/new"
-          className="mt-4 text-[13px] font-medium text-[#6366f1] transition-opacity duration-150 hover:opacity-80"
+          className="mt-4 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80"
         >
           Start with a situation →
         </Link>
@@ -129,14 +136,21 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
       className={`relative mx-auto w-full ${widthClassName}`}
       style={{ aspectRatio: `${RENDER_W} / ${RENDER_H}` }}
     >
-      {/* Quiet orbit rings behind everything — constellation depth. */}
+      {/* Orbit rings: quiet reference marks that sit UNDERNEATH the
+          visualization — they are not layout guides and no station
+          references them. Two TRUE circles, perfectly concentric and
+          evenly spaced (radii 62px and 124px at the canonical 966×260
+          chart — equal 62px intervals from the center), so the backdrop
+          reads as a calm instrument. The authored stages range well past
+          them horizontally: destinations stand in open space, not inside
+          a bubble. */}
       <div
         aria-hidden="true"
-        className="absolute left-1/2 top-1/2 h-[124px] w-[124px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#eeeef2]"
+        className="absolute left-1/2 top-1/2 aspect-square h-[47.69%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#eeeef2]"
       />
       <div
         aria-hidden="true"
-        className="absolute left-1/2 top-1/2 h-[212px] w-[212px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#f2f2f5]"
+        className="absolute left-1/2 top-1/2 aspect-square h-[95.38%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#f2f2f5]"
       />
 
       <svg
@@ -146,9 +160,13 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
         aria-hidden="true"
       >
         {branches.map((branch) => {
-          const { futureSelf, accent, curve, reach } = branch;
+          const { futureSelf, accent, curve, reach, weight } = branch;
           const isActive = activeId === futureSelf.id;
           const isOpen = openId === futureSelf.id;
+          // Visual weight: the likeliest futures carry the heaviest, most
+          // present strokes; emerging ones stay light. Screen-space pixels
+          // (non-scaling-stroke), so the hierarchy holds at every size.
+          const strokeWidth = BRANCH_STROKE - 1 + 3 * weight;
           // The grown branch is a REAL sub-path ending exactly at the node
           // center (exact Bézier split) — never a dash pattern over the full
           // curve. Dash rendering is transform- and browser-dependent
@@ -184,12 +202,12 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
                 d={grownD}
                 fill="none"
                 stroke={accent.color}
-                strokeWidth={BRANCH_STROKE}
+                strokeWidth={strokeWidth}
                 strokeLinecap="round"
-                opacity={isActive || isOpen ? 1 : 0.85}
+                opacity={isActive || isOpen ? 1 : 0.55 + 0.35 * weight}
                 vectorEffect="non-scaling-stroke"
                 style={{ d: `path('${grownD}')` } as React.CSSProperties}
-                className="[transition:d_600ms_cubic-bezier(0.22,1,0.36,1),opacity_200ms_ease-out] motion-reduce:[transition:none]"
+                className="[transition:d_600ms_cubic-bezier(0.22,1,0.36,1),stroke-width_600ms_cubic-bezier(0.22,1,0.36,1),opacity_200ms_ease-out] motion-reduce:[transition:none]"
               />
             </g>
           );
@@ -205,8 +223,12 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
           interactive element. The dot glides along its branch as the
           likelihood moves. */}
       {branches.map((branch) => {
-        const { futureSelf, accent, tip, labelStyle } = branch;
+        const { futureSelf, accent, tip, labelStyle, weight } = branch;
         const isActive = activeId === futureSelf.id;
+        const isLeading = branch.pct === leadingPct;
+        // Dot diameter and halo scale with the future's establishment, so
+        // the map's hierarchy reads before any label is read.
+        const dotSize = 13 + 9 * weight;
         const positionClass =
           "absolute z-10 h-0 w-0 cursor-pointer outline-none [transition:left_600ms_cubic-bezier(0.22,1,0.36,1),top_600ms_cubic-bezier(0.22,1,0.36,1),opacity_200ms_ease-out] motion-reduce:[transition:none]";
         const positionStyle = {
@@ -233,13 +255,15 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
                 hover/focus. */}
             <span
               aria-hidden="true"
-              className="absolute h-[18px] w-[18px] rounded-full transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transition-none"
+              className="absolute rounded-full transition-[transform,box-shadow,width,height] duration-200 ease-out motion-reduce:transition-none"
               style={{
+                width: dotSize,
+                height: dotSize,
                 background: accent.color,
                 transform: `translate(-50%, -50%) scale(${isActive ? 1.3 : 1})`,
                 boxShadow: isActive
-                  ? `0 0 0 2px #fff, 0 0 0 8px ${accent.soft}, 0 0 18px 4px ${accent.color}66`
-                  : `0 0 0 2px #fff, 0 0 0 7px ${accent.soft}, 0 3px 12px ${accent.color}55`,
+                  ? `0 0 0 2px #fff, 0 0 0 ${Math.round(5 + 3.5 * weight)}px ${accent.soft}, 0 0 ${Math.round(12 + 8 * weight)}px 4px ${accent.color}66`
+                  : `0 0 0 2px #fff, 0 0 0 ${Math.round(4 + 3.5 * weight)}px ${accent.soft}, 0 3px ${Math.round(8 + 8 * weight)}px ${accent.color}55`,
               }}
             />
             {/* Label anchored to the dot, extending outward. */}
@@ -247,8 +271,8 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
               <span
                 className="block text-[15px] leading-tight transition-colors duration-200 ease-out motion-reduce:transition-none"
                 style={{
-                  color: isActive ? "#000" : "#111",
-                  fontWeight: isActive ? 600 : 500,
+                  color: isActive ? "#000" : isLeading ? "#111" : "#3f3f46",
+                  fontWeight: isActive || isLeading ? 600 : 500,
                 }}
               >
                 {futureSelf.name}

@@ -37,7 +37,7 @@ function ReflectionRow({
     <div className={["flex items-center gap-3.5 py-3.5", rowBorder(isLast)].join(" ")}>
       <span
         aria-hidden="true"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-[13px] font-semibold text-[#6366f1]"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-[13px] font-semibold text-[#047857]"
       >
         {position}
       </span>
@@ -96,7 +96,7 @@ function CheckInRow({
 function ShowOlder({ count, children }: { count: number; children: React.ReactNode }) {
   return (
     <details className="group">
-      <summary className="cursor-pointer list-none py-3 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1] [&::-webkit-details-marker]:hidden">
+      <summary className="cursor-pointer list-none py-3 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857] [&::-webkit-details-marker]:hidden">
         <span className="group-open:hidden">▼ Show older ({count})</span>
         <span className="hidden group-open:inline">▲ Hide older</span>
       </summary>
@@ -235,7 +235,7 @@ export default async function WorkspacePage() {
                       }
                     />
                     <div className="mt-4 flex items-center gap-3">
-                      <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-[11px] font-semibold text-[#6366f1]">
+                      <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-[11px] font-semibold text-[#047857]">
                         Reflection
                       </span>
                       {waiting.length > 0 ? (

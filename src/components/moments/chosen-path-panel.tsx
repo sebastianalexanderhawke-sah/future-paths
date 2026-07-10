@@ -39,7 +39,7 @@ export function ChosenPathPanel({ path, index = 0 }: ChosenPathPanelProps) {
         <h3 className="font-voice max-w-[24em] text-[24px] font-medium leading-[1.3] tracking-[-0.3px] text-[#111]">
           {scannable.title}
         </h3>
-        <span className="mt-1 shrink-0 rounded-full bg-[#f0fdf4] px-3 py-1 text-[11px] font-semibold text-[#22c55e]">
+        <span className="mt-1 shrink-0 rounded-full bg-[#ecfdf5] px-3 py-1 text-[11px] font-semibold text-[#10b981]">
           Your path
         </span>
       </div>
@@ -62,7 +62,7 @@ export function ChosenPathPanel({ path, index = 0 }: ChosenPathPanelProps) {
         <div className="mt-7 grid grid-cols-2 gap-9">
           {scannable.benefits.length > 0 ? (
             <div>
-              <p className="text-[12px] font-semibold text-[#22c55e]">
+              <p className="text-[12px] font-semibold text-[#10b981]">
                 Benefits
               </p>
               <Bullets items={scannable.benefits} />
@@ -70,7 +70,7 @@ export function ChosenPathPanel({ path, index = 0 }: ChosenPathPanelProps) {
           ) : null}
           {scannable.consequences.length > 0 ? (
             <div>
-              <p className="text-[12px] font-semibold text-[#ef4444]">
+              <p className="text-[12px] font-semibold text-[#f43f5e]">
                 Tradeoffs
               </p>
               <Bullets items={scannable.consequences} />
@@ -81,7 +81,7 @@ export function ChosenPathPanel({ path, index = 0 }: ChosenPathPanelProps) {
 
       {scannable.futureYou ? (
         <div className="mt-7 rounded-xl bg-[#f8f7ff] px-5 py-4">
-          <p className="text-[12px] font-semibold text-[#6366f1]">
+          <p className="text-[12px] font-semibold text-[#b45309]">
             Future note
           </p>
           <p className="mt-1.5 max-w-[52em] text-[14px] leading-[1.7] text-[#333333]">

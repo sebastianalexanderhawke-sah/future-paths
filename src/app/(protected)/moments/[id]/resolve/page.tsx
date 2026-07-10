@@ -46,7 +46,7 @@ export default async function ResolvePage({ params }: ResolvePageProps) {
       <div className="mb-10">
         <Link
           href={`/moments/${moment.id}`}
-          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
+          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#b45309]"
         >
           ← Back to situation
         </Link>

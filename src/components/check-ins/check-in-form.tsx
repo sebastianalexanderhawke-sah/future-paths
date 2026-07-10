@@ -68,7 +68,7 @@ export function CheckInForm({ momentId, onBeforeSubmit }: CheckInFormProps) {
           value={reflection}
           onChange={(event) => setReflection(event.target.value)}
           placeholder="What changed? What surprised you? What happened differently than expected?"
-          className="rounded-xl border border-[#ececf0] bg-white px-4 py-3 text-[14px] leading-[1.6] text-[#111] outline-none transition-colors duration-150 placeholder:text-[#bbbbbb] focus:border-[#6366f1]"
+          className="rounded-xl border border-[#ececf0] bg-white px-4 py-3 text-[14px] leading-[1.6] text-[#111] outline-none transition-colors duration-150 placeholder:text-[#bbbbbb] focus:border-[#b45309]"
         />
       </div>
 

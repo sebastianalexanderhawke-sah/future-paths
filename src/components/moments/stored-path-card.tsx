@@ -53,14 +53,14 @@ function PathDetails({
       <div className="mt-5 flex flex-col gap-5">
         {scannable.benefits.length > 0 ? (
           <div>
-            <p className="text-[12px] font-semibold text-[#22c55e]">Benefits</p>
+            <p className="text-[12px] font-semibold text-[#10b981]">Benefits</p>
             <BulletList items={scannable.benefits} />
           </div>
         ) : null}
 
         {scannable.consequences.length > 0 ? (
           <div>
-            <p className="text-[12px] font-semibold text-[#ef4444]">
+            <p className="text-[12px] font-semibold text-[#f43f5e]">
               Tradeoffs
             </p>
             <BulletList items={scannable.consequences} />
@@ -69,7 +69,7 @@ function PathDetails({
 
         {scannable.futureYou ? (
           <div className="rounded-xl bg-[#f8f7ff] px-5 py-4">
-            <p className="text-[12px] font-semibold text-[#6366f1]">
+            <p className="text-[12px] font-semibold text-[#b45309]">
               Future you
             </p>
             <p className="mt-1.5 text-[14px] leading-[1.7] text-[#333333]">
@@ -95,7 +95,7 @@ export function ChosenPathCard({ path, index = 0 }: ChosenPathCardProps) {
         <h3 className="text-[15px] font-semibold text-[#111]">
           {scannable.title}
         </h3>
-        <span className="shrink-0 rounded-full bg-[#f0fdf4] px-3 py-1 text-[11px] font-semibold text-[#22c55e]">
+        <span className="shrink-0 rounded-full bg-[#ecfdf5] px-3 py-1 text-[11px] font-semibold text-[#10b981]">
           Your path
         </span>
       </div>

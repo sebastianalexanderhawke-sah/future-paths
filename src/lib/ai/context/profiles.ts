@@ -37,6 +37,9 @@ export type BuildContextOverrides = {
   selectedPathTitle?: string;
   situationText?: string;
   situationGoal?: "decision" | "forecast";
+  /** Situations v3: set on a crossroad regeneration after set-level
+   *  diversity validation rejected the first attempt. */
+  diversityFeedback?: string;
   additionalContext?: string;
   checkInHistory?: string[];
   riskFocusThemes?: string[];

@@ -44,15 +44,20 @@ describe("forecast pipeline trace", () => {
     expect(result.pipelineTrace).toBeDefined();
     expect(result.pipelineTrace?.active.length).toBeGreaterThanOrEqual(2);
     expect(result.pipelineTrace?.active.some((item) => item.original === "Gain Clarity")).toBe(true);
+    // v2.1: AI-generated futures are no longer removed for v1 "reflective
+    // language" — the model succeeds or fails on structural correctness.
+    // Even a weak title like "Gain Clarity" is preserved verbatim; prose
+    // quality is the prompt's job now.
     expect(
       result.pipelineTrace?.active.find((item) => item.original === "Gain Clarity")?.status,
-    ).toBe("removed");
+    ).toBe("preserved");
     expect(
       result.pipelineTrace?.active.find((item) => item.original === "She Says Yes To Coffee")?.status,
     ).toBe("preserved");
     expect(result.activeFutures.some((future) => future.title === "She Says Yes To Coffee")).toBe(
       true,
     );
+    expect(result.activeFutures.some((future) => future.title === "Gain Clarity")).toBe(true);
     // Sections are no longer padded to their own minimum individually —
     // fallback only tops up the unified, combined list to the global floor.
     const totalFutures =

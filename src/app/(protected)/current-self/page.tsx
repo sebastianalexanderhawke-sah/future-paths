@@ -186,7 +186,7 @@ export default async function CurrentSelfPage({
                 </p>
                 <Link
                   href="/moments/new"
-                  className="mt-4 text-[13px] font-medium text-[#6366f1] transition-opacity duration-150 hover:opacity-80"
+                  className="mt-4 text-[13px] font-medium text-[#4f46e5] transition-opacity duration-150 hover:opacity-80"
                 >
                   Start with a situation →
                 </Link>
@@ -238,7 +238,7 @@ export default async function CurrentSelfPage({
                     <div className="flex items-center gap-2">
                       <span
                         aria-hidden="true"
-                        className="text-[18px] leading-none text-[#6366f1]"
+                        className="text-[18px] leading-none text-[#4f46e5]"
                       >
                         ◈
                       </span>
@@ -267,7 +267,7 @@ export default async function CurrentSelfPage({
                         >
                           <span
                             aria-hidden="true"
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f5ff] text-[15px] text-[#6366f1]"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5f5ff] text-[15px] text-[#4f46e5]"
                           >
                             ◈
                           </span>
@@ -292,7 +292,7 @@ export default async function CurrentSelfPage({
                     <div className="flex items-center gap-2">
                       <span
                         aria-hidden="true"
-                        className="text-[18px] leading-none text-[#ef4444]"
+                        className="text-[18px] leading-none text-[#f43f5e]"
                       >
                         ↘
                       </span>
@@ -323,7 +323,7 @@ export default async function CurrentSelfPage({
                         >
                           <span
                             aria-hidden="true"
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-[15px] text-[#ef4444]"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fef2f2] text-[15px] text-[#f43f5e]"
                           >
                             ↘
                           </span>
