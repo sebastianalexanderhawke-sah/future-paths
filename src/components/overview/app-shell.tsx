@@ -23,7 +23,7 @@ export async function AppShell({ activeHref, children }: AppShellProps) {
     "pending" in reflectionSummaryResult ? reflectionSummaryResult : null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#fafaf8] text-[#111]">
+    <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
       <AppSidebar
         activeHref={activeHref}
         unansweredReflections={reflectionSummary?.unansweredCount ?? 0}

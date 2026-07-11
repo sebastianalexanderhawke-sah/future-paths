@@ -16,9 +16,19 @@ import {
 import { getUserIdentity } from "@/lib/user-identity";
 import type { Moment } from "@/types/database";
 
-// Sections stay curated: this many rows visible, the rest behind
-// "Show older" so the queue stays readable after years of use.
-const VISIBLE_LIMIT = 6;
+// Next Up answers "what should I do next?", not "here are six things" —
+// the first item plus a couple reinforcing that more follows.
+const NEXT_UP_LIMIT = 3;
+
+// Coming Up previews just enough to give confidence there's more waiting;
+// everything past the preview hides behind a single expansion control.
+const COMING_UP_PREVIEW = 4;
+
+// One queue, two kinds of work. The kind is metadata on the row (a badge),
+// never a section — the user works downward without switching mental models.
+type QueueItem =
+  | { kind: "check-in"; moment: Moment }
+  | { kind: "reflection"; checkIn: ReflectionCheckIn };
 
 function rowBorder(isLast: boolean): string {
   return isLast ? "" : "border-b border-[#f5f5f5]";
@@ -93,16 +103,23 @@ function CheckInRow({
   );
 }
 
-function ShowOlder({ count, children }: { count: number; children: React.ReactNode }) {
-  return (
-    <details className="group">
-      <summary className="cursor-pointer list-none py-3 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857] [&::-webkit-details-marker]:hidden">
-        <span className="group-open:hidden">▼ Show older ({count})</span>
-        <span className="hidden group-open:inline">▲ Hide older</span>
-      </summary>
-      {children}
-    </details>
-  );
+function QueueRow({
+  item,
+  position,
+  lastCheckIn,
+  isLast,
+}: {
+  item: QueueItem;
+  position: number;
+  lastCheckIn: string | undefined;
+  isLast: boolean;
+}) {
+  if (item.kind === "check-in") {
+    return (
+      <CheckInRow moment={item.moment} lastCheckIn={lastCheckIn} isLast={isLast} />
+    );
+  }
+  return <ReflectionRow checkIn={item.checkIn} position={position} isLast={isLast} />;
 }
 
 export default async function WorkspacePage() {
@@ -114,7 +131,7 @@ export default async function WorkspacePage() {
 
   if ("error" in reflectionsResult) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#fafaf8] px-6">
+      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
         <p className="text-[13px] text-red-600">{reflectionsResult.error}</p>
       </div>
     );
@@ -144,7 +161,7 @@ export default async function WorkspacePage() {
     latestPerSituation.length > 0
       ? latestPerSituation[latestPerSituation.length - 1]
       : null;
-  const waiting = latestPerSituation.slice(0, -1).reverse();
+  const waitingReflections = latestPerSituation.slice(0, -1).reverse();
 
   // Check-ins due — existing staleness rule, minus situations already
   // surfaced by a reflection, most-neglected first.
@@ -164,15 +181,25 @@ export default async function WorkspacePage() {
       return aTime - bTime;
     });
 
-  const visibleCheckIns = needsCheckIn.slice(0, VISIBLE_LIMIT);
-  const olderCheckIns = needsCheckIn.slice(VISIBLE_LIMIT);
-  const visibleWaiting = waiting.slice(0, VISIBLE_LIMIT);
-  const olderWaiting = waiting.slice(VISIBLE_LIMIT);
+  // The single prioritized queue: check-ins outrank reflections (a check-in
+  // generates the next round of thinking) and each group keeps its existing
+  // internal order — most-neglected check-in first, oldest reflection first.
+  const queue: QueueItem[] = [
+    ...needsCheckIn.map((moment): QueueItem => ({ kind: "check-in", moment })),
+    ...waitingReflections.map(
+      (checkIn): QueueItem => ({ kind: "reflection", checkIn }),
+    ),
+  ];
 
-  const hasWork = pending !== null || needsCheckIn.length > 0;
+  const nextUp = queue.slice(0, NEXT_UP_LIMIT);
+  const comingUp = queue.slice(NEXT_UP_LIMIT);
+  const comingUpPreview = comingUp.slice(0, COMING_UP_PREVIEW);
+  const comingUpRest = comingUp.slice(COMING_UP_PREVIEW);
+
+  const hasWork = pending !== null || queue.length > 0;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#fafaf8] text-[#111]">
+    <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
       <AppSidebar
         activeHref="/reflections"
         unansweredReflections={unanswered.length}
@@ -188,8 +215,7 @@ export default async function WorkspacePage() {
               Workspace
             </h1>
             <p className="text-[15px] text-[#999999]">
-              Complete reflections, check-ins, and decisions that move your
-              future forward.
+              Pick up where you left off, then work down the queue.
             </p>
           </div>
 
@@ -213,7 +239,7 @@ export default async function WorkspacePage() {
             </OverviewCard>
           ) : (
             <div className="flex flex-col gap-8 pb-14">
-              {/* Continue Working — the situation leads; the task follows. */}
+              {/* 1. Continue — the hero. The situation leads; the task follows. */}
               {pending ? (
                 <section>
                   <div className="mb-4">
@@ -238,10 +264,9 @@ export default async function WorkspacePage() {
                       <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-[11px] font-semibold text-[#047857]">
                         Reflection
                       </span>
-                      {waiting.length > 0 ? (
+                      {queue.length > 0 ? (
                         <span className="text-[12px] text-[#999999]">
-                          {waiting.length} more situation
-                          {waiting.length !== 1 ? "s" : ""} waiting
+                          {queue.length} more in your queue
                         </span>
                       ) : null}
                     </div>
@@ -255,81 +280,110 @@ export default async function WorkspacePage() {
                 </section>
               ) : null}
 
-              {/* Needs Check-in — before reflections: check-ins generate the
-                  next round of thinking. */}
-              {needsCheckIn.length > 0 ? (
+              {/* 2. Next Up — one prioritized queue. Check-ins and reflections
+                  interleave here as rows; the kind is a badge on the row, not
+                  a section of the page. */}
+              {nextUp.length > 0 ? (
                 <section>
                   <div className="mb-4">
                     <h2 className="text-[17px] font-bold text-[#111]">
-                      Needs Check-in
+                      Next Up
                     </h2>
                     <p className="mt-[3px] text-[13px] text-[#999999]">
-                      These situations haven&apos;t heard from you in a while
+                      Just the next few — nothing else needs you yet
                     </p>
                   </div>
                   <OverviewCard className="px-8 py-4">
-                    {visibleCheckIns.map((moment, i) => (
-                      <CheckInRow
-                        key={moment.id}
-                        moment={moment}
-                        lastCheckIn={lastCheckIns[moment.id]}
-                        isLast={
-                          olderCheckIns.length === 0 &&
-                          i === visibleCheckIns.length - 1
+                    {nextUp.map((item, i) => (
+                      <div
+                        key={item.kind === "check-in" ? item.moment.id : item.checkIn.id}
+                        className={
+                          // The top item is the one to act on; the rest only
+                          // reinforce that more follows, so they sit back
+                          // until pointed at.
+                          i === 0
+                            ? undefined
+                            : "opacity-70 transition-opacity duration-150 hover:opacity-100 focus-within:opacity-100"
                         }
-                      />
+                      >
+                        <QueueRow
+                          item={item}
+                          position={i + 2}
+                          lastCheckIn={
+                            item.kind === "check-in"
+                              ? lastCheckIns[item.moment.id]
+                              : undefined
+                          }
+                          isLast={i === nextUp.length - 1}
+                        />
+                      </div>
                     ))}
-                    {olderCheckIns.length > 0 ? (
-                      <ShowOlder count={olderCheckIns.length}>
-                        {olderCheckIns.map((moment, i) => (
-                          <CheckInRow
-                            key={moment.id}
-                            moment={moment}
-                            lastCheckIn={lastCheckIns[moment.id]}
-                            isLast={i === olderCheckIns.length - 1}
-                          />
-                        ))}
-                      </ShowOlder>
-                    ) : null}
                   </OverviewCard>
                 </section>
               ) : null}
 
-              {/* Needs Reflection — one per situation, newest thinking only. */}
-              {waiting.length > 0 ? (
+              {/* 3. Coming Up — a small preview of what's behind the queue.
+                  Enough to give confidence there's more waiting, never so
+                  much that it competes with Next Up. */}
+              {comingUp.length > 0 ? (
                 <section>
                   <div className="mb-4">
                     <h2 className="text-[17px] font-bold text-[#111]">
-                      Needs Reflection
+                      Coming Up
                     </h2>
                     <p className="mt-[3px] text-[13px] text-[#999999]">
-                      Up next, in order — each unlocks when the one above is
-                      answered
+                      Waiting for when you&apos;re ready
                     </p>
                   </div>
                   <OverviewCard className="px-8 py-4">
-                    {visibleWaiting.map((checkIn, i) => (
-                      <ReflectionRow
-                        key={checkIn.id}
-                        checkIn={checkIn}
-                        position={i + 2}
+                    {comingUpPreview.map((item, i) => (
+                      <QueueRow
+                        key={
+                          item.kind === "check-in"
+                            ? item.moment.id
+                            : item.checkIn.id
+                        }
+                        item={item}
+                        position={NEXT_UP_LIMIT + i + 2}
+                        lastCheckIn={
+                          item.kind === "check-in"
+                            ? lastCheckIns[item.moment.id]
+                            : undefined
+                        }
                         isLast={
-                          olderWaiting.length === 0 &&
-                          i === visibleWaiting.length - 1
+                          comingUpRest.length === 0 &&
+                          i === comingUpPreview.length - 1
                         }
                       />
                     ))}
-                    {olderWaiting.length > 0 ? (
-                      <ShowOlder count={olderWaiting.length}>
-                        {olderWaiting.map((checkIn, i) => (
-                          <ReflectionRow
-                            key={checkIn.id}
-                            checkIn={checkIn}
-                            position={VISIBLE_LIMIT + i + 2}
-                            isLast={i === olderWaiting.length - 1}
+                    {comingUpRest.length > 0 ? (
+                      <details className="group">
+                        <summary className="cursor-pointer list-none py-3 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857] [&::-webkit-details-marker]:hidden">
+                          <span className="group-open:hidden">
+                            Show {comingUpRest.length} more →
+                          </span>
+                          <span className="hidden group-open:inline">
+                            ↑ Show fewer
+                          </span>
+                        </summary>
+                        {comingUpRest.map((item, i) => (
+                          <QueueRow
+                            key={
+                              item.kind === "check-in"
+                                ? item.moment.id
+                                : item.checkIn.id
+                            }
+                            item={item}
+                            position={NEXT_UP_LIMIT + COMING_UP_PREVIEW + i + 2}
+                            lastCheckIn={
+                              item.kind === "check-in"
+                                ? lastCheckIns[item.moment.id]
+                                : undefined
+                            }
+                            isLast={i === comingUpRest.length - 1}
                           />
                         ))}
-                      </ShowOlder>
+                      </details>
                     ) : null}
                   </OverviewCard>
                 </section>
@@ -345,11 +399,19 @@ export default async function WorkspacePage() {
             </div>
           )}
 
-          {/* History — quiet, self-collapsed by the existing component. */}
+          {/* 4. Completed — progress lives at the end of the journey. The
+              list itself stays collapsed until the user wants the history. */}
           {completed.length > 0 ? (
-            <div className="pb-14">
+            <section className="pb-14">
+              <div className="mb-4">
+                <h2 className="text-[17px] font-bold text-[#111]">Completed</h2>
+                <p className="mt-[3px] text-[13px] text-[#999999]">
+                  {completed.length} reflection{completed.length !== 1 ? "s" : ""}{" "}
+                  finished — your thinking so far
+                </p>
+              </div>
               <CompletedReflectionsList checkIns={completed} />
-            </div>
+            </section>
           ) : null}
         </div>
       </main>

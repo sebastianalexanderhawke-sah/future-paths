@@ -15,16 +15,27 @@ export const GENERATION_PREFERENCE_LIST = `Generation preference list (use these
 export const CROSSROAD_PATH_RULES = `Path rules (Situation Paths — direction generation):
 
 What a path is:
-- A path is a DIRECTION this person's life could take from here — not another way to implement the same plan.
-- Implementations change the first step. Directions change where the road leads.
+- A path is a MEANINGFULLY DIFFERENT VERSION OF THIS PERSON'S LIFE one year from now — not another way to implement the same plan.
+- The implementation is irrelevant. The destination is what matters. Implementations change the first step. Directions change where the road leads.
 - You are not answering "What are different ways to solve this?" You are answering: "What fundamentally different directions could this person's life take from here?"
-- The test of distinctness: if two paths became reality, would this person's life look meaningfully different one year later? If both roads arrive at the same place, they are ONE path — merge them and look for a genuinely different direction.
+- The One-Year Test of distinctness: "If both paths SUCCEED, would this person's daily life look meaningfully different one year from today?" If the answer is "not really", they are the same path — merge them before responding, no matter how different their first steps look.
 
-Path count — 3 minimum, 5 maximum:
-- Start with the 3 most meaningful genuinely different directions the situation supports.
-- Add a 4th or 5th path ONLY if it is another genuinely different direction — never to reach a count. Stop as soon as another path would no longer introduce a genuinely different destination.
-- If only three truly different directions exist, return three. Three different roads are worth more than five variations of one road. Never generate filler.
-- Do not judge path count by how serious the decision seems. Judge it by how many genuinely different destinations the evidence supports.
+Every path answers a different question:
+- Explore different futures, not different tactics. Each path should answer a different what-if about this person's life, such as: "What if I delayed this?" / "What if I committed fully?" / "What if I changed the business model?" / "What if I changed the goal?" / "What if I changed who I become?" / "What if I chose stability?" / "What if I chose freedom?" / "What if I partnered instead of going alone?" / "What if I stopped pursuing this entirely?"
+- Two candidate paths that answer the same question with different tactics are one path.
+- Partnering counts as its own future ONLY when it changes who owns the life (shared control, shared identity, shared stakes — the ownership vs partnership tradeoff). Bringing in help to execute the same plan is an implementation, not a future.
+
+Different core tensions:
+- Each path should revolve around a different human tradeoff — the felt conflict someone weighing that road would recognize. Examples: security vs ambition, freedom vs stability, ownership vs partnership, growth vs simplicity, persistence vs letting go.
+- If two paths force the person to wrestle with essentially the same emotional conflict, they are variations of one choice — replace one with a path built on a different core tension.
+
+The path describes the commitment, not the year (strict):
+- A path answers "What direction do I choose?" Future Forecast answers "What happens after I choose it?" Never collapse the two.
+- A path's text states the commitment being made and the life it points toward — it must NOT narrate the year that follows. No timelines, no month-by-month sequences, no "first... then... eventually" arcs inside a path. What unfolds after the choice belongs to the forecast.
+
+Path count — at least 5, at most 6:
+- Always generate at least FIVE paths. The goal is not five recommendations — it is five believable alternate futures. The what-if questions above always hold at least five that fit this situation, because they include delaying, changing the goal, choosing stability, and stopping entirely.
+- Generate a SIXTH only if it introduces another genuinely different future. Never generate filler, and never add implementation variants simply to reach six.
 
 direction field (required on every path):
 - A 2-5 word label naming where this road leads — the destination, not the first action.
@@ -33,15 +44,16 @@ direction field (required on every path):
 - Every path's direction must differ in substance, not wording. If two candidate paths would carry the same direction, they are the same path — merge them before responding.
 
 Forbidden differentiation (strict): two paths must NEVER differ only by
-- tool or agent (AI vs freelancer vs contractor vs software)
 - timing (now vs later vs after a milestone)
-- scale or degree (a small step vs a big step of the same move)
-- sequence (the same steps in a different order)
+- tool or technology (AI vs freelancer vs contractor vs software)
+- partners (alone vs co-founder vs agency vs hired help)
+- scale, degree, or sequence (a smaller, bigger, or reordered version of the same move)
 - confidence or wording
-Those are implementations of one direction. Collapse them into the single strongest version and use the freed slot for a different direction — or return fewer paths.
+Those are implementations of one direction. Collapse them into the single strongest version and use the freed slot for a genuinely different future.
+Every path must instead represent a different: identity (who this person becomes), lifestyle, daily routine one year out, primary risk, and long-term opportunity.
 
-Bad set (five implementations of "delegate the same work"): "Hire A Freelancer" / "Hire A Niche Freelancer" / "Use AI" / "Use AI Plus A Freelancer" / "Improve Your AI Workflow".
-Good set (five directions): "Build A Team" / "Simplify The Business" / "Change The Business Model" / "Stay Intentionally Solo" / "Pause Growth To Strengthen The Foundation".
+Bad set (four implementations of one future): "Build The App Yourself" / "Build The App With AI" / "Find A Technical Co-Founder" / "Hire Contractors". One year later this person is living essentially the same life in all four: trying to build the same startup.
+Good set (five futures): "Get A Stable Job First" / "Go All-In On The Startup" / "Turn The Idea Into A Consulting Business" / "Become An Expert Before Building Software" / "Walk Away From The Idea For Now". Each produces a fundamentally different lifestyle, identity, priorities, risks, and opportunities.
 
 Assumption-challenge rule (required): at least one path must question an assumption embedded in the user's framing, and name that assumption in its challenges_assumption field as one plain sentence (e.g. "That the business should keep growing.", "That this friendship must either resume or be mourned.", "That the career has to be chosen now rather than tested."). All other paths set challenges_assumption to an empty string.
 - The challenging path must still be realistic and grounded in this person's actual situation — the goal is revealing a possibility the user may not have considered, never novelty for its own sake.
@@ -59,7 +71,7 @@ Regeneration (regenerationFeedback context, when present):
 - path.title must be 2-6 words, human-readable, direction-oriented, and stand on its own.
 - Good titles: "Build A Team", "Simplify The Business", "Stay Intentionally Solo", "Let The Friendship End", "A Different City Entirely".
 - Bad titles: sentence fragments, mid-sentence cuts, conjunction leftovers like "... And That", or titles copied from the description opening.
-- Each path.description must expand the title into one concrete sentence about the road this path takes.
+- Each path.description must expand the title into one concrete sentence naming the commitment this path makes — not a timeline of what the year looks like afterward.
 - Paths must read like distinct futures someone could actually choose to move toward.
 - Do not generate therapy paths, coaching paths, or reflection-only paths.
 - Do not generate sentence fragments or vague inner-work directions.
@@ -71,7 +83,7 @@ Regeneration (regenerationFeedback context, when present):
   Good: user answer "An apology would not change anything" → a path about apologizing anyway frames it as "closure for yourself, not because it changes her mind" — consistent with what the user said.
   Before finalising, check each path against every context answer: does this path state or imply the opposite of something the user explicitly said? If so, rewrite the path to fit what the user actually said.
 
-- Final distinctness check (internal — never shown in the output): before responding, silently take every pair of paths and ask "If each became reality, would this person's life look meaningfully different one year from now?" Two paths that take different actions but converge on the same life outcome are not distinct — merge them, and either find a genuinely different direction or return fewer paths. Do not mention this verification anywhere in the response.
+- Final self-audit (internal — never shown in the output): before responding, silently take every pair of paths and apply the One-Year Test: "If both paths succeed, would this person's daily life look meaningfully different one year from today?" Two paths that take different actions but converge on approximately the same life are ONE path — delete the weaker one and generate a fundamentally different direction in its place. Do not mention this verification anywhere in the response.
 
 - Move-on rule: When the situation centres on whether to reconnect, re-engage, or pursue something involving another person, at least one path must represent deliberately choosing NOT to pursue it — accepting the situation as it stands and moving forward without re-engaging. This is a distinct, dignified choice, not the same as "wait and see" (which is passive and temporary). Only include this if genuinely relevant to the situation; not all situations involve a relationship to disengage from.`;
 
@@ -87,7 +99,9 @@ export const CROSSROAD_CONSEQUENCE_RULES = `Consequence rules (2-4 per path):
 - Bad: "Reflection feels uncomfortable.", "Growth may require patience.", "You may need to sit with uncertainty."
 - Each consequence should describe a realistic risk or tradeoff — not emotional homework.`;
 
-export const CROSSROAD_FUTURE_SHIFT_RULES = `Future shift rules (future_shift field):
+export const CROSSROAD_FUTURE_SHIFT_RULES = `Future shift rules (future_shift field — shown to the user as "Future You"):
+- Future You must immediately communicate who this person HAS BECOME in this future. Someone reading only a path's Future You line should understand why that future is fundamentally different from the others.
+- Across the set: if two paths' future_shift lines could describe the same person, the paths converge — replace one with a genuinely different future.
 - Describe a concrete, situation-specific behavior change grounded in the exact people and circumstances of this situation — not a generic trait, inner state, or therapy outcome.
 - Name the specific person, relationship, or circumstance from the situation rather than describing a general life skill that could apply to any situation.
 - Good: "Brings up scheduling conflicts with her directly instead of letting them build up.", "Texts him back the same day instead of waiting to seem casual."

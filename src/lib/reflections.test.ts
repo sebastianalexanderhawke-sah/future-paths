@@ -17,6 +17,7 @@ const {
   getUnansweredReflectionSummaryMock,
   listMomentsMock,
   listActiveFutureSelvesMock,
+  listFutureSelvesMock,
   listIdentityUpdatesMock,
   getChosenPathsForMomentsMock,
   getLastCheckInsForMomentsMock,
@@ -27,6 +28,7 @@ const {
   getUnansweredReflectionSummaryMock: vi.fn(),
   listMomentsMock: vi.fn(),
   listActiveFutureSelvesMock: vi.fn(),
+  listFutureSelvesMock: vi.fn(),
   listIdentityUpdatesMock: vi.fn(),
   getChosenPathsForMomentsMock: vi.fn(),
   getLastCheckInsForMomentsMock: vi.fn(),
@@ -45,6 +47,7 @@ vi.mock("@/lib/moments", () => ({
 }));
 vi.mock("@/lib/future-selves", () => ({
   listActiveFutureSelves: listActiveFutureSelvesMock,
+  listFutureSelves: listFutureSelvesMock,
 }));
 vi.mock("@/lib/identity-updates", () => ({
   listIdentityUpdates: listIdentityUpdatesMock,
@@ -198,8 +201,9 @@ describe("/reflections page", () => {
     "utf-8",
   );
 
-  it("renders waiting section, completed reflections list, and prediction card", () => {
-    expect(PAGE_SOURCE).toContain("Waiting");
+  it("renders the queue sections, completed reflections list, and prediction card", () => {
+    expect(PAGE_SOURCE).toContain("Next Up");
+    expect(PAGE_SOURCE).toContain("Coming Up");
     expect(PAGE_SOURCE).toContain("CompletedReflectionsList");
     expect(PAGE_SOURCE).toContain("ReflectionPredictionCard");
   });
@@ -215,6 +219,7 @@ describe("overview surfaces the waiting reflection", () => {
     });
     listMomentsMock.mockResolvedValue({ moments: [] });
     listActiveFutureSelvesMock.mockResolvedValue({ futureSelves: [] });
+    listFutureSelvesMock.mockResolvedValue({ futureSelves: [] });
     listIdentityUpdatesMock.mockResolvedValue({ identityUpdates: [] });
     getChosenPathsForMomentsMock.mockResolvedValue({});
     getLastCheckInsForMomentsMock.mockResolvedValue({});

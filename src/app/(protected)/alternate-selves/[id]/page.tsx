@@ -29,7 +29,7 @@ export default async function AlternateSelfDetailPage({
     }
 
     return (
-      <div className="flex h-screen items-center justify-center bg-[#fafaf8] px-6">
+      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
         <p className="text-[13px] text-red-600">{result.error}</p>
       </div>
     );

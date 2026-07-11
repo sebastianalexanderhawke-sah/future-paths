@@ -57,9 +57,9 @@ function toPercent([x, y]: readonly [number, number]): React.CSSProperties {
  * authored station (protagonist, challenger, kin pair, outlier — see
  * branch-language.ts). The composition is designed, not solved: the leading
  * future owns the open side of the card, kindred lives stand deliberately
- * close, and one region always stays empty. Visual weight — stroke, dot
- * size, halo, opacity — follows likelihood on top of the prominence the
- * stage grants. Both the overview's Future Paths card and the dedicated
+ * close, and one region always stays empty. Visual weight — stroke, marker
+ * size, arrival ring, opacity — follows likelihood on top of the prominence
+ * the stage grants. Both the overview's Future Paths card and the dedicated
  * Future Selves page render THIS component — identical geometry, ordering,
  * colors, and motion everywhere; only scale and interaction differ.
  *
@@ -111,7 +111,7 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
       <div
         className={`mx-auto flex h-[240px] w-full flex-col items-center justify-center ${widthClassName}`}
       >
-        <span className="flex h-[68px] w-[68px] items-center justify-center rounded-full border border-[#ececf0] bg-white text-[15px] font-semibold text-[#111] shadow-[0_10px_36px_rgba(17,17,17,0.10),0_2px_8px_rgba(17,17,17,0.05)]">
+        <span className="font-voice flex h-[68px] w-[68px] items-center justify-center rounded-full border border-[#ececf0] bg-white text-[16px] font-medium text-[#111] shadow-[0_10px_36px_rgba(17,17,17,0.10),0_2px_8px_rgba(17,17,17,0.05)]">
           You
         </span>
         <p className="mt-4 max-w-[340px] text-center text-[13px] leading-relaxed text-[#999999]">
@@ -236,21 +236,28 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
         })}
       </svg>
 
-      {/* Center "You" — the anchor. */}
-      <div className="absolute left-1/2 top-1/2 z-10 flex h-[68px] w-[68px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#ececf0] bg-white text-[15px] font-semibold text-[#111] shadow-[0_10px_36px_rgba(17,17,17,0.10),0_2px_8px_rgba(17,17,17,0.05)]">
+      {/* Center "You" — the point of departure, speaking in the same
+          serif voice as the destinations. */}
+      <div className="font-voice absolute left-1/2 top-1/2 z-10 flex h-[68px] w-[68px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#ececf0] bg-white text-[16px] font-medium text-[#111] shadow-[0_10px_36px_rgba(17,17,17,0.10),0_2px_8px_rgba(17,17,17,0.05)]">
         You
       </div>
 
-      {/* Endpoints with attached labels — each one the branch's real
-          interactive element. The dot glides along its branch as the
-          likelihood moves. */}
+      {/* Destination markers with attached signposts — each one the
+          branch's real interactive element. The marker glides along its
+          branch as the likelihood moves. */}
       {branches.map((branch) => {
         const { futureSelf, accent, tip, labelStyle, weight } = branch;
         const isActive = activeId === futureSelf.id;
+        const isOpen = openId === futureSelf.id;
+        // Hover, keyboard focus, or the open dialog all "light" the
+        // destination: ring widens and saturates, emblem fills, name
+        // underlines — one shared arrival language for every affordance.
+        const isLit = isActive || isOpen;
         const isLeading = branch.pct === leadingPct;
-        // Dot diameter and halo scale with the future's establishment, so
-        // the map's hierarchy reads before any label is read.
+        // Marker core and arrival ring scale with the future's
+        // establishment, so the map's hierarchy reads before any label is.
         const dotSize = 13 + 9 * weight;
+        const ringSize = dotSize + 12 + 2 * weight + (isLit ? 4 : 0);
         const positionClass =
           "absolute z-10 h-0 w-0 cursor-pointer outline-none [transition:left_600ms_cubic-bezier(0.22,1,0.36,1),top_600ms_cubic-bezier(0.22,1,0.36,1),opacity_200ms_ease-out] motion-reduce:[transition:none]";
         const positionStyle = {
@@ -272,9 +279,8 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
 
         const contents = (
           <>
-            {/* Endpoint: colored circle in a thin white ring over a soft
-                halo — the destination marker. Grows and glows on
-                hover/focus. */}
+            {/* Waypoint core: the accent point in a thin white ring, lifted
+                by a soft tinted shadow. The place itself. */}
             <span
               aria-hidden="true"
               className="absolute rounded-full transition-[transform,box-shadow,width,height] duration-200 ease-out motion-reduce:transition-none"
@@ -282,42 +288,64 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
                 width: dotSize,
                 height: dotSize,
                 background: accent.color,
-                transform: `translate(-50%, -50%) scale(${isActive ? 1.3 : 1})`,
-                boxShadow: isActive
-                  ? `0 0 0 2px #fff, 0 0 0 ${Math.round(5 + 3.5 * weight)}px ${accent.soft}, 0 0 ${Math.round(12 + 8 * weight)}px 4px ${accent.color}66`
-                  : `0 0 0 2px #fff, 0 0 0 ${Math.round(4 + 3.5 * weight)}px ${accent.soft}, 0 3px ${Math.round(8 + 8 * weight)}px ${accent.color}55`,
+                transform: `translate(-50%, -50%) scale(${isLit ? 1.18 : 1})`,
+                boxShadow: `0 0 0 2px #fff, 0 2px ${Math.round(7 + 6 * weight)}px ${accent.color}${isLit ? "59" : "40"}`,
               }}
             />
-            {/* Label anchored to the dot, extending outward — an icon chip
-                leading the name block, so each label reads as a destination
-                marker, not a graph annotation. The chip always leads
-                (icon → text), the same reading order at every station. */}
+            {/* Arrival ring: a detached hairline circle with clear air
+                between it and the core — the cartographic mark for a
+                surveyed place, not a graph node's halo. It widens and
+                saturates when the destination is lit. */}
+            <span
+              aria-hidden="true"
+              className="absolute rounded-full border transition-[width,height,border-color] duration-200 ease-out motion-reduce:transition-none"
+              style={{
+                width: ringSize,
+                height: ringSize,
+                borderColor: `${accent.color}${isLit ? "8c" : "4d"}`,
+                transform: "translate(-50%, -50%)",
+              }}
+            />
+            {/* Signpost anchored to the marker, extending outward: the
+                destination's emblem chip leading its name — set in the
+                product's serif voice, the same voice that titles this
+                future in its own card — over a quiet tracked caption.
+                The chip always leads (emblem → text), the same reading
+                order at every station. */}
             <span
               className="absolute flex items-center gap-2.5 whitespace-nowrap"
               style={labelStyle}
             >
               <span
                 aria-hidden="true"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]"
-                style={{ background: accent.soft, color: accent.color }}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] transition-colors duration-200 ease-out motion-reduce:transition-none"
+                style={{
+                  background: isLit ? accent.color : accent.soft,
+                  color: isLit ? "#ffffff" : accent.color,
+                }}
               >
                 <FutureIcon identityId={futureSelf.identity_id} size={15} />
               </span>
               <span className="block">
                 <span
-                  className="block text-[15px] leading-tight transition-colors duration-200 ease-out motion-reduce:transition-none"
+                  className="font-voice block leading-tight tracking-[-0.01em] transition-colors duration-200 ease-out motion-reduce:transition-none"
                   style={{
-                    color: isActive ? "#000" : isLeading ? "#111" : "#3f3f46",
-                    fontWeight: isActive || isLeading ? 600 : 500,
+                    fontSize: isLeading ? 16 : 15,
+                    fontWeight: 500,
+                    color: isLit ? "#000" : isLeading ? "#111" : "#52525b",
+                    textDecorationLine: isLit ? "underline" : "none",
+                    textDecorationColor: `${accent.color}66`,
+                    textDecorationThickness: 1,
+                    textUnderlineOffset: 4,
                   }}
                 >
                   {futureSelf.name}
                 </span>
-                <span className="mt-0.5 block text-[12px] font-medium">
+                <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.08em]">
                   <span style={{ color: accent.color }}>{branch.pct}%</span>
-                  <span className="text-[#9ca3af]">
+                  <span className="text-[#a1a1aa]">
                     {" "}
-                    • {futureSelf.evidence_strength}
+                    · {futureSelf.evidence_strength}
                   </span>
                 </span>
               </span>

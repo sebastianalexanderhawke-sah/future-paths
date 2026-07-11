@@ -6,7 +6,10 @@
 // schema validation and before persistence, and a rejection triggers one
 // regeneration with explicit feedback (see crossroad-generation.ts).
 //
-// v3.1 validation hierarchy:
+// v3.1 validation hierarchy (Phase A adds the count floor):
+//   COUNT     — at least five paths (this file): the product contract is five
+//               believable alternate futures, enforced here so a short set
+//               regenerates instead of hard-failing at the schema.
 //   PRIMARY   — unique `direction` labels (this file): a set that gives two
 //               paths the same destination has admitted they are one path.
 //   SECONDARY — assumption diversity (this file): at least one path must
@@ -30,6 +33,14 @@ export type PathSetDiversityPath = {
 };
 
 export type PathSetDiversityIssue =
+  | {
+      // Crossroads Phase A: the product contract is at least five believable
+      // alternate futures. The output schema deliberately parses shorter sets
+      // (fail-open), so the count is enforced here where it can trigger the
+      // one regeneration instead of a hard failure.
+      kind: "too_few_paths";
+      count: number;
+    }
   | {
       kind: "shared_direction";
       direction: string;
@@ -94,6 +105,11 @@ function jaccard(a: Set<string>, b: Set<string>): number {
  *  close (production audit average within a situation: ~0.10). */
 const NEAR_IDENTICAL_TEXT_THRESHOLD = 0.75;
 
+/** Crossroads Phase A: every set owes the user at least five believable
+ *  alternate futures (a sixth only when it is genuinely different — the
+ *  schema caps at 6). */
+const MIN_PATH_COUNT = 5;
+
 function normalizeDirection(direction: string): string {
   return [...contentTokens(direction)].sort().join(" ");
 }
@@ -115,6 +131,13 @@ export function auditPathSetDiversity(
   paths: PathSetDiversityPath[],
 ): PathSetDiversityAudit {
   const issues: PathSetDiversityIssue[] = [];
+
+  // 0. Path count: at least five meaningfully different futures. Enforced
+  //    here (not in the schema) so a short set gets the regeneration retry
+  //    and, at worst, fail-open acceptance.
+  if (paths.length < MIN_PATH_COUNT) {
+    issues.push({ kind: "too_few_paths", count: paths.length });
+  }
 
   // 1. Shared direction labels: the model's own admission that two paths
   //    lead to the same destination. Empty labels contribute nothing here —
@@ -180,6 +203,8 @@ export function describePathSetDiversityIssues(
 ): string {
   const lines = issues.map((issue) => {
     switch (issue.kind) {
+      case "too_few_paths":
+        return `Only ${issue.count} path${issue.count === 1 ? " was" : "s were"} generated. Generate at least five, each a meaningfully different version of this person's life one year from now — explore delaying, committing fully, changing the goal, choosing stability, or stopping entirely. Never add implementation variants of an existing path to reach the count.`;
       case "shared_direction":
         return `The paths ${issue.titles.map((t) => `"${t}"`).join(" and ")} lead to the same destination ("${issue.direction}"). They are implementations of one direction — keep the strongest and replace the rest with genuinely different directions.`;
       case "implementation_variants":

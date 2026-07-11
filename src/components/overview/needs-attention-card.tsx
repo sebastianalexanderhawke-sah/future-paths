@@ -57,11 +57,20 @@ const NEUTRAL_CHIP: ChipConfig = {
 };
 
 type NeedsAttentionCardProps = {
+  /** At most three rows — the page enforces the cap. The card answers
+      "what requires my attention today?", not "what is everything?";
+      the space left by fewer rows is intentional. */
   items: AttentionRow[];
   hiddenCount: number;
+  /** Total attention items, shown in the "View all (N)" footer. */
+  totalCount: number;
 };
 
-export function NeedsAttentionCard({ items, hiddenCount }: NeedsAttentionCardProps) {
+export function NeedsAttentionCard({
+  items,
+  hiddenCount,
+  totalCount,
+}: NeedsAttentionCardProps) {
   return (
     <OverviewCard className="flex flex-col px-8 py-8">
       <div className="mb-7">
@@ -124,7 +133,7 @@ export function NeedsAttentionCard({ items, hiddenCount }: NeedsAttentionCardPro
         href="/reflections"
         className="mt-auto pt-5 text-[13px] font-medium text-[#9ca3af] transition-colors duration-150 hover:text-[#6366f1]"
       >
-        Open Workspace{hiddenCount > 0 ? ` (${hiddenCount} more)` : ""} →
+        {hiddenCount > 0 ? `View all (${totalCount})` : "Open Workspace"} →
       </Link>
     </OverviewCard>
   );

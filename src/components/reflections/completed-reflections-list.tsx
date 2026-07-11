@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import type { ReflectionCheckIn } from "@/lib/reflections";
-import { SituationTitleExpander } from "@/components/reflections/situation-title-expander";
+import { OverviewCard } from "@/components/overview/overview-card";
 
 const RECENT_COUNT = 5;
 
@@ -11,29 +11,52 @@ type CompletedReflectionsListProps = {
   checkIns: ReflectionCheckIn[];
 };
 
-function ReflectionCard({ checkIn }: { checkIn: ReflectionCheckIn }) {
-  const summary =
-    checkIn.moment.current_understanding ?? checkIn.moment.description ?? null;
+// The one primary action of this section, in the app's black-button language.
+// The same button expands and collapses so the interaction stays consistent.
+const primaryButtonClass =
+  "shrink-0 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]";
+
+// Same overflow voice as Coming Up ("Show N more →") — one design language.
+const expanderButtonClass =
+  "cursor-pointer self-start text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857]";
+
+// A memory card: each finished reflection distinct inside the section's white
+// bubble — bordered, no shadow, so it nests instead of competing with the
+// section card. The header mirrors the queue rows (chip · bold title · gray
+// meta) so Completed speaks the same language as Next Up and Coming Up.
+// Hierarchy inside is fixed — the user's answer is the artifact and gets the
+// darkest ink; the prediction is a quiet footnote of what Reflection expected
+// before they answered.
+function ReflectionMemoryCard({ checkIn }: { checkIn: ReflectionCheckIn }) {
   return (
-    <article className="rounded-lg border border-zinc-200 bg-white px-5 py-5">
-      <SituationTitleExpander
-        title={checkIn.moment.title}
-        date={new Date(checkIn.created_at).toLocaleDateString()}
-        summary={summary}
-      />
-      <p className="mt-3 text-sm font-medium text-zinc-900">
+    <article className="rounded-xl border border-[#f0f0f2] bg-white px-6 py-5">
+      <div className="flex items-center gap-3.5">
+        <span
+          aria-hidden="true"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ecfdf5] text-[15px] font-semibold text-[#047857]"
+        >
+          ✓
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-[14px] font-semibold text-[#111]">
+            {checkIn.moment.title}
+          </span>
+          <span className="mt-0.5 block text-[12px] text-[#888888]">
+            Reflection · {new Date(checkIn.created_at).toLocaleDateString()}
+          </span>
+        </span>
+      </div>
+      <p className="mt-3.5 text-[13px] font-medium text-[#888888]">
         {checkIn.reflection_question}
       </p>
-      <div className="mt-4 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3">
-        <p className="text-xs text-zinc-400">Predicted answer</p>
-        <p className="mt-1 text-sm text-zinc-600">{checkIn.identity_impact}</p>
-      </div>
       {checkIn.reflection_answer ? (
-        <div className="mt-3">
-          <p className="text-xs text-zinc-400">Your answer</p>
-          <p className="mt-1 text-sm text-zinc-900">{checkIn.reflection_answer}</p>
-        </div>
+        <p className="mt-1.5 text-[14px] leading-relaxed text-[#111]">
+          {checkIn.reflection_answer}
+        </p>
       ) : null}
+      <p className="mt-3 border-l-2 border-[#ececec] pl-3 text-[12px] leading-relaxed text-[#999999]">
+        Expected · {checkIn.identity_impact}
+      </p>
     </article>
   );
 }
@@ -45,59 +68,46 @@ export function CompletedReflectionsList({ checkIns }: CompletedReflectionsListP
   const recent = checkIns.slice(0, RECENT_COUNT);
   const older = checkIns.slice(RECENT_COUNT);
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="text-sm text-zinc-500 hover:text-zinc-700"
-      >
-        ▼ View completed reflections ({checkIns.length})
-      </button>
-    );
-  }
-
+  // One white bubble, like every other Workspace section. The header row
+  // stays put in both states; expanding grows the same card downward.
   return (
-    <div className="flex flex-col gap-10">
-      <section>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-zinc-900">Recent reflections</h2>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="text-sm text-zinc-500 hover:text-zinc-700"
-          >
-            Collapse ↑
-          </button>
-        </div>
-        <div className="mt-4 flex flex-col gap-4">
-          {recent.map((checkIn) => (
-            <ReflectionCard key={checkIn.id} checkIn={checkIn} />
-          ))}
-        </div>
-      </section>
+    <OverviewCard className="px-8 py-6">
+      <div className="flex flex-col items-start gap-4">
+        <p className="text-[13px] text-[#999999]">
+          Every question you&apos;ve answered, newest first
+        </p>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={primaryButtonClass}
+        >
+          {open ? "Hide completed reflections" : "View completed reflections"}
+        </button>
+      </div>
 
-      {older.length > 0 ? (
-        <section>
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-zinc-900">Reflection archive</h2>
-            <button
-              type="button"
-              onClick={() => setArchiveOpen((o) => !o)}
-              className="text-sm text-zinc-500 hover:text-zinc-700"
-            >
-              {archiveOpen ? "Collapse ↑" : "Expand ↓"}
-            </button>
-          </div>
-          {archiveOpen ? (
-            <div className="mt-4 flex flex-col gap-4">
-              {older.map((checkIn) => (
-                <ReflectionCard key={checkIn.id} checkIn={checkIn} />
-              ))}
-            </div>
+      {open ? (
+        <div className="mt-5 flex flex-col gap-4">
+          {recent.map((checkIn) => (
+            <ReflectionMemoryCard key={checkIn.id} checkIn={checkIn} />
+          ))}
+          {older.length > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setArchiveOpen((o) => !o)}
+                className={expanderButtonClass}
+              >
+                {archiveOpen ? "↑ Show fewer" : `Show ${older.length} more →`}
+              </button>
+              {archiveOpen
+                ? older.map((checkIn) => (
+                    <ReflectionMemoryCard key={checkIn.id} checkIn={checkIn} />
+                  ))
+                : null}
+            </>
           ) : null}
-        </section>
+        </div>
       ) : null}
-    </div>
+    </OverviewCard>
   );
 }

@@ -45,6 +45,11 @@ const DIVERSE_SET = [
     "Keep the operation deliberately one-person and let that constraint set its size.",
     "a deliberately solo operation",
   ),
+  path(
+    "Pause Growth To Strengthen The Foundation",
+    "Hold the business at its current size for a year and rebuild the systems underneath it.",
+    "the same business on sturdier foundations",
+  ),
 ];
 
 describe("auditPathSetDiversity", () => {
@@ -54,9 +59,16 @@ describe("auditPathSetDiversity", () => {
     expect(audit.ok).toBe(true);
   });
 
+  it("flags a set below five paths so it regenerates instead of hard-failing", () => {
+    const audit = auditPathSetDiversity(DIVERSE_SET.slice(0, 4));
+
+    expect(audit.ok).toBe(false);
+    expect(audit.issues).toContainEqual({ kind: "too_few_paths", count: 4 });
+  });
+
   it("flags two paths that declare the same direction", () => {
     const audit = auditPathSetDiversity([
-      ...DIVERSE_SET.slice(0, 2),
+      ...DIVERSE_SET.slice(0, 3),
       path(
         "Hire A Freelancer",
         "Bring in one focused freelancer to own the work costing the most time.",
@@ -79,7 +91,7 @@ describe("auditPathSetDiversity", () => {
 
   it("treats reworded direction labels as the same destination", () => {
     const audit = auditPathSetDiversity([
-      ...DIVERSE_SET.slice(0, 2),
+      ...DIVERSE_SET.slice(0, 3),
       path("Path A", "First framing of the road.", "the delegated work"),
       path("Path B", "Second framing of the road.", "work, delegated"),
     ]);
@@ -89,7 +101,7 @@ describe("auditPathSetDiversity", () => {
 
   it("flags near-identical prose (degenerate duplication) even when labels differ", () => {
     const audit = auditPathSetDiversity([
-      ...DIVERSE_SET.slice(0, 2),
+      ...DIVERSE_SET.slice(0, 3),
       path(
         "Hire A Content Freelancer",
         "Bring in a freelancer to draft the weekly content and manage the publishing schedule.",
@@ -117,7 +129,7 @@ describe("auditPathSetDiversity", () => {
     // that is a MEANING judgment: it belongs to the semantic audit, not to
     // lexical overlap. The deterministic tier must let them through.
     const audit = auditPathSetDiversity([
-      ...DIVERSE_SET.slice(0, 2),
+      ...DIVERSE_SET.slice(0, 3),
       path(
         "Build A Small Team",
         "Bring on two part-time employees and grow into a manager of people.",
@@ -173,6 +185,15 @@ describe("describePathSetDiversityIssues", () => {
     expect(feedback).toContain("delegated content work");
     expect(feedback).toContain("challenges_assumption");
     expect(feedback.split("\n")).toHaveLength(2);
+  });
+
+  it("renders too_few_paths as a demand for five different futures", () => {
+    const feedback = describePathSetDiversityIssues([
+      { kind: "too_few_paths", count: 3 },
+    ]);
+
+    expect(feedback).toContain("Only 3 paths were generated");
+    expect(feedback).toContain("at least five");
   });
 
   it("renders semantic convergence with its reason", () => {

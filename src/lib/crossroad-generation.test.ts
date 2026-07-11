@@ -61,6 +61,16 @@ const DIVERSE_OUTPUT: CrossroadOutput = {
       "Move from ongoing content to a paid product without weekly output.",
       "a product business",
     ),
+    makePath(
+      "Stay Intentionally Solo",
+      "Keep the operation deliberately one-person and let that set its size.",
+      "a deliberately solo operation",
+    ),
+    makePath(
+      "Pause Growth To Strengthen The Foundation",
+      "Hold the business at its current size and rebuild the systems underneath it.",
+      "the same business on sturdier foundations",
+    ),
   ],
   opportunity_themes: ["Growth"],
   risk_themes: ["Stability"],
@@ -84,6 +94,16 @@ const CONVERGENT_OUTPUT: CrossroadOutput = {
       "Stay Solo",
       "Keep the operation deliberately one-person.",
       "a deliberately solo operation",
+    ),
+    makePath(
+      "Simplify The Business",
+      "Cut the site down to its highest-value core so it needs less work.",
+      "a smaller, calmer business",
+    ),
+    makePath(
+      "Change The Business Model",
+      "Move from ongoing content to a paid product without weekly output.",
+      "a product business",
     ),
   ],
 };
@@ -208,6 +228,16 @@ describe("generateDiverseCrossroadSet", () => {
           "Simplify The Business",
           "Cut the site down to its highest-value core.",
           "a smaller, calmer business",
+        ),
+        makePath(
+          "Change The Business Model",
+          "Move from ongoing content to a paid product without weekly output.",
+          "a product business",
+        ),
+        makePath(
+          "Pause Growth To Strengthen The Foundation",
+          "Hold the business at its current size and rebuild the systems underneath it.",
+          "the same business on sturdier foundations",
         ),
       ],
     };

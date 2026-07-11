@@ -34,7 +34,6 @@ import { formatDecisionPaths } from "@/components/home/decision-simulator-utils"
 import { toPathTitleInput } from "@/components/home/path-titles";
 import type { ForecastResult } from "@/components/home/forecast-utils";
 import { FutureForecastResultView } from "@/components/home/future-forecast-result";
-import { CardShell } from "@/components/ui/card-shell";
 import { SituationRotatingExamples } from "@/components/home/situation-rotating-examples";
 import { withJustChosenPathFlag } from "@/lib/forecast-visit-flag";
 
@@ -141,54 +140,60 @@ async function readSSEStream<T>(
 // Skeleton + preview cards
 // ---------------------------------------------------------------------------
 
+// Shaped like a collapsed possible-future row (theme label → title →
+// one-sentence hook) so the streamed result replaces the placeholder in
+// place instead of reflowing the list.
 function PathSkeleton() {
   return (
-    <div className="animate-pulse rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/10 bg-[var(--surface-muted)] p-6">
-      <div className="mb-4 h-5 w-3/4 rounded bg-[var(--ink-tertiary)]/15" />
-      <div className="mb-2 h-3 w-full rounded bg-[var(--ink-tertiary)]/10" />
-      <div className="mb-2 h-3 w-5/6 rounded bg-[var(--ink-tertiary)]/10" />
-      <div className="h-3 w-4/6 rounded bg-[var(--ink-tertiary)]/10" />
+    <div className="animate-pulse py-4">
+      <div className="h-3 w-16 rounded bg-[var(--ink-tertiary)]/10" />
+      <div className="mt-2 h-5 w-2/3 rounded bg-[var(--ink-tertiary)]/15" />
+      <div className="mt-2 h-3 w-5/6 rounded bg-[var(--ink-tertiary)]/10" />
     </div>
   );
 }
 
+// Shaped like the final forecast card's collapsed summary (timeframe chip →
+// title → preview line) on the same white elevated surface.
 function ForecastSkeleton() {
   return (
-    <div className="animate-pulse rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/10 bg-[var(--surface-muted)] p-5">
-      <div className="mb-3 h-5 w-1/2 rounded bg-[var(--ink-tertiary)]/15" />
-      <div className="mb-2 h-3 w-full rounded bg-[var(--ink-tertiary)]/10" />
-      <div className="h-3 w-4/5 rounded bg-[var(--ink-tertiary)]/10" />
+    <div className="animate-pulse rounded-[var(--radius-card)] bg-[var(--surface)] px-4 py-4 shadow-[var(--shadow-elevated)] sm:px-5">
+      <div className="h-4 w-20 rounded-full bg-[var(--ink-tertiary)]/10" />
+      <div className="mt-3 h-4 w-1/2 rounded bg-[var(--ink-tertiary)]/15" />
+      <div className="mt-2 h-3 w-4/5 rounded bg-[var(--ink-tertiary)]/10" />
     </div>
   );
 }
 
+// A streamed path rendered exactly as its final collapsed row (serif title +
+// first-line hook) — arrival means the row simply stops pulsing, not that
+// the layout changes shape.
 function StreamingPathCard({ path }: { path: StreamPathDraft }) {
   return (
-    <CardShell variant="elevated" className="p-6">
-      <h4 className="text-body font-semibold text-ink-primary">{path.title}</h4>
+    <div className="py-4">
+      <h4 className="font-voice text-[19px] font-medium leading-[1.3] tracking-[-0.01em] text-ink-primary">
+        {path.title}
+      </h4>
       {path.description ? (
-        <p className="mt-1 line-clamp-2 text-body-small text-ink-secondary">{path.description}</p>
-      ) : null}
-      {path.benefits.length > 0 ? (
-        <ul className="mt-3 flex flex-col gap-1">
-          {path.benefits.slice(0, 2).map((benefit, i) => (
-            <li key={i} className="text-body-small text-ink-secondary">
-              + {benefit}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </CardShell>
+        <p className="mt-1 line-clamp-2 max-w-[46em] text-body-small text-ink-secondary">
+          {path.description}
+        </p>
+      ) : (
+        <div className="mt-2 h-3 w-5/6 animate-pulse rounded bg-[var(--ink-tertiary)]/10" />
+      )}
+    </div>
   );
 }
 
 function StreamingFutureCard({ future }: { future: StreamFutureDraft }) {
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--ink-tertiary)]/15 bg-[var(--surface-muted)] p-5">
+    <div className="rounded-[var(--radius-card)] bg-[var(--surface)] px-4 py-4 shadow-[var(--shadow-elevated)] sm:px-5">
       <h4 className="text-body font-medium text-ink-primary">{future.title}</h4>
       {future.why ? (
-        <p className="mt-2 text-body-small text-ink-secondary">{future.why}</p>
-      ) : null}
+        <p className="mt-2 line-clamp-2 text-body-small text-ink-secondary">{future.why}</p>
+      ) : (
+        <div className="mt-2 h-3 w-4/5 animate-pulse rounded bg-[var(--ink-tertiary)]/10" />
+      )}
     </div>
   );
 }
@@ -644,9 +649,12 @@ export function SituationEntryFlow() {
     }
   }
 
-  // Number of placeholder skeletons to show below arrived streaming items
+  // Number of placeholder skeletons to show below arrived streaming items.
+  // Paths reserve five slots up front — the generation contract guarantees
+  // at least five futures, so the list holds its final height instead of
+  // growing as paths arrive.
   const pathSkeletonCount = isStreamingPaths
-    ? Math.max(0, 3 - streamingPaths.length)
+    ? Math.max(0, 5 - streamingPaths.length)
     : 0;
   const forecastSkeletonCount = isStreamingForecast
     ? Math.max(0, 3 - streamingFutures.length)
@@ -825,7 +833,19 @@ export function SituationEntryFlow() {
           </div>
 
           {isLoadingQuestions && questions.length === 0 ? (
-            <p className="text-sm text-zinc-400">Preparing questions…</p>
+            <div>
+              <p className="animate-pulse text-label text-ink-tertiary">
+                Preparing questions…
+              </p>
+              {/* Same surface the questions arrive on, so the panel fills in
+                  rather than appearing from nothing. */}
+              <div className="mt-3 animate-pulse rounded-xl border border-zinc-100 bg-zinc-50/50 p-6">
+                <div className="h-3 w-24 rounded bg-[var(--ink-tertiary)]/10" />
+                <div className="mt-3 h-4 w-3/4 rounded bg-[var(--ink-tertiary)]/15" />
+                <div className="mt-4 h-24 w-full rounded-lg bg-[var(--ink-tertiary)]/10" />
+                <div className="mt-4 h-9 w-28 rounded-lg bg-[var(--ink-tertiary)]/10" />
+              </div>
+            </div>
           ) : null}
 
           {questionsError ? (
@@ -859,24 +879,34 @@ export function SituationEntryFlow() {
       {/* ── Stage 3: Explore possible paths (decision mode) ── */}
       {stage === "paths" ? (
         <div className="flex flex-col gap-8">
-          <div>
-            <h2 className="text-xl font-semibold text-zinc-900">Explore possible paths</h2>
-            <p className="mt-2 text-sm text-zinc-500">
-              Here are the different decisions you could make. Select the one that resonates most.
-            </p>
-          </div>
+          {/* Once the result exists it opens with its own editorial situation
+              intro — a second stage heading above it would stack two headers
+              and bring back the report feel. */}
+          {!simulatorResult ? (
+            <div>
+              <h2 className="text-xl font-semibold text-zinc-900">Explore possible paths</h2>
+              <p className="mt-2 text-sm text-zinc-500">
+                Here are the different decisions you could make. Select the one that resonates most.
+              </p>
+            </div>
+          ) : null}
 
           {isStreamingPaths && !simulatorResult ? (
-            <div className="flex flex-col gap-3">
+            <div>
+              {/* Same scaffold as the final result: a "Possible futures"
+                  label over a hairline-divided list, so the finished view
+                  lands on the structure the user is already reading. */}
               <p className="animate-pulse text-label text-ink-tertiary">
-                Exploring possible decisions…
+                Exploring possible futures…
               </p>
-              {streamingPaths.map((path, i) => (
-                <StreamingPathCard key={i} path={path} />
-              ))}
-              {[...Array(pathSkeletonCount)].map((_, i) => (
-                <PathSkeleton key={`sk-${i}`} />
-              ))}
+              <div className="mt-2 flex flex-col divide-y divide-[var(--ink-tertiary)]/10">
+                {streamingPaths.map((path, i) => (
+                  <StreamingPathCard key={i} path={path} />
+                ))}
+                {[...Array(pathSkeletonCount)].map((_, i) => (
+                  <PathSkeleton key={`sk-${i}`} />
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -906,19 +936,12 @@ export function SituationEntryFlow() {
               audit={simulatorResult.audit}
               selectedPathId={selectedPathId}
               onSelectPath={handleSelectPath}
+              onContinue={
+                selectedPathId && !isSelectingPath ? handleContinueFromPaths : undefined
+              }
               isSelectingPath={isSelectingPath}
               showForecastBridge={false}
             />
-          ) : null}
-
-          {simulatorResult && selectedPathId && !isSelectingPath ? (
-            <button
-              type="button"
-              onClick={handleContinueFromPaths}
-              className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-            >
-              Continue
-            </button>
           ) : null}
         </div>
       ) : null}

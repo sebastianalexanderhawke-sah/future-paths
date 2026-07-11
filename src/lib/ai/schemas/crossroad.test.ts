@@ -131,7 +131,7 @@ describe("crossroad schema", () => {
     expect(parsed.paths[0]?.title).toBe("Tell Her Directly And Honestly That");
   });
 
-  it("accepts exactly 3 paths", () => {
+  it("accepts exactly 3 paths (parse floor stays below the 5-path product minimum so short sets regenerate instead of hard-failing)", () => {
     const parsed = parseCrossroadOutput({
       current_understanding: CURRENT_UNDERSTANDING,
       paths: makePaths(3),
@@ -139,12 +139,12 @@ describe("crossroad schema", () => {
     expect(parsed.paths).toHaveLength(3);
   });
 
-  it("accepts exactly 5 paths", () => {
+  it("accepts exactly 6 paths", () => {
     const parsed = parseCrossroadOutput({
       current_understanding: CURRENT_UNDERSTANDING,
-      paths: makePaths(5),
+      paths: makePaths(6),
     });
-    expect(parsed.paths).toHaveLength(5);
+    expect(parsed.paths).toHaveLength(6);
   });
 
   it("rejects fewer than 3 paths", () => {
@@ -156,11 +156,11 @@ describe("crossroad schema", () => {
     ).toThrow();
   });
 
-  it("rejects more than 5 paths", () => {
+  it("rejects more than 6 paths", () => {
     expect(() =>
       parseCrossroadOutput({
         current_understanding: CURRENT_UNDERSTANDING,
-        paths: makePaths(6),
+        paths: makePaths(7),
       }),
     ).toThrow();
   });

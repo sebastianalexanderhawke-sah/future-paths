@@ -11,7 +11,7 @@ import {
 export const crossroadGenerateV1 = createPromptModule({
   promptId: "crossroad.generate",
   promptVersion: "1",
-  taskInstructions: `Generate a current understanding, three to five genuinely different directions the user's life could take from this moment, and the situation's opportunity/risk themes.
+  taskInstructions: `Generate a current understanding, five to six meaningfully different versions of the user's life one year from now, and the situation's opportunity/risk themes.
 
 This output powers both the Decision Simulator and Future Forecast. Raw output must already be concrete, direction-oriented, and event-oriented. Post-processing will refine it — not rescue vague or reflective language.
 
@@ -28,11 +28,11 @@ Situation polarity rules (opportunity_themes / risk_themes — strict):
   buildUserPrompt: (context) =>
     buildDefaultUserPrompt(
       context,
-      `Produce JSON with current_understanding, paths (3–5 items), opportunity_themes (1-3), and risk_themes (1-3).
+      `Produce JSON with current_understanding, paths (5–6 items), opportunity_themes (1-3), and risk_themes (1-3).
 
-Generate the 3 most meaningful genuinely different directions this person's life could take from here. Then, for a possible 4th and 5th path, add each ONLY if it represents another genuinely different direction — a different destination, not a different implementation. Stop as soon as the real directions are exhausted. If only three truly different directions exist, return three. Never generate filler.
+Generate at least FIVE paths, each a meaningfully different version of this person's life one year from now — a different destination, not a different implementation. Add a 6th ONLY if it introduces another genuinely different future. Never generate filler, and never add implementation variants simply to reach a count.
 
-Before responding, silently verify for every pair of paths: "If each became reality, would this person's life look meaningfully different one year from now?" If the answer is no for any pair, merge that pair and either find a genuinely different direction or return fewer paths. This verification is internal — never mention it in the output.
+Before responding, silently verify for every pair of paths: "If both paths succeed, would this person's daily life look meaningfully different one year from today?" If the answer is "not really" for any pair, delete the weaker path and generate a fundamentally different direction in its place. This verification is internal — never mention it in the output.
 
 Each path needs title, description, direction, challenges_assumption, benefits (2-4), consequences (2-4), future_shift, and themes (1-3).
 

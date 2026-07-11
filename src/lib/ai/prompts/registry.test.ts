@@ -70,11 +70,17 @@ describe("prompt registry", () => {
 
     expect(systemPrompt).toContain("Never invent themes");
     expect(userPrompt).toContain("Never invent theme labels");
-    // Situations v3: paths are directions, not implementation strategies.
+    // Crossroads Phase A: a path is a meaningfully different life one year
+    // out — at least five of them, never implementation variants.
     expect(systemPrompt).toContain("fundamentally different directions");
     expect(systemPrompt).toContain("Implementations change the first step.");
     expect(systemPrompt).toContain("challenges_assumption");
-    expect(userPrompt).toContain("paths (3–5 items)");
+    expect(userPrompt).toContain("paths (5–6 items)");
+    expect(userPrompt).toContain("If both paths succeed");
+    // Phase B: distinct core tensions per path, and the path/forecast
+    // boundary — the path is the commitment, the forecast is the year after.
+    expect(systemPrompt).toContain("core tension");
+    expect(systemPrompt).toContain("What direction do I choose?");
     expect(systemPrompt).toContain("inner landscape");
     expect(systemPrompt).toContain("What happens?");
   });

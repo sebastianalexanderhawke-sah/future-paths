@@ -16,13 +16,19 @@ import {
 } from "@/components/overview/whats-changed-card";
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
 import { getFutureSelfTrend } from "@/lib/future-self-trend";
-import { listActiveFutureSelves } from "@/lib/future-selves";
+import { listActiveFutureSelves, listFutureSelves } from "@/lib/future-selves";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
 import { getChosenPathsForMoments } from "@/lib/paths";
 import { getUnansweredReflectionSummary } from "@/lib/reflections";
 import { isCheckInStale } from "@/lib/relative-time";
 import { getUserIdentity } from "@/lib/user-identity";
+
+// How far back "since you last checked in" reaches for one-off events (a
+// path fading, new observations landing). Active-path movement carries its
+// own since-last-run snapshot; fades and additions only carry timestamps, so
+// they stay in the story for a week and then step aside.
+const RECENT_CHANGE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -36,19 +42,26 @@ export default async function OverviewPage() {
     userIdentity,
     momentsResult,
     futuresResult,
+    fadedResult,
     reflectionSummaryResult,
     identityUpdatesResult,
   ] = await Promise.all([
     getUserIdentity(),
     listMoments(),
     listActiveFutureSelves(5),
+    // Weakening rarely survives as a "down" delta on an active row — when a
+    // path truly weakens the engine fades it out of the active set entirely
+    // (see the What's Changed assembly below). Read recent fades so the card
+    // can tell that side of the story too.
+    listFutureSelves({ status: "faded", limit: 8 }),
     getUnansweredReflectionSummary(),
-    listIdentityUpdates(5),
+    listIdentityUpdates(10),
   ]);
 
   const situations = "moments" in momentsResult ? momentsResult.moments : [];
   const futureSelves =
     "futureSelves" in futuresResult ? futuresResult.futureSelves : [];
+  const fadedSelves = "futureSelves" in fadedResult ? fadedResult.futureSelves : [];
   const reflectionSummary =
     "pending" in reflectionSummaryResult ? reflectionSummaryResult : null;
   const identityUpdates =
@@ -62,27 +75,68 @@ export default async function OverviewPage() {
     getLastCheckInsForMoments(momentIds),
   ]);
 
-  // ── What's Changed: Future Self movement + new observations ──────────
+  // ── What's Changed: a three-second summary of movement ───────────────
+  // Compact by design: name, one-word qualifier, signed delta. WHY things
+  // moved is Pattern Emerging's job; this card never explains.
   const movers = futureSelves
     .map((futureSelf) => ({ futureSelf, trend: getFutureSelfTrend(futureSelf) }))
     .filter(({ trend }) => trend.direction === "up" || trend.direction === "down")
     .sort((a, b) => Math.abs(b.trend.delta) - Math.abs(a.trend.delta));
 
-  const changeRows: ChangeRow[] = movers
-    .slice(0, identityUpdates.length > 0 ? 2 : 3)
-    .map(({ futureSelf, trend }) => ({
+  const now = Date.now();
+
+  // A fade IS the strongest weakening: the engine retires a weakening path
+  // in one step (status "faded", percentage 0) instead of letting it
+  // decline visibly, so recent fades join as ordinary "Faded" rows whose
+  // delta is the strength the path last held. Without them the card would
+  // almost never show anything weakening.
+  const fadeMovementRows = fadedSelves
+    .filter(
+      (futureSelf) =>
+        now - Date.parse(futureSelf.updated_at) <= RECENT_CHANGE_WINDOW_MS,
+    )
+    .slice(0, 2)
+    .flatMap((futureSelf) => {
+      const lastStrength = futureSelf.previous_percentage;
+      if (lastStrength === null || lastStrength <= 0) return [];
+      return [
+        {
+          key: futureSelf.id,
+          name: futureSelf.name,
+          detail: "Faded",
+          delta: -Math.round(lastStrength),
+          kind: "down" as const,
+        },
+      ];
+    });
+
+  const movementRows = [
+    ...movers.map(({ futureSelf, trend }) => ({
       key: futureSelf.id,
       name: futureSelf.name,
       detail: trend.direction === "up" ? "Strengthened" : "Weakened",
       delta: Math.round(trend.delta),
       kind: trend.direction === "up" ? ("up" as const) : ("down" as const),
-    }));
+    })),
+    ...fadeMovementRows,
+  ].sort((a, b) => Math.abs(b.delta ?? 0) - Math.abs(a.delta ?? 0));
 
-  if (identityUpdates.length > 0) {
+  // "New observations" is honest news, not a rolling total: only signals
+  // recorded inside the recency window count, and a quiet week shows none.
+  const recentUpdateCount = identityUpdates.filter(
+    (update) => now - Date.parse(update.created_at) <= RECENT_CHANGE_WINDOW_MS,
+  ).length;
+
+  // Three rows maximum, the observations row included.
+  const changeRows: ChangeRow[] = movementRows.slice(
+    0,
+    recentUpdateCount > 0 ? 2 : 3,
+  );
+  if (recentUpdateCount > 0) {
     changeRows.push({
       key: "new-observations",
       name: "New observations",
-      detail: `${identityUpdates.length} added`,
+      detail: `${recentUpdateCount} added`,
       delta: null,
       kind: "added",
     });
@@ -130,7 +184,7 @@ export default async function OverviewPage() {
   const visibleAttentionItems = attentionItems.slice(0, 3);
   const hiddenAttentionCount = Math.max(0, attentionItems.length - 3);
 
-  // ── Pattern Emerging: strongest active future + recent movement ──────
+  // ── Pattern Emerging: strongest active future + the numeric impact ───
   const topFutureSelf = futureSelves[0] ?? null;
   const patternImpacts: PatternImpactRow[] = movers
     .slice(0, 3)
@@ -141,7 +195,7 @@ export default async function OverviewPage() {
     }));
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#fafaf8] text-[#111]">
+    <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
       <AppSidebar
         activeHref="/overview"
         unansweredReflections={reflectionSummary?.unansweredCount ?? 0}
@@ -178,6 +232,7 @@ export default async function OverviewPage() {
               <NeedsAttentionCard
                 items={visibleAttentionItems}
                 hiddenCount={hiddenAttentionCount}
+                totalCount={attentionItems.length}
               />
             </div>
 

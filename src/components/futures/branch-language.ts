@@ -345,31 +345,46 @@ const LABEL_MID: CSSProperties = { top: "50%", transform: "translateY(-50%)" };
 /**
  * The stages: one hand-composed scene per cast size, designed on the
  * rendered 966×260 card (remember the vertical squash) and judged as
- * pictures, not solved as constraints. Shared composition rules:
+ * pictures, not solved as constraints. Every scene is built the same way a
+ * spread is: ONE long lever east, an UNEVEN arc of supporting mass west of
+ * center, and at least one large region that stays deliberately empty.
+ * Shared composition rules:
  *
- *   - REACH IS HIERARCHY. Station reach is tiered by role — full chords of
- *     ≈314 rendered px for the protagonist, ≈258 for the challenger,
- *     ≈134–248 for kin/outlier, performed at 0.68–0.90 of them — and since
- *     casting sends the two strongest futures to the two longest stations,
- *     distance tracks likelihood before any number is read. Arrival
- *     refines it within a tier.
- *   - The PROTAGONIST owns the right wing ALONE: the longest reach on the
- *     stage and no other station past mid-canvas. The eye lands there
- *     because the composition clears that entire side for it — never
- *     because it is bigger or brighter.
- *   - The CHALLENGER counterweights it from deep in the lower-left.
- *   - The KIN PAIR (4–5 casts) sits deliberately close, high on the left —
- *     near enough to read as related, the one tension the old solver used
- *     to "fix". Their labels diverge outward from the pair.
- *   - The OUTLIER (3 and 5 casts) stands apart — top-center-left when the
- *     stage is sparse, anchoring the bottom-center when it is full — with
- *     empty space around it in both.
- *   - Supporting mass runs along a DIAGONAL, never a column: kin high,
- *     challenger deep, so the left side arcs instead of stacking. Voids
- *     stay at top-center and the lower-right quadrant — intentional,
- *     load-bearing emptiness. Balance comes from counterweight (one long
- *     lever right, distributed mass left), never from even spacing. No two
- *     stations share a bend, so no two branches carry the same gesture.
+ *   - REACH IS HIERARCHY. Station reach is tiered by role — a ≈307–312
+ *     rendered-px chord for the protagonist, next-longest for the
+ *     challenger (≈245–261 on the full stages, a deliberately short ≈182
+ *     on the two-cast stage, where subordination IS the picture), ≈117–212
+ *     for kin/outlier — performed at 0.68–0.90 of them. Casting sends the
+ *     two strongest futures to the two longest stations, so distance
+ *     tracks likelihood before any number is read; arrival refines it
+ *     within a tier. No two stations on a stage stand at the same radius —
+ *     every distance in a scene is its own.
+ *   - The PROTAGONIST owns the east ALONE: the longest reach on the stage
+ *     and nothing else past mid-canvas — on the full five-cast stage the
+ *     entire lower-right quadrant and everything east of the center
+ *     column stay empty. The eye lands there because the composition
+ *     clears that whole side for it — never because it is bigger or
+ *     brighter.
+ *   - The CHALLENGER counterweights from the deep south-west on a DROPPED
+ *     approach (4–5 casts): its branch sags below its chord and lands
+ *     from the east, so its gesture diverges from kin-a's above it
+ *     instead of paralleling it.
+ *   - The KIN PAIR (4–5 casts) sits deliberately close on a NW→N
+ *     diagonal — kin-a out to the west-northwest, kin-b short and high
+ *     toward top-center — near enough to read as related, the one
+ *     tension the old solver used to "fix". Their labels diverge outward
+ *     from the pair.
+ *   - The OUTLIER (3 and 5 casts) stands apart — high center-left when
+ *     the stage is sparse, hanging low just south-west of "You" when it
+ *     is full — with empty space around it in both.
+ *   - Supporting mass runs along an UNEVEN western arc — kin-b high near
+ *     top-center, kin-a WNW, challenger deep SW, outlier low — with
+ *     irregular angular gaps and strongly different radii, so the left
+ *     side sweeps instead of stacking into a column. Voids are
+ *     load-bearing: emptiness beside a destination is what makes it read
+ *     as a place. Balance comes from counterweight (one long lever east,
+ *     distributed mass west), never from even spacing. No two stations
+ *     share a bend, so no two branches carry the same gesture.
  *
  * Stages are authored protagonist-right and MIRROR horizontally when the
  * protagonist's compass leans left, so the compass still whispers.
@@ -389,35 +404,44 @@ export const STAGES: Record<number, readonly Station[]> = {
     },
   ],
   2: [
+    // Two futures are a lever, not a dumbbell: the challenger stands a
+    // full 16° off the protagonist's counter-diagonal at barely 0.6× its
+    // reach, so the pair never reads as two ends of one rod through
+    // "You". The entire upper-left of the card stays empty on purpose —
+    // the leader's reach is measured against that silence.
     {
       role: "protagonist",
-      anchor: [648, 172],
+      anchor: [652, 150],
       bend: -38,
       labelStyle: { left: 20, ...LABEL_MID },
     },
     {
       role: "challenger",
-      anchor: [236, 330],
-      bend: 28,
+      anchor: [262, 342],
+      bend: 30,
       labelStyle: { right: 20, textAlign: "right", ...LABEL_MID },
     },
   ],
   3: [
+    // Three radii, three territories: 307 / 245 / 128 rendered px. The
+    // outlier stands close and high — a possibility glimpsed over the
+    // shoulder — while the challenger digs into the far south-west and
+    // the whole bottom-center-through-east stays open.
     {
       role: "protagonist",
-      anchor: [648, 160],
+      anchor: [652, 148],
       bend: -40,
       labelStyle: { left: 20, ...LABEL_MID },
     },
     {
       role: "outlier",
-      anchor: [298, 92],
-      bend: 18,
+      anchor: [318, 84],
+      bend: 16,
       labelStyle: { right: 18, bottom: 6, textAlign: "right" },
     },
     {
       role: "challenger",
-      anchor: [215, 348],
+      anchor: [206, 340],
       bend: 32,
       labelStyle: { right: 18, textAlign: "right", ...LABEL_MID },
     },
@@ -425,71 +449,77 @@ export const STAGES: Record<number, readonly Station[]> = {
   4: [
     {
       role: "protagonist",
-      anchor: [658, 152],
+      anchor: [656, 150],
       bend: -40,
       labelStyle: { left: 20, ...LABEL_MID },
     },
     // The kin pair performs at its stations, deliberately nearer to each
     // other than any stranger pair but never a blur: the compact arrival
     // window bounds the pair's closeness by construction across ALL
-    // likelihoods (see TERRITORY + stage-territory.test.ts), and kin-b's
-    // bubble stays clearly in the upper-LEFT: its dot cannot cross into
-    // the top-center void even at maximum arrival, so the protagonist's
-    // wing keeps its clear approach. Opposite bows splay the two
-    // approaches apart instead of nesting them, and both labels aim
-    // outward, away from the corridor between the pair.
+    // likelihoods (see TERRITORY + stage-territory.test.ts). The pair
+    // rides a NW→N diagonal — kin-a out at 212 rendered px, kin-b short
+    // and high at 117 — so its two radii differ as much as its two
+    // bearings, and kin-b's bubble stays left of the center column at
+    // every arrival, keeping the protagonist's wing approach clear. Both
+    // labels aim outward, away from the corridor between the pair. The
+    // challenger's NEGATIVE bow drops its approach below the chord so it
+    // lands from the east — the gesture pulls away from kin-a's instead
+    // of stacking a second left-hand swoop under it.
     {
       role: "kin-a",
-      anchor: [200, 124],
-      bend: 18,
+      anchor: [230, 128],
+      bend: 20,
       labelStyle: { right: 16, bottom: 4, textAlign: "right" },
     },
     {
       role: "kin-b",
-      anchor: [322, 58],
-      bend: -10,
+      anchor: [348, 54],
+      bend: -12,
       labelStyle: { left: 16, bottom: 6 },
     },
     {
       role: "challenger",
-      anchor: [198, 362],
-      bend: 34,
+      anchor: [192, 338],
+      bend: -28,
       labelStyle: { right: 20, textAlign: "right", ...LABEL_MID },
     },
   ],
   5: [
     {
       role: "protagonist",
-      anchor: [658, 152],
+      anchor: [656, 150],
       bend: -40,
       labelStyle: { left: 20, ...LABEL_MID },
     },
     // Same kin composition as the 4-cast stage (same bounded closeness,
-    // same upper-left bubble for kin-b); the challenger sits a touch
-    // deeper than on the 4-cast stage so the full five-station arc still
-    // reads as one diagonal sweep around the protagonist's cleared wing.
+    // same left-of-center bubble for kin-b). The outlier does NOT take a
+    // fifth wedge: it hangs low just south-west of "You" at the shortest
+    // radius on the stage, which leaves the entire lower-right quadrant
+    // empty and the protagonist alone in the east — five destinations,
+    // four of them an uneven western arc, one long lever the arc exists
+    // to balance.
     {
       role: "kin-a",
-      anchor: [200, 124],
-      bend: 18,
+      anchor: [230, 128],
+      bend: 20,
       labelStyle: { right: 16, bottom: 4, textAlign: "right" },
     },
     {
       role: "kin-b",
-      anchor: [322, 58],
-      bend: -10,
+      anchor: [348, 54],
+      bend: -12,
       labelStyle: { left: 16, bottom: 6 },
     },
     {
       role: "challenger",
-      anchor: [194, 362],
-      bend: 34,
+      anchor: [196, 336],
+      bend: -26,
       labelStyle: { right: 20, textAlign: "right", ...LABEL_MID },
     },
     {
       role: "outlier",
-      anchor: [496, 396],
-      bend: -24,
+      anchor: [346, 394],
+      bend: -22,
       labelStyle: { left: 18, bottom: 8 },
     },
   ],

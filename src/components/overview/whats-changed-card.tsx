@@ -8,9 +8,16 @@ import {
 } from "@/components/icons";
 import { OverviewCard } from "@/components/overview/overview-card";
 
+/**
+ * One row of the three-second summary. This card answers "what changed?"
+ * and nothing else — no stories, no explanations. WHY things are moving is
+ * Pattern Emerging's job. A recent fade arrives here as an ordinary
+ * "Faded" row whose delta is the strength the path last held.
+ */
 export type ChangeRow = {
   key: string;
   name: string;
+  /** One-word qualifier: Strengthened / Weakened / Faded / "N added". */
   detail: string;
   /** Signed percentage-point movement; null renders no delta (e.g. counts). */
   delta: number | null;
@@ -51,7 +58,7 @@ export function WhatsChangedCard({ rows }: WhatsChangedCardProps) {
           </h2>
         </div>
         <p className="mt-1 text-[12px] text-[#aab0bb]">
-          Since your last reflection
+          Since you last checked in
         </p>
       </div>
 

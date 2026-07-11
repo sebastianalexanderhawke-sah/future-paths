@@ -24,11 +24,12 @@ export const pathDraftSchema = z.object({
 
 export const crossroadOutputSchema = z.object({
   current_understanding: tentativeTextSchema,
-  // Situations v3: 3-5 directions instead of 5-7 strategies (v3.1 lowered
-  // the ceiling from 6). The floor dropped because a forced minimum
-  // manufactures implementation variants; three genuinely different roads
-  // beat five variations.
-  paths: z.array(pathDraftSchema).min(3).max(5),
+  // Crossroads Phase A: a path is a meaningfully different version of this
+  // person's life one year out; the product contract is 5-6 paths. The parse
+  // floor stays below 5 on purpose — a short set must degrade to a
+  // too_few_paths diversity issue (one regeneration, fail-open acceptance),
+  // never to a hard parse failure that leaves the user pathless.
+  paths: z.array(pathDraftSchema).min(3).max(6),
   // Situation polarity, generated alongside the candidate paths in this same
   // call: which approved themes this situation could strengthen versus
   // weaken, so a single situation can support some futures while working
