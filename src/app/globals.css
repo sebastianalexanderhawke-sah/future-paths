@@ -134,10 +134,10 @@ html {
 :root {
   color-scheme: light;
 
-  /* Canvas & surfaces — match the app shell (#f4f4f6 canvas, white cards) */
-  --canvas: #f4f4f6;
-  --canvas-gradient-top: #f8f8fa;
-  --canvas-gradient-bottom: #eeeef2;
+  /* Canvas & surfaces — match the app shell (#fafaf8 canvas, white cards) */
+  --canvas: #fafaf8;
+  --canvas-gradient-top: #fdfdfc;
+  --canvas-gradient-bottom: #f5f5f2;
   --surface: #ffffff;
   --surface-muted: #f4f4f6;
   --surface-raised: #ffffff;

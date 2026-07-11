@@ -141,7 +141,7 @@ export default async function OverviewPage() {
     }));
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
+    <div className="flex h-screen overflow-hidden bg-[#fafaf8] text-[#111]">
       <AppSidebar
         activeHref="/overview"
         unansweredReflections={reflectionSummary?.unansweredCount ?? 0}

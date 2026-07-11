@@ -114,7 +114,7 @@ export default async function WorkspacePage() {
 
   if ("error" in reflectionsResult) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
+      <div className="flex h-screen items-center justify-center bg-[#fafaf8] px-6">
         <p className="text-[13px] text-red-600">{reflectionsResult.error}</p>
       </div>
     );
@@ -172,7 +172,7 @@ export default async function WorkspacePage() {
   const hasWork = pending !== null || needsCheckIn.length > 0;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
+    <div className="flex h-screen overflow-hidden bg-[#fafaf8] text-[#111]">
       <AppSidebar
         activeHref="/reflections"
         unansweredReflections={unanswered.length}

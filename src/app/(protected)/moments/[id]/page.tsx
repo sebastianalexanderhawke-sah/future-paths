@@ -172,7 +172,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
+    <div className="flex h-screen overflow-hidden bg-[#fafaf8] text-[#111]">
       <AppSidebar
         activeHref="/moments"
         unansweredReflections={reflectionSummary?.unansweredCount ?? 0}

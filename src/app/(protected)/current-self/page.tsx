@@ -100,7 +100,7 @@ export default async function CurrentSelfPage({
 
   if ("error" in result) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
+      <div className="flex h-screen items-center justify-center bg-[#fafaf8] px-6">
         <p className="text-[13px] text-red-600">{result.error}</p>
       </div>
     );
@@ -140,7 +140,7 @@ export default async function CurrentSelfPage({
   ];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
+    <div className="flex h-screen overflow-hidden bg-[#fafaf8] text-[#111]">
       <AppSidebar
         activeHref="/current-self"
         unansweredReflections={reflectionSummary?.unansweredCount ?? 0}
