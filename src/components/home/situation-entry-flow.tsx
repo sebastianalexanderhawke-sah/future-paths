@@ -30,6 +30,7 @@ import {
 } from "@/components/home/context-questions";
 import { ContextQuestionsStage } from "@/components/home/context-questions-stage";
 import { DecisionSimulatorResultView } from "@/components/home/decision-simulator-result";
+import { OverviewCard } from "@/components/overview/overview-card";
 import { formatDecisionPaths } from "@/components/home/decision-simulator-utils";
 import { toPathTitleInput } from "@/components/home/path-titles";
 import type { ForecastResult } from "@/components/home/forecast-utils";
@@ -137,18 +138,47 @@ async function readSSEStream<T>(
 }
 
 // ---------------------------------------------------------------------------
-// Skeleton + preview cards
+// Generation loader + skeleton + preview cards
 // ---------------------------------------------------------------------------
 
-// Shaped like a collapsed possible-future row (theme label → title →
-// one-sentence hook) so the streamed result replaces the placeholder in
-// place instead of reflowing the list.
+// THE loading language for every AI operation in the flow — questions,
+// paths, forecasts. A centered quiet spinner, an editorial title, and one
+// sentence naming what Reflection is doing. Always rendered ABOVE a
+// reserved-layout list (skeletons and streamed previews), never instead of
+// it, so the page keeps its final shape while Reflection thinks.
+function GenerationLoader({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 py-6 text-center" role="status">
+      <span
+        aria-hidden="true"
+        className="mb-1 h-6 w-6 animate-spin rounded-full border-2 border-[var(--ink-tertiary)]/20 border-t-[#8b5cf6] motion-reduce:animate-none"
+      />
+      <p className="text-body font-medium text-ink-primary">{title}</p>
+      <p className="max-w-[42em] text-body-small text-ink-secondary">{description}</p>
+    </div>
+  );
+}
+
+// Shaped like a collapsed destination card (serif title → three theme chips
+// → one-sentence hook, on the elevated forecast-card surface) so the
+// streamed result replaces the placeholder in place instead of reflowing
+// the list.
 function PathSkeleton() {
   return (
-    <div className="animate-pulse py-4">
-      <div className="h-3 w-16 rounded bg-[var(--ink-tertiary)]/10" />
-      <div className="mt-2 h-5 w-2/3 rounded bg-[var(--ink-tertiary)]/15" />
-      <div className="mt-2 h-3 w-5/6 rounded bg-[var(--ink-tertiary)]/10" />
+    <div className="animate-pulse rounded-[var(--radius-card)] bg-[var(--surface)] px-7 py-5 shadow-[var(--shadow-elevated)]">
+      <div className="h-5 w-2/3 rounded bg-[var(--ink-tertiary)]/15" />
+      <div className="mt-2.5 flex gap-1.5">
+        <div className="h-[22px] w-16 rounded-full bg-[var(--ink-tertiary)]/10" />
+        <div className="h-[22px] w-20 rounded-full bg-[var(--ink-tertiary)]/10" />
+        <div className="h-[22px] w-14 rounded-full bg-[var(--ink-tertiary)]/10" />
+      </div>
+      <div className="mt-2.5 h-3 w-5/6 rounded bg-[var(--ink-tertiary)]/10" />
     </div>
   );
 }
@@ -165,21 +195,28 @@ function ForecastSkeleton() {
   );
 }
 
-// A streamed path rendered exactly as its final collapsed row (serif title +
-// first-line hook) — arrival means the row simply stops pulsing, not that
-// the layout changes shape.
+// A streamed path rendered exactly as its final collapsed destination card
+// (elevated surface, serif title + theme chips + first-line hook) — arrival
+// means the card simply stops pulsing, not that the layout changes shape.
+// Themes aren't streamed, so chip-shaped placeholders hold their line until
+// the final result lands.
 function StreamingPathCard({ path }: { path: StreamPathDraft }) {
   return (
-    <div className="py-4">
+    <div className="rounded-[var(--radius-card)] bg-[var(--surface)] px-7 py-5 shadow-[var(--shadow-elevated)]">
       <h4 className="font-voice text-[19px] font-medium leading-[1.3] tracking-[-0.01em] text-ink-primary">
         {path.title}
       </h4>
+      <div className="mt-2.5 flex animate-pulse gap-1.5">
+        <div className="h-[22px] w-16 rounded-full bg-[var(--ink-tertiary)]/10" />
+        <div className="h-[22px] w-20 rounded-full bg-[var(--ink-tertiary)]/10" />
+        <div className="h-[22px] w-14 rounded-full bg-[var(--ink-tertiary)]/10" />
+      </div>
       {path.description ? (
-        <p className="mt-1 line-clamp-2 max-w-[46em] text-body-small text-ink-secondary">
+        <p className="mt-2.5 line-clamp-2 max-w-[52em] text-body-small text-ink-secondary">
           {path.description}
         </p>
       ) : (
-        <div className="mt-2 h-3 w-5/6 animate-pulse rounded bg-[var(--ink-tertiary)]/10" />
+        <div className="mt-2.5 h-3 w-5/6 animate-pulse rounded bg-[var(--ink-tertiary)]/10" />
       )}
     </div>
   );
@@ -707,153 +744,170 @@ export function SituationEntryFlow() {
     <div className="flex flex-col gap-10">
 
       {/* ── Stage 1: Describe your situation ── */}
+      {/* The writing stages live on ONE form card at reading width — a dense
+          editorial column (title → situation → goal → continue) whose beats
+          sit close enough to read as a single act. The paths and forecast
+          stages then open onto the shell's full width. */}
       {stage === "describe" ? (
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-                What should we call this situation?
-              </h1>
-              <p className="mt-2 text-sm text-zinc-500">
-                A short title that helps you recognize this situation later.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <SituationRotatingExamples />
-              <input
-                id="situation-input"
-                type="text"
-                value={situationText}
-                onChange={(event) => {
-                  const nextValue = event.target.value;
-                  setSituationText(nextValue);
-                  if (nextValue.trim().length === 0) {
-                    setGoal(null);
-                    setAdditionalContext("");
-                  }
-                }}
-                autoFocus
-                maxLength={120}
-                placeholder="Give this situation a short title…"
-                className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white transition-colors"
-              />
-            </div>
-          </div>
-
-          {hasSituation ? (
-            <div className="flex flex-col gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-zinc-900">
-                  Tell Future Paths what&apos;s happening
-                </h2>
-                <p className="mt-2 text-sm text-zinc-500">
-                  Describe your situation in as much detail as you&apos;d like. The more context you
-                  provide, the more personalized your paths and forecasts become.
-                </p>
-              </div>
-              <textarea
-                id="additional-context-input"
-                value={additionalContext}
-                onChange={(event) => setAdditionalContext(event.target.value)}
-                placeholder="What's going on? Who's involved? What have you tried? What are the constraints?"
-                rows={6}
-                className="w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white transition-colors"
-              />
-            </div>
-          ) : null}
-
-          {hasSituation && hasContext ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-sm font-medium text-zinc-700">
-                What kind of help are you looking for?
-              </p>
-              <div className="flex flex-col gap-2">
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 transition-colors hover:border-zinc-300 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50">
+        <div className="mx-auto w-full max-w-[720px]">
+          <OverviewCard className="px-8 py-7">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-3">
+                <div>
+                  <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+                    What should we call this situation?
+                  </h1>
+                  <p className="mt-1.5 text-sm text-zinc-500">
+                    A short title that helps you recognize this situation later.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <SituationRotatingExamples />
                   <input
-                    type="radio"
-                    name="entry-goal"
-                    value="decision"
-                    checked={goal === "decision"}
-                    onChange={() => setGoal("decision")}
-                    className="mt-0.5"
+                    id="situation-input"
+                    type="text"
+                    value={situationText}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      setSituationText(nextValue);
+                      if (nextValue.trim().length === 0) {
+                        setGoal(null);
+                        setAdditionalContext("");
+                      }
+                    }}
+                    autoFocus
+                    maxLength={120}
+                    placeholder="Give this situation a short title…"
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white transition-colors"
                   />
-                  <div>
-                    <span className="block text-sm font-medium text-zinc-900">
-                      Explore a decision
-                    </span>
-                    <span className="mt-0.5 block text-sm text-zinc-500">
-                      Help me think through what to do
-                    </span>
-                  </div>
-                </label>
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 transition-colors hover:border-zinc-300 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50">
-                  <input
-                    type="radio"
-                    name="entry-goal"
-                    value="forecast"
-                    checked={goal === "forecast"}
-                    onChange={() => setGoal("forecast")}
-                    className="mt-0.5"
-                  />
-                  <div>
-                    <span className="block text-sm font-medium text-zinc-900">
-                      Forecast the future
-                    </span>
-                    <span className="mt-0.5 block text-sm text-zinc-500">
-                      Help me see what might happen next
-                    </span>
-                  </div>
-                </label>
+                </div>
               </div>
-            </div>
-          ) : null}
 
-          {hasSituation && hasContext && hasGoal ? (
-            <button
-              type="button"
-              onClick={handleContinueFromDescribe}
-              className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-            >
-              Continue
-            </button>
-          ) : null}
+              {hasSituation ? (
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-zinc-900">
+                      Tell Future Paths what&apos;s happening
+                    </h2>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      The more context you provide, the more personalized your
+                      paths and forecasts become.
+                    </p>
+                  </div>
+                  {/* Starts at four lines and grows with the writing
+                      (field-sizing where supported, manual resize as the
+                      fallback) — the goal step below stays in view instead
+                      of being pushed off by an empty box. */}
+                  <textarea
+                    id="additional-context-input"
+                    value={additionalContext}
+                    onChange={(event) => setAdditionalContext(event.target.value)}
+                    placeholder="What's going on? Who's involved? What have you tried? What are the constraints?"
+                    rows={4}
+                    className="max-h-[50vh] w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 transition-colors [field-sizing:content] placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white"
+                  />
+                </div>
+              ) : null}
+
+              {hasSituation && hasContext ? (
+                <div className="flex flex-col gap-2.5">
+                  <p className="text-sm font-medium text-zinc-700">
+                    What kind of help are you looking for?
+                  </p>
+                  {/* Side by side, directly under the writing: the last
+                      choice before Continue, not a separate section. */}
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 transition-colors hover:border-zinc-300 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50">
+                      <input
+                        type="radio"
+                        name="entry-goal"
+                        value="decision"
+                        checked={goal === "decision"}
+                        onChange={() => setGoal("decision")}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <span className="block text-sm font-medium text-zinc-900">
+                          Explore a decision
+                        </span>
+                        <span className="mt-0.5 block text-sm text-zinc-500">
+                          Help me think through what to do
+                        </span>
+                      </div>
+                    </label>
+                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-4 py-3 transition-colors hover:border-zinc-300 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50">
+                      <input
+                        type="radio"
+                        name="entry-goal"
+                        value="forecast"
+                        checked={goal === "forecast"}
+                        onChange={() => setGoal("forecast")}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <span className="block text-sm font-medium text-zinc-900">
+                          Forecast the future
+                        </span>
+                        <span className="mt-0.5 block text-sm text-zinc-500">
+                          Help me see what might happen next
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              ) : null}
+
+              {hasSituation && hasContext && hasGoal ? (
+                <button
+                  type="button"
+                  onClick={handleContinueFromDescribe}
+                  className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
+                >
+                  Continue
+                </button>
+              ) : null}
+            </div>
+          </OverviewCard>
         </div>
       ) : null}
 
       {/* ── Stage 2: Understand your situation ── */}
       {stage === "questions" ? (
-        <div className="flex flex-col gap-8">
+        <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5">
           <div>
             <h2 className="text-xl font-semibold text-zinc-900">
               Help us understand your situation
             </h2>
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-1.5 text-sm text-zinc-500">
               Answer a few questions so we can tailor the analysis to your specific situation.
             </p>
           </div>
 
-          {isLoadingQuestions && questions.length === 0 ? (
-            <div>
-              <p className="animate-pulse text-label text-ink-tertiary">
-                Preparing questions…
-              </p>
-              {/* Same surface the questions arrive on, so the panel fills in
-                  rather than appearing from nothing. */}
-              <div className="mt-3 animate-pulse rounded-xl border border-zinc-100 bg-zinc-50/50 p-6">
-                <div className="h-3 w-24 rounded bg-[var(--ink-tertiary)]/10" />
-                <div className="mt-3 h-4 w-3/4 rounded bg-[var(--ink-tertiary)]/15" />
-                <div className="mt-4 h-24 w-full rounded-lg bg-[var(--ink-tertiary)]/10" />
-                <div className="mt-4 h-9 w-28 rounded-lg bg-[var(--ink-tertiary)]/10" />
+          {/* The questions live on the SAME card surface as Stage 1's form —
+              one continuous writing experience, no panel inside a card. */}
+          <OverviewCard className="px-8 py-7">
+            {isLoadingQuestions && questions.length === 0 ? (
+              <div>
+                <GenerationLoader
+                  title="Preparing your questions…"
+                  description="Reflection is reading your situation and deciding what it needs to understand."
+                />
+                {/* The shape the first question will take, so the card fills
+                    in rather than appearing from nothing. */}
+                <div className="mt-2 animate-pulse">
+                  <div className="h-3 w-24 rounded bg-[var(--ink-tertiary)]/10" />
+                  <div className="mt-3 h-4 w-3/4 rounded bg-[var(--ink-tertiary)]/15" />
+                  <div className="mt-4 h-24 w-full rounded-lg bg-[var(--ink-tertiary)]/10" />
+                  <div className="mt-4 h-9 w-28 rounded-lg bg-[var(--ink-tertiary)]/10" />
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {questionsError ? (
-            <p className="text-sm text-red-500">{questionsError}</p>
-          ) : null}
+            {questionsError ? (
+              <p className="text-sm text-red-500">{questionsError}</p>
+            ) : null}
 
-          {questions.length > 0 ? (
-            <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-6">
+            {questions.length > 0 ? (
               <ContextQuestionsStage
                 questions={questions}
                 answers={answers}
@@ -861,8 +915,8 @@ export function SituationEntryFlow() {
                 onComplete={() => setQuestionsComplete(true)}
                 onContinueFromLast={handleContinueFromLast}
               />
-            </div>
-          ) : null}
+            ) : null}
+          </OverviewCard>
 
           {questionsComplete ? (
             <button
@@ -893,13 +947,14 @@ export function SituationEntryFlow() {
 
           {isStreamingPaths && !simulatorResult ? (
             <div>
-              {/* Same scaffold as the final result: a "Possible futures"
-                  label over a hairline-divided list, so the finished view
-                  lands on the structure the user is already reading. */}
-              <p className="animate-pulse text-label text-ink-tertiary">
-                Exploring possible futures…
-              </p>
-              <div className="mt-2 flex flex-col divide-y divide-[var(--ink-tertiary)]/10">
+              {/* Same scaffold as the final result: a stack of destination
+                  cards, so the finished view lands on the structure the
+                  user is already reading. */}
+              <GenerationLoader
+                title="Generating possible paths…"
+                description="Reflection is exploring different futures based on everything you've shared."
+              />
+              <div className="mt-2 flex flex-col gap-3">
                 {streamingPaths.map((path, i) => (
                   <StreamingPathCard key={i} path={path} />
                 ))}
@@ -960,9 +1015,10 @@ export function SituationEntryFlow() {
             <>
               {isStreamingPathForecast && !pathForecastResult ? (
                 <div className="flex flex-col gap-3">
-                  <p className="animate-pulse text-label text-ink-tertiary">
-                    Forecasting your futures…
-                  </p>
+                  <GenerationLoader
+                    title="Generating your forecast…"
+                    description="Reflection is projecting how this path may unfold over the coming year."
+                  />
                   {streamingPathFutures.map((future, i) => (
                     <StreamingFutureCard key={i} future={future} />
                   ))}
@@ -986,9 +1042,10 @@ export function SituationEntryFlow() {
             <>
               {isStreamingForecast && !forecastResult ? (
                 <div className="flex flex-col gap-3">
-                  <p className="animate-pulse text-label text-ink-tertiary">
-                    Forecasting your futures…
-                  </p>
+                  <GenerationLoader
+                    title="Generating your forecast…"
+                    description="Reflection is projecting how your situation may unfold over the coming year."
+                  />
                   {streamingFutures.map((future, i) => (
                     <StreamingFutureCard key={i} future={future} />
                   ))}

@@ -20,16 +20,17 @@ const primaryButtonClass =
 const expanderButtonClass =
   "cursor-pointer self-start text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857]";
 
-// A memory card: each finished reflection distinct inside the section's white
-// bubble — bordered, no shadow, so it nests instead of competing with the
-// section card. The header mirrors the queue rows (chip · bold title · gray
-// meta) so Completed speaks the same language as Next Up and Coming Up.
-// Hierarchy inside is fixed — the user's answer is the artifact and gets the
-// darkest ink; the prediction is a quiet footnote of what Reflection expected
-// before they answered.
+// A memory card: each finished reflection is its own elevated white card —
+// the same OverviewCard surface every other finished artifact in the app
+// stands on (Overview cards, faded paths) — so a completed reflection reads
+// as a completed chapter, not archived text inside a container. The header
+// mirrors the queue rows (chip · bold title · gray meta) so Completed speaks
+// the same language as Next Up and Coming Up. Hierarchy inside is fixed —
+// the user's answer is the artifact and gets the darkest ink; the prediction
+// is a quiet footnote of what Reflection expected before they answered.
 function ReflectionMemoryCard({ checkIn }: { checkIn: ReflectionCheckIn }) {
   return (
-    <article className="rounded-xl border border-[#f0f0f2] bg-white px-6 py-5">
+    <OverviewCard className="px-7 py-6">
       <div className="flex items-center gap-3.5">
         <span
           aria-hidden="true"
@@ -57,7 +58,7 @@ function ReflectionMemoryCard({ checkIn }: { checkIn: ReflectionCheckIn }) {
       <p className="mt-3 border-l-2 border-[#ececec] pl-3 text-[12px] leading-relaxed text-[#999999]">
         Expected · {checkIn.identity_impact}
       </p>
-    </article>
+    </OverviewCard>
   );
 }
 
@@ -68,25 +69,30 @@ export function CompletedReflectionsList({ checkIns }: CompletedReflectionsListP
   const recent = checkIns.slice(0, RECENT_COUNT);
   const older = checkIns.slice(RECENT_COUNT);
 
-  // One white bubble, like every other Workspace section. The header row
-  // stays put in both states; expanding grows the same card downward.
+  // The section header stays one quiet white bubble; opening it releases the
+  // reflections as their own SIBLING cards below — the same disclosure idiom
+  // as Faded Paths on Future Selves (summary card → independent cards in the
+  // column), so finished chapters stand on their own surfaces instead of
+  // nesting inside a container.
   return (
-    <OverviewCard className="px-8 py-6">
-      <div className="flex flex-col items-start gap-4">
-        <p className="text-[13px] text-[#999999]">
-          Every question you&apos;ve answered, newest first
-        </p>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className={primaryButtonClass}
-        >
-          {open ? "Hide completed reflections" : "View completed reflections"}
-        </button>
-      </div>
+    <div className="flex flex-col gap-5">
+      <OverviewCard className="px-8 py-6">
+        <div className="flex flex-col items-start gap-4">
+          <p className="text-[13px] text-[#999999]">
+            Every question you&apos;ve answered, newest first
+          </p>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className={primaryButtonClass}
+          >
+            {open ? "Hide completed reflections" : "View completed reflections"}
+          </button>
+        </div>
+      </OverviewCard>
 
       {open ? (
-        <div className="mt-5 flex flex-col gap-4">
+        <>
           {recent.map((checkIn) => (
             <ReflectionMemoryCard key={checkIn.id} checkIn={checkIn} />
           ))}
@@ -106,8 +112,8 @@ export function CompletedReflectionsList({ checkIns }: CompletedReflectionsListP
                 : null}
             </>
           ) : null}
-        </div>
+        </>
       ) : null}
-    </OverviewCard>
+    </div>
   );
 }

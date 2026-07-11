@@ -32,11 +32,13 @@ type PatternEmergingCardProps = {
 const EVIDENCE_DOTS = 5;
 
 /**
- * The evidence meter: a quiet, reusable mark — five small circles, filled
+ * The evidence meter: a quiet, reusable mark — five circles, filled
  * left-to-right by how much of the pattern's strongest evidence a source
- * contributed. Static by design (no animation, no decoration): the circles
- * exist only to communicate evidence strength, and must never compete with
- * the insight panel.
+ * contributed. Static by design (no animation, no decoration), but tactile:
+ * a filled dot carries a soft top-lit gradient and rests on a faint tinted
+ * shadow, an empty dot reads as a shallow recess — evidence you can feel is
+ * present or missing at a glance, without ever competing with the insight
+ * panel.
  */
 function EvidenceMeter({ label, filled }: { label: string; filled: number }) {
   const count = Math.max(0, Math.min(EVIDENCE_DOTS, Math.round(filled)));
@@ -47,15 +49,23 @@ function EvidenceMeter({ label, filled }: { label: string; filled: number }) {
       aria-label={`${label}: ${count} of ${EVIDENCE_DOTS} strongest observations`}
     >
       <span className="text-[13px] text-[#6b7280]">{label}</span>
-      <span className="flex shrink-0 gap-[7px]">
+      <span className="flex shrink-0 gap-2">
         {Array.from({ length: EVIDENCE_DOTS }, (_, i) => (
           <span
             key={i}
-            className="h-2 w-2 rounded-full"
+            className="h-[11px] w-[11px] rounded-full"
             style={
               i < count
-                ? { background: "#7c3aed" }
-                : { border: "1.5px solid #dddde6" }
+                ? {
+                    background: "linear-gradient(180deg, #8f65f0 0%, #7c3aed 100%)",
+                    boxShadow:
+                      "inset 0 1px 0 rgba(255,255,255,0.28), 0 1px 3px rgba(124,58,237,0.35)",
+                  }
+                : {
+                    background: "#f0f0f4",
+                    boxShadow:
+                      "inset 0 1px 2px rgba(17,17,17,0.07), inset 0 0 0 1px #e7e7ee",
+                  }
             }
           />
         ))}
@@ -114,37 +124,21 @@ export function PatternEmergingCard({
           </Link>
         </div>
 
-        {/* Right — the evidence, plainly: where the pattern appeared, what
-            it moved, and (last, quietly) how often. The insight on the left
-            stays the protagonist; this column just shows its receipts. */}
+        {/* Right — one argument in two beats: how much evidence backs the
+            insight (by source), then which futures it is influencing. The
+            insight on the left stays the protagonist; this column is its
+            supporting case. */}
         <div>
-          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9ca3af]">
-            Appeared in
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9ca3af]">
+            Evidence
           </p>
-          {supportTitles.length === 0 ? (
-            <p className="py-1 text-[13px] text-[#9ca3af]">
-              No supporting situations recorded yet.
-            </p>
-          ) : (
-            <ul>
-              {supportTitles.map((title) => (
-                <li
-                  key={title}
-                  className="flex items-baseline gap-2.5 py-1 text-[13px] text-[#6b7280]"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full bg-[#c4b5fd]"
-                  />
-                  <span className="truncate">{title}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <EvidenceMeter label="Situations" filled={evidenceSources.situations} />
+          <EvidenceMeter label="Check-ins" filled={evidenceSources.checkIns} />
+          <EvidenceMeter label="Reflections" filled={evidenceSources.reflections} />
 
           <div className="mt-6">
             <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9ca3af]">
-              Impact on your Future Paths
+              Influencing
             </p>
             {impacts.length === 0 ? (
               <p className="py-1 text-[13px] text-[#9ca3af]">
@@ -170,14 +164,6 @@ export function PatternEmergingCard({
               ))
             )}
           </div>
-
-          {/* Frequency survives only as a footnote — secondary by design. */}
-          {supportingCount > 0 ? (
-            <p className="mt-6 text-[12px] text-[#b8bac6]">
-              Seen in {supportingCount} of your last {FREQUENCY_DOTS}{" "}
-              situations.
-            </p>
-          ) : null}
         </div>
       </div>
 

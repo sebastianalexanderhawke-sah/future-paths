@@ -10,14 +10,13 @@ import {
   toFirstSentence,
   type ScannablePath,
 } from "@/components/home/output-refinement";
-import { assignPathThemeLabels } from "@/components/home/path-theme-labels";
 import { Button } from "@/components/ui/button";
+import { CardShell } from "@/components/ui/card-shell";
+import { ThemeChip } from "@/components/ui/theme-chip";
 import { toProcessedPathAudit, type DecisionSimulatorAudit } from "@/lib/ai-audit";
-import { getThemeCssVar } from "@/lib/design/theme-colors";
 import { computePathTextTransformationMetrics } from "@/lib/path-text-transformation-trace";
 import { computeFutureShiftPreservationMetrics } from "@/lib/future-shift-preservation";
 import type { Path } from "@/types/database";
-import type { ThemeName } from "@/types/enums";
 
 type DecisionSimulatorResultProps = {
   situationTitle: string;
@@ -41,7 +40,6 @@ type DecisionSimulatorResultProps = {
 type PathRowProps = {
   path: ScannablePath;
   rawPath: Path;
-  themeLabel: ThemeName | null;
   isSelected: boolean;
   isExpanded: boolean;
   onToggleExpand: (pathId: string) => void;
@@ -65,13 +63,16 @@ function BulletList({ items }: { items: string[] }) {
   );
 }
 
-// One possible future as a quiet list row — typography carries the
-// hierarchy (theme label → serif title → one-sentence hook), hairline
-// dividers separate futures, and no box competes with the content.
+// One possible future as a DESTINATION CARD — the same elevated surface,
+// radius, and hover lift as the Future Forecast cards, so paths and
+// forecasts read as chapters of one story. Collapsed, the card is wide and
+// shallow (serif title → theme chips → one-sentence hook) for side-scanning
+// five futures; expanded, it spreads across the width instead of growing
+// tall. The chips are the path's own persisted themes (up to three,
+// generation untouched): the emotional character of that future.
 function PathRow({
   path,
   rawPath,
-  themeLabel,
   isSelected,
   isExpanded,
   onToggleExpand,
@@ -85,40 +86,47 @@ function PathRow({
   const summary = toFirstSentence(path.explanation);
   const explanationAddsMore = path.explanation.trim() !== summary;
   const panelId = `path-panel-${rawPath.id}`;
+  const themes = (rawPath.themes ?? []).slice(0, 3);
 
   return (
-    <div>
+    <CardShell
+      variant="elevated"
+      className={isSelected ? "ring-1 ring-[var(--state-strengthened)]/30" : ""}
+    >
       <button
         type="button"
         aria-expanded={isExpanded}
         aria-controls={panelId}
         onClick={() => onToggleExpand(rawPath.id)}
-        className="group -mx-3 flex w-[calc(100%+1.5rem)] cursor-pointer items-center gap-4 rounded-[10px] px-3 py-4 text-left transition-colors duration-150 hover:bg-[var(--surface-muted)]"
+        className="flex w-full cursor-pointer items-center gap-4 rounded-[var(--radius-card)] px-7 py-5 text-left"
       >
         <div className="min-w-0 flex-1">
-          <p className="flex items-baseline gap-2.5 text-label text-ink-tertiary">
-            {themeLabel ? (
-              <span style={{ color: getThemeCssVar(themeLabel, "primary") }}>
-                {themeLabel}
-              </span>
-            ) : null}
-            {isSelected ? (
-              <span className="text-[var(--state-strengthened)]">Selected</span>
-            ) : null}
-          </p>
-          <h4
-            className={`font-voice text-[19px] font-medium leading-[1.3] tracking-[-0.01em] text-ink-primary ${
-              themeLabel || isSelected ? "mt-1" : ""
-            }`}
-          >
+          {isSelected ? (
+            <p className="mb-1 text-label text-[var(--state-strengthened)]">
+              ✓ Selected
+            </p>
+          ) : null}
+          <h4 className="font-voice text-[19px] font-medium leading-[1.3] tracking-[-0.01em] text-ink-primary">
             {path.title}
           </h4>
-          <p className="mt-1 max-w-[46em] text-body-small text-ink-secondary">{summary}</p>
+          {themes.length > 0 ? (
+            <span className="mt-2 flex flex-wrap gap-1.5">
+              {themes.map((theme) => (
+                <ThemeChip
+                  key={theme}
+                  theme={theme}
+                  showDot={false}
+                  className="shadow-[0_1px_2px_rgba(17,17,17,0.06)]"
+                />
+              ))}
+            </span>
+          ) : null}
+          <p className="mt-2 max-w-[60em] text-body-small text-ink-secondary">{summary}</p>
         </div>
         <svg
           aria-hidden="true"
           viewBox="0 0 16 16"
-          className={`h-4 w-4 shrink-0 text-ink-tertiary transition-transform duration-300 group-hover:text-ink-secondary ${
+          className={`h-4 w-4 shrink-0 text-ink-tertiary transition-transform duration-300 ${
             isExpanded ? "rotate-180" : ""
           }`}
           fill="none"
@@ -138,29 +146,31 @@ function PathRow({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-5 pb-6 pt-1">
+          <div className="flex flex-col gap-6 px-7 pb-7 pt-1">
             {explanationAddsMore ? (
-              <div>
-                <p className="text-label text-ink-tertiary">Explanation</p>
-                <p className="mt-1 max-w-[46em] text-body-small text-ink-secondary">
-                  {path.explanation}
-                </p>
-              </div>
+              <p className="max-w-[60em] text-body-small text-ink-secondary">
+                {path.explanation}
+              </p>
             ) : null}
 
-            <div>
-              <p className="text-label text-[var(--state-strengthened)]">Benefits</p>
-              <BulletList items={path.benefits} />
+            {/* Benefits and trade-offs read side by side — the trade-off IS
+                the comparison, and pairing the columns keeps the expanded
+                future wide and balanced instead of tall. */}
+            <div className="grid gap-6 sm:grid-cols-2 sm:gap-12">
+              <div>
+                <p className="text-label text-[var(--state-strengthened)]">Benefits</p>
+                <BulletList items={path.benefits} />
+              </div>
+
+              <div>
+                <p className="text-label text-[var(--state-contradiction-detected)]">Trade-offs</p>
+                <BulletList items={path.consequences} />
+              </div>
             </div>
 
-            <div>
-              <p className="text-label text-[var(--state-contradiction-detected)]">Consequences</p>
-              <BulletList items={path.consequences} />
-            </div>
-
-            <div className="rounded-[var(--radius-whisper)] bg-[var(--surface-muted)] px-4 py-3">
+            <div className="rounded-[var(--radius-whisper)] bg-[var(--surface-muted)] px-5 py-4">
               <p className="text-label text-ink-tertiary">Future you</p>
-              <p className="mt-1 text-body-small text-ink-primary">{path.futureYou}</p>
+              <p className="mt-1 max-w-[60em] text-body-small text-ink-primary">{path.futureYou}</p>
             </div>
 
             {path.expansion ? (
@@ -175,17 +185,21 @@ function PathRow({
               </details>
             ) : null}
 
-            <div>
+            {/* Choosing is progressing: once a path is selected its card
+                confirms quietly (✓ Selected) and the black primary button
+                becomes Continue — the decision immediately points forward. */}
+            <div className="flex items-center gap-4">
               {isSelected ? (
-                onContinue ? (
-                  <Button type="button" onClick={onContinue}>
-                    Continue →
-                  </Button>
-                ) : (
-                  <p className="text-body-small font-medium text-[var(--state-strengthened)]">
-                    Selected path
-                  </p>
-                )
+                <>
+                  <span className="text-body-small font-medium text-[var(--state-strengthened)]">
+                    ✓ Selected
+                  </span>
+                  {onContinue ? (
+                    <Button type="button" onClick={onContinue}>
+                      Continue →
+                    </Button>
+                  ) : null}
+                </>
               ) : (
                 <Button
                   type="button"
@@ -200,7 +214,7 @@ function PathRow({
           </div>
         </div>
       </div>
-    </div>
+    </CardShell>
   );
 }
 
@@ -225,7 +239,6 @@ export function DecisionSimulatorResultView({
   const [expandedPathId, setExpandedPathId] = useState<string | null>(null);
   const { paths: scannablePaths, traces: pathTitleTraces, textTransformationAudit, futureShiftAudit } =
     formatDecisionPathsWithTrace(paths, situationTitle);
-  const themeLabels = assignPathThemeLabels(paths.map((path) => path.themes ?? []));
   const selectedPath = paths.find((path) => path.id === selectedPathId);
   const selectedScannablePath = scannablePaths.find(
     (_, index) => paths[index]?.id === selectedPathId,
@@ -244,15 +257,14 @@ export function DecisionSimulatorResultView({
         </p>
       </header>
 
-      <div className="mt-9">
+      <div className="mt-8">
         <p className="text-label text-ink-tertiary">Possible futures</p>
-        <div className="mt-2 flex flex-col divide-y divide-[var(--ink-tertiary)]/10">
+        <div className="mt-3 flex flex-col gap-3">
           {scannablePaths.map((path, index) => (
             <PathRow
               key={paths[index]?.id ?? `${path.title}-${index}`}
               path={path}
               rawPath={paths[index]!}
-              themeLabel={themeLabels[index] ?? null}
               isSelected={paths[index]?.id === selectedPathId}
               isExpanded={paths[index]?.id === expandedPathId}
               onToggleExpand={(pathId) =>

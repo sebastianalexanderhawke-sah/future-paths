@@ -15,6 +15,10 @@ import {
   type ChangeRow,
 } from "@/components/overview/whats-changed-card";
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
+import {
+  EMPTY_EVIDENCE_SOURCE_COUNTS,
+  getEvidenceSourceCounts,
+} from "@/lib/evidence-sources";
 import { getFutureSelfTrend } from "@/lib/future-self-trend";
 import { listActiveFutureSelves, listFutureSelves } from "@/lib/future-selves";
 import { listIdentityUpdates } from "@/lib/identity-updates";
@@ -194,6 +198,16 @@ export default async function OverviewPage() {
       delta: Math.round(trend.delta),
     }));
 
+  // The evidence meter's data: which sources the top pattern's persisted
+  // strongest observations were extracted from. A ≤5-row indexed lookup of
+  // the attribution the row already carries — nothing recomputed.
+  const supportingObservationIds = (topFutureSelf?.supporting_observations ?? [])
+    .map((row) => row.observationId)
+    .filter((id): id is string => typeof id === "string");
+  const evidenceSources = topFutureSelf
+    ? await getEvidenceSourceCounts(supportingObservationIds)
+    : EMPTY_EVIDENCE_SOURCE_COUNTS;
+
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
       <AppSidebar
@@ -240,6 +254,7 @@ export default async function OverviewPage() {
               <PatternEmergingCard
                 futureSelf={topFutureSelf}
                 impacts={patternImpacts}
+                evidenceSources={evidenceSources}
               />
             ) : null}
           </div>
