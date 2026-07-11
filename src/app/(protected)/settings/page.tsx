@@ -8,8 +8,10 @@ import {
   EmailChangeForm,
   PasswordChangeForm,
 } from "@/components/settings/account-controls";
+import { AppearanceControl } from "@/components/settings/appearance-control";
 import { AppSidebar } from "@/components/overview/app-sidebar";
 import { OverviewCard } from "@/components/overview/overview-card";
+import { Button } from "@/components/ui/button";
 import { getUnansweredReflectionSummary } from "@/lib/reflections";
 import { createClient } from "@/lib/supabase/server";
 import { getUserIdentity } from "@/lib/user-identity";
@@ -55,7 +57,7 @@ export default async function SettingsPage() {
               Settings
             </h1>
             <p className="text-[15px] text-[#999999]">
-              Your account and how your data is used.
+              Your account, your experience, and how Reflection works.
             </p>
           </div>
 
@@ -128,46 +130,76 @@ export default async function SettingsPage() {
               </div>
             </OverviewCard>
 
-            {/* Privacy & Data */}
+            {/* Appearance — the one experience setting that exists */}
+            <OverviewCard className="px-9 py-7">
+              <div className="mb-5">
+                <h2 className="text-[17px] font-bold text-[#111]">Appearance</h2>
+                <p className="mt-[3px] text-[13px] text-[#888888]">
+                  How Reflection looks on this device
+                </p>
+              </div>
+
+              <div className="max-w-[36rem]">
+                <AppearanceControl />
+                <p className="mt-3 text-[13px] leading-[1.6] text-[#999999]">
+                  System follows your operating system&apos;s preference. Your
+                  choice is remembered between sessions.
+                </p>
+              </div>
+            </OverviewCard>
+
+            {/* Interactive Walkthrough — the primary way to learn the product */}
             <OverviewCard className="px-9 py-7">
               <div className="mb-4">
                 <h2 className="text-[17px] font-bold text-[#111]">
-                  Privacy &amp; Data
+                  Interactive Walkthrough
                 </h2>
                 <p className="mt-[3px] text-[13px] text-[#888888]">
-                  What is stored and how it&apos;s used
+                  Learn by doing, not by reading
                 </p>
               </div>
 
               <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
-                Your Current Self and Future Selves are generated only from the
-                situations, check-ins, and reflections you record.
+                Learn how Reflection works from beginning to end by following
+                one example situation — from writing it down to watching it
+                become part of a Timeline. It uses demonstration content only
+                and never touches your own situations.
               </p>
-              <p className="mt-2 max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
-                We never invent experiences that are not part of your history,
-                and your entries are never shared. The full picture — what is
-                stored, what the AI processes, and how to have everything
-                deleted — is in the{" "}
+              <div className="mt-5 flex items-center gap-5">
+                <Button href="/settings/walkthrough">Start Walkthrough →</Button>
+                <p className="text-[13px] text-[#999999]">
+                  Estimated time: 2–3 minutes
+                </p>
+              </div>
+            </OverviewCard>
+
+            {/* Privacy — short and plain; the full documents carry the detail */}
+            <OverviewCard className="px-9 py-7">
+              <div className="mb-4">
+                <h2 className="text-[17px] font-bold text-[#111]">Privacy</h2>
+                <p className="mt-[3px] text-[13px] text-[#888888]">
+                  Your writing is private
+                </p>
+              </div>
+
+              <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
+                Reflection only uses the situations, check-ins, and reflections
+                you choose to record.
+              </p>
+              <div className="mt-4 flex items-center gap-6">
                 <Link
                   href="/privacy"
-                  className="text-[#111] underline underline-offset-4"
+                  className="text-[13px] font-medium text-[#333333] transition-colors duration-150 hover:text-[#111]"
                 >
-                  Privacy Policy
-                </Link>{" "}
-                and{" "}
+                  Privacy Policy →
+                </Link>
                 <Link
                   href="/terms"
-                  className="text-[#111] underline underline-offset-4"
+                  className="text-[13px] font-medium text-[#333333] transition-colors duration-150 hover:text-[#111]"
                 >
-                  Terms of Use
+                  Terms of Use →
                 </Link>
-                .
-              </p>
-              <p className="mt-2 max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
-                Want your account and everything in it deleted during the beta?
-                Reply to your beta invite email and we&apos;ll take care of it,
-                usually within a few days.
-              </p>
+              </div>
             </OverviewCard>
 
             {/* During the beta — honest expectation-setting, no dead controls. */}
@@ -185,8 +217,9 @@ export default async function SettingsPage() {
                 A few account tools aren&apos;t in the app yet: exporting your
                 data, deleting your account yourself, and notification
                 preferences. They&apos;re planned — until they ship, nothing
-                here will pretend to do them, and deletion is always available
-                by request above.
+                here will pretend to do them. Want your account and everything
+                in it deleted? Reply to your beta invite email and we&apos;ll
+                take care of it, usually within a few days.
               </p>
             </OverviewCard>
 
@@ -206,28 +239,6 @@ export default async function SettingsPage() {
                 <span className="text-[13px] text-[#999999]">
                   {packageJson.version}
                 </span>
-              </div>
-              <div className="flex items-center justify-between border-t border-[#f0f0f0] py-2.5">
-                <span className="text-[14px] font-medium text-[#111]">
-                  Privacy Policy
-                </span>
-                <Link
-                  href="/privacy"
-                  className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
-                >
-                  Read →
-                </Link>
-              </div>
-              <div className="flex items-center justify-between border-t border-[#f0f0f0] py-2.5">
-                <span className="text-[14px] font-medium text-[#111]">
-                  Terms of Use
-                </span>
-                <Link
-                  href="/terms"
-                  className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#6366f1]"
-                >
-                  Read →
-                </Link>
               </div>
             </OverviewCard>
           </div>

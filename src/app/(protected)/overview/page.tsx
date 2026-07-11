@@ -6,19 +6,13 @@ import {
   NeedsAttentionCard,
   type AttentionRow,
 } from "@/components/overview/needs-attention-card";
-import {
-  PatternEmergingCard,
-  type PatternImpactRow,
-} from "@/components/overview/pattern-emerging-card";
+import { PatternEmergingCard } from "@/components/overview/pattern-emerging-card";
 import {
   WhatsChangedCard,
   type ChangeRow,
 } from "@/components/overview/whats-changed-card";
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
-import {
-  EMPTY_EVIDENCE_SOURCE_COUNTS,
-  getEvidenceSourceCounts,
-} from "@/lib/evidence-sources";
+import { getRecentFocusAreas } from "@/lib/focus-areas";
 import { getFutureSelfTrend } from "@/lib/future-self-trend";
 import { listActiveFutureSelves, listFutureSelves } from "@/lib/future-selves";
 import { listIdentityUpdates } from "@/lib/identity-updates";
@@ -188,25 +182,12 @@ export default async function OverviewPage() {
   const visibleAttentionItems = attentionItems.slice(0, 3);
   const hiddenAttentionCount = Math.max(0, attentionItems.length - 3);
 
-  // ── Pattern Emerging: strongest active future + the numeric impact ───
+  // ── Pattern Emerging: strongest active future, told as a story ───────
+  // The card derives its own momentum from the row's trend; the page only
+  // tallies where recent attention went (themes on the user's own recent
+  // check-ins and chosen paths) for the Your Focus section.
   const topFutureSelf = futureSelves[0] ?? null;
-  const patternImpacts: PatternImpactRow[] = movers
-    .slice(0, 3)
-    .map(({ futureSelf, trend }) => ({
-      key: futureSelf.id,
-      name: futureSelf.name,
-      delta: Math.round(trend.delta),
-    }));
-
-  // The evidence meter's data: which sources the top pattern's persisted
-  // strongest observations were extracted from. A ≤5-row indexed lookup of
-  // the attribution the row already carries — nothing recomputed.
-  const supportingObservationIds = (topFutureSelf?.supporting_observations ?? [])
-    .map((row) => row.observationId)
-    .filter((id): id is string => typeof id === "string");
-  const evidenceSources = topFutureSelf
-    ? await getEvidenceSourceCounts(supportingObservationIds)
-    : EMPTY_EVIDENCE_SOURCE_COUNTS;
+  const focusAreas = topFutureSelf ? await getRecentFocusAreas() : [];
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
@@ -253,8 +234,7 @@ export default async function OverviewPage() {
             {topFutureSelf ? (
               <PatternEmergingCard
                 futureSelf={topFutureSelf}
-                impacts={patternImpacts}
-                evidenceSources={evidenceSources}
+                focusAreas={focusAreas}
               />
             ) : null}
           </div>

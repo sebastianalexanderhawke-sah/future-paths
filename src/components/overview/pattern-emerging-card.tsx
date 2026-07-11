@@ -3,88 +3,86 @@ import Link from "next/link";
 import { toFirstSentence } from "@/components/home/output-refinement";
 import { IconSparkle } from "@/components/icons";
 import { OverviewCard } from "@/components/overview/overview-card";
-import type { EvidenceSourceCounts } from "@/lib/evidence-sources";
+import type { FocusArea } from "@/lib/focus-areas";
+import { getFutureSelfTrend } from "@/lib/future-self-trend";
+import { getPatternMomentum } from "@/lib/pattern-momentum";
 import type { FutureSelf } from "@/types/database";
 
 /**
- * One row of the influence list. This card is the Overview's causal layer —
- * it answers "why are your futures changing?" as one argument: the insight
- * (left), then the evidence behind it and the futures it is influencing
- * (right). What's Changed stays a bare summary; the explanation lives here.
+ * The Overview's one interpretive card, told as a single story in three
+ * beats: this pattern… (name + one sentence) → is currently… (momentum)
+ * → and here is where your attention has been living (focus). Everything it
+ * says is derived from existing data — the trend from the row's own
+ * percentages, the focus areas from themes the user's entries already carry
+ * — so the card narrates without recognizing, scoring, or storing anything.
+ *
+ * Layout is deliberately section-per-beat: richer momentum states, more
+ * focus rows, clickable areas (FocusArea already carries an optional href),
+ * or monthly comparisons (it keeps its raw mention count) all slot into an
+ * existing section without a redesign.
  */
-export type PatternImpactRow = {
-  key: string;
-  name: string;
-  /** Signed movement since the last update. */
-  delta: number;
-};
-
 type PatternEmergingCardProps = {
   futureSelf: FutureSelf;
-  impacts: PatternImpactRow[];
-  /** How many of the pattern's strongest persisted observations came from
-      each source — the five-dot evidence meter's data (see
-      lib/evidence-sources.ts; counts are already bounded by the ≤5-row
-      attribution list, so a count IS a dot count). */
-  evidenceSources: EvidenceSourceCounts;
+  /** Where recent attention went, strongest first (≤4, never padded). */
+  focusAreas: FocusArea[];
 };
 
-const EVIDENCE_DOTS = 5;
+/** Small uppercase beat label — the card's only structural signage. */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9ca3af]">
+      {children}
+    </p>
+  );
+}
 
 /**
- * The evidence meter: a quiet, reusable mark — five circles, filled
- * left-to-right by how much of the pattern's strongest evidence a source
- * contributed. Static by design (no animation, no decoration), but tactile:
- * a filled dot carries a soft top-lit gradient and rests on a faint tinted
- * shadow, an empty dot reads as a shallow recess — evidence you can feel is
- * present or missing at a glance, without ever competing with the insight
- * panel.
+ * One area of life and how much recent thinking went toward it. The bar is
+ * relative attention only — not success, importance, or progress — so it
+ * stays a soft monochrome violet: width is the whole message. A small floor
+ * keeps the faintest area visible without inflating it. Becomes a link the
+ * day areas start carrying hrefs.
  */
-function EvidenceMeter({ label, filled }: { label: string; filled: number }) {
-  const count = Math.max(0, Math.min(EVIDENCE_DOTS, Math.round(filled)));
-  return (
+function FocusRow({ area }: { area: FocusArea }) {
+  const width = `${Math.round(12 + area.weight * 88)}%`;
+  const body = (
     <div
-      className="flex items-center justify-between gap-3 py-[5px]"
       role="img"
-      aria-label={`${label}: ${count} of ${EVIDENCE_DOTS} strongest observations`}
+      aria-label={`${area.theme}: ${area.mentions} recent ${
+        area.mentions === 1 ? "moment" : "moments"
+      } of attention`}
     >
-      <span className="text-[13px] text-[#6b7280]">{label}</span>
-      <span className="flex shrink-0 gap-2">
-        {Array.from({ length: EVIDENCE_DOTS }, (_, i) => (
-          <span
-            key={i}
-            className="h-[11px] w-[11px] rounded-full"
-            style={
-              i < count
-                ? {
-                    background: "linear-gradient(180deg, #8f65f0 0%, #7c3aed 100%)",
-                    boxShadow:
-                      "inset 0 1px 0 rgba(255,255,255,0.28), 0 1px 3px rgba(124,58,237,0.35)",
-                  }
-                : {
-                    background: "#f0f0f4",
-                    boxShadow:
-                      "inset 0 1px 2px rgba(17,17,17,0.07), inset 0 0 0 1px #e7e7ee",
-                  }
-            }
-          />
-        ))}
-      </span>
+      <p className="text-[14px] font-medium text-[#111]">{area.theme}</p>
+      <div className="mt-1.5 h-2 rounded-full bg-[rgba(139,92,246,0.10)]">
+        <div
+          className="h-full rounded-full bg-[rgba(139,92,246,0.6)]"
+          style={{ width }}
+        />
+      </div>
     </div>
   );
+
+  if (area.href) {
+    return (
+      <Link
+        href={area.href}
+        className="block transition-opacity duration-150 hover:opacity-80"
+      >
+        {body}
+      </Link>
+    );
+  }
+  return body;
 }
 
 export function PatternEmergingCard({
   futureSelf,
-  impacts,
-  evidenceSources,
+  focusAreas,
 }: PatternEmergingCardProps) {
-  const headline =
-    toFirstSentence(futureSelf.why_emerging, 110) ||
-    toFirstSentence(futureSelf.summary, 110);
-  const description =
+  const sentence =
     toFirstSentence(futureSelf.summary, 160) ||
-    toFirstSentence(futureSelf.likely_evolution, 160);
+    toFirstSentence(futureSelf.why_emerging, 160);
+  const momentum = getPatternMomentum(getFutureSelfTrend(futureSelf));
 
   return (
     <OverviewCard className="px-9 py-8">
@@ -102,68 +100,55 @@ export function PatternEmergingCard({
         </p>
       </div>
 
-      <div className="grid grid-cols-2 items-start gap-10">
-        {/* Left — the insight leads, set on its own translucent violet
-            panel: a highlighted quotation, the app interpreting a life.
-            Only this narrative block wears the tint; the supporting data
-            on the right stays on the card's neutral surface. */}
-        <div className="rounded-2xl border border-[rgba(139,92,246,0.16)] bg-[rgba(139,92,246,0.06)] px-6 py-5">
-          <p className="font-voice text-[20px] font-medium leading-[1.4] tracking-[-0.3px] text-[#111]">
-            {headline}
+      {/* The whole story lives on one translucent violet surface — the card's
+          identity — with faint violet hairlines separating its three beats. */}
+      <div className="divide-y divide-[rgba(139,92,246,0.12)] rounded-2xl border border-[rgba(139,92,246,0.16)] bg-[rgba(139,92,246,0.06)] px-7">
+        {/* Beat 1 — this pattern… */}
+        <div className="py-6">
+          <p className="font-voice text-[22px] font-medium leading-[1.35] tracking-[-0.3px] text-[#111]">
+            {futureSelf.name}
           </p>
-          {description ? (
-            <p className="mt-3 text-[14px] leading-[1.7] text-[#6b6b76]">
-              {description}
+          {sentence ? (
+            <p className="mt-2 max-w-[46em] text-[14px] leading-[1.7] text-[#6b6b76]">
+              {sentence}
             </p>
           ) : null}
-          <Link
-            href="/future-selves"
-            className="mt-4 inline-flex items-center gap-1 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80"
-          >
-            Read more about this pattern →
-          </Link>
         </div>
 
-        {/* Right — one argument in two beats: how much evidence backs the
-            insight (by source), then which futures it is influencing. The
-            insight on the left stays the protagonist; this column is its
-            supporting case. */}
-        <div>
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9ca3af]">
-            Evidence
+        {/* Beat 2 — is currently… The trajectory is the card's loudest line
+            after the name: glyph in the identity violet, verdict in ink. */}
+        <div className="py-5">
+          <SectionLabel>Momentum</SectionLabel>
+          <p className="flex items-baseline gap-2.5">
+            <span aria-hidden="true" className="text-[15px] text-[#7c3aed]">
+              {momentum.glyph}
+            </span>
+            <span className="text-[18px] font-semibold tracking-[-0.2px] text-[#111]">
+              {momentum.label}
+            </span>
           </p>
-          <EvidenceMeter label="Situations" filled={evidenceSources.situations} />
-          <EvidenceMeter label="Check-ins" filled={evidenceSources.checkIns} />
-          <EvidenceMeter label="Reflections" filled={evidenceSources.reflections} />
+          <p className="mt-1.5 max-w-[46em] text-[14px] leading-[1.6] text-[#6b6b76]">
+            {momentum.phrase}
+          </p>
+        </div>
 
-          <div className="mt-6">
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9ca3af]">
-              Influencing
+        {/* Beat 3 — where your attention has been living. Only areas the
+            user's own entries actually carried, strongest first, never
+            padded to fill the space. */}
+        <div className="py-5 pb-6">
+          <SectionLabel>Your Focus</SectionLabel>
+          {focusAreas.length === 0 ? (
+            <p className="text-[14px] leading-[1.6] text-[#6b6b76]">
+              Not enough recent entries to see where your attention is going
+              yet.
             </p>
-            {impacts.length === 0 ? (
-              <p className="py-1 text-[13px] text-[#9ca3af]">
-                No movement since your last update.
-              </p>
-            ) : (
-              impacts.map((impact) => (
-                <div
-                  key={impact.key}
-                  className="flex items-center gap-3 py-1.5"
-                >
-                  <span
-                    className="w-11 shrink-0 text-[13px] font-semibold tabular-nums"
-                    style={{ color: impact.delta >= 0 ? "#10b981" : "#f43f5e" }}
-                  >
-                    {impact.delta > 0 ? "+" : ""}
-                    {impact.delta}%
-                  </span>
-                  <span className="truncate text-[13px] text-[#6b7280]">
-                    {impact.name}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
+          ) : (
+            <div className="flex flex-col gap-3.5">
+              {focusAreas.map((area) => (
+                <FocusRow key={area.theme} area={area} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

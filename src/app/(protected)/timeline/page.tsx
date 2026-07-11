@@ -2,17 +2,25 @@ import Link from "next/link";
 
 import { AppSidebar } from "@/components/overview/app-sidebar";
 import { OverviewCard } from "@/components/overview/overview-card";
-import { MonthlyIdentityNarrativeCard } from "@/components/timeline/monthly-identity-narrative-card";
+import { ChapterAccordion } from "@/components/timeline/chapter-accordion";
+import {
+  MonthlyChapter,
+  MonthlyChapterPreview,
+} from "@/components/timeline/monthly-chapter";
 import { loadMonthlyIdentityNarratives } from "@/lib/monthly-identity-narrative";
+import { loadTimelineChapterStories } from "@/lib/timeline-chapter-story-loader";
+import type { ChapterStory } from "@/lib/timeline-chapter-story";
 import { getUnansweredReflectionSummary } from "@/lib/reflections";
 import { getUserIdentity } from "@/lib/user-identity";
 
 export default async function TimelinePage() {
-  const [userIdentity, result, reflectionSummaryResult] = await Promise.all([
-    getUserIdentity(),
-    loadMonthlyIdentityNarratives(),
-    getUnansweredReflectionSummary(),
-  ]);
+  const [userIdentity, result, storiesResult, reflectionSummaryResult] =
+    await Promise.all([
+      getUserIdentity(),
+      loadMonthlyIdentityNarratives(),
+      loadTimelineChapterStories(),
+      getUnansweredReflectionSummary(),
+    ]);
 
   if ("error" in result) {
     return (
@@ -23,6 +31,10 @@ export default async function TimelinePage() {
   }
 
   const { narratives } = result;
+  // Chapter stories are presentation enrichment: a failed load renders the
+  // narrative-only chapter rather than failing the page.
+  const storiesByMonth: Map<string, ChapterStory> =
+    "error" in storiesResult ? new Map() : storiesResult.storiesByMonth;
   const reflectionSummary =
     "pending" in reflectionSummaryResult ? reflectionSummaryResult : null;
 
@@ -66,30 +78,29 @@ export default async function TimelinePage() {
               </div>
             </OverviewCard>
           ) : (
-            /* The rail: a quiet vertical thread every chapter hangs from. */
-            <div className="relative pb-14">
-              <div
-                aria-hidden="true"
-                className="absolute bottom-2 left-[7px] top-2 w-[2px] rounded-full bg-[#e8e8ee]"
-              />
-              <div className="flex flex-col gap-12">
-                {narratives.map((narrative) => (
-                  <section key={narrative.month} className="relative pl-10">
-                    {/* Node on the rail, with the month as its label. */}
-                    <span
-                      aria-hidden="true"
-                      className="absolute left-0 top-[3px] h-4 w-4 rounded-full border-[3px] border-white bg-[#047857] shadow-[0_0_0_1px_#e8e8ee]"
+            /* Every month is one collapsed chapter card on the rail; the
+               accordion opens at most one chapter at a time. */
+            <ChapterAccordion
+              chapters={narratives.map((narrative) => {
+                const story = storiesByMonth.get(narrative.month) ?? null;
+                const previousStory = narrative.previousMonth
+                  ? (storiesByMonth.get(narrative.previousMonth) ?? null)
+                  : null;
+                return {
+                  month: narrative.month,
+                  preview: (
+                    <MonthlyChapterPreview narrative={narrative} story={story} />
+                  ),
+                  full: (
+                    <MonthlyChapter
+                      narrative={narrative}
+                      story={story}
+                      previousStory={previousStory}
                     />
-                    <p className="text-[13px] font-semibold text-[#999999]">
-                      {narrative.month}
-                    </p>
-                    <div className="mt-3">
-                      <MonthlyIdentityNarrativeCard narrative={narrative} />
-                    </div>
-                  </section>
-                ))}
-              </div>
-            </div>
+                  ),
+                };
+              })}
+            />
           )}
         </div>
       </main>
