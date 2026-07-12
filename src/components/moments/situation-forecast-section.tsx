@@ -12,6 +12,11 @@ import type { ScannableFuture } from "@/components/home/output-refinement";
 import { CardShell } from "@/components/ui/card-shell";
 import { computeForecastDiff, flattenFutures, normalizeTitle } from "@/lib/forecast-diff";
 import type { FutureMovement } from "@/lib/forecast-diff";
+import {
+  groupForecastFutures,
+  isStructuredForecastList,
+  orderForecastFuturesByConfidence,
+} from "@/lib/forecast-order";
 import { toCurrentFutureRendering } from "@/lib/forecast-simplification-experiment";
 import type { CheckIn } from "@/types/database";
 
@@ -140,7 +145,12 @@ export function SituationForecastSection({
   }, [transitioning, previousSections, sections]);
 
   const allFutures = sections
-    ? dedupeByNormalizedTitle([...flattenFutures(sections), ...(sections.wildCardFutures ?? [])])
+    ? orderForecastFuturesByConfidence(
+        dedupeByNormalizedTitle([
+          ...flattenFutures(sections),
+          ...(sections.wildCardFutures ?? []),
+        ]),
+      )
     : [];
   const topFutures = allFutures.slice(0, TOP_FUTURES_COUNT);
   const remainingFutures = allFutures.slice(TOP_FUTURES_COUNT);
@@ -148,6 +158,30 @@ export function SituationForecastSection({
     () => new Set((sections?.wildCardFutures ?? []).map((future) => future.title)),
     [sections],
   );
+  // Phase 3: v3 forecasts (action-bullet cards) render as two labelled
+  // groups with every card visible — the cards are short enough that the
+  // top-3/"See all" collapse is no longer needed. Pre-v3 rows keep it.
+  const isStructured = isStructuredForecastList(allFutures);
+  const groupedFutures = groupForecastFutures(allFutures, wildCardTitles);
+
+  const renderFutureCard = (future: ScannableFuture) => {
+    const rendering = toCurrentFutureRendering(future);
+    const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
+    return (
+      <div key={future.title} className="relative">
+        {isNew ? (
+          <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
+            New
+          </span>
+        ) : null}
+        <CurrentForecastFutureCard
+          future={rendering}
+          movement={movementMap?.[future.title]}
+          cardVariant={wildCardTitles.has(future.title) ? "wildcard" : undefined}
+        />
+      </div>
+    );
+  };
 
   const disappearedFutures = useMemo(() => {
     if (!transitioning || !diff || !previousSections) return [];
@@ -270,55 +304,45 @@ export function SituationForecastSection({
           </div>
         ) : null}
 
-        {topFutures.map((future) => {
-          const rendering = toCurrentFutureRendering(future);
-          const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
-          return (
-            <div key={future.title} className="relative">
-              {isNew ? (
-                <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
-                  New
-                </span>
-              ) : null}
-              <CurrentForecastFutureCard
-                future={rendering}
-                movement={movementMap?.[future.title]}
-                cardVariant={wildCardTitles.has(future.title) ? "wildcard" : undefined}
-              />
-            </div>
-          );
-        })}
+        {isStructured ? (
+          <>
+            {groupedFutures.risks.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-[12px] font-semibold text-[#999999]">
+                  Things to Watch For
+                </p>
+                {groupedFutures.risks.map((future) => renderFutureCard(future))}
+              </div>
+            ) : null}
 
-        {remainingFutures.length > 0 ? (
-          <details className="group">
-            <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#7c3aed] [&::-webkit-details-marker]:hidden">
-              <span className="group-open:hidden">
-                ▼ See all futures ({remainingFutures.length} more)
-              </span>
-              <span className="hidden group-open:inline">▲ Hide</span>
-            </summary>
-            <div className="mt-3 flex flex-col gap-4">
-              {remainingFutures.map((future) => {
-                const rendering = toCurrentFutureRendering(future);
-                const isNew = transitioning && diff?.appeared.has(normalizeTitle(future.title));
-                return (
-                  <div key={future.title} className="relative">
-                    {isNew ? (
-                      <span className="absolute -top-1.5 right-2 z-10 rounded-full bg-[var(--state-emerging)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--state-emerging)]">
-                        New
-                      </span>
-                    ) : null}
-                    <CurrentForecastFutureCard
-                      future={rendering}
-                      movement={movementMap?.[future.title]}
-                      cardVariant={wildCardTitles.has(future.title) ? "wildcard" : undefined}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </details>
-        ) : null}
+            {groupedFutures.opportunities.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-[12px] font-semibold text-[#999999]">
+                  Unexpected Opportunities
+                </p>
+                {groupedFutures.opportunities.map((future) => renderFutureCard(future))}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            {topFutures.map((future) => renderFutureCard(future))}
+
+            {remainingFutures.length > 0 ? (
+              <details className="group">
+                <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#7c3aed] [&::-webkit-details-marker]:hidden">
+                  <span className="group-open:hidden">
+                    ▼ See all futures ({remainingFutures.length} more)
+                  </span>
+                  <span className="hidden group-open:inline">▲ Hide</span>
+                </summary>
+                <div className="mt-3 flex flex-col gap-4">
+                  {remainingFutures.map((future) => renderFutureCard(future))}
+                </div>
+              </details>
+            ) : null}
+          </>
+        )}
       </div>
     </OverviewCard>
   ) : null;

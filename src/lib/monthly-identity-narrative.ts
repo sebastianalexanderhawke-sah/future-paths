@@ -66,6 +66,14 @@ export async function getLatestSettledChapter(): Promise<LatestSettledChapter | 
 export type MonthlyIdentityNarrative = {
   month: string;
   headline: string;
+  /**
+   * Dedicated one-sentence cover teaser. Empty string on legacy rows
+   * generated before the teaser existed — the cover then falls back to the
+   * first sentence of openingBeginning, and the chapter keeps its legacy
+   * "Becoming" rendering (deterministic movement bullets) so the two never
+   * repeat each other.
+   */
+  teaser: string;
   openingBeginning: string;
   openingEnd: string;
   howYouChanged: string[];
@@ -118,9 +126,11 @@ function howYouChangedFor(comparison: MonthlyComparison): string[] {
 }
 
 // The AI-authored slice of a narrative, as stored per (user, month).
+// teaser is undefined on rows written before the column existed.
 type NarrativeDraft = {
   month: string;
   headline: string;
+  teaser?: string;
   opening_beginning: string;
   opening_end: string;
 };
@@ -183,7 +193,9 @@ export async function loadMonthlyIdentityNarratives(): Promise<
   const supabase = await createClient();
   const { data: storedRows, error: storedError } = await supabase
     .from("monthly_identity_narratives")
-    .select("month, headline, opening_beginning, opening_end, evidence_fingerprint")
+    .select(
+      "month, headline, teaser, opening_beginning, opening_end, evidence_fingerprint",
+    )
     .eq("user_id", auth.userId);
 
   // A failed read falls back to generating (the pre-persistence behavior)
@@ -197,15 +209,19 @@ export async function loadMonthlyIdentityNarratives(): Promise<
     months.map((month) => [month.month, evidenceFingerprint(month)]),
   );
 
-  // A month needs generation when it has never been stored, or when it is the
-  // still-changing current month and its evidence moved since the stored
-  // draft was written. Settled historical months never regenerate.
+  // A month needs generation when it has never been stored, or when it is
+  // the still-changing current month and either its evidence moved since the
+  // stored draft was written or the draft predates the dedicated teaser
+  // field (one-time format upgrade for the living month only). Settled
+  // historical months never regenerate; legacy rows there simply keep the
+  // legacy rendering.
   const isStale = (month: MonthlyIdentityEvolution): boolean => {
     const stored = storedByMonth.get(month.month);
     if (!stored) return true;
     return (
       month.month === nowLabel &&
-      stored.evidence_fingerprint !== fingerprintByMonth.get(month.month)
+      (stored.evidence_fingerprint !== fingerprintByMonth.get(month.month) ||
+        !stored.teaser)
     );
   };
 
@@ -241,6 +257,7 @@ export async function loadMonthlyIdentityNarratives(): Promise<
           user_id: auth.userId,
           month: month.month,
           headline: draft.headline,
+          teaser: draft.teaser ?? "",
           opening_beginning: draft.opening_beginning,
           opening_end: draft.opening_end,
           evidence_fingerprint: fingerprintByMonth.get(month.month)!,
@@ -280,6 +297,7 @@ export async function loadMonthlyIdentityNarratives(): Promise<
     return {
       month: month.month,
       headline: draft?.headline ?? month.month,
+      teaser: draft?.teaser ?? "",
       openingBeginning: draft?.opening_beginning ?? "",
       openingEnd: draft?.opening_end ?? "",
       howYouChanged: howYouChangedFor(comparison),

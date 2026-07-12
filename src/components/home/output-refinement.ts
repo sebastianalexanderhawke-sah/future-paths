@@ -52,6 +52,12 @@ export type ScannableFuture = {
   /** AI's estimate of how soon this future could occur. Absent for
    *  fallback-generated futures (source: "fallback"). */
   timeframe?: string;
+  /** Forecasts v3: "What you can do" bullets. Presence selects the v3
+   *  structured card; absent on pre-v3 rows and fallback futures. */
+  actions?: string[];
+  /** Forecasts v3: honest 0-100 likelihood estimate, used only to order
+   *  cards highest-confidence first. Absent on pre-v3 rows. */
+  confidence?: number;
   source?: ForecastFutureSource;
   sourceStage?: string;
   originalTitle?: string | null;

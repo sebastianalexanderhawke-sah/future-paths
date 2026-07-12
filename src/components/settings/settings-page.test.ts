@@ -34,6 +34,24 @@ vi.mock("@/actions/settings", () => ({
   updateDisplayName: vi.fn(),
   requestEmailChange: vi.fn(),
 }));
+vi.mock("@/actions/billing", () => ({
+  startPremiumCheckout: vi.fn(),
+  buySituationTokens: vi.fn(),
+  manageSubscription: vi.fn(),
+}));
+vi.mock("@/lib/plan", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/plan")>();
+  return {
+    ...actual,
+    getPlanStatus: vi.fn(async () => ({
+      plan: "free",
+      renewsAt: null,
+      situationTokens: 0,
+      situationsUsed: 1,
+      freeSituationAllowance: 1,
+    })),
+  };
+});
 
 const { default: SettingsPage } = await import("@/app/(protected)/settings/page");
 const { AppearanceControl } = await import(
@@ -41,7 +59,9 @@ const { AppearanceControl } = await import(
 );
 
 async function renderPage(): Promise<string> {
-  return renderToStaticMarkup(await SettingsPage());
+  return renderToStaticMarkup(
+    await SettingsPage({ searchParams: Promise.resolve({}) }),
+  );
 }
 
 describe("settings appearance section", () => {
@@ -60,6 +80,20 @@ describe("settings appearance section", () => {
     expect(radios).toHaveLength(3);
     // Before hydration nothing is guessed as selected — no flicker.
     expect(html).not.toMatch(/<input[^>]*\schecked/);
+  });
+});
+
+describe("settings premium section placement", () => {
+  it("sits directly below Account with the plan snapshot", async () => {
+    const html = await renderPage();
+    const account = html.indexOf(">Account<");
+    const premium = html.indexOf("Reflection Premium");
+    const security = html.indexOf(">Security<");
+    expect(account).toBeGreaterThan(-1);
+    expect(premium).toBeGreaterThan(account);
+    expect(security).toBeGreaterThan(premium);
+    expect(html).toContain("Your plan and available usage.");
+    expect(html).toContain("Free Plan");
   });
 });
 

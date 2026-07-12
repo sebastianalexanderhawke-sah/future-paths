@@ -9,9 +9,11 @@ import {
   PasswordChangeForm,
 } from "@/components/settings/account-controls";
 import { AppearanceControl } from "@/components/settings/appearance-control";
+import { PremiumSection } from "@/components/settings/premium-section";
 import { AppSidebar } from "@/components/overview/app-sidebar";
 import { OverviewCard } from "@/components/overview/overview-card";
 import { Button } from "@/components/ui/button";
+import { getPlanStatus } from "@/lib/plan";
 import { getUnansweredReflectionSummary } from "@/lib/reflections";
 import { createClient } from "@/lib/supabase/server";
 import { getUserIdentity } from "@/lib/user-identity";
@@ -22,17 +24,25 @@ import { getUserIdentity } from "@/lib/user-identity";
 // stated as plain text, so no toggle, button, or picker ever silently does
 // nothing.
 
-export default async function SettingsPage() {
+type SettingsPageProps = {
+  searchParams: Promise<{ billing?: string }>;
+};
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const supabase = await createClient();
   const [
     userIdentity,
     reflectionSummaryResult,
+    planStatus,
+    { billing },
     {
       data: { user },
     },
   ] = await Promise.all([
     getUserIdentity(),
     getUnansweredReflectionSummary(),
+    getPlanStatus(),
+    searchParams,
     supabase.auth.getUser(),
   ]);
 
@@ -96,6 +106,12 @@ export default async function SettingsPage() {
                 <EmailChangeForm currentEmail={email} />
               </div>
             </OverviewCard>
+
+            {/* Reflection Premium — the account's plan and usage */}
+            <PremiumSection
+              plan={planStatus}
+              showBillingNotice={billing === "unavailable"}
+            />
 
             {/* Security — how you get in */}
             <OverviewCard className="px-9 py-7">

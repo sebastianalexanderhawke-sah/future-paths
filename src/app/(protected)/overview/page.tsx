@@ -6,13 +6,13 @@ import {
   NeedsAttentionCard,
   type AttentionRow,
 } from "@/components/overview/needs-attention-card";
-import { RecentActivityCard } from "@/components/overview/recent-activity-card";
+import { YourActivityCard } from "@/components/overview/your-activity-card";
 import {
   WhatsChangedCard,
   type ChangeRow,
 } from "@/components/overview/whats-changed-card";
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
-import { getRecentFocusAreas } from "@/lib/focus-areas";
+import { buildFocusInsight, getRecentFocusAreas } from "@/lib/focus-areas";
 import { getFutureSelfTrend } from "@/lib/future-self-trend";
 import { getEngagementActivity } from "@/lib/recent-activity";
 import { listActiveFutureSelves, listFutureSelves } from "@/lib/future-selves";
@@ -183,14 +183,16 @@ export default async function OverviewPage() {
   const visibleAttentionItems = attentionItems.slice(0, 3);
   const hiddenAttentionCount = Math.max(0, attentionItems.length - 3);
 
-  // ── Recent Activity: the engagement snapshot ─────────────────────────
+  // ── Engagement row: Recently Active → Consistency → Your Focus ───────
   // Two pure reads over existing rows: where recent attention went (themes
   // on the user's own check-ins and chosen paths) and how steadily they've
-  // been showing up (existing timestamps only).
+  // been showing up (existing timestamps only). The focus insight sentence
+  // is composed from the same tallied areas the bars use.
   const [focusAreas, engagementActivity] = await Promise.all([
     getRecentFocusAreas(),
     getEngagementActivity(),
   ]);
+  const focusInsight = buildFocusInsight(focusAreas);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
@@ -234,9 +236,13 @@ export default async function OverviewPage() {
               />
             </div>
 
-            <RecentActivityCard
-              activity={engagementActivity}
+            {/* One pulse-check card: what you did → how steadily → where it went. */}
+            <YourActivityCard
+              items={engagementActivity.items}
+              consistency={engagementActivity.consistency}
+              weeklyCounts={engagementActivity.weeklyCounts}
               focusAreas={focusAreas}
+              insight={focusInsight}
             />
           </div>
         </div>

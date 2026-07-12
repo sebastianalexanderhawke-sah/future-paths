@@ -7,8 +7,9 @@ import type { ChapterStory, ChapterStoryline } from "@/lib/timeline-chapter-stor
 
 // Behavioral tests: render the chapter preview, the full chapter, and the
 // Timeline page with fixture narratives/stories and assert on the visible
-// output — the collapsed preview, the truthful Beginning → End, shift rows,
-// the featured situation, and the accordion — instead of on component source.
+// output — the collapsed preview, the truthful "The Person You Were
+// Becoming" comparison, the compact "What Changed" rows, and the accordion —
+// instead of on component source.
 
 const {
   getUserIdentityMock,
@@ -49,6 +50,7 @@ function makeNarrative(
   return {
     month: "June 2026",
     headline: "The month you stopped waiting for permission",
+    teaser: "The waiting had a shape by now, and this was the month it cracked.",
     openingBeginning:
       "June opened with a decision you had postponed for weeks. The postponing had become its own routine.",
     openingEnd: "By the end of the month the move felt inevitable.",
@@ -63,6 +65,17 @@ function makeNarrative(
     reflectionCount: 1,
     ...overrides,
   };
+}
+
+/**
+ * A narrative stored before the dedicated teaser existed: the cover borrows
+ * the opening's first sentence, and the chapter keeps the deterministic
+ * movement bullets instead of the portraits.
+ */
+function makeLegacyNarrative(
+  overrides: Partial<MonthlyIdentityNarrative> = {},
+): MonthlyIdentityNarrative {
+  return makeNarrative({ teaser: "", ...overrides });
 }
 
 function makeStoryline(overrides: Partial<ChapterStoryline> = {}): ChapterStoryline {
@@ -104,11 +117,8 @@ function makePreviousStory(overrides: Partial<ChapterStory> = {}): ChapterStory 
 function renderChapter(
   narrative: MonthlyIdentityNarrative,
   story: ChapterStory | null = makeStory(),
-  previousStory: ChapterStory | null = null,
 ): string {
-  return renderToStaticMarkup(
-    createElement(MonthlyChapter, { narrative, story, previousStory }),
-  );
+  return renderToStaticMarkup(createElement(MonthlyChapter, { narrative, story }));
 }
 
 function renderPreview(
@@ -147,23 +157,34 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("chapter preview — collapsed card", () => {
-  it("reads like a cover: month, headline, one epigraph sentence, identity preview", () => {
+  it("reads like a cover: only month, headline, one teaser sentence, story count", () => {
     const html = renderPreview(makeNarrative());
 
     expect(html).toContain("June 2026");
     expect(html).toContain("The month you stopped waiting for permission");
-    expect(html).toContain("June opened with a decision you had postponed for weeks.");
-    // Only the first sentence previews; the rest waits inside the chapter.
+    expect(html).toContain(
+      "The waiting had a shape by now, and this was the month it cracked.",
+    );
+    expect(html).toContain("1 story changed this month.");
+    // The portraits wait inside the chapter; the cover never borrows them.
+    expect(html).not.toContain("June opened with a decision");
     expect(html).not.toContain("The postponing had become its own routine.");
     expect(html).not.toContain("By the end of the month the move felt inevitable.");
+    // No identity preview, dominant theme, or shift values on the cover.
+    expect(html).not.toContain("Identity Preview");
+    expect(html).not.toContain("Courage");
+    expect(html).not.toContain("+8");
+    expect(html).not.toContain("−4");
+  });
 
-    expect(html).toContain("Identity Preview");
-    expect(html).toContain("Courage");
-    expect(html).toContain("+8");
-    expect(html).toContain("Loneliness");
-    expect(html).toContain("+7");
-    expect(html).toContain("Stability");
-    expect(html).toContain("−4");
+  it("shows no teaser on legacy narratives instead of borrowing the portrait", () => {
+    const html = renderPreview(makeLegacyNarrative());
+
+    expect(html).toContain("The month you stopped waiting for permission");
+    // The portraits render inside the chapter now, so the cover never
+    // borrows their first sentence.
+    expect(html).not.toContain("June opened with a decision");
+    expect(html).not.toContain("this was the month it cracked");
   });
 
   it("says how many stories the chapter holds", () => {
@@ -180,90 +201,75 @@ describe("chapter preview — collapsed card", () => {
   it("keeps the full chapter sections out of the preview", () => {
     const html = renderPreview(makeNarrative());
 
-    expect(html).not.toContain("Your Life Changed");
-    expect(html).not.toContain("Identity Shifts");
+    expect(html).not.toContain("What Changed");
+    expect(html).not.toContain("The Person You Were Becoming");
     expect(html).not.toContain("Beginning of June");
     expect(html).not.toContain("Just an idea.");
   });
 
-  it("omits the identity preview and story count when the month has no story", () => {
+  it("omits the story count when the month has no story", () => {
     const html = renderPreview(makeNarrative(), null);
 
     expect(html).toContain("The month you stopped waiting for permission");
-    expect(html).not.toContain("Identity Preview");
     expect(html).not.toContain("changed this month");
   });
 });
 
 // ---------------------------------------------------------------------------
-// Chapter — truthful beginning vs end
+// Chapter — becoming portraits (new-format narratives)
 // ---------------------------------------------------------------------------
 
-describe("chapter — truthful beginning vs end", () => {
-  it("describes the month's movement comparatively, from recorded shifts", () => {
+describe("chapter — becoming portraits", () => {
+  it("renders the full identity portraits as a Beginning → End comparison", () => {
     const html = renderChapter(makeNarrative());
 
-    expect(html).toContain("More willing to act without certainty.");
-    expect(html).toContain("More isolated.");
-    expect(html).toContain("Placing less weight on stability.");
-  });
-
-  it("shows a beginning only when the previous month recorded one, with provenance", () => {
-    const withPrior = renderChapter(makeNarrative(), makeStory(), makePreviousStory());
-
-    expect(withPrior).toContain("Beginning of June");
-    expect(withPrior).toContain("where May left you");
-    expect(withPrior).toContain("Investing less in the people around you.");
-    expect(withPrior).toContain("End of June");
-    expect(withPrior).not.toContain("How You Left June");
-    expect(withPrior).not.toContain("recorded journey");
-  });
-
-  it("keeps the first month's two-block shape but honestly explains the missing beginning", () => {
-    const withoutPrior = renderChapter(makeNarrative(), makeStory(), null);
-
-    expect(withoutPrior).toContain("Beginning of June");
-    expect(withoutPrior).toContain("The beginning of your recorded journey.");
-    expect(withoutPrior).toContain(
-      "describe who you were before this month",
-    );
-    expect(withoutPrior).toContain("How You Left June");
-    expect(withoutPrior).toContain("More willing to act without certainty.");
-    // No fabricated identity bullets, and no bare "End of X" without a beginning.
-    expect(withoutPrior).not.toContain("End of June");
-    expect(withoutPrior).not.toContain("where May left you");
-  });
-
-  it("never invents a balanced opening for a rising difficult theme", () => {
-    const html = renderChapter(makeNarrative(), makeStory(), null);
-
-    expect(html).not.toContain("socially connected");
-    expect(html).not.toContain("Invested in the people around you.");
-  });
-
-  it("falls back to the month comparison when a month has no magnitudes", () => {
-    const html = renderChapter(
-      makeNarrative({
-        comparison: { traitsMorePresent: ["Courage"], traitsLessPresent: [] },
-      }),
-      makeStory({ identityShifts: [], closingReflection: null }),
-    );
-
+    expect(html).toContain("The Person You Were Becoming");
     expect(html).toContain("Beginning of June");
-    expect(html).toContain("The beginning of your recorded journey.");
-    expect(html).toContain("How You Left June");
-    expect(html).toContain("More willing to act without certainty.");
+    expect(html).toContain("The postponing had become its own routine.");
+    expect(html).toContain("End of June");
+    expect(html).toContain("By the end of the month the move felt inevitable.");
   });
 
-  it("omits the comparison when there is no identity evidence at all", () => {
-    const html = renderChapter(
-      makeNarrative(),
-      makeStory({ identityShifts: [], closingReflection: null }),
-    );
+  it("renders no derived movement bullets anywhere", () => {
+    const html = renderChapter(makeNarrative());
 
-    expect(html).not.toContain("Beginning of June");
-    expect(html).not.toContain("End of June");
+    expect(html).not.toContain("More willing to act without certainty.");
+    expect(html).not.toContain("More isolated.");
+    expect(html).not.toContain("You became more decisive.");
+    expect(html).not.toContain("<ul");
+  });
+
+  it("never repeats the cover teaser inside the portraits", () => {
+    const html = renderChapter(makeNarrative());
+
+    const teaserMatches =
+      html.match(/The waiting had a shape by now, and this was the month it cracked\./g) ??
+      [];
+    expect(teaserMatches.length).toBe(1);
+  });
+
+  it("still renders the portraits when the month has no derived story", () => {
+    const html = renderChapter(makeNarrative(), null);
+
+    expect(html).toContain("The Person You Were Becoming");
+    expect(html).toContain("The postponing had become its own routine.");
+    expect(html).toContain("By the end of the month the move felt inevitable.");
+  });
+
+  it("renders legacy narratives' stored portraits too, never bullets", () => {
+    const html = renderChapter(makeLegacyNarrative());
+
+    expect(html).toContain("The Person You Were Becoming");
+    expect(html).toContain("Beginning of June");
+    expect(html).toContain("The postponing had become its own routine.");
+    expect(html).toContain("End of June");
+    expect(html).toContain("By the end of the month the move felt inevitable.");
+    // The deterministic movement phrases and placeholder copy are gone.
+    expect(html).not.toContain("More willing to act without certainty.");
+    expect(html).not.toContain("where May left you");
     expect(html).not.toContain("How You Left June");
+    expect(html).not.toContain("recorded journey");
+    expect(html).not.toContain("foundation of your Current Self");
   });
 });
 
@@ -293,16 +299,6 @@ describe("chapter — accent identity", () => {
     expect(html).not.toContain("#dc2626");
   });
 
-  it("marks each shift row with its own theme-family dot", () => {
-    const html = renderChapter(makeNarrative());
-
-    // Courage → emerald dot, Loneliness → slate dot, Stability → amber
-    // (falling, so its bar uses the pale amber fill).
-    expect(html).toContain("#10b981");
-    expect(html).toContain("#64748b");
-    expect(html).toContain("#fde68a");
-  });
-
   it("falls back to the Timeline's emerald family when a month has no shifts", () => {
     const html = renderPreview(
       makeNarrative(),
@@ -314,69 +310,130 @@ describe("chapter — accent identity", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Chapter — identity shifts
+// Chapter — the in-progress month speaks in the present tense
 // ---------------------------------------------------------------------------
 
-describe("chapter — identity shifts", () => {
-  it("renders one row per shift with signed magnitudes, unsplit by direction", () => {
-    const html = renderChapter(makeNarrative());
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
-    expect(html).toContain("Identity Shifts");
-    expect(html).toContain("+8");
-    expect(html).toContain("+7");
-    expect(html).toContain("−4");
-    expect(html).not.toContain("Growing");
-    expect(html).not.toContain("Fading");
+function currentMonthLabel(): string {
+  const now = new Date();
+  return `${MONTH_NAMES[now.getUTCMonth()]} ${now.getUTCFullYear()}`;
+}
+
+// React escapes the apostrophe in static markup.
+const BECOMING_LABEL = "Who You&#x27;re Becoming";
+
+describe("chapter — current month is still emerging", () => {
+  const month = currentMonthLabel();
+  const monthName = month.split(" ")[0];
+
+  it("labels the portrait end as who you're becoming, never as an ending", () => {
+    const html = renderChapter(makeNarrative({ month }));
+
+    expect(html).toContain(`Beginning of ${monthName}`);
+    expect(html).toContain(BECOMING_LABEL);
+    expect(html).not.toContain(`End of ${monthName}`);
+    expect(html).not.toContain(`How You Left ${monthName}`);
   });
 
-  it("falls back to the deterministic movement statements when a month has no magnitudes", () => {
-    const html = renderChapter(
-      makeNarrative(),
-      makeStory({ identityShifts: [], closingReflection: null }),
-    );
+  it("keeps present-tense language on legacy narratives' portraits too", () => {
+    const html = renderChapter(makeLegacyNarrative({ month }), makeStory({ month }));
 
-    expect(html).toContain("Identity Shifts");
-    expect(html).toContain("You became more decisive.");
+    expect(html).toContain(BECOMING_LABEL);
+    expect(html).not.toContain(`End of ${monthName}`);
+    expect(html).not.toContain(`How You Left ${monthName}`);
   });
 
-  it("omits the section when there are neither magnitudes nor statements", () => {
-    const html = renderChapter(
-      makeNarrative({ howYouChanged: [] }),
-      makeStory({ identityShifts: [], closingReflection: null }),
-    );
+  it("still describes completed months as who you became by their end", () => {
+    const html = renderChapter(makeNarrative(), makeStory());
 
-    expect(html).not.toContain("Identity Shifts");
+    expect(html).toContain("End of June");
+    expect(html).not.toContain(BECOMING_LABEL);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Chapter — featured situation and stories disclosure
+// Chapter — the person you were becoming
 // ---------------------------------------------------------------------------
 
-describe("chapter — your life changed", () => {
-  it("features only the situation that changed the most", () => {
+describe("chapter — the person you were becoming", () => {
+  it("speaks in identity language, never in report-style magnitude rows", () => {
+    const html = renderChapter(makeNarrative());
+
+    expect(html).toContain("The Person You Were Becoming");
+    expect(html).not.toContain("Identity Shifts");
+    expect(html).not.toContain("+8");
+    expect(html).not.toContain("−4");
+  });
+
+  it("omits the section entirely when the narrative has no portraits yet", () => {
+    const html = renderChapter(
+      makeLegacyNarrative({ openingBeginning: "", openingEnd: "" }),
+      makeStory(),
+    );
+
+    expect(html).not.toContain("The Person You Were Becoming");
+    // Never a bullet fallback: the section is portraits or nothing.
+    expect(html).not.toContain("You became more decisive.");
+    expect(html).not.toContain("More willing to act without certainty.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chapter — what changed: compact comparisons and disclosure
+// ---------------------------------------------------------------------------
+
+describe("chapter — what changed", () => {
+  it("shows the top three situations as compact comparisons, rest folded", () => {
+    const storylines = ["Building the app", "Soccer", "Relationships", "Moving", "Health"].map(
+      (title, i) => makeStoryline({ momentId: `m${i}`, title }),
+    );
+    const html = renderChapter(makeNarrative(), makeStory({ storylines }));
+
+    expect(html).toContain("What Changed");
+    expect(html).toContain("Building the app");
+    expect(html).toContain("Soccer");
+    expect(html).toContain("Relationships");
+    expect(html).not.toContain("Moving");
+    expect(html).not.toContain("Health");
+    expect(html).toContain("Show 2 more");
+  });
+
+  it("shows every situation with no disclosure when three or fewer changed", () => {
     const storylines = ["Building the app", "Soccer", "Relationships"].map((title, i) =>
       makeStoryline({ momentId: `m${i}`, title }),
     );
     const html = renderChapter(makeNarrative(), makeStory({ storylines }));
 
-    expect(html).toContain("Your Life Changed");
     expect(html).toContain("Building the app");
-    expect(html).not.toContain("Soccer");
-    expect(html).not.toContain("Relationships");
-    expect(html).toContain("Show 2 more stories");
+    expect(html).toContain("Soccer");
+    expect(html).toContain("Relationships");
+    expect(html).not.toContain("Show ");
   });
 
   it("uses the singular label when exactly one situation is folded", () => {
-    const storylines = ["Building the app", "Soccer"].map((title, i) =>
-      makeStoryline({ momentId: `m${i}`, title }),
+    const storylines = ["Building the app", "Soccer", "Relationships", "Moving"].map(
+      (title, i) => makeStoryline({ momentId: `m${i}`, title }),
     );
     const html = renderChapter(makeNarrative(), makeStory({ storylines }));
 
-    expect(html).toContain("Show 1 more story");
+    expect(html).toContain("Show 1 more");
   });
 
-  it("tells the featured situation as a beginning → end story", () => {
+  it("tells each situation as a beginning → end comparison", () => {
     const html = renderChapter(makeNarrative());
 
     expect(html).toContain("Just an idea.");
@@ -395,7 +452,7 @@ describe("chapter — your life changed", () => {
   it("omits the section when the month has no storylines", () => {
     const html = renderChapter(makeNarrative(), makeStory({ storylines: [] }));
 
-    expect(html).not.toContain("Your Life Changed");
+    expect(html).not.toContain("What Changed");
   });
 });
 
@@ -404,13 +461,26 @@ describe("chapter — your life changed", () => {
 // ---------------------------------------------------------------------------
 
 describe("chapter — surfaces and closing", () => {
-  it("renders each section on its own nested surface", () => {
+  it("renders each story section on its own nested surface, cover on none", () => {
     const html = renderChapter(makeNarrative());
 
-    // Hero (month/title/intro) + Beginning → End + Identity Shifts +
-    // featured situation + closing reflection = five nested section
-    // surfaces inside the month's outer card.
-    expect((html.match(/data-surface="chapter-section"/g) ?? []).length).toBe(5);
+    // The Person You Were Becoming + What Changed + closing reflection =
+    // three nested section surfaces; the cover renders directly on the
+    // month's outer card, exactly as it does collapsed.
+    expect((html.match(/data-surface="chapter-section"/g) ?? []).length).toBe(3);
+  });
+
+  it("keeps the cover as the header without reprinting it in the opened chapter", () => {
+    const html = renderChapter(makeNarrative(), makeStory());
+
+    // The cover appears exactly once — title, month, and teaser — and the
+    // portraits below it never borrow a cover line.
+    const titleMatches =
+      html.match(/The month you stopped waiting for permission/g) ?? [];
+    expect(titleMatches.length).toBe(1);
+    expect((html.match(/June 2026/g) ?? []).length).toBe(1);
+    const teaserMatches = html.match(/this was the month it cracked\./g) ?? [];
+    expect(teaserMatches.length).toBe(1);
   });
 
   it("ends the chapter with the open closing line", () => {
@@ -421,32 +491,51 @@ describe("chapter — surfaces and closing", () => {
     );
   });
 
-  it("reads who I was → who I became → what changed → what happened → what to remember", () => {
-    const html = renderChapter(makeNarrative(), makeStory(), makePreviousStory());
+  it("keeps serif type for the chapter title and section headings only", () => {
+    const html = renderChapter(makeNarrative());
+
+    // Cover headline + "The Person You Were Becoming" + "What Changed".
+    // Body copy — portraits, comparisons, closing — is the app's standard
+    // sans text, never italic.
+    expect((html.match(/font-voice/g) ?? []).length).toBe(3);
+    expect(html).not.toContain("italic");
+  });
+
+  it("reads title → teaser → who I was becoming → what changed → what to remember", () => {
+    const html = renderChapter(makeNarrative(), makeStory());
 
     const title = html.indexOf("The month you stopped waiting for permission");
-    const intro = html.indexOf("June opened with a decision");
+    const teaser = html.indexOf("this was the month it cracked.");
+    const becoming = html.indexOf("The Person You Were Becoming");
     const beginning = html.indexOf("Beginning of June");
+    const beginningPortrait = html.indexOf("June opened with a decision");
     const end = html.indexOf("End of June");
-    const shifts = html.indexOf("Identity Shifts");
-    const life = html.indexOf("Your Life Changed");
+    const endPortrait = html.indexOf("the move felt inevitable.");
+    const changed = html.indexOf("What Changed");
+    const story = html.indexOf("Just an idea.");
     const closing = html.indexOf("out of June than you brought in");
 
     expect(title).toBeGreaterThan(-1);
-    expect(intro).toBeGreaterThan(title);
-    expect(beginning).toBeGreaterThan(intro);
-    expect(end).toBeGreaterThan(beginning);
-    expect(shifts).toBeGreaterThan(end);
-    expect(life).toBeGreaterThan(shifts);
-    expect(closing).toBeGreaterThan(life);
+    expect(teaser).toBeGreaterThan(title);
+    expect(becoming).toBeGreaterThan(teaser);
+    expect(beginning).toBeGreaterThan(becoming);
+    expect(beginningPortrait).toBeGreaterThan(beginning);
+    expect(end).toBeGreaterThan(beginningPortrait);
+    expect(endPortrait).toBeGreaterThan(end);
+    expect(changed).toBeGreaterThan(endPortrait);
+    expect(story).toBeGreaterThan(changed);
+    expect(closing).toBeGreaterThan(story);
   });
 
   it("degrades to the narrative-only chapter when no story exists for the month", () => {
-    const html = renderChapter(makeNarrative(), null, null);
+    const legacy = renderChapter(makeLegacyNarrative(), null);
 
-    expect(html).toContain("The month you stopped waiting for permission");
-    expect(html).toContain("You became more decisive.");
-    expect(html).not.toContain("Your Life Changed");
+    expect(legacy).toContain("The month you stopped waiting for permission");
+    // The portraits still tell the identity story; only the story-derived
+    // sections (situations, closing) drop away.
+    expect(legacy).toContain("The postponing had become its own routine.");
+    expect(legacy).not.toContain("You became more decisive.");
+    expect(legacy).not.toContain("What Changed");
   });
 });
 
@@ -473,12 +562,13 @@ describe("Timeline page — chapter browsing", () => {
     expect(html).toContain("The month you stopped waiting for permission");
     expect(html).toContain("May 2026");
     expect(html).toContain("A slower month of groundwork");
-    expect(html).toContain("Identity Preview");
+    expect(html).toContain("1 story changed this month.");
+    expect(html).not.toContain("Identity Preview");
     expect(html).toContain("Show chapter");
     expect(html).toContain('aria-expanded="false"');
     // Collapsed by default: the full sections stay behind the disclosure.
-    expect(html).not.toContain("Your Life Changed");
-    expect(html).not.toContain("Identity Shifts");
+    expect(html).not.toContain("What Changed");
+    expect(html).not.toContain("The Person You Were Becoming");
     expect(html).not.toContain("End of June");
   });
 
@@ -489,7 +579,7 @@ describe("Timeline page — chapter browsing", () => {
 
     expect(html).toContain("The month you stopped waiting for permission");
     expect(html).toContain("Show chapter");
-    expect(html).not.toContain("Identity Preview");
+    expect(html).not.toContain("changed this month");
   });
 
   it("shows an empty state when there are no monthly narratives", async () => {

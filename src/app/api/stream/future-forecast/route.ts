@@ -61,10 +61,13 @@ function sseData(event: unknown): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }
 
-// Forecasts v2 model output keys, with the legacy keys kept as fallbacks so
-// a cached or older-model payload still streams item events. The client only
-// reads title/why/impact from each event; `section` rides along unused.
+// Forecasts v3 model output keys (risks/opportunities), with the v2 and
+// legacy keys kept as fallbacks so a cached or older-model payload still
+// streams item events. The client reads title plus whichever preview field
+// the payload shape carries; `section` rides along unused.
 const FORECAST_SECTION_KEYS = [
+  "risks",
+  "opportunities",
   "likely_developments",
   "failure_modes",
   "alternative_outcomes",

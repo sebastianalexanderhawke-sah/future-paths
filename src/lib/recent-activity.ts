@@ -34,14 +34,26 @@ export type EngagementConsistency = {
   longestStreak: number;
 };
 
+/**
+ * The Consistency section's compact statistics: how many of each kind of
+ * engagement happened in the last seven days. Same kind semantics as the
+ * feed — a reflected check-in counts as the reflection it became.
+ */
+export type WeeklyActivityCounts = {
+  reflections: number;
+  checkIns: number;
+  pathsChosen: number;
+};
+
 export type EngagementActivity = {
   consistency: EngagementConsistency;
+  weeklyCounts: WeeklyActivityCounts;
   /** Newest first, at most ACTIVITY_FEED_LIMIT. */
   items: EngagementActivityItem[];
 };
 
 /** The feed stays a glance, not a log. */
-export const ACTIVITY_FEED_LIMIT = 4;
+export const ACTIVITY_FEED_LIMIT = 3;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_DAYS = 7;
@@ -99,6 +111,34 @@ export function summarizeConsistency(
   return { weekDays, activeDaysThisWeek, currentStreak, longestStreak };
 }
 
+/** Events within the last seven days (today inclusive, UTC day keys). */
+function countRecentEvents(timestamps: string[], today: number): number {
+  let count = 0;
+  for (const stamp of timestamps) {
+    const ms = Date.parse(stamp);
+    if (Number.isNaN(ms)) continue;
+    const day = dayKeyOf(ms);
+    if (day > today - WEEK_DAYS && day <= today) count += 1;
+  }
+  return count;
+}
+
+/**
+ * Pure past-week event counts per engagement kind. Same UTC day window as
+ * summarizeConsistency, so the statistics always agree with the strip.
+ */
+export function countWeeklyActivity(
+  input: { reflections: string[]; checkIns: string[]; pathsChosen: string[] },
+  now: Date = new Date(),
+): WeeklyActivityCounts {
+  const today = dayKeyOf(now.getTime());
+  return {
+    reflections: countRecentEvents(input.reflections, today),
+    checkIns: countRecentEvents(input.checkIns, today),
+    pathsChosen: countRecentEvents(input.pathsChosen, today),
+  };
+}
+
 /** Pure merge of activity items: newest first, capped for the card. */
 export function buildActivityFeed(
   items: EngagementActivityItem[],
@@ -116,6 +156,7 @@ const EMPTY_ACTIVITY: EngagementActivity = {
     currentStreak: 0,
     longestStreak: 0,
   },
+  weeklyCounts: { reflections: 0, checkIns: 0, pathsChosen: 0 },
   items: [],
 };
 
@@ -165,9 +206,19 @@ export async function getEngagementActivity(): Promise<EngagementActivity> {
 
   const items: EngagementActivityItem[] = [];
   const timestamps: string[] = [];
+  const checkInTimestamps: string[] = [];
+  const reflectionTimestamps: string[] = [];
+  const pathTimestamps: string[] = [];
 
   for (const row of checkIns.data ?? []) {
     timestamps.push(row.created_at);
+    // Kind semantics match the feed: an answered check-in counts as the
+    // reflection it became, an unanswered one as a check-in.
+    if (row.reflection_answer) {
+      reflectionTimestamps.push(row.created_at);
+    } else {
+      checkInTimestamps.push(row.created_at);
+    }
     const title = titleOf(row.moments as JoinedMoment);
     if (!title) continue;
     items.push({
@@ -191,6 +242,7 @@ export async function getEngagementActivity(): Promise<EngagementActivity> {
   for (const row of chosenPaths.data ?? []) {
     if (!row.chosen_at) continue;
     timestamps.push(row.chosen_at);
+    pathTimestamps.push(row.chosen_at);
     const title = titleOf(row.moments as JoinedMoment);
     if (!title) continue;
     items.push({
@@ -203,6 +255,11 @@ export async function getEngagementActivity(): Promise<EngagementActivity> {
 
   return {
     consistency: summarizeConsistency(timestamps),
+    weeklyCounts: countWeeklyActivity({
+      reflections: reflectionTimestamps,
+      checkIns: checkInTimestamps,
+      pathsChosen: pathTimestamps,
+    }),
     items: buildActivityFeed(items),
   };
 }

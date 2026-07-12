@@ -30,9 +30,10 @@ describe("forecast slot integrity", () => {
     expect(integrity.fallbackAdds).toBe(0);
   });
 
-  it("preserves all surviving active futures without adding fallback replacements", () => {
+  it("preserves all surviving risk futures without adding fallback replacements", () => {
     const generated = {
-      active: [
+      active: [],
+      hidden: [
         {
           title: "She Says Yes To Coffee",
           why: "A direct ask after daily rapport can lead to plans quickly.",
@@ -48,8 +49,6 @@ describe("forecast slot integrity", () => {
           why: "Mutual interest often turns into concrete plans quickly.",
           impact: "You meet outside work within days.",
         },
-      ],
-      hidden: [
         {
           title: "Coworkers Notice The Dynamic",
           why: "Workplace chemistry rarely stays invisible.",
@@ -90,13 +89,13 @@ describe("forecast slot integrity", () => {
       { collectPipelineTrace: true },
     );
 
-    const displayedTitles = result.activeFutures.map((future) => future.title);
+    const displayedTitles = result.hiddenFutures.map((future) => future.title);
 
-    expect(result.integrityAudit?.active.rawCount).toBe(3);
-    expect(result.integrityAudit?.active.displayedCount).toBe(3);
-    expect(result.integrityAudit?.active.replacements).toBe(0);
-    expect(displayedTitles.length).toBe(3);
-    expect(displayedTitles.length).toBeLessThanOrEqual(generated.active.length);
+    expect(result.integrityAudit?.hidden.rawCount).toBe(6);
+    expect(result.integrityAudit?.hidden.displayedCount).toBe(6);
+    expect(result.integrityAudit?.hidden.replacements).toBe(0);
+    expect(displayedTitles.length).toBe(6);
+    expect(displayedTitles.length).toBeLessThanOrEqual(generated.hidden.length);
     expect(displayedTitles[0]).toBe("She Says Yes To Coffee");
     expect(displayedTitles[1]).toBe("She Declines But Stays Warm");
     expect(displayedTitles[2]).toBe("A First Date Gets Planned");

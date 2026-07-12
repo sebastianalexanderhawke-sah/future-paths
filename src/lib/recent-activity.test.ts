@@ -86,16 +86,17 @@ describe("buildActivityFeed", () => {
     };
   }
 
-  it("orders newest first and caps the feed", () => {
+  it("orders newest first and caps the feed at three", () => {
     const feed = buildActivityFeed([
       item("a", 5),
       item("b", 0),
       item("c", 3),
       item("d", 1),
       item("e", 2),
+      item("f", 6),
     ]);
     expect(feed).toHaveLength(ACTIVITY_FEED_LIMIT);
-    expect(feed.map((f) => f.id)).toEqual(["b", "d", "e", "c"]);
+    expect(feed.map((f) => f.id)).toEqual(["b", "d", "e"]);
   });
 
   it("never pads an empty feed", () => {

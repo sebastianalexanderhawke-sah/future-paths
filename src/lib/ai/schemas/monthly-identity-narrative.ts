@@ -6,6 +6,7 @@ import type { MockMonthlyIdentityNarrativeDraft } from "@/lib/mock-monthly-ident
 export const monthlyIdentityNarrativeDraftSchema = z.object({
   month: z.string().trim().min(1).max(40),
   headline: tentativeTextSchema,
+  teaser: tentativeTextSchema,
   opening_beginning: tentativeTextSchema,
   opening_end: tentativeTextSchema,
 }) satisfies z.ZodType<MockMonthlyIdentityNarrativeDraft>;

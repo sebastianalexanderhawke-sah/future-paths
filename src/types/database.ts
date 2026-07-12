@@ -105,6 +105,8 @@ export type MonthlyIdentityNarrativeRow = {
   user_id: string;
   month: string;
   headline: string;
+  // Empty string = legacy row generated before the dedicated cover teaser.
+  teaser: string;
   opening_beginning: string;
   opening_end: string;
   evidence_fingerprint: string;
@@ -116,6 +118,7 @@ export type MonthlyIdentityNarrativeInsert = Pick<
   MonthlyIdentityNarrativeRow,
   "user_id" | "month" | "headline" | "evidence_fingerprint"
 > & {
+  teaser?: string;
   opening_beginning?: string;
   opening_end?: string;
   updated_at?: string;

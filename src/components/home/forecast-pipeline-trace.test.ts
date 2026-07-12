@@ -7,7 +7,8 @@ describe("forecast pipeline trace", () => {
     const result = processGeneratedForecastSections(
       {
         wild_card: [],
-        active: [
+        active: [],
+        hidden: [
           {
             title: "She Says Yes To Coffee",
             why: "A direct ask after daily rapport can lead to plans quickly.",
@@ -18,8 +19,6 @@ describe("forecast pipeline trace", () => {
             why: "Reflection may help you understand your feelings.",
             impact: "You learn more about yourself.",
           },
-        ],
-        hidden: [
           {
             title: "Feedback Creates Insight",
             why: "Early users may push the product in a new direction.",
@@ -42,22 +41,22 @@ describe("forecast pipeline trace", () => {
     );
 
     expect(result.pipelineTrace).toBeDefined();
-    expect(result.pipelineTrace?.active.length).toBeGreaterThanOrEqual(2);
-    expect(result.pipelineTrace?.active.some((item) => item.original === "Gain Clarity")).toBe(true);
+    expect(result.pipelineTrace?.hidden.length).toBeGreaterThanOrEqual(3);
+    expect(result.pipelineTrace?.hidden.some((item) => item.original === "Gain Clarity")).toBe(true);
     // v2.1: AI-generated futures are no longer removed for v1 "reflective
     // language" — the model succeeds or fails on structural correctness.
     // Even a weak title like "Gain Clarity" is preserved verbatim; prose
     // quality is the prompt's job now.
     expect(
-      result.pipelineTrace?.active.find((item) => item.original === "Gain Clarity")?.status,
+      result.pipelineTrace?.hidden.find((item) => item.original === "Gain Clarity")?.status,
     ).toBe("preserved");
     expect(
-      result.pipelineTrace?.active.find((item) => item.original === "She Says Yes To Coffee")?.status,
+      result.pipelineTrace?.hidden.find((item) => item.original === "She Says Yes To Coffee")?.status,
     ).toBe("preserved");
-    expect(result.activeFutures.some((future) => future.title === "She Says Yes To Coffee")).toBe(
+    expect(result.hiddenFutures.some((future) => future.title === "She Says Yes To Coffee")).toBe(
       true,
     );
-    expect(result.activeFutures.some((future) => future.title === "Gain Clarity")).toBe(true);
+    expect(result.hiddenFutures.some((future) => future.title === "Gain Clarity")).toBe(true);
     // Sections are no longer padded to their own minimum individually —
     // fallback only tops up the unified, combined list to the global floor.
     const totalFutures =

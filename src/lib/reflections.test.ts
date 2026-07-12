@@ -71,6 +71,7 @@ vi.mock("@/actions/auth", () => ({
 // always calls them; quiet fixtures keep these tests about reflections.
 vi.mock("@/lib/focus-areas", () => ({
   getRecentFocusAreas: vi.fn(async () => []),
+  buildFocusInsight: vi.fn(() => null),
 }));
 vi.mock("@/lib/recent-activity", () => ({
   getEngagementActivity: vi.fn(async () => ({
@@ -80,6 +81,7 @@ vi.mock("@/lib/recent-activity", () => ({
       currentStreak: 0,
       longestStreak: 0,
     },
+    weeklyCounts: { reflections: 0, checkIns: 0, pathsChosen: 0 },
     items: [],
   })),
 }));
@@ -217,11 +219,21 @@ describe("/reflections page", () => {
     "utf-8",
   );
 
-  it("renders the queue sections, completed reflections list, and prediction card", () => {
-    expect(PAGE_SOURCE).toContain("Next Up");
-    expect(PAGE_SOURCE).toContain("Coming Up");
+  it("renders the three workflow sections, completed list, and prediction card", () => {
+    expect(PAGE_SOURCE).toContain('title="Check-ins"');
+    expect(PAGE_SOURCE).toContain(
+      "Situations that may have changed since you last visited them.",
+    );
+    expect(PAGE_SOURCE).toContain('title="Reflections"');
+    expect(PAGE_SOURCE).toContain("Situations waiting for deeper thought.");
+    expect(PAGE_SOURCE).toContain("Completed");
     expect(PAGE_SOURCE).toContain("CompletedReflectionsList");
     expect(PAGE_SOURCE).toContain("ReflectionPredictionCard");
+    // The standalone hero section is gone; the active reflection now opens
+    // the Reflections section instead.
+    expect(PAGE_SOURCE).not.toContain("Continue Working");
+    expect(PAGE_SOURCE).not.toContain("Next Up");
+    expect(PAGE_SOURCE).not.toContain("Coming Up");
   });
 });
 

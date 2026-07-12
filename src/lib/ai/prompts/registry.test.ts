@@ -147,7 +147,7 @@ describe("prompt registry", () => {
     expect(systemPrompt).toContain("reuse its exact name");
   });
 
-  it("requires forecast.generate to simulate a plausible year of the chosen path", () => {
+  it("requires forecast.generate to produce 6-8 risk/opportunity cards", () => {
     const definition = getPromptDefinition("forecast.generate");
     const systemPrompt = definition.buildSystemPrompt();
     const userPrompt = definition.buildUserPrompt({
@@ -155,17 +155,26 @@ describe("prompt registry", () => {
       profile: "forecast",
     });
 
-    // Forecasts v2: exactly 8 moments — 3 likely developments, 3 failure
-    // modes, 2 alternative outcomes — as one connected timeline.
-    expect(systemPrompt).toContain("EXACTLY 8 FUTURES");
-    expect(systemPrompt).toContain("likely_developments: exactly 3");
-    expect(systemPrompt).toContain("failure_modes: exactly 3");
-    expect(systemPrompt).toContain("alternative_outcomes: exactly 2");
-    expect(systemPrompt).toContain("THE TIMELINE MUST FLOW");
-    expect(systemPrompt).toContain("not fear tactics");
-    expect(userPrompt).toContain("likely_developments (exactly 3)");
-    expect(userPrompt).toContain("failure_modes (exactly 3)");
-    expect(userPrompt).toContain("alternative_outcomes (exactly 2)");
+    // Forecasts v3 (Phase 2): 6-8 cards — 5-6 realistic "What Could Go
+    // Wrong" risks plus 1-2 unexpected opportunities, each with the same
+    // three bullet sections and an honest confidence estimate.
+    expect(systemPrompt).toContain("6 TO 8 FORECAST CARDS");
+    expect(systemPrompt).toContain("risks: 5 or 6");
+    expect(systemPrompt).toContain("opportunities: 1 or 2");
+    expect(systemPrompt).toContain("what_could_happen");
+    expect(systemPrompt).toContain("why_this");
+    expect(systemPrompt).toContain("what_you_can_do");
+    expect(systemPrompt).toContain("confidence");
+    expect(systemPrompt).toContain("not fear-mongering");
+    // Phase 3: forecasts are observable events, never emotional states, and
+    // every section is exactly two bullets.
+    expect(systemPrompt).toContain("EVENTS, NOT EMOTIONS");
+    expect(systemPrompt).toContain("never an emotional or internal state");
+    expect(systemPrompt).toContain("exactly 2");
+    expect(userPrompt).toContain("risks (5 or 6 cards)");
+    expect(userPrompt).toContain("opportunities (1 or 2 cards)");
+    expect(userPrompt).toContain("what_could_happen (exactly 2 bullets)");
+    expect(userPrompt).toContain("confidence (integer 0-100)");
   });
 
   it("requires check_in.generate to require theme and direction", () => {

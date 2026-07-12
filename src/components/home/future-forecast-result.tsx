@@ -9,6 +9,11 @@ import {
 import type { ScannableFuture } from "@/components/home/output-refinement";
 import { CardShell } from "@/components/ui/card-shell";
 import { toProcessedForecastAudit } from "@/lib/ai-audit";
+import {
+  groupForecastFutures,
+  isStructuredForecastList,
+  orderForecastFuturesByConfidence,
+} from "@/lib/forecast-order";
 import { toCurrentFutureRendering } from "@/lib/forecast-simplification-experiment";
 
 type FutureForecastResultProps = {
@@ -51,15 +56,47 @@ function UnifiedForecastList({ futures, wildCardTitles }: UnifiedForecastListPro
   );
 }
 
+// Phase 3: structured (v3) forecasts render as two labelled groups —
+// risks first, then opportunities — each ordered highest-confidence first.
+function GroupedForecastList({ futures, wildCardTitles }: UnifiedForecastListProps) {
+  const { risks, opportunities } = groupForecastFutures(futures, wildCardTitles);
+
+  return (
+    <div className="flex flex-col gap-6">
+      {risks.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <p className="text-label text-ink-primary">Things to Watch For</p>
+          <div className="flex flex-col gap-3">
+            {risks.map((future) => (
+              <ForecastFutureCard key={future.title} future={future} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {opportunities.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <p className="text-label text-ink-primary">Unexpected Opportunities</p>
+          <div className="flex flex-col gap-3">
+            {opportunities.map((future) => (
+              <ForecastFutureCard key={future.title} future={future} cardVariant="wildcard" />
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
 export function FutureForecastResultView({ forecast }: FutureForecastResultProps) {
   const wildCardFutures = forecast.sections.wildCardFutures ?? [];
   const wildCardTitles = new Set(wildCardFutures.map((future) => future.title));
-  const allFutures = [
+  const allFutures = orderForecastFuturesByConfidence([
     ...forecast.sections.activeFutures,
     ...forecast.sections.hiddenFutures,
     ...forecast.sections.blindSpotFutures,
     ...wildCardFutures,
-  ];
+  ]);
 
   return (
     <CardShell
@@ -83,7 +120,11 @@ export function FutureForecastResultView({ forecast }: FutureForecastResultProps
       </div>
 
       <div className="flex flex-col gap-6 p-4 sm:p-6">
-        <UnifiedForecastList futures={allFutures} wildCardTitles={wildCardTitles} />
+        {isStructuredForecastList(allFutures) ? (
+          <GroupedForecastList futures={allFutures} wildCardTitles={wildCardTitles} />
+        ) : (
+          <UnifiedForecastList futures={allFutures} wildCardTitles={wildCardTitles} />
+        )}
 
         <Link
           href={`/moments/${forecast.momentId}`}

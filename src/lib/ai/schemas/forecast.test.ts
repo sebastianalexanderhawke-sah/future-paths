@@ -74,8 +74,86 @@ const VALID_WILD_CARD_2 = {
   timeframe: "months",
 };
 
+const V3_RISK = (title: string) => ({
+  title,
+  what_could_happen: ["Something concrete happens first", "A second concrete thing follows"],
+  why_this: ["You described this exact constraint", "This dynamic is well documented"],
+  what_you_can_do: ["Take one concrete step this week", "Watch for the early sign"],
+  confidence: 60,
+  timeframe: "months",
+});
+
+const V3_OPPORTUNITY = {
+  title: "A Better Opportunity Appears",
+  what_could_happen: ["An option you had not weighed becomes realistic", "Someone brings you an opening"],
+  why_this: ["Being in motion attracts options", "Your new context widens what finds you"],
+  what_you_can_do: ["Tell people what you are working toward", "Leave room to say yes"],
+  confidence: 30,
+  timeframe: "longer_term",
+};
+
 describe("forecast schema", () => {
-  it("parses v2 section names onto the transport keys", () => {
+  it("parses v3 card sections onto the transport keys with newline-joined bullets", () => {
+    const parsed = parseForecastOutput({
+      risks: [
+        V3_RISK("Risk One Appears"),
+        V3_RISK("Risk Two Appears"),
+        V3_RISK("Risk Three Appears"),
+        V3_RISK("Risk Four Appears"),
+        V3_RISK("Risk Five Appears"),
+      ],
+      opportunities: [V3_OPPORTUNITY],
+    });
+
+    expect(parsed.active).toHaveLength(0);
+    expect(parsed.hidden).toHaveLength(5);
+    expect(parsed.blind_spots).toHaveLength(0);
+    expect(parsed.wild_card).toHaveLength(1);
+
+    // Bullets are newline-encoded onto the legacy string fields so the
+    // stored sections_json shape stays identical to previous versions.
+    expect(parsed.hidden[0]?.impact).toBe(
+      "Something concrete happens first\nA second concrete thing follows",
+    );
+    expect(parsed.hidden[0]?.why).toBe(
+      "You described this exact constraint\nThis dynamic is well documented",
+    );
+    expect(parsed.hidden[0]?.actions).toEqual([
+      "Take one concrete step this week",
+      "Watch for the early sign",
+    ]);
+    expect(parsed.hidden[0]?.confidence).toBe(60);
+    expect(parsed.hidden[0]?.timeframe).toBe("months");
+
+    expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
+  });
+
+  it("rejects a generation with too few risks or missing opportunities", () => {
+    const fourRisks = parseForecastOutput({
+      risks: [
+        V3_RISK("Risk One Appears"),
+        V3_RISK("Risk Two Appears"),
+        V3_RISK("Risk Three Appears"),
+        V3_RISK("Risk Four Appears"),
+      ],
+      opportunities: [V3_OPPORTUNITY],
+    });
+    expect(forecastOutputSchema.safeParse(fourRisks).success).toBe(false);
+
+    const noOpportunities = parseForecastOutput({
+      risks: [
+        V3_RISK("Risk One Appears"),
+        V3_RISK("Risk Two Appears"),
+        V3_RISK("Risk Three Appears"),
+        V3_RISK("Risk Four Appears"),
+        V3_RISK("Risk Five Appears"),
+      ],
+      opportunities: [],
+    });
+    expect(forecastOutputSchema.safeParse(noOpportunities).success).toBe(false);
+  });
+
+  it("parses v2 section names onto the transport keys (legacy payloads)", () => {
     const parsed = parseForecastOutput({
       likely_developments: [VALID_ITEM_A, VALID_ITEM_D, VALID_ITEM_E],
       failure_modes: [VALID_ITEM_B, VALID_ITEM_G, VALID_ITEM_F],
@@ -87,7 +165,10 @@ describe("forecast schema", () => {
     expect(parsed.hidden).toHaveLength(3);
     expect(parsed.blind_spots).toHaveLength(0);
     expect(parsed.wild_card).toHaveLength(2);
-    expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
+    // v2 counts no longer validate as a FRESH generation (v3 requires 5-6
+    // risks and 1-2 opportunities with an empty active section) — but the
+    // payload still parses, which is what keeps stored rows rendering.
+    expect(forecastOutputSchema.safeParse(parsed).success).toBe(false);
   });
 
   it("still parses legacy transport keys from cached payloads", () => {
@@ -245,7 +326,6 @@ describe("forecast schema", () => {
     // Banned phrase removed; sentence re-capitalised at the start.
     expect(parsed.active[2]?.why).toBe("Talk to her about how you feel.");
     expect(parsed.active.every((item) => !item.why.toLowerCase().includes("you should"))).toBe(true);
-    expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
   });
 
   it("sanitizes directive language across all items in a section", () => {
@@ -282,10 +362,9 @@ describe("forecast schema", () => {
     expect(parsed.hidden[0]?.why).toBe("Act now.");
     expect(parsed.hidden[1]?.why).toBe("Tell her.");
     expect(parsed.hidden[2]?.why).toBe("Decide.");
-    expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
   });
 
-  it("parses a fully valid v2 forecast without regression", () => {
+  it("parses a fully valid v2 forecast payload without regression", () => {
     const input = {
       likely_developments: [
         VALID_ITEM_A,
@@ -309,6 +388,5 @@ describe("forecast schema", () => {
     expect(parsed.blind_spots).toHaveLength(0);
     expect(parsed.wild_card).toHaveLength(2);
     expect(parsed.active[0]?.title).toBe("She Says Yes To Coffee");
-    expect(forecastOutputSchema.safeParse(parsed).success).toBe(true);
   });
 });

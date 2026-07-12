@@ -7,9 +7,9 @@ import { OverviewCard } from "@/components/overview/overview-card";
 export type AccordionChapter = {
   /** Month label, e.g. "June 2026" — the accordion key and rail label. */
   month: string;
-  /** Compact chapter card contents: headline, short intro, identity preview. */
+  /** The cover: month, chapter title, teaser, story count. */
   preview: React.ReactNode;
-  /** The full chapter: story, beginning → end, shifts, situations, closing. */
+  /** The opened chapter: the same cover, then the story sections. */
   full: React.ReactNode;
 };
 

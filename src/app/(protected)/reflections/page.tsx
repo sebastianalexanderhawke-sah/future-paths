@@ -8,27 +8,13 @@ import { SituationTitleExpander } from "@/components/reflections/situation-title
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
 import { listMoments } from "@/lib/moments";
 import { listReflectionCheckIns, type ReflectionCheckIn } from "@/lib/reflections";
-import {
-  CHECK_IN_STALE_DAYS,
-  formatRelativeTime,
-  isCheckInStale,
-} from "@/lib/relative-time";
+import { formatRelativeTime, isCheckInStale } from "@/lib/relative-time";
 import { getUserIdentity } from "@/lib/user-identity";
 import type { Moment } from "@/types/database";
 
-// Next Up answers "what should I do next?", not "here are six things" —
-// the first item plus a couple reinforcing that more follows.
-const NEXT_UP_LIMIT = 3;
-
-// Coming Up previews just enough to give confidence there's more waiting;
-// everything past the preview hides behind a single expansion control.
-const COMING_UP_PREVIEW = 4;
-
-// One queue, two kinds of work. The kind is metadata on the row (a badge),
-// never a section — the user works downward without switching mental models.
-type QueueItem =
-  | { kind: "check-in"; moment: Moment }
-  | { kind: "reflection"; checkIn: ReflectionCheckIn };
+// Each section shows just enough rows to work from; everything past the
+// preview hides behind a single expansion control, as before.
+const LIST_PREVIEW = 4;
 
 function rowBorder(isLast: boolean): string {
   return isLast ? "" : "border-b border-[#f5f5f5]";
@@ -66,6 +52,17 @@ function ReflectionRow({
   );
 }
 
+/**
+ * The reason line answers "why is this ready for a check-in?" — either
+ * enough time has passed for the situation (and the forecasts built on it)
+ * to have drifted, or Reflection has never seen how it's going at all.
+ */
+function checkInReason(lastCheckIn: string | undefined): string {
+  return lastCheckIn
+    ? `Last check-in ${formatRelativeTime(lastCheckIn)} — enough time has passed for this to have changed.`
+    : "No check-ins yet — Reflection can learn something new about this situation.";
+}
+
 function CheckInRow({
   moment,
   lastCheckIn,
@@ -88,9 +85,7 @@ function CheckInRow({
           {moment.title}
         </span>
         <span className="mt-0.5 block text-[12px] text-[#888888]">
-          {lastCheckIn
-            ? `Check-in · last one ${formatRelativeTime(lastCheckIn)} — more than ${CHECK_IN_STALE_DAYS} days`
-            : "Check-in · none yet"}
+          {checkInReason(lastCheckIn)}
         </span>
       </span>
       <Link
@@ -103,23 +98,23 @@ function CheckInRow({
   );
 }
 
-function QueueRow({
-  item,
-  position,
-  lastCheckIn,
-  isLast,
-}: {
-  item: QueueItem;
-  position: number;
-  lastCheckIn: string | undefined;
-  isLast: boolean;
-}) {
-  if (item.kind === "check-in") {
-    return (
-      <CheckInRow moment={item.moment} lastCheckIn={lastCheckIn} isLast={isLast} />
-    );
-  }
-  return <ReflectionRow checkIn={item.checkIn} position={position} isLast={isLast} />;
+/** The same folded-list control the queue used: preview, then one control. */
+function ShowMoreSummary({ count }: { count: number }) {
+  return (
+    <summary className="cursor-pointer list-none py-3 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857] [&::-webkit-details-marker]:hidden">
+      <span className="group-open:hidden">Show {count} more →</span>
+      <span className="hidden group-open:inline">↑ Show fewer</span>
+    </summary>
+  );
+}
+
+function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="mb-4">
+      <h2 className="text-[17px] font-bold text-[#111]">{title}</h2>
+      <p className="mt-[3px] text-[13px] text-[#999999]">{subtitle}</p>
+    </div>
+  );
 }
 
 export default async function WorkspacePage() {
@@ -155,16 +150,18 @@ export default async function WorkspacePage() {
   });
   const supersededCount = unanswered.length - latestPerSituation.length;
 
-  // Longest-waiting situation is the one in progress; the rest queue behind
-  // it, oldest first.
+  // The longest-waiting reflection opens the Reflections section expanded,
+  // question and answer box ready; the rest queue behind it, oldest first.
   const pending =
     latestPerSituation.length > 0
       ? latestPerSituation[latestPerSituation.length - 1]
       : null;
   const waitingReflections = latestPerSituation.slice(0, -1).reverse();
+  const waitingPreview = waitingReflections.slice(0, LIST_PREVIEW);
+  const waitingRest = waitingReflections.slice(LIST_PREVIEW);
 
   // Check-ins due — existing staleness rule, minus situations already
-  // surfaced by a reflection, most-neglected first.
+  // surfaced by a reflection, prioritized most-neglected first.
   const activeMoments =
     "moments" in momentsResult ? momentsResult.moments : [];
   const lastCheckIns = await getLastCheckInsForMoments(
@@ -180,23 +177,10 @@ export default async function WorkspacePage() {
       const bTime = lastCheckIns[b.id] ? new Date(lastCheckIns[b.id]).getTime() : 0;
       return aTime - bTime;
     });
+  const checkInPreview = needsCheckIn.slice(0, LIST_PREVIEW);
+  const checkInRest = needsCheckIn.slice(LIST_PREVIEW);
 
-  // The single prioritized queue: check-ins outrank reflections (a check-in
-  // generates the next round of thinking) and each group keeps its existing
-  // internal order — most-neglected check-in first, oldest reflection first.
-  const queue: QueueItem[] = [
-    ...needsCheckIn.map((moment): QueueItem => ({ kind: "check-in", moment })),
-    ...waitingReflections.map(
-      (checkIn): QueueItem => ({ kind: "reflection", checkIn }),
-    ),
-  ];
-
-  const nextUp = queue.slice(0, NEXT_UP_LIMIT);
-  const comingUp = queue.slice(NEXT_UP_LIMIT);
-  const comingUpPreview = comingUp.slice(0, COMING_UP_PREVIEW);
-  const comingUpRest = comingUp.slice(COMING_UP_PREVIEW);
-
-  const hasWork = pending !== null || queue.length > 0;
+  const hasWork = pending !== null || needsCheckIn.length > 0;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
@@ -215,7 +199,7 @@ export default async function WorkspacePage() {
               Workspace
             </h1>
             <p className="text-[15px] text-[#999999]">
-              Pick up where you left off, then work down the queue.
+              Check in on what&apos;s changed, then continue your reflections.
             </p>
           </div>
 
@@ -239,17 +223,51 @@ export default async function WorkspacePage() {
             </OverviewCard>
           ) : (
             <div className="flex flex-col gap-8 pb-14">
-              {/* 1. Continue — the hero. The situation leads; the task follows. */}
+              {/* 1. Check-ins — reality first: what may have moved since the
+                  last visit. Each row says why it's ready. */}
+              {needsCheckIn.length > 0 ? (
+                <section>
+                  <SectionHeader
+                    title="Check-ins"
+                    subtitle="Situations that may have changed since you last visited them."
+                  />
+                  <OverviewCard className="px-8 py-4">
+                    {checkInPreview.map((moment, i) => (
+                      <CheckInRow
+                        key={moment.id}
+                        moment={moment}
+                        lastCheckIn={lastCheckIns[moment.id]}
+                        isLast={
+                          checkInRest.length === 0 &&
+                          i === checkInPreview.length - 1
+                        }
+                      />
+                    ))}
+                    {checkInRest.length > 0 ? (
+                      <details className="group">
+                        <ShowMoreSummary count={checkInRest.length} />
+                        {checkInRest.map((moment, i) => (
+                          <CheckInRow
+                            key={moment.id}
+                            moment={moment}
+                            lastCheckIn={lastCheckIns[moment.id]}
+                            isLast={i === checkInRest.length - 1}
+                          />
+                        ))}
+                      </details>
+                    ) : null}
+                  </OverviewCard>
+                </section>
+              ) : null}
+
+              {/* 2. Reflections — the active one opens the section, question
+                  and answer box ready; the rest wait as compact rows. */}
               {pending ? (
                 <section>
-                  <div className="mb-4">
-                    <h2 className="text-[17px] font-bold text-[#111]">
-                      Continue Working
-                    </h2>
-                    <p className="mt-[3px] text-[13px] text-[#999999]">
-                      Pick up where you left off
-                    </p>
-                  </div>
+                  <SectionHeader
+                    title="Reflections"
+                    subtitle="Situations waiting for deeper thought."
+                  />
                   <OverviewCard className="px-9 py-7">
                     <SituationTitleExpander
                       title={pending.moment.title}
@@ -264,9 +282,9 @@ export default async function WorkspacePage() {
                       <span className="rounded-full bg-[#eef2ff] px-3 py-1 text-[11px] font-semibold text-[#047857]">
                         Reflection
                       </span>
-                      {queue.length > 0 ? (
+                      {waitingReflections.length > 0 ? (
                         <span className="text-[12px] text-[#999999]">
-                          {queue.length} more in your queue
+                          {waitingReflections.length} more waiting below
                         </span>
                       ) : null}
                     </div>
@@ -277,115 +295,35 @@ export default async function WorkspacePage() {
                       <ReflectionPredictionCard checkInId={pending.id} />
                     </div>
                   </OverviewCard>
-                </section>
-              ) : null}
 
-              {/* 2. Next Up — one prioritized queue. Check-ins and reflections
-                  interleave here as rows; the kind is a badge on the row, not
-                  a section of the page. */}
-              {nextUp.length > 0 ? (
-                <section>
-                  <div className="mb-4">
-                    <h2 className="text-[17px] font-bold text-[#111]">
-                      Next Up
-                    </h2>
-                    <p className="mt-[3px] text-[13px] text-[#999999]">
-                      Just the next few — nothing else needs you yet
-                    </p>
-                  </div>
-                  <OverviewCard className="px-8 py-4">
-                    {nextUp.map((item, i) => (
-                      <div
-                        key={item.kind === "check-in" ? item.moment.id : item.checkIn.id}
-                        className={
-                          // The top item is the one to act on; the rest only
-                          // reinforce that more follows, so they sit back
-                          // until pointed at.
-                          i === 0
-                            ? undefined
-                            : "opacity-70 transition-opacity duration-150 hover:opacity-100 focus-within:opacity-100"
-                        }
-                      >
-                        <QueueRow
-                          item={item}
+                  {waitingReflections.length > 0 ? (
+                    <OverviewCard className="mt-4 px-8 py-4">
+                      {waitingPreview.map((checkIn, i) => (
+                        <ReflectionRow
+                          key={checkIn.id}
+                          checkIn={checkIn}
                           position={i + 2}
-                          lastCheckIn={
-                            item.kind === "check-in"
-                              ? lastCheckIns[item.moment.id]
-                              : undefined
+                          isLast={
+                            waitingRest.length === 0 &&
+                            i === waitingPreview.length - 1
                           }
-                          isLast={i === nextUp.length - 1}
                         />
-                      </div>
-                    ))}
-                  </OverviewCard>
-                </section>
-              ) : null}
-
-              {/* 3. Coming Up — a small preview of what's behind the queue.
-                  Enough to give confidence there's more waiting, never so
-                  much that it competes with Next Up. */}
-              {comingUp.length > 0 ? (
-                <section>
-                  <div className="mb-4">
-                    <h2 className="text-[17px] font-bold text-[#111]">
-                      Coming Up
-                    </h2>
-                    <p className="mt-[3px] text-[13px] text-[#999999]">
-                      Waiting for when you&apos;re ready
-                    </p>
-                  </div>
-                  <OverviewCard className="px-8 py-4">
-                    {comingUpPreview.map((item, i) => (
-                      <QueueRow
-                        key={
-                          item.kind === "check-in"
-                            ? item.moment.id
-                            : item.checkIn.id
-                        }
-                        item={item}
-                        position={NEXT_UP_LIMIT + i + 2}
-                        lastCheckIn={
-                          item.kind === "check-in"
-                            ? lastCheckIns[item.moment.id]
-                            : undefined
-                        }
-                        isLast={
-                          comingUpRest.length === 0 &&
-                          i === comingUpPreview.length - 1
-                        }
-                      />
-                    ))}
-                    {comingUpRest.length > 0 ? (
-                      <details className="group">
-                        <summary className="cursor-pointer list-none py-3 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857] [&::-webkit-details-marker]:hidden">
-                          <span className="group-open:hidden">
-                            Show {comingUpRest.length} more →
-                          </span>
-                          <span className="hidden group-open:inline">
-                            ↑ Show fewer
-                          </span>
-                        </summary>
-                        {comingUpRest.map((item, i) => (
-                          <QueueRow
-                            key={
-                              item.kind === "check-in"
-                                ? item.moment.id
-                                : item.checkIn.id
-                            }
-                            item={item}
-                            position={NEXT_UP_LIMIT + COMING_UP_PREVIEW + i + 2}
-                            lastCheckIn={
-                              item.kind === "check-in"
-                                ? lastCheckIns[item.moment.id]
-                                : undefined
-                            }
-                            isLast={i === comingUpRest.length - 1}
-                          />
-                        ))}
-                      </details>
-                    ) : null}
-                  </OverviewCard>
+                      ))}
+                      {waitingRest.length > 0 ? (
+                        <details className="group">
+                          <ShowMoreSummary count={waitingRest.length} />
+                          {waitingRest.map((checkIn, i) => (
+                            <ReflectionRow
+                              key={checkIn.id}
+                              checkIn={checkIn}
+                              position={LIST_PREVIEW + i + 2}
+                              isLast={i === waitingRest.length - 1}
+                            />
+                          ))}
+                        </details>
+                      ) : null}
+                    </OverviewCard>
+                  ) : null}
                 </section>
               ) : null}
 
@@ -399,7 +337,7 @@ export default async function WorkspacePage() {
             </div>
           )}
 
-          {/* 4. Completed — progress lives at the end of the journey. The
+          {/* 3. Completed — progress lives at the end of the journey. The
               list itself stays collapsed until the user wants the history. */}
           {completed.length > 0 ? (
             <section className="pb-14">

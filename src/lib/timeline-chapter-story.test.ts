@@ -4,8 +4,8 @@ import {
   buildChapterStories,
   buildStoryline,
   composeClosingReflection,
-  composeIdentityJourney,
   computeIdentityShifts,
+  isMonthInProgress,
   splitIntoSentences,
   type ChapterCheckInInput,
   type ChapterChosenPathInput,
@@ -223,120 +223,6 @@ describe("buildStoryline", () => {
 });
 
 // ---------------------------------------------------------------------------
-// composeIdentityJourney
-// ---------------------------------------------------------------------------
-
-describe("composeIdentityJourney", () => {
-  const emptyComparison = { traitsMorePresent: [], traitsLessPresent: [] };
-
-  it("describes this month's movement comparatively, never an invented starting state", () => {
-    const journey = composeIdentityJourney(
-      [
-        { theme: "Courage", value: 8 },
-        { theme: "Loneliness", value: 7 },
-        { theme: "Stability", value: -4 },
-      ],
-      [],
-      emptyComparison,
-    );
-
-    expect(journey?.end).toEqual([
-      "More willing to act without certainty.",
-      "More isolated.",
-      "Placing less weight on stability.",
-    ]);
-    // No prior evidence → no beginning. Truth before symmetry.
-    expect(journey?.beginning).toEqual([]);
-  });
-
-  it("builds the beginning only from the previous month's recorded movement", () => {
-    const journey = composeIdentityJourney(
-      [{ theme: "Courage", value: 3 }],
-      [
-        { theme: "Connection", value: -2 },
-        { theme: "Uncertainty", value: 1 },
-      ],
-      emptyComparison,
-    );
-
-    expect(journey?.beginning).toEqual([
-      "Investing less in the people around you.",
-      "Living with more open questions.",
-    ]);
-    expect(journey?.end).toEqual(["More willing to act without certainty."]);
-  });
-
-  it("never balances a rising difficult theme with an invented positive opening", () => {
-    const journey = composeIdentityJourney(
-      [{ theme: "Loneliness", value: 7 }],
-      [],
-      emptyComparison,
-    );
-
-    expect(journey?.end).toEqual(["More isolated."]);
-    expect(journey?.beginning).toEqual([]);
-    expect(JSON.stringify(journey)).not.toContain("socially connected");
-    expect(JSON.stringify(journey)).not.toContain("Invested in the people");
-  });
-
-  it("caps both lists at 4 phrases", () => {
-    const manyShifts = [
-      { theme: "Courage", value: 5 },
-      { theme: "Loneliness", value: 4 },
-      { theme: "Curiosity", value: 3 },
-      { theme: "Connection", value: -2 },
-      { theme: "Growth", value: 1 },
-    ];
-    const journey = composeIdentityJourney(manyShifts, manyShifts, emptyComparison);
-
-    expect(journey?.beginning).toHaveLength(4);
-    expect(journey?.end).toHaveLength(4);
-  });
-
-  it("skips unknown themes instead of inventing a phrase", () => {
-    const journey = composeIdentityJourney(
-      [
-        { theme: "Mystery", value: 9 },
-        { theme: "Courage", value: 1 },
-      ],
-      [],
-      emptyComparison,
-    );
-
-    expect(journey?.end).toEqual(["More willing to act without certainty."]);
-  });
-
-  it("falls back to the month comparison for the end when there are no magnitudes", () => {
-    const journey = composeIdentityJourney([], [], {
-      traitsMorePresent: ["Courage"],
-      traitsLessPresent: ["Connection"],
-    });
-
-    expect(journey).toEqual({
-      beginning: [],
-      end: [
-        "More willing to act without certainty.",
-        "Investing less in the people around you.",
-      ],
-    });
-  });
-
-  it("returns null when there is no identity evidence at all", () => {
-    expect(composeIdentityJourney([], [], emptyComparison)).toBeNull();
-  });
-
-  it("does not fabricate an end from prior-month evidence alone", () => {
-    const journey = composeIdentityJourney(
-      [],
-      [{ theme: "Courage", value: 3 }],
-      emptyComparison,
-    );
-
-    expect(journey).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // composeClosingReflection
 // ---------------------------------------------------------------------------
 
@@ -441,5 +327,28 @@ describe("buildChapterStories", () => {
     );
 
     expect(stories.get("July 2026")?.storylines).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isMonthInProgress
+// ---------------------------------------------------------------------------
+
+describe("isMonthInProgress", () => {
+  it("recognizes the running calendar month by its label", () => {
+    const now = new Date("2026-07-12T09:00:00Z");
+
+    expect(isMonthInProgress("July 2026", now)).toBe(true);
+    expect(isMonthInProgress("June 2026", now)).toBe(false);
+    expect(isMonthInProgress("July 2025", now)).toBe(false);
+  });
+
+  it("uses the UTC month, matching the rest of the chapter grouping", () => {
+    // 23:30 on July 31 in UTC-2 is already August 1 locally; the chapter
+    // convention stays UTC.
+    const now = new Date("2026-07-31T23:30:00Z");
+
+    expect(isMonthInProgress("July 2026", now)).toBe(true);
+    expect(isMonthInProgress("August 2026", now)).toBe(false);
   });
 });

@@ -125,24 +125,13 @@ describe("forecast reality", () => {
   it("processes dedicated forecast generation through safeguards", () => {
     const sections = processGeneratedForecastSections(
       {
-        active: [
-          {
-            title: "She Says Yes To Coffee",
-            why: "A direct ask after daily rapport can lead to plans quickly.",
-            impact: "You meet outside work within the week.",
-          },
-          {
-            title: "You Start Spending Time Together Outside Work",
-            why: "One plan tends to lead to another once the first invitation lands.",
-            impact: "Weekends start including her instead of just workdays.",
-          },
-          {
-            title: "Coworkers Learn About The Ask",
-            why: "Workplace moments rarely stay fully private.",
-            impact: "Small talk feels strained for a few weeks.",
-          },
-        ],
+        active: [],
         hidden: [
+          {
+            title: "She Says No And Work Feels Strained",
+            why: "A direct ask at a shared workplace always risks some awkwardness.",
+            impact: "Small talk feels careful for a few weeks.",
+          },
           {
             title: "She Leaves The Company",
             why: "Job changes can remove the situation entirely.",
@@ -157,6 +146,11 @@ describe("forecast reality", () => {
             title: "She Assumes You're Not Interested",
             why: "Platonic behavior can read as disinterest when she initiates often.",
             impact: "She stops looking for signs because the friendship feels settled.",
+          },
+          {
+            title: "Coworkers Learn About The Ask",
+            why: "Workplace moments rarely stay fully private.",
+            impact: "Small talk feels strained for a few weeks.",
           },
         ],
         blind_spots: [],
@@ -179,13 +173,14 @@ describe("forecast reality", () => {
       ["Ask her out directly after work."],
     );
 
-    // Forecasts v2: 3 likely developments, 3 failure modes, 2 alternatives.
-    expect(sections.activeFutures.length).toBe(3);
-    expect(sections.hiddenFutures.length).toBe(3);
+    // Forecasts v3: 5-6 risks (hidden), 1-2 opportunities (wild_card),
+    // active and blind_spots retired.
+    expect(sections.activeFutures.length).toBe(0);
+    expect(sections.hiddenFutures.length).toBe(5);
     expect(sections.blindSpotFutures.length).toBe(0);
     expect(sections.wildCardFutures.length).toBe(2);
     expect(
-      sections.activeFutures.every((future) => !isReflectiveForecast(future.title)),
+      sections.hiddenFutures.every((future) => !isReflectiveForecast(future.title)),
     ).toBe(true);
   });
 
@@ -194,7 +189,8 @@ describe("forecast reality", () => {
     // lived-moment language. The structural filter must not remove them.
     const sections = processGeneratedForecastSections(
       {
-        active: [
+        active: [],
+        hidden: [
           {
             title: "You Finally Have Time To Think About Growth",
             why: "With tech handled, your attention shifts from firefighting to direction — you start thinking about where the site should go next instead of what broke today.",
@@ -210,8 +206,6 @@ describe("forecast reality", () => {
             why: "You notice patterns in which posts resonate, and that changes what you write.",
             impact: "The work starts to reflect what your readers actually need.",
           },
-        ],
-        hidden: [
           {
             title: "You Become The Bottleneck Between Two Systems",
             why: "Both threads route back through you for context.",
@@ -248,19 +242,21 @@ describe("forecast reality", () => {
       ["Treat content and tech as two distinct problems."],
     );
 
-    // Exactly 8 survive — nothing removed for narrative vocabulary.
-    expect(sections.activeFutures).toHaveLength(3);
-    expect(sections.hiddenFutures).toHaveLength(3);
+    // All 8 survive — nothing removed for narrative vocabulary.
+    expect(sections.hiddenFutures).toHaveLength(6);
     expect(sections.wildCardFutures).toHaveLength(2);
     // Titles preserved verbatim — no title-case mangling ("AI" stays "AI"),
     // no scene-title substitution.
-    expect(sections.activeFutures.map((f) => f.title)).toEqual([
+    expect(sections.hiddenFutures.map((f) => f.title)).toEqual([
       "You Finally Have Time To Think About Growth",
       "AI Content Drafts Start Sounding Like You",
       "The Site Starts Running Without Your Daily Attention",
+      "You Become The Bottleneck Between Two Systems",
+      "The Site's Voice Slowly Becomes Unrecognizable",
+      "You Stop Asking For Help",
     ]);
     // Impact text is the model's own writing, untouched.
-    expect(sections.activeFutures[0]?.futureImpact).toBe(
+    expect(sections.hiddenFutures[0]?.futureImpact).toBe(
       "Watching user replies gives you insight into what actually helps people who overthink.",
     );
   });
@@ -274,7 +270,8 @@ describe("forecast reality", () => {
 
     const sections = processGeneratedForecastSections(
       {
-        active: [
+        active: [],
+        hidden: [
           {
             title: "You Realize Content Is The Real Business",
             why: longWhy,
@@ -286,13 +283,6 @@ describe("forecast reality", () => {
             why: "After prompt iteration the drafts arrive closer to publishable.",
             impact: "The bottleneck shifts from writing to reviewing.",
           },
-          {
-            title: "A Freelancer Takes The Tech Off Your Plate",
-            why: "Handing off a real problem shifts the mental load.",
-            impact: "A site error gets fixed without your hours.",
-          },
-        ],
-        hidden: [
           {
             title: "You Become The Bottleneck",
             why: "Both threads route back through you.",
@@ -330,14 +320,14 @@ describe("forecast reality", () => {
     );
 
     // The 462-char paragraph survives verbatim — no "Because you described…".
-    expect(sections.activeFutures[0]?.whyItMightHappen).toBe(longWhy);
+    expect(sections.hiddenFutures[0]?.whyItMightHappen).toBe(longWhy);
     expect(
-      [...sections.activeFutures, ...sections.hiddenFutures, ...sections.wildCardFutures].every(
+      [...sections.hiddenFutures, ...sections.wildCardFutures].every(
         (f) => !/^because you described/i.test(f.whyItMightHappen),
       ),
     ).toBe(true);
     // Model-supplied signals keep their exact casing ("AI" is not mangled).
-    expect(sections.activeFutures[0]?.signals).toContain("AI Output Needs Less Editing");
+    expect(sections.hiddenFutures[0]?.signals).toContain("AI Output Needs Less Editing");
   });
 
   it("v2.1: anti-fabrication still removes futures about invented topics", () => {
@@ -414,7 +404,8 @@ describe("forecast reality", () => {
     const sections = processGeneratedForecastSections(
       {
         wild_card: [],
-        active: [
+        active: [],
+        hidden: [
           {
             title: "She Says Yes To Coffee",
             why: "A direct ask after daily rapport can lead to plans quickly.",
@@ -439,8 +430,6 @@ describe("forecast reality", () => {
             impact: "You talk every week but nothing romantic happens yet.",
             signals: ["Lunch plans happen weekly", "Personal topics come up", "Weekend plans suggested"],
           },
-        ],
-        hidden: [
           {
             title: "She Leaves The Company",
             why: "Job changes can remove the situation entirely.",
@@ -487,7 +476,7 @@ describe("forecast reality", () => {
       ["Ask her out directly after work."],
     );
 
-    const future = sections.activeFutures.find((f) => f.title === "She Says Yes To Coffee");
+    const future = sections.hiddenFutures.find((f) => f.title === "She Says Yes To Coffee");
     expect(future).toBeDefined();
     // v2.2: signals come directly from Claude's output, verbatim — no
     // title-casing pass (it mangled acronyms like "AI").
@@ -502,7 +491,8 @@ describe("forecast reality", () => {
     const sections = processGeneratedForecastSections(
       {
         wild_card: [],
-        active: [
+        active: [],
+        hidden: [
           {
             title: "She Says Yes To Coffee",
             why: "A direct ask after daily rapport can lead to plans quickly.",
@@ -524,8 +514,6 @@ describe("forecast reality", () => {
             why: "More time together can build comfort before romance.",
             impact: "You talk every week but nothing romantic happens yet.",
           },
-        ],
-        hidden: [
           {
             title: "She Leaves The Company",
             why: "Job changes can remove the situation entirely.",
@@ -566,7 +554,7 @@ describe("forecast reality", () => {
       ["Ask her out directly after work."],
     );
 
-    const future = sections.activeFutures.find((f) => f.title === "She Says Yes To Coffee");
+    const future = sections.hiddenFutures.find((f) => f.title === "She Says Yes To Coffee");
     expect(future).toBeDefined();
     // Without Claude signals the fallback derives from title/why/impact — not empty.
     expect(future?.signals.length).toBeGreaterThan(0);
@@ -585,7 +573,8 @@ describe("forecast reality", () => {
     const sections = processGeneratedForecastSections(
       {
         wild_card: [],
-        active: [
+        active: [],
+        hidden: [
           {
             title: "She Welcomes More Contact",
             why: workInitiationWhy,
@@ -606,8 +595,6 @@ describe("forecast reality", () => {
             why: "More time together can build comfort before romance.",
             impact: "You talk every week but nothing romantic happens yet.",
           },
-        ],
-        hidden: [
           {
             title: "She Leaves The Company",
             why: "Job changes can remove the situation entirely.",
@@ -648,10 +635,10 @@ describe("forecast reality", () => {
       ["Ask her out directly after work."],
     );
 
-    const preservedWork = sections.activeFutures.find(
+    const preservedWork = sections.hiddenFutures.find(
       (future) => future.explanationPreservation?.status === "preserved" && future.whyItMightHappen.includes("initiates conversation"),
     );
-    const preservedPersonality = sections.activeFutures.find((future) =>
+    const preservedPersonality = sections.hiddenFutures.find((future) =>
       future.whyItMightHappen.includes("extremely nice at work"),
     );
 
@@ -665,7 +652,8 @@ describe("forecast reality", () => {
     const sections = processGeneratedForecastSections(
       {
         wild_card: [],
-        active: [
+        active: [],
+        hidden: [
           {
             title: "She Says Yes To Coffee",
             why: "A direct ask after daily rapport can lead to plans quickly.",
@@ -694,8 +682,6 @@ describe("forecast reality", () => {
             signals: ["Lunch plans happen weekly", "Personal topics come up", "Weekend plans suggested"],
             timeframe: "months",
           },
-        ],
-        hidden: [
           {
             title: "She Leaves The Company",
             why: "Job changes can remove the situation entirely.",
@@ -749,7 +735,7 @@ describe("forecast reality", () => {
     );
 
     // Timeframe should flow from draft through to ScannableFuture.
-    const coffeeFuture = sections.activeFutures.find((f) => f.title === "She Says Yes To Coffee");
+    const coffeeFuture = sections.hiddenFutures.find((f) => f.title === "She Says Yes To Coffee");
     expect(coffeeFuture?.timeframe).toBe("weeks");
 
     const leaveFuture = sections.hiddenFutures.find((f) => f.title === "She Leaves The Company");
@@ -763,5 +749,51 @@ describe("forecast reality", () => {
     ];
     const fallbackFutures = allFutures.filter((f) => f.source === "fallback");
     expect(fallbackFutures.every((f) => f.timeframe === undefined)).toBe(true);
+  });
+
+  it("v3: carries action bullets and confidence through to ScannableFuture", () => {
+    const risk = (title: string, confidence: number) => ({
+      title,
+      why: "You described daily contact\nThis dynamic is well documented",
+      impact: "Something concrete happens\nA second thing follows",
+      actions: ["Take one concrete step", "Watch for the early sign"],
+      confidence,
+    });
+
+    const sections = processGeneratedForecastSections(
+      {
+        active: [],
+        hidden: [
+          risk("The Ambiguity Outlasts Your Patience", 75),
+          risk("She Assumes You're Not Interested", 65),
+          risk("Work Gets Complicated First", 55),
+          risk("A Coworker Becomes Her Focus", 40),
+          risk("The Friendship Slowly Fades", 35),
+        ],
+        blind_spots: [],
+        wild_card: [risk("A Mutual Friend Opens The Door", 30)],
+      },
+      "I like a girl at work",
+      "How often does she initiate conversations?\nDaily",
+      "Ask Her Out",
+      ["Ask her out directly after work."],
+    );
+
+    expect(sections.hiddenFutures).toHaveLength(5);
+    expect(sections.wildCardFutures).toHaveLength(1);
+    // Newline-encoded bullets survive verbatim on the legacy string fields.
+    expect(sections.hiddenFutures[0]?.whyItMightHappen).toBe(
+      "You described daily contact\nThis dynamic is well documented",
+    );
+    expect(sections.hiddenFutures[0]?.futureImpact).toBe(
+      "Something concrete happens\nA second thing follows",
+    );
+    // Actions and confidence ride along for the v3 card UI and ordering.
+    expect(sections.hiddenFutures[0]?.actions).toEqual([
+      "Take one concrete step",
+      "Watch for the early sign",
+    ]);
+    expect(sections.hiddenFutures[0]?.confidence).toBe(75);
+    expect(sections.wildCardFutures[0]?.confidence).toBe(30);
   });
 });

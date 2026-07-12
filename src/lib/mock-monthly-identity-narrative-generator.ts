@@ -3,6 +3,7 @@ import type { MonthlyIdentityEvolution } from "@/lib/monthly-identity-evolution"
 export type MockMonthlyIdentityNarrativeDraft = {
   month: string;
   headline: string;
+  teaser: string;
   opening_beginning: string;
   opening_end: string;
 };
@@ -55,12 +56,22 @@ function openingEndFor(month: MonthlyIdentityEvolution): string {
   return "By the end of the month, the pattern from earlier in the month had mostly held steady.";
 }
 
+// One-sentence cover line, deliberately distinct from both opening
+// paragraphs so the mock exercises the no-repeat contract between the cover
+// and "The Person You Were Becoming".
+function teaserFor(month: MonthlyIdentityEvolution): string {
+  return month.majorDecisions.length > 1
+    ? "Something about how choices got made started to give this month."
+    : "A quiet month on the surface, with movement underneath.";
+}
+
 export function generateMockMonthlyIdentityNarratives(
   months: MonthlyIdentityEvolution[],
 ): MockMonthlyIdentityNarrativeDraft[] {
   return months.map((month) => ({
     month: month.month,
     headline: headlineFor(month.dominantThemes),
+    teaser: teaserFor(month),
     opening_beginning: openingBeginningFor(month),
     opening_end: openingEndFor(month),
   }));

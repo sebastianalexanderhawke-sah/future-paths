@@ -17,6 +17,11 @@ export type CurrentFutureRendering = {
   timeframe?: string;
   futureImpact: string;
   expansion?: string | null;
+  /** Forecasts v3: "What you can do" bullets — presence selects the v3
+   *  structured card layout. */
+  actions?: string[];
+  /** Forecasts v3: 0-100 likelihood estimate (ordering only). */
+  confidence?: number;
 };
 
 export type ForecastSimplificationItem = {
@@ -75,6 +80,8 @@ export function toCurrentFutureRendering(future: ScannableFuture): CurrentFuture
     ...(future.timeframe ? { timeframe: future.timeframe } : {}),
     futureImpact: future.futureImpact,
     expansion: future.expansion,
+    ...(future.actions ? { actions: [...future.actions] } : {}),
+    ...(typeof future.confidence === "number" ? { confidence: future.confidence } : {}),
   };
 }
 

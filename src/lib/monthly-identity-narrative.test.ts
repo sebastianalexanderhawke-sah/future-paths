@@ -192,6 +192,7 @@ describe("loadMonthlyIdentityNarratives", () => {
         {
           month: "June 2026",
           headline: "Decisions started getting made before certainty arrived.",
+          teaser: "The month the plan stopped mattering.",
           opening_beginning: "Plans waited for a clearer picture.",
           opening_end: "Action came first and the picture filled in after.",
         },
@@ -205,6 +206,7 @@ describe("loadMonthlyIdentityNarratives", () => {
       {
         month: "June 2026",
         headline: "Decisions started getting made before certainty arrived.",
+        teaser: "The month the plan stopped mattering.",
         openingBeginning: "Plans waited for a clearer picture.",
         openingEnd: "Action came first and the picture filled in after.",
         howYouChanged: ["You became more willing to act without certainty."],
@@ -271,6 +273,7 @@ describe("loadMonthlyIdentityNarratives", () => {
       {
         month: "June 2026",
         headline: "June 2026",
+        teaser: "",
         openingBeginning: "",
         openingEnd: "",
         howYouChanged: ["You became more willing to act without certainty."],
@@ -357,6 +360,7 @@ describe("loadMonthlyIdentityNarratives", () => {
         {
           month: "June 2026",
           headline: "Decisions started getting made before certainty arrived.",
+          teaser: "The month the plan stopped mattering.",
           opening_beginning: "Plans waited for a clearer picture.",
           opening_end: "Action came first and the picture filled in after.",
         },
@@ -375,6 +379,7 @@ describe("loadMonthlyIdentityNarratives", () => {
       user_id: "user-1",
       month: "June 2026",
       headline: "Decisions started getting made before certainty arrived.",
+      teaser: "The month the plan stopped mattering.",
     });
 
     // Second load: the stored narrative covers every month, so no AI call is
@@ -481,6 +486,7 @@ describe("loadMonthlyIdentityNarratives", () => {
         {
           month: nowLabel,
           headline: "The refreshed current-month chapter.",
+          teaser: "A cover line of its own.",
           opening_beginning: "New beginning.",
           opening_end: "New end.",
         },
@@ -501,9 +507,98 @@ describe("loadMonthlyIdentityNarratives", () => {
     expect(rows[0]).toMatchObject({
       month: nowLabel,
       headline: "The refreshed current-month chapter.",
+      teaser: "A cover line of its own.",
     });
     expect(rows[0].evidence_fingerprint).not.toBe(
       "written-before-this-month's-newest-evidence",
     );
+  });
+
+  it("upgrades the current month once when its stored draft predates the teaser", async () => {
+    const { currentMonthLabel } = await import("@/lib/monthly-identity-evolution");
+    const nowIso = new Date().toISOString();
+    const nowLabel = currentMonthLabel();
+
+    const currentMonthData = {
+      paths: {
+        data: [
+          {
+            id: "path-1",
+            moment_id: "moment-1",
+            description: "@native-title:Apply Wider, Move Faster@\nSend more applications.",
+            themes: ["Courage", "Independence"],
+            chosen_at: nowIso,
+          },
+        ],
+        error: null,
+      },
+      identity_updates: { data: [], error: null },
+      future_self_events: { data: [], error: null },
+      future_selves: { data: [], error: null },
+    };
+
+    // First load (nothing stored) captures the fingerprint the loader
+    // computes for this exact evidence.
+    const firstStub = createSupabaseStub(currentMonthData);
+    setActiveStub(firstStub);
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          month: nowLabel,
+          headline: "H",
+          teaser: "T",
+          opening_beginning: "B",
+          opening_end: "E",
+        },
+      ],
+    });
+    await loadMonthlyIdentityNarratives();
+    const firstUpsert = firstStub.calls.find(
+      (call) => call.table === "monthly_identity_narratives" && call.method === "upsert",
+    );
+    const fingerprint = (firstUpsert!.args[0] as Array<Record<string, unknown>>)[0]
+      .evidence_fingerprint;
+
+    // Second load: same evidence (fingerprint matches), but the stored row
+    // is a legacy draft with no teaser → the living month upgrades once.
+    setActiveStub(
+      createSupabaseStub({
+        ...currentMonthData,
+        monthly_identity_narratives: {
+          data: [
+            {
+              month: nowLabel,
+              headline: "The legacy current-month chapter.",
+              teaser: "",
+              opening_beginning: "Old beginning.",
+              opening_end: "Old end.",
+              evidence_fingerprint: fingerprint,
+            },
+          ],
+          error: null,
+        },
+      }),
+    );
+    runStructuredGenerationMock.mockClear();
+    runStructuredGenerationMock.mockResolvedValueOnce({
+      ok: true,
+      data: [
+        {
+          month: nowLabel,
+          headline: "The upgraded current-month chapter.",
+          teaser: "A cover line of its own.",
+          opening_beginning: "New beginning.",
+          opening_end: "New end.",
+        },
+      ],
+    });
+
+    const result = await loadMonthlyIdentityNarratives();
+    if (!("narratives" in result)) throw new Error("expected narratives");
+
+    expect(runStructuredGenerationMock).toHaveBeenCalledTimes(1);
+    expect(result.narratives[0].teaser).toBe("A cover line of its own.");
+    expect(result.narratives[0].headline).toBe("The upgraded current-month chapter.");
   });
 });

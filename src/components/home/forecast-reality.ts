@@ -42,9 +42,10 @@ import {
 
 const MIN_SIGNALS = 3;
 const MAX_SIGNALS = 5;
-// Forecasts v2: exactly 8 moments — 3 likely developments (active), 3
-// failure modes (hidden), 2 alternative outcomes (wild_card). blind_spots is
-// retired for new generations (0/0) but stored v1 forecasts still render.
+// Legacy (v1/v2) section limits. Still used by the deterministic
+// crossroad-derived builders below (buildSelectedPathForecastSections,
+// buildRealityForecastSections, withRealityForecastFallbacks), whose
+// behavior is pinned by tests and which never produce v3 cards.
 const MIN_ACTIVE_FUTURES = 3;
 const MAX_ACTIVE_FUTURES = 3;
 const MIN_HIDDEN_FUTURES = 3;
@@ -53,6 +54,16 @@ const MIN_BLIND_SPOT_FUTURES = 0;
 const MAX_BLIND_SPOT_FUTURES = 0;
 const MIN_WILD_CARD_FUTURES = 2;
 const MAX_WILD_CARD_FUTURES = 2;
+// Forecasts v3 (AI pipeline only): 6-8 cards — 5-6 risks (hidden transport
+// key) and 1-2 unexpected opportunities (wild_card transport key). active
+// and blind_spots are retired for new generations (0/0) but stored v1/v2
+// forecasts still render.
+const MIN_V3_ACTIVE_FUTURES = 0;
+const MAX_V3_ACTIVE_FUTURES = 0;
+const MIN_RISK_FUTURES = 5;
+const MAX_RISK_FUTURES = 6;
+const MIN_OPPORTUNITY_FUTURES = 1;
+const MAX_OPPORTUNITY_FUTURES = 2;
 const MAX_TITLE_LENGTH = 100;
 const MAX_SUMMARY_LENGTH = 160;
 
@@ -1859,6 +1870,11 @@ function mapGeneratedFutureVerbatim(
       sourceTrace: buildSourceTrace(bundle),
       explanationPreservation: { rawExplanation: rawWhy, status: "preserved" },
       ...(draft.timeframe ? { timeframe: draft.timeframe } : {}),
+      // Forecasts v3: the action bullets and confidence estimate ride along
+      // verbatim — actions select the structured card UI, confidence only
+      // orders the rendered list.
+      ...(draft.actions ? { actions: draft.actions.map((action) => action.trim()) } : {}),
+      ...(typeof draft.confidence === "number" ? { confidence: draft.confidence } : {}),
     },
     "claude",
     "generation",
@@ -1992,8 +2008,8 @@ export function processGeneratedForecastSections(
     fallbacks.activeFutures,
     bundle,
     {
-      min: MIN_ACTIVE_FUTURES,
-      max: MAX_ACTIVE_FUTURES,
+      min: MIN_V3_ACTIVE_FUTURES,
+      max: MAX_V3_ACTIVE_FUTURES,
     },
     recoveryInput,
     collector
@@ -2013,8 +2029,8 @@ export function processGeneratedForecastSections(
     fallbacks.hiddenFutures,
     bundle,
     {
-      min: MIN_HIDDEN_FUTURES,
-      max: MAX_HIDDEN_FUTURES,
+      min: MIN_RISK_FUTURES,
+      max: MAX_RISK_FUTURES,
     },
     recoveryInput,
     collector
@@ -2055,8 +2071,8 @@ export function processGeneratedForecastSections(
     fallbacks.wildCardFutures,
     bundle,
     {
-      min: MIN_WILD_CARD_FUTURES,
-      max: MAX_WILD_CARD_FUTURES,
+      min: MIN_OPPORTUNITY_FUTURES,
+      max: MAX_OPPORTUNITY_FUTURES,
     },
     recoveryInput,
     collector

@@ -64,7 +64,8 @@ describe("forecast source attribution", () => {
 
   it("tags surviving Claude futures during forecast processing", () => {
     const generated = {
-      active: [
+      active: [],
+      hidden: [
         {
           title: "She Says Yes To Coffee",
           why: "A direct ask after daily rapport can lead to plans quickly.",
@@ -80,8 +81,6 @@ describe("forecast source attribution", () => {
           why: "Mutual interest often turns into concrete plans quickly.",
           impact: "You meet outside work within days.",
         },
-      ],
-      hidden: [
         {
           title: "Coworkers Notice The Dynamic",
           why: "Workplace chemistry rarely stays invisible.",
@@ -124,12 +123,12 @@ describe("forecast source attribution", () => {
     const audit = buildForecastSourceAttributionAudit(result);
     const metrics = computeForecastSourceMetricsFromSections(result);
 
-    // All 3 active inputs survive the reality filter as claude-sourced futures.
-    // "The Ask Happens Over Lunch" was previously dropped by the over-broad
-    // FUTURE_IDENTITY_NAME_PATTERN and replaced by a recovery slot; the fixed pattern
-    // lets it pass through correctly.
-    expect(audit.active.filter((item) => item.source === "claude").length).toBe(3);
-    expect(audit.active.find((item) => item.source === "recovery")).toBeUndefined();
+    // All 6 risk inputs survive the structural filter as claude-sourced
+    // futures. "The Ask Happens Over Lunch" was previously dropped by the
+    // over-broad FUTURE_IDENTITY_NAME_PATTERN and replaced by a recovery
+    // slot; the fixed pattern lets it pass through correctly.
+    expect(audit.hidden.filter((item) => item.source === "claude").length).toBe(6);
+    expect(audit.hidden.find((item) => item.source === "recovery")).toBeUndefined();
     expect(metrics.claude).toBeGreaterThan(0);
     expect(metrics.recovery).toBe(0);
     expect(metrics.percentages.claude).toBeGreaterThan(0);

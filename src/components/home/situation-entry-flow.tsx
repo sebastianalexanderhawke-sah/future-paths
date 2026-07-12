@@ -56,6 +56,27 @@ type StreamFutureDraft = {
   impact: string;
 };
 
+// Streamed forecast items arrive in the v3 card shape (bullet arrays) or,
+// for older cached payloads, the flat v2 shape (why/impact strings). Either
+// way the streaming card only needs a title and a one-line preview.
+function toStreamFutureDraft(data: unknown): StreamFutureDraft {
+  const raw = data as {
+    title?: string;
+    why?: string;
+    impact?: string;
+    what_could_happen?: string[];
+    why_this?: string[];
+  };
+
+  const preview =
+    (Array.isArray(raw.what_could_happen) ? raw.what_could_happen[0] : undefined) ??
+    raw.why ??
+    (Array.isArray(raw.why_this) ? raw.why_this[0] : undefined) ??
+    "";
+
+  return { title: raw.title ?? "", why: preview, impact: raw.impact ?? "" };
+}
+
 // ---------------------------------------------------------------------------
 // SSE stream reader — fires onEvent for each intermediate event, returns T
 // when the final {type:"result"} event arrives.
@@ -464,12 +485,9 @@ export function SituationEntryFlow() {
         },
         (event) => {
           if (event.type === "future") {
-            const raw = event.data as { title?: string; why?: string; impact?: string };
+            const draft = toStreamFutureDraft(event.data);
             flushSync(() => {
-              setStreamingFutures((prev) => [
-                ...prev,
-                { title: raw.title ?? "", why: raw.why ?? "", impact: raw.impact ?? "" },
-              ]);
+              setStreamingFutures((prev) => [...prev, draft]);
             });
           }
         },
@@ -656,12 +674,9 @@ export function SituationEntryFlow() {
         forecastInput,
         (event) => {
           if (event.type === "future") {
-            const raw = event.data as { title?: string; why?: string; impact?: string };
+            const draft = toStreamFutureDraft(event.data);
             flushSync(() => {
-              setStreamingPathFutures((prev) => [
-                ...prev,
-                { title: raw.title ?? "", why: raw.why ?? "", impact: raw.impact ?? "" },
-              ]);
+              setStreamingPathFutures((prev) => [...prev, draft]);
             });
           }
         },
@@ -693,11 +708,13 @@ export function SituationEntryFlow() {
   const pathSkeletonCount = isStreamingPaths
     ? Math.max(0, 5 - streamingPaths.length)
     : 0;
+  // Forecasts v3 guarantees at least 6 cards (5 risks + 1 opportunity), so
+  // reserve six slots up front and let arrivals replace the skeletons.
   const forecastSkeletonCount = isStreamingForecast
-    ? Math.max(0, 3 - streamingFutures.length)
+    ? Math.max(0, 6 - streamingFutures.length)
     : 0;
   const pathForecastSkeletonCount = isStreamingPathForecast
-    ? Math.max(0, 3 - streamingPathFutures.length)
+    ? Math.max(0, 6 - streamingPathFutures.length)
     : 0;
 
   // ---------------------------------------------------------------------------

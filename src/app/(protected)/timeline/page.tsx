@@ -83,21 +83,12 @@ export default async function TimelinePage() {
             <ChapterAccordion
               chapters={narratives.map((narrative) => {
                 const story = storiesByMonth.get(narrative.month) ?? null;
-                const previousStory = narrative.previousMonth
-                  ? (storiesByMonth.get(narrative.previousMonth) ?? null)
-                  : null;
                 return {
                   month: narrative.month,
                   preview: (
                     <MonthlyChapterPreview narrative={narrative} story={story} />
                   ),
-                  full: (
-                    <MonthlyChapter
-                      narrative={narrative}
-                      story={story}
-                      previousStory={previousStory}
-                    />
-                  ),
+                  full: <MonthlyChapter narrative={narrative} story={story} />,
                 };
               })}
             />

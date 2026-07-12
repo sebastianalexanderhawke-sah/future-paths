@@ -106,6 +106,22 @@ function monthLabelOf(monthKey: string): string {
 }
 
 /**
+ * Whether a chapter's month label ("July 2026") is the still-running
+ * calendar month. The chapter presentation uses this to speak truthfully in
+ * tense: a completed month describes who the person became by its end; the
+ * in-progress month describes who they are becoming now. Same UTC month
+ * convention as the rest of this module.
+ */
+export function isMonthInProgress(month: string, now: Date = new Date()): boolean {
+  return (
+    month ===
+    monthLabelOf(
+      `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`,
+    )
+  );
+}
+
+/**
  * Splits prose into sentences for bullet rendering. Keeps the terminal
  * punctuation with each sentence; a trailing fragment without punctuation
  * still becomes a bullet.
@@ -229,149 +245,6 @@ export function buildStoryline(
     end,
     weight: monthCheckIns.length + monthChosenPaths.length,
   };
-}
-
-/**
- * One comparative movement phrase per theme and direction. Comparative on
- * purpose: a shift only evidences *movement* ("more isolated"), never the
- * absolute state someone started from ("felt socially connected" was Phase
- * 2's invention — plausible, symmetric, and unsupported). Every phrase here
- * is true whenever its direction is true, so the presentation can never
- * confidently state something the evidence doesn't back. Judgment-free in
- * both directions: rising Loneliness and rising Courage read the same way.
- */
-const IDENTITY_MOVEMENTS: Record<string, { up: string; down: string }> = {
-  Connection: {
-    up: "Investing more in the people around you.",
-    down: "Investing less in the people around you.",
-  },
-  Independence: {
-    up: "More comfortable deciding alone.",
-    down: "Less comfortable deciding alone.",
-  },
-  Curiosity: {
-    up: "More open to options you hadn't considered.",
-    down: "Less open to options you hadn't considered.",
-  },
-  Stability: {
-    up: "Placing more weight on stability.",
-    down: "Placing less weight on stability.",
-  },
-  Creativity: {
-    up: "More drawn to making something new.",
-    down: "Less drawn to making something new.",
-  },
-  Growth: {
-    up: "More willing to step into the unknown.",
-    down: "Less willing to step into the unknown.",
-  },
-  Belonging: {
-    up: "More invested in belonging.",
-    down: "Less invested in belonging.",
-  },
-  Leadership: {
-    up: "More willing to carry responsibility.",
-    down: "Less willing to carry responsibility.",
-  },
-  Reflection: {
-    up: "Examining your own patterns more.",
-    down: "Examining your own patterns less.",
-  },
-  Courage: {
-    up: "More willing to act without certainty.",
-    down: "Less willing to act without certainty.",
-  },
-  Loneliness: {
-    up: "More isolated.",
-    down: "Less isolated.",
-  },
-  Disappointment: {
-    up: "Carrying more disappointment.",
-    down: "Carrying less disappointment.",
-  },
-  Grief: {
-    up: "Grief closer to the surface.",
-    down: "Grief weighing less.",
-  },
-  Frustration: {
-    up: "More frustrated by the gap between effort and results.",
-    down: "Less frustrated by the gap between effort and results.",
-  },
-  Uncertainty: {
-    up: "Living with more open questions.",
-    down: "Living with fewer open questions.",
-  },
-  Hurt: {
-    up: "Carrying more hurt.",
-    down: "Carrying less hurt.",
-  },
-  Acceptance: {
-    up: "More at peace with how things are.",
-    down: "Less at peace with how things are.",
-  },
-  Resilience: {
-    up: "Recovering faster from setbacks.",
-    down: "Recovering more slowly from setbacks.",
-  },
-};
-
-/**
- * IdentityJourney is deliberately just two lists of sentences: the chapter
- * layout renders whatever strings arrive here. A future generation phase can
- * replace composeIdentityJourney with bespoke AI-written monthly bullets by
- * returning this same shape — no component changes required.
- */
-export type IdentityJourney = {
-  /**
-   * Who this person was entering the month — evidenced by the PREVIOUS
-   * month's recorded movement, never inferred by inverting this month's.
-   * Empty when the prior month offers no evidence: truth before symmetry.
-   */
-  beginning: string[];
-  /** How this month actually moved them — one phrase per recorded shift. */
-  end: string[];
-};
-
-const MAX_JOURNEY_BULLETS = 4;
-
-function movementPhrases(shifts: IdentityShift[]): string[] {
-  return shifts.slice(0, MAX_JOURNEY_BULLETS).flatMap((shift) => {
-    const movement = IDENTITY_MOVEMENTS[shift.theme];
-    if (!movement) return [];
-    return [shift.value > 0 ? movement.up : movement.down];
-  });
-}
-
-/**
- * The chapter's Beginning → End comparison, built only from recorded
- * movement. The end is this month's shifts; the beginning is the previous
- * month's shifts — the state the last chapter actually left the person in.
- * When there is no prior evidence the beginning stays empty and the section
- * renders end-only, rather than inventing a balanced "before" (Phase 2's
- * pole inversion could claim "Invested in the people around you." in a month
- * whose evidence said the opposite). Falls back to the deterministic month
- * comparison for the end when a month has no magnitudes, and returns null
- * when there is no identity evidence at all.
- */
-export function composeIdentityJourney(
-  identityShifts: IdentityShift[],
-  previousShifts: IdentityShift[],
-  comparison: { traitsMorePresent: string[]; traitsLessPresent: string[] },
-): IdentityJourney | null {
-  let end = movementPhrases(identityShifts);
-
-  if (end.length === 0) {
-    end = movementPhrases([
-      ...comparison.traitsMorePresent.map((theme) => ({ theme, value: 1 })),
-      ...comparison.traitsLessPresent.map((theme) => ({ theme, value: -1 })),
-    ]);
-  }
-
-  if (end.length === 0) {
-    return null;
-  }
-
-  return { beginning: movementPhrases(previousShifts), end };
 }
 
 function lowercaseTheme(theme: string): string {
