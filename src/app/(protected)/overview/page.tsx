@@ -6,7 +6,7 @@ import {
   NeedsAttentionCard,
   type AttentionRow,
 } from "@/components/overview/needs-attention-card";
-import { PatternEmergingCard } from "@/components/overview/pattern-emerging-card";
+import { RecentActivityCard } from "@/components/overview/recent-activity-card";
 import {
   WhatsChangedCard,
   type ChangeRow,
@@ -14,6 +14,7 @@ import {
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
 import { getRecentFocusAreas } from "@/lib/focus-areas";
 import { getFutureSelfTrend } from "@/lib/future-self-trend";
+import { getEngagementActivity } from "@/lib/recent-activity";
 import { listActiveFutureSelves, listFutureSelves } from "@/lib/future-selves";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
@@ -182,12 +183,14 @@ export default async function OverviewPage() {
   const visibleAttentionItems = attentionItems.slice(0, 3);
   const hiddenAttentionCount = Math.max(0, attentionItems.length - 3);
 
-  // ── Pattern Emerging: strongest active future, told as a story ───────
-  // The card derives its own momentum from the row's trend; the page only
-  // tallies where recent attention went (themes on the user's own recent
-  // check-ins and chosen paths) for the Your Focus section.
-  const topFutureSelf = futureSelves[0] ?? null;
-  const focusAreas = topFutureSelf ? await getRecentFocusAreas() : [];
+  // ── Recent Activity: the engagement snapshot ─────────────────────────
+  // Two pure reads over existing rows: where recent attention went (themes
+  // on the user's own check-ins and chosen paths) and how steadily they've
+  // been showing up (existing timestamps only).
+  const [focusAreas, engagementActivity] = await Promise.all([
+    getRecentFocusAreas(),
+    getEngagementActivity(),
+  ]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
@@ -231,12 +234,10 @@ export default async function OverviewPage() {
               />
             </div>
 
-            {topFutureSelf ? (
-              <PatternEmergingCard
-                futureSelf={topFutureSelf}
-                focusAreas={focusAreas}
-              />
-            ) : null}
+            <RecentActivityCard
+              activity={engagementActivity}
+              focusAreas={focusAreas}
+            />
           </div>
         </div>
       </main>

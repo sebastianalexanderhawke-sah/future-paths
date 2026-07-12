@@ -67,6 +67,22 @@ vi.mock("@/lib/monthly-identity-narrative", () => ({
 vi.mock("@/actions/auth", () => ({
   signOut: vi.fn(),
 }));
+// The Recent Activity card's reads are user-level and ungated, so the page
+// always calls them; quiet fixtures keep these tests about reflections.
+vi.mock("@/lib/focus-areas", () => ({
+  getRecentFocusAreas: vi.fn(async () => []),
+}));
+vi.mock("@/lib/recent-activity", () => ({
+  getEngagementActivity: vi.fn(async () => ({
+    consistency: {
+      weekDays: [false, false, false, false, false, false, false],
+      activeDaysThisWeek: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+    },
+    items: [],
+  })),
+}));
 // FuturePathsCard calls useRouter at render time; outside a running Next app
 // there is no router context, so provide an inert one.
 vi.mock("next/navigation", async (importOriginal) => {
