@@ -1,6 +1,7 @@
 import { PostHog } from "posthog-node";
 
 import type { AnalyticsEvent, AnalyticsProperties } from "@/lib/analytics/events";
+import { reportError } from "@/lib/observability";
 
 /**
  * Server side of the analytics service: events that mark durable state
@@ -57,8 +58,11 @@ export async function captureServerEvent(
 
     posthog.capture({ distinctId, event, ...(properties ? { properties } : {}) });
     await posthog.flush();
-  } catch {
+  } catch (error) {
     // Telemetry is best-effort by contract; the product outcome already
-    // happened and must never be failed (or slowed further) by analytics.
+    // happened and must never be failed by analytics. But best-effort must
+    // not mean invisible (the observability module's founding rule) — a
+    // silently dead pipeline looks identical to a healthy one.
+    await reportError("analytics: server capture failed", error, { event });
   }
 }
