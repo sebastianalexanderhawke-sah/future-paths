@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { AnalyticsIdentity } from "@/components/analytics/analytics-identity";
 import { createClient } from "@/lib/supabase/server";
 
 // Server Actions in this segment schedule post-response AI enrichment via
@@ -26,5 +27,10 @@ export default async function ProtectedLayout({
     redirect("/login");
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <AnalyticsIdentity userId={user.id} />
+      {children}
+    </>
+  );
 }

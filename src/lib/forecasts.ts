@@ -1,4 +1,6 @@
 import type { ForecastSections } from "@/components/home/forecast-utils";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Forecast } from "@/types/database";
 
@@ -43,6 +45,14 @@ export async function saveForecast(input: {
   if (error || !data) {
     return { error: error?.message ?? "Failed to save forecast." };
   }
+
+  // The single choke point for every generation route (entry flow, streaming,
+  // path choice, regeneration after a check-in) — a forecast counts as
+  // generated exactly when it is durably saved.
+  await captureServerEvent(input.userId, ANALYTICS_EVENTS.futureForecastGenerated, {
+    moment_id: input.momentId,
+    has_path: input.pathId !== null,
+  });
 
   return { forecast: data };
 }

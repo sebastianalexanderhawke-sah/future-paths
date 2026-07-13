@@ -137,15 +137,18 @@ export default async function MomentsPage() {
           {active.length === 0 && archived.length === 0 ? (
             <OverviewCard className="px-9 py-14">
               <div className="flex flex-col items-center text-center">
-                <p className="text-[15px] font-semibold text-[#111]">
-                  No situations yet.
+                <p className="font-voice text-[22px] font-medium tracking-[-0.3px] text-[#111]">
+                  Everything in Reflection begins with a situation.
                 </p>
-                <p className="mt-2 max-w-[340px] text-[13px] leading-relaxed text-[#999999]">
-                  Capture a meaningful decision or crossroads to begin.
+                <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#999999]">
+                  Capture a decision you&apos;re weighing or a change already
+                  underway. Each one you work through — the paths you consider,
+                  the check-ins you record — teaches Reflection where your life
+                  is moving.
                 </p>
                 <Link
                   href="/moments/new"
-                  className="mt-5 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+                  className="mt-6 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
                 >
                   Create your first situation
                 </Link>
@@ -166,8 +169,10 @@ export default async function MomentsPage() {
                 {active.length === 0 ? (
                   <OverviewCard className="px-8 py-7">
                     <p className="text-[13px] leading-relaxed text-[#888888]">
-                      Nothing active right now. Start a new situation to get
-                      moving.
+                      Nothing is in motion right now — everything you&apos;ve
+                      worked through lives on in your resolved situations
+                      below. When the next decision or change arrives, capture
+                      it here.
                     </p>
                   </OverviewCard>
                 ) : (

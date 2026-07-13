@@ -275,18 +275,45 @@ function ResumeGenerationButton() {
 
 type Stage = "describe" | "questions" | "paths" | "forecast";
 
+/** The flow's stage names, exported for embedders that track progress. */
+export type SituationEntryStage = Stage;
+
+type SituationEntryFlowProps = {
+  /**
+   * Locks the flow to one goal and hides the goal picker. Onboarding uses
+   * "decision" so a first-time user always experiences the full journey:
+   * paths → a chosen path → its forecast.
+   */
+  fixedGoal?: SituationGoal;
+  /** Reports stage transitions so an embedding page can move its own chrome. */
+  onStageChange?: (stage: Stage) => void;
+  /**
+   * Replaces the final Continue's navigation to the situation page — the
+   * embedder decides what follows the forecast (onboarding shows its
+   * closing step). Receives the created situation's id.
+   */
+  onComplete?: (momentId: string) => void;
+  /** Label for the final Continue button (default "Continue"). */
+  completeLabel?: string;
+};
+
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
-export function SituationEntryFlow() {
+export function SituationEntryFlow({
+  fixedGoal,
+  onStageChange,
+  onComplete,
+  completeLabel,
+}: SituationEntryFlowProps = {}) {
   const router = useRouter();
 
   const [stage, setStage] = useState<Stage>("describe");
 
   const [situationText, setSituationText] = useState("");
   const [additionalContext, setAdditionalContext] = useState("");
-  const [goal, setGoal] = useState<SituationGoal | null>(null);
+  const [goal, setGoal] = useState<SituationGoal | null>(fixedGoal ?? null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [questionsComplete, setQuestionsComplete] = useState(false);
   const [simulatorError, setSimulatorError] = useState<string | null>(null);
@@ -721,31 +748,41 @@ export function SituationEntryFlow() {
   // Stage transition handlers
   // ---------------------------------------------------------------------------
 
+  function goToStage(next: Stage) {
+    setStage(next);
+    onStageChange?.(next);
+  }
+
   function handleContinueFromDescribe() {
-    setStage("questions");
+    goToStage("questions");
   }
 
   function handleContinueFromQuestions() {
     if (isDecisionMode) {
-      setStage("paths");
+      goToStage("paths");
       void handleContinueToDecisionSimulator();
     } else {
-      setStage("forecast");
+      goToStage("forecast");
       void handleGenerateForecast();
     }
   }
 
   function handleContinueFromPaths() {
-    setStage("forecast");
+    goToStage("forecast");
     void handleForecastSelectedPath();
   }
 
   function handleContinueFromForecast() {
     const momentId =
       pathForecastResult?.momentId ?? forecastResult?.momentId ?? simulatorResult?.momentId;
-    if (momentId) {
-      router.push(withJustChosenPathFlag(`/moments/${momentId}`));
+    if (!momentId) {
+      return;
     }
+    if (onComplete) {
+      onComplete(momentId);
+      return;
+    }
+    router.push(withJustChosenPathFlag(`/moments/${momentId}`));
   }
 
   const forecastDone =
@@ -788,7 +825,7 @@ export function SituationEntryFlow() {
                       const nextValue = event.target.value;
                       setSituationText(nextValue);
                       if (nextValue.trim().length === 0) {
-                        setGoal(null);
+                        setGoal(fixedGoal ?? null);
                         setAdditionalContext("");
                       }
                     }}
@@ -804,7 +841,7 @@ export function SituationEntryFlow() {
                 <div className="flex flex-col gap-3">
                   <div>
                     <h2 className="text-lg font-semibold text-zinc-900">
-                      Tell Future Paths what&apos;s happening
+                      Tell Reflection what&apos;s happening
                     </h2>
                     <p className="mt-1 text-sm text-zinc-500">
                       The more context you provide, the more personalized your
@@ -826,7 +863,7 @@ export function SituationEntryFlow() {
                 </div>
               ) : null}
 
-              {hasSituation && hasContext ? (
+              {!fixedGoal && hasSituation && hasContext ? (
                 <div className="flex flex-col gap-2.5">
                   <p className="text-sm font-medium text-zinc-700">
                     What kind of help are you looking for?
@@ -1105,7 +1142,7 @@ export function SituationEntryFlow() {
               onClick={handleContinueFromForecast}
               className="self-start rounded-xl bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
             >
-              Continue
+              {completeLabel ?? "Continue"}
             </button>
           ) : null}
         </div>

@@ -20,6 +20,16 @@ export type IdentityProfile = {
    * carrying forward (see generateFutureSelves step 6).
    */
   legacy_names?: string[];
+  /**
+   * Identity ids this identity previously lived under in retired library
+   * epochs. Continuity matching checks these after the exact id, so a row
+   * persisted under an old epoch's id is carried forward (renamed and
+   * re-keyed to the current id) instead of fading — a library update must
+   * never read as an identity suddenly disappearing. Each legacy id may
+   * appear in at most ONE profile, and never as a live id
+   * (identity-library.test.ts pins both).
+   */
+  legacy_ids?: string[];
   dimension_weights: IdentityDimensionWeights;
   typical_behaviors: string[];
 };
@@ -38,8 +48,13 @@ export type IdentityProfile = {
  * typical_behaviors (context for the narrative AI). Weights are chosen so
  * no two identities exceed ~0.66 pairwise cosine similarity — overlap is
  * removed at design time, not patched at runtime. This library was built
- * from scratch for v3; the pre-v3 identities were retired, so their rows
- * fade naturally and the new lives emerge from the same evidence.
+ * from scratch for v3, retiring the pre-v3 identities. Retired ids with a
+ * clear successor here (by dimension-weight similarity and/or name lineage)
+ * live on in that successor's legacy_ids so their rows carry forward across
+ * the epoch instead of mass-fading — the 2026-07-09 library swap faded five
+ * active futures to 0% in one run, which read as the identity model
+ * collapsing. Retired ids with no clear successor stay unmapped and fade
+ * gradually (see the fade step in generateFutureSelves).
  *
  * v4/v5 naming: each canonical_name names the REPUTATION this person
  * gradually earns — a phrase another person would naturally use to describe
@@ -62,6 +77,8 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
     short_description:
       "The version of you people learned to trust with making things real — the one who starts without permission, keeps ownership of what matters, and treats risk as the ordinary price of a life built rather than waited for.",
     legacy_names: ["The Builder", "The Independent Operator"],
+    // Pre-v3 "Self-Reliant Builder": same name, 0.92 weight cosine.
+    legacy_ids: ["self-reliant-builder"],
     dimension_weights: {
       Initiative: 1.0,
       Independence: 0.7,
@@ -86,6 +103,9 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
     short_description:
       "The version of you whose life kept getting wider — new places, new domains, new selves — because whatever was interesting always outranked whatever was settled.",
     legacy_names: ["The Explorer"],
+    // Pre-v3 "Threshold Crosser" (this identity's current name is its direct
+    // descendant) and "Adaptive Explorer" (0.94 weight cosine).
+    legacy_ids: ["threshold-crosser", "adaptive-explorer"],
     dimension_weights: {
       Adaptability: 1.0,
       Curiosity: 0.9,
@@ -156,6 +176,9 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
     short_description:
       "The version of you who kept things safe — the people, the home, the promises — a life built like a wall other people get to relax behind.",
     legacy_names: ["The Guardian"],
+    // Pre-v3 "Steady Foundation Builder" (0.91 weight cosine) and
+    // "Quiet Supporter" (0.87).
+    legacy_ids: ["steady-foundation-builder", "quiet-supporter"],
     dimension_weights: {
       Consistency: 0.9,
       Connection: 0.5,
@@ -179,6 +202,8 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
     short_description:
       "The version of you who became the reason people know each other — the introducer, the host, the one who noticed who was missing and went to get them.",
     legacy_names: ["The Connector"],
+    // Pre-v3 "Community Weaver": 0.98 weight cosine.
+    legacy_ids: ["community-weaver"],
     dimension_weights: {
       Connection: 1.0,
       Initiative: 0.5,
@@ -202,6 +227,8 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
     short_description:
       "The version of you who kept score honestly and played anyway — a life of arenas entered, standards raised, and a self measured against real opposition rather than imagination.",
     legacy_names: ["The Competitor"],
+    // Pre-v3 "Relentless Grower": 0.82 weight cosine + "Relentless" lineage.
+    legacy_ids: ["relentless-grower"],
     dimension_weights: {
       Initiative: 0.7,
       "Risk Tolerance": 0.6,
@@ -248,6 +275,11 @@ export const IDENTITY_LIBRARY: readonly IdentityProfile[] = [
     short_description:
       "The version of you who followed questions further than anyone around you cared to — a life of understanding built slowly, alone with the problem, until the problem gave in.",
     legacy_names: ["The Scholar"],
+    // Pre-v3 "Reflective Practitioner": 0.77 weight cosine, its best
+    // successor. (Pre-v3 ids with no clear successor — deliberate-soloist,
+    // vulnerable-leader, committed-achiever, resilient-adapter — are
+    // deliberately unmapped and fade gradually.)
+    legacy_ids: ["reflective-practitioner"],
     dimension_weights: {
       Reflection: 1.0,
       Curiosity: 0.8,

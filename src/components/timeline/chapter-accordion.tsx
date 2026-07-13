@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 import { OverviewCard } from "@/components/overview/overview-card";
+import { trackEvent } from "@/lib/analytics/client";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 
 export type AccordionChapter = {
   /** Month label, e.g. "June 2026" — the accordion key and rail label. */
@@ -51,7 +53,12 @@ export function ChapterAccordion({ chapters }: ChapterAccordionProps) {
                 <button
                   type="button"
                   aria-expanded={open}
-                  onClick={() => setOpenMonth(open ? null : month)}
+                  onClick={() => {
+                    if (!open) {
+                      trackEvent(ANALYTICS_EVENTS.timelineChapterOpened, { month });
+                    }
+                    setOpenMonth(open ? null : month);
+                  }}
                   className="mt-6 cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
                 >
                   {open ? "Close chapter" : "Show chapter"}

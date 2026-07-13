@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { layoutBranches } from "@/components/futures/branch-language";
 import { BranchMap } from "@/components/futures/branch-map";
 import { FutureCard } from "@/components/futures/future-card";
+import { trackEvent } from "@/lib/analytics/client";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 import type { FutureSelf } from "@/types/database";
 
 type FutureSelvesExplorerProps = {
@@ -104,6 +106,9 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
           kind: "dialog",
           openId,
           onOpen: (futureSelf, trigger) => {
+            trackEvent(ANALYTICS_EVENTS.futureSelfExpanded, {
+              future_self_id: futureSelf.id,
+            });
             triggerRef.current = trigger;
             setOpenId(futureSelf.id);
           },

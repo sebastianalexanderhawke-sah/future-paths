@@ -204,23 +204,50 @@ export default async function WorkspacePage() {
           </div>
 
           {!hasWork ? (
-            <OverviewCard className="px-9 py-16">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-[17px] font-semibold text-[#111]">
-                  You&apos;re all caught up.
-                </p>
-                <p className="mt-2 max-w-[360px] text-[13px] leading-relaxed text-[#999999]">
-                  Reflections and check-ins appear here as your situations
-                  develop. Capture what&apos;s on your mind to get moving.
-                </p>
-                <Link
-                  href="/moments/new"
-                  className="mt-5 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
-                >
-                  Start with a situation
-                </Link>
-              </div>
-            </OverviewCard>
+            // Two quiet states share this card: a workspace that has never
+            // had anything to do (no situations to draw work from) and one
+            // that is simply caught up. The first explains what the page is
+            // for; the second promises what will arrive.
+            activeMoments.length === 0 && completed.length === 0 ? (
+              <OverviewCard className="px-9 py-16">
+                <div className="flex flex-col items-center text-center">
+                  <p className="font-voice text-[22px] font-medium tracking-[-0.3px] text-[#111]">
+                    Your workspace is waiting for its first situation.
+                  </p>
+                  <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#999999]">
+                    This is where Reflection brings the work to you — a
+                    check-in when a situation has had time to move, a question
+                    worth sitting with after something meaningful happens.
+                    Start a situation and this page begins filling on its own.
+                  </p>
+                  <Link
+                    href="/moments/new"
+                    className="mt-6 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+                  >
+                    Create your first situation
+                  </Link>
+                </div>
+              </OverviewCard>
+            ) : (
+              <OverviewCard className="px-9 py-16">
+                <div className="flex flex-col items-center text-center">
+                  <p className="text-[17px] font-semibold text-[#111]">
+                    You&apos;re all caught up.
+                  </p>
+                  <p className="mt-2 max-w-[400px] text-[13px] leading-relaxed text-[#999999]">
+                    New reflections and check-ins will appear here as your
+                    situations evolve — once enough time passes for something
+                    to have changed, Reflection will ask about it.
+                  </p>
+                  <Link
+                    href="/moments"
+                    className="mt-5 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857]"
+                  >
+                    Revisit your situations →
+                  </Link>
+                </div>
+              </OverviewCard>
+            )
           ) : (
             <div className="flex flex-col gap-8 pb-14">
               {/* 1. Check-ins — reality first: what may have moved since the

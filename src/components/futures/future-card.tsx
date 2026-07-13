@@ -5,6 +5,7 @@ import { useState } from "react";
 import { TrendIndicator } from "@/components/ui/trend-indicator";
 import { getMovementStory } from "@/lib/future-self-story";
 import { getIdentityById } from "@/lib/identity-library";
+import { traitForFutureSelf } from "@/lib/trait-library";
 import type { FutureSelf } from "@/types/database";
 
 export type FutureCardAccent = {
@@ -68,71 +69,100 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** One short bullet — the card's shared list voice for gains and tradeoffs. */
+function BulletList({
+  items,
+  dotColor,
+}: {
+  items: string[];
+  dotColor: string;
+}) {
+  return (
+    <ul className="mt-3 max-w-[58ch] space-y-2">
+      {items.map((item) => (
+        <li
+          key={item}
+          className="flex items-start gap-2.5 text-[15px] leading-relaxed text-zinc-700"
+        >
+          <span
+            aria-hidden="true"
+            className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full"
+            style={{ background: dotColor, opacity: 0.7 }}
+          />
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
- * A possible life, not a report. The card answers six questions in a fixed
- * order — who does this person slowly become (name + the future identity's
- * timeless statement), why does this life keep calling them back (the pull,
- * directly under the statement), has this future changed (the movement since
- * the last update, receipts behind a quiet toggle), who do they become (the
- * transformation itself), what do they leave behind (the interior price),
- * and why Reflection believes this (three evidence bullets) — closed not by
- * a question but by "You'll Know You're Here When...": one ordinary moment
- * the reader will recognize from inside if this future ever becomes real.
+ * A strengthening trait, not an archetype (Phase 4). The card answers, in a
+ * fixed order: which trait is strengthening (headline + a hand-written
+ * one-sentence quote from the trait library), how likely this future is, has
+ * it moved since the last update, what this trait usually becomes (plain
+ * prose), what it strengthens (three gains), its tradeoffs (three honest
+ * costs) — closed by "Why Reflection Believes This", the evidence checklist
+ * collapsed by default so understanding precedes the receipts.
  *
- * The identity statement is hand-written in the future identity library and
- * never changes between renders or regenerations; the narrative fields are
- * AI-authored and own the future tense. why_emerging carries one evidence
- * bullet per line; growth_opportunities carries the "What keeps pulling you
- * here" sentence as its first element (v3 format — earlier rows render
- * without it until their one-time format_upgrade regeneration);
- * likely_evolution carries the recognition moment as its final line (v2–v5
- * rows carry a reflective question there instead, rendered in the legacy
- * style until their one-time regeneration). Faded futures lead with
- * FadedFutureCard, which preserves this card behind its "View original
- * Future Self" reveal.
+ * The trait is derived deterministically from the row's persisted
+ * dimension_breakdown (see traitForFutureSelf); rows without one — legacy or
+ * fixture rows — fall back to the stored archetype name and identity
+ * statement. The narrative fields are AI-authored in the v8 encoding:
+ * why_emerging carries one evidence bullet per line; growth_opportunities
+ * the three "strengthens" bullets; blind_spots the three tradeoff bullets;
+ * likely_evolution the single "usually becomes" paragraph. Pre-v8 rows keep
+ * rendering (their first likely_evolution line, and however many list items
+ * they hold) until their one-time format_upgrade regeneration. Faded futures
+ * lead with FadedFutureCard, which preserves this card behind its "View
+ * original Future Self" reveal.
  */
 export function FutureCard({ futureSelf, accent }: FutureCardProps) {
   const tone = accent ?? NEUTRAL_ACCENT;
   const pct = Math.max(0, Math.min(100, futureSelf.percentage));
   const movement = getMovementStory(futureSelf);
+  const trait = traitForFutureSelf(futureSelf);
   const identityStatement = futureSelf.identity_id
     ? getIdentityById(futureSelf.identity_id)?.identity_statement
     : undefined;
 
-  // v2 narrative encoding (see explain-identity): why_emerging carries one
-  // evidence bullet per line; blind_spots carries a single cost paragraph
-  // (pre-v2 rows hold short risk labels — joined into terse prose until
-  // their one-time format_upgrade regeneration); likely_evolution ends with
-  // a final closing line when one was written.
+  const headline = trait?.label ?? futureSelf.name;
+  const quote = trait?.quote ?? identityStatement;
+
+  // v8 narrative encoding (see explain-identity): why_emerging carries one
+  // evidence bullet per line; growth_opportunities and blind_spots carry
+  // exactly three bullets each (pre-v8 rows hold one — rendered as-is until
+  // regeneration); likely_evolution is a single plain paragraph (pre-v8 rows
+  // hold multi-line encodings, so only the first line — always the portrait
+  // — renders until regeneration).
   const evidenceBullets = futureSelf.why_emerging
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
     .slice(0, 3);
-  const costParts = futureSelf.blind_spots.map((s) => s.trim()).filter(Boolean);
-  const cost = costParts.length === 1 ? costParts[0] : costParts.join(". ");
-  // v3: the quiet reason this life keeps becoming more likely. Rows from the
-  // identity engine only carry it after their v3 (re)generation; absent, the
-  // section simply doesn't render.
-  const pull = futureSelf.growth_opportunities?.map((s) => s.trim()).find(Boolean) ?? null;
-  const evolutionLines = futureSelf.likely_evolution
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  // The final line is the card's closing beat. v6 rows carry the "You'll
-  // Know You're Here When..." recognition moment there; v2–v5 rows carry the
-  // old reflective question (always "?"-terminated — exactly what marks them
-  // for regeneration), rendered in the legacy style until they regenerate.
-  const closingLine = evolutionLines.length > 1 ? evolutionLines[evolutionLines.length - 1] : null;
-  const legacyClosingQuestion = closingLine?.endsWith("?") ? closingLine : null;
-  const recognitionMoment = closingLine && !legacyClosingQuestion ? closingLine : null;
-  const narrative = (closingLine ? evolutionLines.slice(0, -1) : evolutionLines).join(" ");
+  const strengthens = futureSelf.growth_opportunities
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  const tradeoffs = futureSelf.blind_spots
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  const becomes =
+    futureSelf.likely_evolution
+      .split("\n")
+      .map((line) => line.trim())
+      .find(Boolean) ?? "";
 
   // The receipts behind "What's changed": the recorded behavior that moved
   // this future when the pipeline attributed any, otherwise the situations,
   // check-ins, and reflections that support it. Hidden until asked for —
   // the default reading stays calm.
   const [showEvidence, setShowEvidence] = useState(false);
+  // "Why Reflection Believes This" closes the card collapsed by default:
+  // the reader meets the trait, sees what it builds and costs, and only
+  // then opens the receipts if curious.
+  const [showWhy, setShowWhy] = useState(false);
   const receipts =
     movement && movement.evidence.length > 0
       ? movement.evidence
@@ -145,8 +175,8 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
       <div aria-hidden="true" className="h-1" style={{ background: tone.color }} />
 
       <div className="p-8 sm:px-10 sm:py-9">
-        {/* 1 — Who does this person become? Name in the product's serif
-            voice, then the future identity's timeless one-line answer. */}
+        {/* 1 — The strengthening trait: its everyday name in the product's
+            serif voice, then the trait library's one-sentence quote. */}
         <header className="flex items-center gap-5">
           <span
             aria-hidden="true"
@@ -157,11 +187,11 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
           </span>
           <div className="min-w-0">
             <h3 className="font-voice text-[28px] font-medium leading-tight tracking-[-0.01em] text-zinc-900">
-              {futureSelf.name}
+              {headline}
             </h3>
-            {identityStatement ? (
+            {quote ? (
               <p className="font-voice mt-1.5 text-[15px] italic leading-snug text-zinc-500">
-                “{identityStatement}”
+                “{quote}”
               </p>
             ) : (
               <p className="mt-1 text-[13px] text-zinc-500">
@@ -170,18 +200,6 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
             )}
           </div>
         </header>
-
-        {/* 2 — Why does this life keep calling them back? The pull sits
-            directly under the identity statement: one or two sentences of
-            emotional gravity, before any numbers. */}
-        {pull ? (
-          <div className="mt-8">
-            <SectionLabel>What keeps pulling you here</SectionLabel>
-            <p className="font-voice mt-3 max-w-[58ch] text-[16px] leading-[1.65] text-zinc-700">
-              {pull}
-            </p>
-          </div>
-        ) : null}
 
         {/* Likelihood: one quiet line — the same signal the tree encodes as
             branch reach, restated in the branch's own color. */}
@@ -200,7 +218,7 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
           <p className="shrink-0 text-[13px] text-zinc-500">
             <span className="font-semibold tabular-nums text-zinc-900">{pct}%</span>
             <TrendIndicator futureSelf={futureSelf} className="ml-1.5 text-xs font-medium" />
-            {identityStatement ? (
+            {quote ? (
               <span className="ml-1.5 text-zinc-400">· {futureSelf.evidence_strength}</span>
             ) : null}
           </p>
@@ -252,82 +270,94 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
           </div>
         ) : null}
 
-        {/* 3 — Who You Become: meeting the future person — the
-            transformation itself, set in the serif voice. A hairline marks
-            where the status zone ends and the reading begins. */}
-        {narrative ? (
+        {/* 3 — What This Usually Becomes: what people with this growing
+            trait naturally become — plain prose, standard body color. A
+            hairline marks where the status zone ends and the reading
+            begins. */}
+        {becomes ? (
           <div className="mt-9 border-t border-zinc-100 pt-8">
-            <SectionLabel>Who You Become</SectionLabel>
-            <p className="font-voice mt-3 max-w-[58ch] text-[17px] leading-[1.65] text-zinc-800">
-              {narrative}
+            <SectionLabel>What This Usually Becomes</SectionLabel>
+            <p className="mt-3 max-w-[58ch] text-[15px] leading-[1.7] text-zinc-700">
+              {becomes}
             </p>
           </div>
         ) : null}
 
-        {/* 4 — What You Leave Behind: the emotional center. One quiet
-            prose paragraph — what slowly changes inside the person — never a
-            list of risks. Set in the serif voice like the narrative it
-            balances. */}
-        {cost ? (
+        {/* 4 — What This Strengthens: three real gains. */}
+        {strengthens.length > 0 ? (
           <div className="mt-9">
-            <SectionLabel>What You Leave Behind</SectionLabel>
-            <p className="font-voice mt-3 max-w-[58ch] text-[16px] leading-[1.65] text-zinc-700">
-              {cost}
-            </p>
+            <SectionLabel>What This Strengthens</SectionLabel>
+            <BulletList items={strengthens} dotColor={tone.color} />
           </div>
         ) : null}
 
-        {/* 5 — Why Reflection Believes This: three recurring patterns from
-            the evidence — the receipts, after the life and its price. One
-            bullet per line of why_emerging (pre-v2 rows carry a single
-            sentence, which renders as one bullet until regeneration). */}
+        {/* 5 — Tradeoffs: three honest costs, in the same list voice —
+            balance, not warning. */}
+        {tradeoffs.length > 0 ? (
+          <div className="mt-9">
+            <SectionLabel>Tradeoffs</SectionLabel>
+            <BulletList items={tradeoffs} dotColor="#a1a1aa" />
+          </div>
+        ) : null}
+
+        {/* 6 — Why Reflection Believes This: the receipts, last and collapsed
+            by default — understand the trait, recognize it, then explore the
+            evidence if curious. Same quiet aria-expanded disclosure idiom as
+            every other in-card reveal. The checklist inside is unchanged:
+            one ✓ bullet per line of why_emerging. */}
         {evidenceBullets.length > 0 ? (
-          <div className="mt-9">
-            <SectionLabel>Why Reflection Believes This</SectionLabel>
-            <ul className="mt-3 max-w-[60ch] space-y-2">
-              {evidenceBullets.map((bullet) => (
-                <li
-                  key={bullet}
-                  className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-600"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="mt-px shrink-0 text-[13px] font-semibold"
-                    style={{ color: tone.color, opacity: 0.7 }}
-                  >
-                    ✓
-                  </span>
-                  {bullet}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {/* 6 — You'll Know You're Here When...: the card ends on recognition,
-            not interrogation — one ordinary moment the reader will live
-            through if this future becomes real. */}
-        {recognitionMoment ? (
           <div className="mt-9 border-t border-zinc-100 pt-8">
-            <SectionLabel>{"You'll Know You're Here When..."}</SectionLabel>
-            <p
-              className="font-voice mt-3 max-w-[58ch] text-[17px] italic leading-[1.6]"
-              style={{ color: tone.color }}
+            <button
+              type="button"
+              aria-expanded={showWhy}
+              onClick={() => setShowWhy((current) => !current)}
+              className="flex w-full cursor-pointer items-center justify-between gap-4 text-left"
             >
-              {recognitionMoment}
-            </p>
+              <span className="min-w-0">
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+                  Why Reflection Believes This
+                </span>
+                <span className="mt-1 block text-[13px] text-zinc-500">
+                  The moments that led Reflection here.
+                </span>
+              </span>
+              <svg
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+                className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform duration-150 ${
+                  showWhy ? "rotate-180" : ""
+                }`}
+              >
+                <path
+                  d="M4 6l4 4 4-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            {showWhy ? (
+              <ul className="mt-4 max-w-[60ch] space-y-2">
+                {evidenceBullets.map((bullet) => (
+                  <li
+                    key={bullet}
+                    className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-600"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="mt-px shrink-0 text-[13px] font-semibold"
+                      style={{ color: tone.color, opacity: 0.7 }}
+                    >
+                      ✓
+                    </span>
+                    {bullet}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
-        ) : null}
-
-        {/* Legacy (pre-v6) rows close with their reflective question until
-            their one-time regeneration replaces it. */}
-        {legacyClosingQuestion ? (
-          <p
-            className="font-voice mt-9 max-w-[58ch] border-t border-zinc-100 pt-8 text-[17px] italic leading-[1.6]"
-            style={{ color: tone.color }}
-          >
-            {legacyClosingQuestion}
-          </p>
         ) : null}
       </div>
     </article>

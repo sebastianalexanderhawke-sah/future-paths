@@ -161,7 +161,7 @@ describe("Faded future card", () => {
   it("keeps the original identity behind the quiet inline disclosure, closed at first", () => {
     expect(html).toContain("View original Future Self");
     // The original card renders only on request — the fade story leads.
-    expect(html).not.toContain("Who You Become");
+    expect(html).not.toContain("What This Usually Becomes");
   });
 });
 
@@ -171,7 +171,7 @@ describe("The preserved original Future Self", () => {
       createElement(FutureCard, { futureSelf: asLastActive(fadedExplorer) }),
     );
     // The identity card is intact…
-    expect(html).toContain("Who You Become");
+    expect(html).toContain("What This Usually Becomes");
     expect(html).toContain("Becomes someone who finishes.");
     // …with its likelihood restored to the last active strength…
     expect(html).toContain("18 percent likely");
@@ -183,63 +183,105 @@ describe("The preserved original Future Self", () => {
 });
 
 describe("Active future card hierarchy", () => {
-  it("answers who this person becomes with the future identity's timeless identity statement", () => {
+  it("falls back to the archetype name and identity statement when a row carries no dimension breakdown", () => {
     const html = renderToString(
       createElement(FutureCard, { futureSelf: makeFuture({}) }),
     );
-    // the-guardian's hand-written statement from the library —
-    // never AI-generated, identical on every render.
+    // No dimension_breakdown → no derivable trait: the stored name heads the
+    // card and the-guardian's hand-written statement quotes under it.
+    expect(html).toContain("The Steady Builder");
     expect(html).toContain(
       "One day everything and everyone you were trusted with will still be standing",
     );
   });
 
-  it("reads as a possible life — evidence bullets, the price, the becoming, a recognition moment — never behavior vectors", () => {
+  it("reads as a strengthening trait — trait headline and quote, becomes, gains, tradeoffs, collapsed evidence — never behavior vectors (Phase 4)", () => {
     const html = renderToString(
       createElement(FutureCard, {
         futureSelf: makeFuture({
+          dimension_breakdown: [
+            { dimension: "Consistency", identityWeight: 1, userScore: 6, contribution: 6 },
+            { dimension: "Initiative", identityWeight: 0.4, userScore: 4, contribution: 1.6 },
+          ],
           why_emerging:
             "You repeatedly choose ownership over certainty.\nYou keep returning to difficult work after setbacks.\nYour recent decisions favor long-term meaning over comfort.",
+          growth_opportunities: [
+            "Making decisions without waiting for permission.",
+            "A reputation for finishing what you take on.",
+            "Staying steady when plans fall through.",
+          ],
           blind_spots: [
-            "At first the self-reliance made you capable. Eventually it made you hard to reach.",
+            "Asking for help gets harder the more capable you become.",
+            "People stop offering input because you seem to have it handled.",
+            "Rest starts to feel like a failure of discipline.",
           ],
           likely_evolution:
-            "You slowly become the person others plan around.\nSomeone offers to carry part of the weight, and you realize you have forgotten how to let them.",
+            "You become the person who has already started while others are still discussing it.",
         }),
       }),
     );
 
-    // The sections, in the v6 language…
-    expect(html).toContain("Why Reflection Believes This");
-    expect(html).toContain("You repeatedly choose ownership over certainty.");
-    expect(html).toContain("What You Leave Behind");
-    expect(html).toContain("Eventually it made you hard to reach.");
-    expect(html).toContain("Who You Become");
-    // …the card ends on recognition, not interrogation…
-    expect(html).toContain("Here When...");
+    // The trait heads the card — everyday label + hand-written quote — and
+    // the archetype name is gone…
+    expect(html).toContain("Discipline");
+    expect(html).toContain("You keep showing up after the excitement wears off.");
+    expect(html).not.toContain("The Steady Builder");
+    // …the plain "usually becomes" prose renders…
+    expect(html).toContain("What This Usually Becomes");
     expect(html).toContain(
-      "Someone offers to carry part of the weight, and you realize you have forgotten how to let them.",
+      "You become the person who has already started while others are still discussing it.",
     );
-    // …and the implementation never leaks: no behavior vectors, no risk list.
+    // …three gains and three tradeoffs, as bullets…
+    expect(html).toContain("What This Strengthens");
+    expect(html).toContain("Making decisions without waiting for permission.");
+    expect(html).toContain("Staying steady when plans fall through.");
+    expect(html).toContain("Tradeoffs");
+    expect(html).toContain("Asking for help gets harder the more capable you become.");
+    expect(html).toContain("Rest starts to feel like a failure of discipline.");
+    // …the evidence closes the card collapsed: header and subtitle visible,
+    // the checklist itself only on request. The first why_emerging bullet
+    // legitimately appears as the movement lead, so the collapsed state is
+    // proven by the second and third bullets.
+    expect(html).toContain("Why Reflection Believes This");
+    expect(html).toContain("The moments that led Reflection here.");
+    expect(html).not.toContain("You keep returning to difficult work after setbacks.");
+    expect(html).not.toContain("Your recent decisions favor long-term meaning over comfort.");
+    // …reading top to bottom in the Phase 4 order.
+    const order = [
+      "What This Usually Becomes",
+      "What This Strengthens",
+      "Tradeoffs",
+      "Why Reflection Believes This",
+    ].map((label) => html.indexOf(label));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // …and retired sections and implementation details never leak.
+    expect(html).not.toContain("Notice It When...");
+    expect(html).not.toContain("Who You Become");
+    expect(html).not.toContain("What You Leave Behind");
     expect(html).not.toContain("Core behaviors");
     expect(html).not.toContain("Ships weekly");
     expect(html).not.toContain("What You Risk");
   });
 
-  it("renders a not-yet-regenerated pre-v6 row's closing question in the legacy style, without the recognition label", () => {
+  it("renders only the portrait line of a not-yet-regenerated pre-v8 row — retired closings never leak", () => {
     const html = renderToString(
       createElement(FutureCard, {
         futureSelf: makeFuture({
-          likely_evolution:
-            "You slowly become the person others plan around.\nWould you still choose this path if it required trusting others as much as yourself?",
+          // A v7-encoded row: portrait + three notice signals.
+          likely_evolution: [
+            "You slowly become the person others plan around.",
+            "You start projects before you feel completely ready.",
+            "Finishing becomes more satisfying than planning.",
+            "People begin relying on you because you consistently follow through.",
+          ].join("\n"),
         }),
       }),
     );
 
-    expect(html).toContain(
-      "Would you still choose this path if it required trusting others as much as yourself?",
-    );
-    expect(html).not.toContain("Here When...");
+    expect(html).toContain("You slowly become the person others plan around.");
+    expect(html).not.toContain("You start projects before you feel completely ready.");
+    expect(html).not.toContain("Notice It When...");
   });
 
   it("explains an increase with a grounded sentence, receipts behind a quiet action", () => {

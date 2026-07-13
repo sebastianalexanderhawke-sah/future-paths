@@ -67,6 +67,8 @@ const {
   queueFutureSelvesGeneration,
   loadFutureSelfImpactByPath,
   maxFutureSelvesForEvidence,
+  nextFadeStep,
+  FADE_COMPLETE_THRESHOLD,
 } = await import("@/lib/future-selves");
 
 // ---------------------------------------------------------------------------
@@ -442,9 +444,9 @@ describe("generateFutureSelves", () => {
       evidence_strength: "Emerging",
       identity_id: "self-reliant-builder",
       why_emerging: "Existing why_emerging text.",
-      growth_opportunities: ["Existing growth opportunity."],
-      blind_spots: ["Existing blind spot."],
-      likely_evolution: "Existing likely evolution text.\nOne day you notice you never stopped building.",
+      growth_opportunities: ["Existing growth opportunity.", "Existing second gain.", "Existing third gain."],
+      blind_spots: ["Existing blind spot.", "Existing second tradeoff.", "Existing third tradeoff."],
+      likely_evolution: "Existing likely evolution text.\nYou reach for the harder version first.\nBuilding fills the hours planning used to.\nPeople hand you the unfinished things.",
     };
     const stub = createSupabaseStub({
       behavior_observations: OBSERVATIONS_RESPONSE,
@@ -471,9 +473,9 @@ describe("generateFutureSelves", () => {
     expect(payload.previous_percentage).toBe(22);
     // Narrative fields are carried over unchanged from the existing row.
     expect(payload.why_emerging).toBe("Existing why_emerging text.");
-    expect(payload.growth_opportunities).toEqual(["Existing growth opportunity."]);
-    expect(payload.blind_spots).toEqual(["Existing blind spot."]);
-    expect(payload.likely_evolution).toBe("Existing likely evolution text.\nOne day you notice you never stopped building.");
+    expect(payload.growth_opportunities).toEqual(["Existing growth opportunity.", "Existing second gain.", "Existing third gain."]);
+    expect(payload.blind_spots).toEqual(["Existing blind spot.", "Existing second tradeoff.", "Existing third tradeoff."]);
+    expect(payload.likely_evolution).toBe("Existing likely evolution text.\nYou reach for the harder version first.\nBuilding fills the hours planning used to.\nPeople hand you the unfinished things.");
   });
 
   it("does not call the AI even when evidence_strength crosses a tier boundary (Phase 6C: narratives are stable archetypes, not per-situation output)", async () => {
@@ -491,9 +493,9 @@ describe("generateFutureSelves", () => {
       evidence_strength: "Emerging",
       identity_id: "self-reliant-builder",
       why_emerging: "Stable why_emerging text.",
-      growth_opportunities: ["Stable growth opportunity."],
-      blind_spots: ["Stable blind spot."],
-      likely_evolution: "Stable likely evolution text.\nOne day you notice you never stopped building.",
+      growth_opportunities: ["Stable growth opportunity.", "Stable second gain.", "Stable third gain."],
+      blind_spots: ["Stable blind spot.", "Stable second tradeoff.", "Stable third tradeoff."],
+      likely_evolution: "Stable likely evolution text.\nYou reach for the harder version first.\nBuilding fills the hours planning used to.\nPeople hand you the unfinished things.",
     };
     const stub = createSupabaseStub({
       behavior_observations: OBSERVATIONS_RESPONSE,
@@ -518,7 +520,7 @@ describe("generateFutureSelves", () => {
     expect(payload.evidence_strength).toBe("Moderate");
     // Layer 1 (evidence_strength) updated; Layer 2 narrative stayed put.
     expect(payload.why_emerging).toBe("Stable why_emerging text.");
-    expect(payload.growth_opportunities).toEqual(["Stable growth opportunity."]);
+    expect(payload.growth_opportunities).toEqual(["Stable growth opportunity.", "Stable second gain.", "Stable third gain."]);
   });
 
   describe("Phase 6C — Explorer walkthrough", () => {
@@ -543,9 +545,9 @@ describe("generateFutureSelves", () => {
         evidence_strength: "Emerging",
         identity_id: "explorer",
         why_emerging: "Explorer's existing why_emerging.",
-        growth_opportunities: ["Explorer's existing growth opportunity."],
-        blind_spots: ["Explorer's existing blind spot."],
-        likely_evolution: "Explorer's existing likely evolution.\nOne day leaving feels like arriving.",
+        growth_opportunities: ["Explorer's existing growth opportunity.", "Explorer's existing second gain.", "Explorer's existing third gain."],
+        blind_spots: ["Explorer's existing blind spot.", "Explorer's existing second tradeoff.", "Explorer's existing third tradeoff."],
+        likely_evolution: "Explorer's existing likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -566,7 +568,7 @@ describe("generateFutureSelves", () => {
       const payload = updates[0].args[0] as Record<string, unknown>;
       expect(payload.percentage).toBe(23);
       expect(payload.why_emerging).toBe("Explorer's existing why_emerging.");
-      expect(payload.growth_opportunities).toEqual(["Explorer's existing growth opportunity."]);
+      expect(payload.growth_opportunities).toEqual(["Explorer's existing growth opportunity.", "Explorer's existing second gain.", "Explorer's existing third gain."]);
     });
 
     it("Example 2: 22% -> 39%, several new behaviors consistently reinforce the identity — percentage updates, narrative still unchanged (Phase 6C: only a brand-new identity generates a narrative)", async () => {
@@ -584,9 +586,9 @@ describe("generateFutureSelves", () => {
         evidence_strength: "Emerging",
         identity_id: "explorer",
         why_emerging: "Explorer's existing why_emerging.",
-        growth_opportunities: ["Explorer's existing growth opportunity."],
-        blind_spots: ["Explorer's existing blind spot."],
-        likely_evolution: "Explorer's existing likely evolution.\nOne day leaving feels like arriving.",
+        growth_opportunities: ["Explorer's existing growth opportunity.", "Explorer's existing second gain.", "Explorer's existing third gain."],
+        blind_spots: ["Explorer's existing blind spot.", "Explorer's existing second tradeoff.", "Explorer's existing third tradeoff."],
+        likely_evolution: "Explorer's existing likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -610,7 +612,7 @@ describe("generateFutureSelves", () => {
       expect(payload.why_emerging).toBe("Explorer's existing why_emerging.");
     });
 
-    it("Example 3: Explorer disappears — fades using existing behavior, no AI call", async () => {
+    it("Example 3: Explorer disappears — begins a gradual fade (still active, thinner, flat trend), no AI call", async () => {
       // A different identity is recognized this run; Explorer isn't, so it fades.
       recognizeMock.mockReturnValue([{ ...MATCH, identityId: "other", canonicalName: "Other" }]);
       getIdentityByIdMock.mockReturnValueOnce({ ...PROFILE, id: "other", canonical_name: "Other" });
@@ -655,8 +657,11 @@ describe("generateFutureSelves", () => {
 
       const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
       const fadePayload = updates[0].args[0] as Record<string, unknown>;
-      expect(fadePayload.status).toBe("faded");
-      expect(fadePayload.percentage).toBe(0);
+      // Gradual fade: 39% thins to 20% and the row stays active; both
+      // percentage fields move together so no down-trend renders.
+      expect(fadePayload.status).toBeUndefined();
+      expect(fadePayload.percentage).toBe(20);
+      expect(fadePayload.previous_percentage).toBe(20);
       // Fade never touches the narrative fields — they aren't in the update payload.
       expect(fadePayload.why_emerging).toBeUndefined();
     });
@@ -676,10 +681,11 @@ describe("generateFutureSelves", () => {
         evidence_strength: "Moderate",
         identity_id: "explorer",
         why_emerging: "Explorer's pre-fade why_emerging.",
-        // Current-format narrative (question line + pull line), so
+        // Current-format narrative (signal bullets + pull line), so
         // reactivation reuses it instead of triggering a format upgrade.
-        likely_evolution: "Explorer's pre-fade evolution.\nOne day the door out is the familiar one.",
-        growth_opportunities: ["The unfamiliar stopped feeling like risk."],
+        likely_evolution: "Explorer's pre-fade evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
+        growth_opportunities: ["The unfamiliar stopped feeling like risk.", "Quick footing in new rooms.", "A wider map of what counts as home."],
+        blind_spots: ["Roots stay shallow.", "Follow-through competes with novelty.", "People hesitate to plan around you."],
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -768,9 +774,9 @@ describe("generateFutureSelves", () => {
         evidence_strength: "Emerging",
         identity_id: "explorer",
         why_emerging: "Explorer's archetype narrative.",
-        growth_opportunities: ["Explorer's archetype growth opportunity."],
-        blind_spots: ["Explorer's archetype blind spot."],
-        likely_evolution: "Explorer's archetype likely evolution.\nOne day leaving feels like arriving.",
+        growth_opportunities: ["Explorer's archetype growth opportunity.", "Explorer's archetype second gain.", "Explorer's archetype third gain."],
+        blind_spots: ["Explorer's archetype blind spot.", "Explorer's archetype second tradeoff.", "Explorer's archetype third tradeoff."],
+        likely_evolution: "Explorer's archetype likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -791,7 +797,7 @@ describe("generateFutureSelves", () => {
       const payload = updates[0].args[0] as Record<string, unknown>;
       expect(payload.percentage).toBe(28);
       expect(payload.why_emerging).toBe("Explorer's archetype narrative.");
-      expect(payload.growth_opportunities).toEqual(["Explorer's archetype growth opportunity."]);
+      expect(payload.growth_opportunities).toEqual(["Explorer's archetype growth opportunity.", "Explorer's archetype second gain.", "Explorer's archetype third gain."]);
     });
 
     it("Situation 3: Explorer goes from 28% -> 41% (an evidence-strength tier crossing) — percentage updates, narrative unchanged, no AI call", async () => {
@@ -809,9 +815,9 @@ describe("generateFutureSelves", () => {
         evidence_strength: "Emerging",
         identity_id: "explorer",
         why_emerging: "Explorer's archetype narrative.",
-        growth_opportunities: ["Explorer's archetype growth opportunity."],
-        blind_spots: ["Explorer's archetype blind spot."],
-        likely_evolution: "Explorer's archetype likely evolution.\nOne day leaving feels like arriving.",
+        growth_opportunities: ["Explorer's archetype growth opportunity.", "Explorer's archetype second gain.", "Explorer's archetype third gain."],
+        blind_spots: ["Explorer's archetype blind spot.", "Explorer's archetype second tradeoff.", "Explorer's archetype third tradeoff."],
+        likely_evolution: "Explorer's archetype likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -908,9 +914,9 @@ describe("generateFutureSelves", () => {
         evidence_strength: "Emerging",
         identity_id: "adaptive-explorer",
         why_emerging: "Adaptive Explorer's archetype narrative.",
-        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
-        blind_spots: ["Adaptive Explorer's archetype blind spot."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nOne day leaving feels like arriving.",
+        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity.", "Adaptive Explorer's archetype second gain.", "Adaptive Explorer's archetype third gain."],
+        blind_spots: ["Adaptive Explorer's archetype blind spot.", "Adaptive Explorer's archetype second tradeoff.", "Adaptive Explorer's archetype third tradeoff."],
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -953,9 +959,9 @@ describe("generateFutureSelves", () => {
         evidence_strength: "Emerging",
         identity_id: "adaptive-explorer",
         why_emerging: "Adaptive Explorer's archetype narrative.",
-        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
-        blind_spots: ["Adaptive Explorer's archetype blind spot."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nOne day leaving feels like arriving.",
+        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity.", "Adaptive Explorer's archetype second gain.", "Adaptive Explorer's archetype third gain."],
+        blind_spots: ["Adaptive Explorer's archetype blind spot.", "Adaptive Explorer's archetype second tradeoff.", "Adaptive Explorer's archetype third tradeoff."],
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -978,7 +984,7 @@ describe("generateFutureSelves", () => {
       expect(payload.why_emerging).toBe("Adaptive Explorer's archetype narrative.");
     });
 
-    it("Situation 4: Adaptive Explorer fades — percentage/status/evidence change, narrative unchanged (never written to the fade payload)", async () => {
+    it("Situation 4: Adaptive Explorer starts fading — percentage thins gradually, narrative unchanged (never written to the fade payload)", async () => {
       recognizeMock.mockReturnValue([
         { ...MATCH, identityId: "other", canonicalName: "Other" },
       ]);
@@ -1021,8 +1027,10 @@ describe("generateFutureSelves", () => {
       ]);
       const updates = stub.calls.filter((c) => c.table === "future_selves" && c.method === "update");
       const fadePayload = updates[0].args[0] as Record<string, unknown>;
-      expect(fadePayload.status).toBe("faded");
-      expect(fadePayload.percentage).toBe(0);
+      // Gradual fade: 46% thins to 23%, row stays active, trend flat.
+      expect(fadePayload.status).toBeUndefined();
+      expect(fadePayload.percentage).toBe(23);
+      expect(fadePayload.previous_percentage).toBe(23);
       expect(fadePayload.why_emerging).toBeUndefined();
     });
 
@@ -1047,9 +1055,9 @@ describe("generateFutureSelves", () => {
         evidence_strength: "Moderate",
         identity_id: "adaptive-explorer",
         why_emerging: "Adaptive Explorer's archetype narrative.",
-        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity."],
-        blind_spots: ["Adaptive Explorer's archetype blind spot."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nOne day leaving feels like arriving.",
+        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity.", "Adaptive Explorer's archetype second gain.", "Adaptive Explorer's archetype third gain."],
+        blind_spots: ["Adaptive Explorer's archetype blind spot.", "Adaptive Explorer's archetype second tradeoff.", "Adaptive Explorer's archetype third tradeoff."],
+        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -1117,7 +1125,7 @@ describe("generateFutureSelves", () => {
     expect(event.event_type).toBe("returned");
   });
 
-  it("fades an active future whose identity is not in the recognized set", async () => {
+  it("gradually fades an active future whose identity is not in the recognized set — thinner but still active, flat trend, faded event carries the decline", async () => {
     const otherMatch = {
       ...MATCH,
       identityId: "community-weaver",
@@ -1169,9 +1177,12 @@ describe("generateFutureSelves", () => {
     );
     expect(updates).toHaveLength(1);
     const fadePayload = updates[0].args[0] as Record<string, unknown>;
-    expect(fadePayload.status).toBe("faded");
-    expect(fadePayload.percentage).toBe(0);
-    expect(fadePayload.previous_percentage).toBe(45);
+    // First unmatched run: 45% thins to 23% (never straight to 0), the row
+    // stays active, and previous_percentage moves with percentage so the
+    // decay never renders as a down-trend.
+    expect(fadePayload.status).toBeUndefined();
+    expect(fadePayload.percentage).toBe(23);
+    expect(fadePayload.previous_percentage).toBe(23);
 
     const events = stub.calls.filter(
       (c) => c.table === "future_self_events" && c.method === "insert",
@@ -1179,6 +1190,67 @@ describe("generateFutureSelves", () => {
     const eventTypes = events.map((e) => (e.args[0] as Record<string, unknown>).event_type);
     expect(eventTypes).toContain("emerged");
     expect(eventTypes).toContain("faded");
+    const fadeEvent = events
+      .map((e) => e.args[0] as Record<string, unknown>)
+      .find((e) => e.event_type === "faded")!;
+    expect(fadeEvent.percentage_before).toBe(45);
+    expect(fadeEvent.percentage_after).toBe(23);
+  });
+
+  it("completes the fade (status faded, 0%) only once a declining future has thinned below the completion threshold", async () => {
+    const otherMatch = {
+      ...MATCH,
+      identityId: "community-weaver",
+      canonicalName: "Community Weaver",
+    };
+    recognizeMock.mockReturnValue([otherMatch]);
+    getIdentityByIdMock.mockReturnValueOnce({
+      ...PROFILE,
+      id: "community-weaver",
+      canonical_name: "Community Weaver",
+    });
+
+    // Already thinned by previous unmatched runs: 15% halves to 8, which is
+    // below FADE_COMPLETE_THRESHOLD — this run completes the fade.
+    const thinnedRow = {
+      id: "fs-old",
+      user_id: "user-1",
+      name: "Self-Reliant Builder",
+      status: "active",
+      percentage: 15,
+      previous_percentage: 15,
+      identity_id: "self-reliant-builder",
+    };
+    const newRow = {
+      id: "fs-new",
+      user_id: "user-1",
+      name: "Community Weaver",
+      status: "active",
+      percentage: 60,
+      identity_id: "community-weaver",
+    };
+    const stub = createSupabaseStub({
+      behavior_observations: OBSERVATIONS_RESPONSE,
+      future_selves: [
+        { data: [thinnedRow], error: null },
+        { data: newRow, error: null },
+        { error: null },
+        { data: [newRow], error: null },
+      ],
+      future_self_events: [{ error: null }, { error: null }],
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    const updates = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "update",
+    );
+    expect(updates).toHaveLength(1);
+    const fadePayload = updates[0].args[0] as Record<string, unknown>;
+    expect(fadePayload.status).toBe("faded");
+    expect(fadePayload.percentage).toBe(0);
+    expect(fadePayload.previous_percentage).toBe(15);
   });
 
   it("matches a legacy row by canonical name and updates it rather than inserting a duplicate", async () => {
@@ -1219,6 +1291,144 @@ describe("generateFutureSelves", () => {
     const payload = updates[0].args[0] as Record<string, unknown>;
     expect(payload.identity_id).toBe("self-reliant-builder");
     expect(payload.percentage).toBe(60);
+  });
+
+  it("carries an active row from a retired library epoch forward via legacy_ids — re-keyed, flat trend, no grew event", async () => {
+    const newEpochMatch = {
+      ...MATCH,
+      identityId: "the-builder",
+      canonicalName: "The Self-Reliant Builder",
+      likelihood: 60,
+    };
+    recognizeMock.mockReturnValue([newEpochMatch]);
+    getIdentityByIdMock.mockReturnValueOnce({
+      ...PROFILE,
+      id: "the-builder",
+      canonical_name: "The Self-Reliant Builder",
+      legacy_ids: ["self-reliant-builder"],
+    });
+
+    // A row persisted under the previous library epoch's id. Without the
+    // legacy_ids bridge this row would fade and a duplicate would be
+    // inserted — the 2026-07-09 library swap failure mode.
+    const oldEpochRow = {
+      id: "fs-old-epoch",
+      user_id: "user-1",
+      name: "Self-Reliant Builder",
+      status: "active",
+      percentage: 31,
+      evidence_strength: "Emerging",
+      identity_id: "self-reliant-builder",
+      narrative_source: "ai",
+      why_emerging: "Old epoch narrative.",
+      growth_opportunities: ["Old epoch growth opportunity."],
+      blind_spots: ["Old epoch blind spot."],
+      likely_evolution: "Old epoch evolution.\nOne day you notice you never stopped building.",
+    };
+    const stub = createSupabaseStub({
+      behavior_observations: OBSERVATIONS_RESPONSE,
+      future_selves: [
+        { data: [oldEpochRow], error: null },
+        { error: null },
+        { data: [{ ...oldEpochRow, identity_id: "the-builder", percentage: 60 }], error: null },
+      ],
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    // Carried forward, never duplicated…
+    const inserts = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    expect(inserts).toHaveLength(0);
+
+    const updates = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "update",
+    );
+    expect(updates).toHaveLength(1);
+    const payload = updates[0].args[0] as Record<string, unknown>;
+    // …re-keyed and renamed to the current epoch…
+    expect(payload.identity_id).toBe("the-builder");
+    expect(payload.name).toBe("The Self-Reliant Builder");
+    expect(payload.status).toBeUndefined(); // stays active
+    // …with the percentage jump treated as a technical migration: trend
+    // flat (both fields carry the new value), and no grew event even though
+    // 60 > 31.
+    expect(payload.percentage).toBe(60);
+    expect(payload.previous_percentage).toBe(60);
+
+    const events = stub.calls.filter(
+      (c) => c.table === "future_self_events" && c.method === "insert",
+    );
+    expect(events).toHaveLength(0);
+  });
+
+  it("returns a faded row from a retired library epoch via legacy_ids with a returned event", async () => {
+    const newEpochMatch = {
+      ...MATCH,
+      identityId: "the-competitor",
+      canonicalName: "The Relentless Contender",
+      likelihood: 24,
+      evidenceStrength: "Emerging" as const,
+    };
+    recognizeMock.mockReturnValue([newEpochMatch]);
+    getIdentityByIdMock.mockReturnValueOnce({
+      ...PROFILE,
+      id: "the-competitor",
+      canonical_name: "The Relentless Contender",
+      legacy_ids: ["relentless-grower"],
+    });
+
+    const oldEpochFadedRow = {
+      id: "fs-grower",
+      user_id: "user-1",
+      name: "Relentless Grower",
+      status: "faded",
+      percentage: 0,
+      previous_percentage: 28,
+      evidence_strength: "Emerging",
+      identity_id: "relentless-grower",
+    };
+    const stub = createSupabaseStub({
+      behavior_observations: OBSERVATIONS_RESPONSE,
+      future_selves: [
+        { data: [oldEpochFadedRow], error: null },
+        { error: null },
+        {
+          data: [
+            { ...oldEpochFadedRow, identity_id: "the-competitor", status: "active", percentage: 24 },
+          ],
+          error: null,
+        },
+      ],
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    const inserts = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    expect(inserts).toHaveLength(0);
+
+    const updates = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "update",
+    );
+    expect(updates).toHaveLength(1);
+    const payload = updates[0].args[0] as Record<string, unknown>;
+    expect(payload.identity_id).toBe("the-competitor");
+    expect(payload.name).toBe("The Relentless Contender");
+    expect(payload.status).toBe("active");
+    expect(payload.percentage).toBe(24);
+
+    const events = stub.calls.filter(
+      (c) => c.table === "future_self_events" && c.method === "insert",
+    );
+    expect(events).toHaveLength(1);
+    expect((events[0].args[0] as Record<string, unknown>).event_type).toBe("returned");
   });
 
   it("calls extraction when a momentId is provided and no observations exist yet for that moment", async () => {
@@ -1825,5 +2035,43 @@ describe("maxFutureSelvesForEvidence", () => {
 
   it("reads the strongest (top-ranked) match, not the weakest", () => {
     expect(maxFutureSelvesForEvidence([match("Strong"), match("Emerging")])).toBe(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// nextFadeStep — gradual fade progression
+// ---------------------------------------------------------------------------
+
+describe("nextFadeStep", () => {
+  it("halves a strong percentage instead of zeroing it", () => {
+    expect(nextFadeStep(44)).toEqual({ kind: "declining", percentage: 22 });
+    expect(nextFadeStep(31)).toEqual({ kind: "declining", percentage: 16 });
+  });
+
+  it("completes the fade once the decayed value falls below the threshold", () => {
+    expect(nextFadeStep(18)).toEqual({ kind: "complete" });
+    expect(nextFadeStep(15)).toEqual({ kind: "complete" });
+    expect(nextFadeStep(0)).toEqual({ kind: "complete" });
+  });
+
+  it("keeps declining right at the threshold boundary", () => {
+    // FADE_COMPLETE_THRESHOLD × 2 halves exactly to the threshold, which
+    // still counts as declining — completion requires falling BELOW it.
+    expect(nextFadeStep(FADE_COMPLETE_THRESHOLD * 2)).toEqual({
+      kind: "declining",
+      percentage: FADE_COMPLETE_THRESHOLD,
+    });
+  });
+
+  it("a 30%-strength future takes multiple generations to fade out", () => {
+    let percentage = 30;
+    let runs = 0;
+    for (;;) {
+      const step = nextFadeStep(percentage);
+      runs += 1;
+      if (step.kind === "complete") break;
+      percentage = step.percentage;
+    }
+    expect(runs).toBeGreaterThan(1);
   });
 });

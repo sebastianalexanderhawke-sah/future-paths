@@ -59,6 +59,7 @@ vi.mock("@/actions/paths", () => ({
 }));
 vi.mock("@/actions/future-forecast", () => ({
   generateForecastForMomentAction: vi.fn(),
+  regenerateForecastForChosenPathAction: vi.fn(),
 }));
 vi.mock("@/actions/auth", () => ({
   signOut: vi.fn(),

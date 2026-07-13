@@ -246,6 +246,38 @@ async function recordFutureSelfEvent(input: {
 
 const MIN_FUTURE_SELVES = 2;
 
+// ---------------------------------------------------------------------------
+// Gradual fade
+// ---------------------------------------------------------------------------
+//
+// Leaving the recognized set used to zero a future in a single run — a
+// selection-boundary wobble (or a library update) rendered as a "-30%" cliff
+// that read as the identity model collapsing, when the user's evidence had
+// barely moved. Instead, an unmatched active future now thins by
+// FADE_DECAY_FACTOR per generation run and only completes its fade (status
+// "faded", percentage 0 — the same terminal state as before) once it has
+// thinned below FADE_COMPLETE_THRESHOLD. While it is thinning, percentage
+// and previous_percentage move together so the decay never renders as an
+// evidence-driven score drop; the recorded faded events carry the decline
+// for the evolution story.
+
+export const FADE_DECAY_FACTOR = 0.5;
+export const FADE_COMPLETE_THRESHOLD = 10;
+
+/**
+ * One generation run's fade progression for an unmatched active future:
+ * either it thins to a lower (still displayed) percentage, or it has grown
+ * too thin to keep and completes the fade.
+ */
+export function nextFadeStep(
+  percentage: number,
+): { kind: "declining"; percentage: number } | { kind: "complete" } {
+  const decayed = Math.round(percentage * FADE_DECAY_FACTOR);
+  return decayed >= FADE_COMPLETE_THRESHOLD
+    ? { kind: "declining", percentage: decayed }
+    : { kind: "complete" };
+}
+
 /**
  * v3: the number of Future Selves follows the evidence, never a fixed count.
  * The strongest match's evidence tier sets the ceiling — weak evidence
@@ -569,11 +601,18 @@ export async function generateFutureSelves(
     const profile = getIdentityById(input.identityId);
     if (!profile) return [];
 
-    // Match first by identity_id (new-pipeline rows), then by canonical or
-    // legacy name (legacy rows that happen to share a name this identity has
-    // ever displayed under — see IdentityProfile.legacy_names).
+    // Match first by identity_id (new-pipeline rows), then by a retired
+    // epoch's id (see IdentityProfile.legacy_ids — a library update must
+    // never read as an identity disappearing), then by canonical or legacy
+    // name (legacy rows that happen to share a name this identity has ever
+    // displayed under — see IdentityProfile.legacy_names).
     const existing =
       allExisting.find((r) => r.identity_id === input.identityId) ??
+      allExisting.find(
+        (r) =>
+          r.identity_id !== null &&
+          (profile.legacy_ids?.includes(r.identity_id) ?? false),
+      ) ??
       allExisting.find(
         (r) =>
           !r.identity_id &&
@@ -723,6 +762,14 @@ export async function generateFutureSelves(
 
     matchedRowIds.add(existing.id);
 
+    // A row matched under a different key — a retired epoch's id or a
+    // name-matched legacy row — is being re-keyed to this identity. Its
+    // percentage moves from the old epoch's value onto this run's freshly
+    // computed likelihood, which is a technical migration, not a change in
+    // the user's evidence: the trend must read flat and no grew event may be
+    // recorded for this run.
+    const remapped = existing.identity_id !== input.identityId;
+
     if (existing.status === "faded") {
       const { error: updateError } = await supabase
         .from("future_selves")
@@ -762,7 +809,7 @@ export async function generateFutureSelves(
       .from("future_selves")
       .update({
         percentage,
-        previous_percentage: existing.percentage,
+        previous_percentage: remapped ? percentage : existing.percentage,
         updated_at: now,
         ...contentFields,
         ...attributionFields,
@@ -774,7 +821,7 @@ export async function generateFutureSelves(
       return { error: updateError.message };
     }
 
-    if (percentageIncreased) {
+    if (percentageIncreased && !remapped) {
       await recordFutureSelfEvent({
         userId: auth.userId,
         futureSelfId: existing.id,
@@ -790,9 +837,44 @@ export async function generateFutureSelves(
     }
   }
 
-  // Step 8: Fade every active future that was not matched this run.
+  // Step 8: Gradually fade every active future that was not matched this
+  // run (see nextFadeStep — never straight to 0% in a single run).
   for (const existing of allExisting) {
     if (existing.status !== "active" || matchedRowIds.has(existing.id)) {
+      continue;
+    }
+
+    const step = nextFadeStep(existing.percentage);
+
+    if (step.kind === "declining") {
+      const { error: declineError } = await supabase
+        .from("future_selves")
+        .update({
+          percentage: step.percentage,
+          // Both percentage fields move together: the decay is a lifecycle
+          // step, not an evidence-driven score change, so the trend reads
+          // flat everywhere a delta would otherwise render.
+          previous_percentage: step.percentage,
+          updated_at: now,
+        })
+        .eq("id", existing.id)
+        .eq("user_id", auth.userId);
+
+      if (declineError) {
+        return { error: declineError.message };
+      }
+
+      await recordFutureSelfEvent({
+        userId: auth.userId,
+        futureSelfId: existing.id,
+        eventType: "faded",
+        percentageBefore: existing.percentage,
+        percentageAfter: step.percentage,
+        summary: `${existing.name} may be fading for now.`,
+      });
+
+      // Still active — Current Self regeneration waits for the fade to
+      // complete.
       continue;
     }
 

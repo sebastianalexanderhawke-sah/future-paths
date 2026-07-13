@@ -7,6 +7,8 @@ import {
   submitReflectionAnswerAction,
   type ReflectionAnswerFormState,
 } from "@/actions/reflections";
+import { trackEvent } from "@/lib/analytics/client";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 
 type ReflectionPredictionCardProps = {
   checkInId: string;
@@ -28,6 +30,10 @@ export function ReflectionPredictionCard({
   // resets uncontrolled fields after a form action completes, error or not).
   const [answer, setAnswer] = useState("");
 
+  // "Started" = the first keystroke of an answer, once per mount — the
+  // moment intent becomes action, not merely seeing the question.
+  const startedFired = useRef(false);
+
   useEffect(() => {
     if (wasPending.current && !pending && !state.error) {
       setAnswer("");
@@ -45,7 +51,15 @@ export function ReflectionPredictionCard({
         required
         maxLength={2000}
         value={answer}
-        onChange={(event) => setAnswer(event.target.value)}
+        onChange={(event) => {
+          if (!startedFired.current) {
+            startedFired.current = true;
+            trackEvent(ANALYTICS_EVENTS.reflectionStarted, {
+              check_in_id: checkInId,
+            });
+          }
+          setAnswer(event.target.value);
+        }}
         placeholder="Write whatever comes to mind."
         className="rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-zinc-400"
       />

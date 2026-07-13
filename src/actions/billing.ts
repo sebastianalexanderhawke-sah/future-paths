@@ -13,6 +13,14 @@ import { redirect } from "next/navigation";
 
 const BILLING_NOTICE_DESTINATION = "/settings?billing=unavailable#premium";
 
+// Analytics: premium_viewed already fires from the Settings card. The
+// purchase events are declared in the catalog (ANALYTICS_EVENTS.premiumPurchased,
+// ANALYTICS_EVENTS.tokensPurchased) but deliberately NOT captured here — no
+// purchase happens yet, and a funnel must never contain phantom conversions.
+// When checkout launches, capture them via captureServerEvent in the payment
+// provider's success webhook (the same place entitlements land in
+// app_metadata), not in these redirect-to-provider actions.
+
 export async function startPremiumCheckout(): Promise<void> {
   redirect(BILLING_NOTICE_DESTINATION);
 }

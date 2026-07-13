@@ -2,7 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { generatePathsAction, choosePathAction } from "@/actions/paths";
-import { generateForecastForMomentAction } from "@/actions/future-forecast";
+import {
+  generateForecastForMomentAction,
+  regenerateForecastForChosenPathAction,
+} from "@/actions/future-forecast";
 import { CheckInCard } from "@/components/check-ins/check-in-card";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { AlternatePathsDisclosure } from "@/components/moments/alternate-paths-disclosure";
@@ -353,6 +356,36 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
               <>
                 {summaryCard}
                 {chosenPathCard}
+
+                {/* A chosen path whose forecast never finished generating
+                    (the failure redirect is seen once, then lost) would
+                    otherwise leave a silent hole where Possible Futures
+                    belongs. Say what's missing and offer the retry. */}
+                {!forecastSections ? (
+                  <OverviewCard className="px-9 py-7">
+                    <h2 className="text-[17px] font-bold text-[#111]">
+                      Possible Futures
+                    </h2>
+                    <p className="mt-[3px] text-[13px] text-[#888888]">
+                      How this situation could unfold.
+                    </p>
+                    <p className="mt-5 max-w-[52em] text-[13px] leading-relaxed text-[#999999]">
+                      The forecast for your chosen path hasn&apos;t been
+                      generated yet. Once it runs, Reflection maps the risks
+                      worth watching and the opportunities that could open up
+                      — and every check-in you record sharpens it.
+                    </p>
+                    <form action={regenerateForecastForChosenPathAction} className="mt-4">
+                      <input type="hidden" name="momentId" value={moment.id} />
+                      <button
+                        type="submit"
+                        className="cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+                      >
+                        Generate your forecast
+                      </button>
+                    </form>
+                  </OverviewCard>
+                ) : null}
 
                 <SituationForecastSection
                   sections={forecastSections}

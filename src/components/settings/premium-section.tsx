@@ -3,6 +3,7 @@ import {
   manageSubscription,
   startPremiumCheckout,
 } from "@/actions/billing";
+import { TrackView } from "@/components/analytics/track-view";
 import { OverviewCard } from "@/components/overview/overview-card";
 import type { PlanStatus } from "@/lib/plan";
 import { TOKENS_PER_PACK } from "@/lib/plan";
@@ -48,6 +49,7 @@ export function PremiumSection({ plan, showBillingNotice }: PremiumSectionProps)
 
   return (
     <OverviewCard className="px-9 py-7">
+      <TrackView event="premium_viewed" properties={{ plan: plan.plan }} />
       <div id="premium" className="mb-5 scroll-mt-6">
         <h2 className="text-[17px] font-bold text-[#111]">
           Reflection Premium

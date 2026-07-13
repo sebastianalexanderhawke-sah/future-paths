@@ -171,22 +171,39 @@ describe("MomentCard — forecast badge logic", () => {
 });
 
 describe("ExistingSituationsSection — parallel enrichment fetch pattern", () => {
-  it("getForecastExistenceForMoments returns empty Set for empty input", async () => {
-    const { getForecastExistenceForMoments } = await import("@/lib/forecasts");
-    const result = await getForecastExistenceForMoments([]);
-    expect(result).toBeInstanceOf(Set);
-    expect(result.size).toBe(0);
-  });
+  // These tests import heavy server modules on first use; under a full
+  // parallel run the transform alone can approach the 5s default, so they
+  // carry an explicit timeout. The assertions themselves are instant.
+  const IMPORT_TIMEOUT_MS = 20_000;
 
-  it("getChosenPathsForMoments returns empty object for empty input", async () => {
-    const { getChosenPathsForMoments } = await import("@/lib/paths");
-    const result = await getChosenPathsForMoments([]);
-    expect(result).toEqual({});
-  });
+  it(
+    "getForecastExistenceForMoments returns empty Set for empty input",
+    async () => {
+      const { getForecastExistenceForMoments } = await import("@/lib/forecasts");
+      const result = await getForecastExistenceForMoments([]);
+      expect(result).toBeInstanceOf(Set);
+      expect(result.size).toBe(0);
+    },
+    IMPORT_TIMEOUT_MS,
+  );
 
-  it("getLastCheckInsForMoments returns empty object for empty input", async () => {
-    const { getLastCheckInsForMoments } = await import("@/lib/check-ins");
-    const result = await getLastCheckInsForMoments([]);
-    expect(result).toEqual({});
-  });
+  it(
+    "getChosenPathsForMoments returns empty object for empty input",
+    async () => {
+      const { getChosenPathsForMoments } = await import("@/lib/paths");
+      const result = await getChosenPathsForMoments([]);
+      expect(result).toEqual({});
+    },
+    IMPORT_TIMEOUT_MS,
+  );
+
+  it(
+    "getLastCheckInsForMoments returns empty object for empty input",
+    async () => {
+      const { getLastCheckInsForMoments } = await import("@/lib/check-ins");
+      const result = await getLastCheckInsForMoments([]);
+      expect(result).toEqual({});
+    },
+    IMPORT_TIMEOUT_MS,
+  );
 });

@@ -225,8 +225,8 @@ export function YourActivityCard({
           <SectionLabel>Recently Active</SectionLabel>
           {items.length === 0 ? (
             <p className="text-[13px] leading-relaxed text-[#9ca3af]">
-              Nothing recorded yet — your next situation, check-in, or
-              reflection will appear here.
+              Nothing recorded yet — the moment you start a situation, check
+              in, or answer a reflection, it shows up here.
             </p>
           ) : (
             <div className="divide-y divide-[#f7f7f8]">
@@ -257,7 +257,8 @@ export function YourActivityCard({
           {focusAreas.length === 0 ? (
             <p className="text-[13px] leading-relaxed text-[#9ca3af]">
               Not enough recent entries to see where your attention is going
-              yet.
+              yet — as your check-ins and chosen paths accumulate, the life
+              areas you&apos;re tending appear here.
             </p>
           ) : (
             <div className="flex flex-col gap-3">

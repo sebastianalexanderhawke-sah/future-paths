@@ -1,4 +1,5 @@
 import { generateFutureSelvesAction } from "@/actions/future-selves";
+import { TrackView } from "@/components/analytics/track-view";
 import { FadedPathsSection } from "@/components/futures/faded-paths-section";
 import { FutureSelvesExplorer } from "@/components/futures/future-selves-explorer";
 import { AppShell } from "@/components/overview/app-shell";
@@ -28,6 +29,7 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
 
   return (
     <AppShell activeHref="/future-selves">
+      <TrackView event="future_selves_viewed" />
       {/* Page header */}
       <div className="mb-10 flex items-start justify-between">
         <div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { signOut } from "@/actions/auth";
+import { SignOutForm } from "@/components/analytics/sign-out-form";
 import { IconSparkle } from "@/components/icons";
 import { SidebarNav, type SidebarNavItem } from "@/components/overview/sidebar-nav";
 import { getNavActivity } from "@/lib/nav-activity";
@@ -120,8 +121,8 @@ export function AppSidebar({
           )}
         </div>
 
-        {/* User row — signs out */}
-        <form action={signOut}>
+        {/* User row — signs out (and clears the analytics identity). */}
+        <SignOutForm action={signOut}>
           <button
             type="submit"
             title="Sign out"
@@ -146,7 +147,7 @@ export function AppSidebar({
               ›
             </span>
           </button>
-        </form>
+        </SignOutForm>
       </div>
     </aside>
   );

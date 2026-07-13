@@ -587,7 +587,7 @@ describe("Timeline page — chapter browsing", () => {
 
     const html = await renderTimelinePage();
 
-    expect(html).toContain("No monthly chapters yet.");
+    expect(html).toContain("Your first chapter is still being written.");
   });
 
   it("surfaces a load error instead of silently rendering nothing", async () => {
@@ -598,6 +598,6 @@ describe("Timeline page — chapter browsing", () => {
     const html = await renderTimelinePage();
 
     expect(html).toContain("Could not load your timeline.");
-    expect(html).not.toContain("No monthly chapters yet.");
+    expect(html).not.toContain("Your first chapter is still being written.");
   });
 });

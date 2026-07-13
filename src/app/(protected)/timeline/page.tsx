@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { TrackView } from "@/components/analytics/track-view";
 import { AppSidebar } from "@/components/overview/app-sidebar";
 import { OverviewCard } from "@/components/overview/overview-card";
 import { ChapterAccordion } from "@/components/timeline/chapter-accordion";
@@ -48,6 +49,7 @@ export default async function TimelinePage() {
       />
 
       <main className="flex-1 overflow-y-auto">
+        <TrackView event="timeline_viewed" />
         <div className="mx-auto max-w-[1120px] px-10 py-10">
           {/* Page header */}
           <div className="mb-10">
@@ -62,18 +64,21 @@ export default async function TimelinePage() {
           {narratives.length === 0 ? (
             <OverviewCard className="px-9 py-14">
               <div className="flex flex-col items-center text-center">
-                <p className="text-[15px] font-semibold text-[#111]">
-                  No monthly chapters yet.
+                <p className="font-voice text-[22px] font-medium tracking-[-0.3px] text-[#111]">
+                  Your first chapter is still being written.
                 </p>
-                <p className="mt-2 max-w-[400px] text-[13px] leading-relaxed text-[#999999]">
-                  Start situations, choose paths, and check in — your first
-                  chapter appears once a month of activity accumulates.
+                <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#999999]">
+                  Reflection composes a chapter for each month once it has
+                  observed enough meaningful change to tell a complete story.
+                  The month you&apos;re living now is already gathering
+                  material — every situation, check-in, and reflection you
+                  record becomes part of it.
                 </p>
                 <Link
                   href="/moments/new"
-                  className="mt-5 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+                  className="mt-6 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
                 >
-                  Start with a situation
+                  Add to this month&apos;s story
                 </Link>
               </div>
             </OverviewCard>

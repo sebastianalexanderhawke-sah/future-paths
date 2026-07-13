@@ -5,6 +5,8 @@ import {
   decodeNativePathFields,
   encodePathDescriptionWithNativeTitle,
 } from "@/components/home/path-native-title";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/server";
 import { crossroadOutputSchema } from "@/lib/ai/schemas/crossroad";
 import { generateDiverseCrossroadSet } from "@/lib/crossroad-generation";
 import { queueFutureSelvesGeneration } from "@/lib/future-selves";
@@ -387,6 +389,13 @@ export async function choosePath(
   if (commitError || !updatedPath) {
     return { error: commitError?.message ?? "Failed to choose path." };
   }
+
+  // A deliberate user choice — the auto-chosen forecast-mode path
+  // (createForecastModePath) is intentionally not counted here.
+  await captureServerEvent(auth.userId, ANALYTICS_EVENTS.futurePathChosen, {
+    moment_id: momentId,
+    path_id: pathId,
+  });
 
   // Choosing a path for a situation is itself predictive evidence — not just
   // a record of intent — so it regenerates Future Selves, the same way

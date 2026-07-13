@@ -114,15 +114,17 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
         <span className="font-voice flex h-[68px] w-[68px] items-center justify-center rounded-full border border-[#ececf0] bg-white text-[16px] font-medium text-[#111] shadow-[0_10px_36px_rgba(17,17,17,0.10),0_2px_8px_rgba(17,17,17,0.05)]">
           You
         </span>
-        <p className="mt-4 max-w-[340px] text-center text-[13px] leading-relaxed text-[#999999]">
-          No future paths yet. As you work through situations and reflections,
-          possible futures will begin to emerge here.
+        <p className="mt-4 max-w-[380px] text-center text-[13px] leading-relaxed text-[#999999]">
+          Every situation can lead in a different direction. As you choose
+          paths and check in on how they&apos;re going, the people you may be
+          becoming branch out from here — each one growing stronger or fading
+          with what you actually do.
         </p>
         <Link
-          href="/moments/new"
+          href="/moments"
           className="mt-4 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80"
         >
-          Start with a situation →
+          Explore a situation →
         </Link>
       </div>
     );

@@ -1,5 +1,7 @@
 import { after } from "next/server";
 
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/server";
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { queueFutureSelvesGeneration } from "@/lib/future-selves";
 import {
@@ -185,6 +187,11 @@ export async function submitReflectionAnswer(
   if (updateError) {
     return { error: updateError.message };
   }
+
+  await captureServerEvent(auth.userId, ANALYTICS_EVENTS.reflectionSaved, {
+    check_in_id: checkInId,
+    moment_id: checkIn.moment_id,
+  });
 
   const { data: moment } = await supabase
     .from("moments")

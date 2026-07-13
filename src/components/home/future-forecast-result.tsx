@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { TrackView } from "@/components/analytics/track-view";
 import { ForecastAuditPanel } from "@/components/home/ai-audit-panel";
 import { CurrentForecastFutureCard } from "@/components/home/forecast-simplification-cards";
 import {
@@ -103,6 +104,10 @@ export function FutureForecastResultView({ forecast }: FutureForecastResultProps
       variant="hero"
       className="overflow-hidden ring-1 ring-[var(--state-emerging)]/25"
     >
+      <TrackView
+        event="future_forecast_viewed"
+        properties={{ surface: "entry_flow", moment_id: forecast.momentId }}
+      />
       <div className="border-b border-[var(--ink-tertiary)]/10 bg-[var(--surface-muted)] px-6 py-4 sm:px-8">
         <p className="text-label text-[var(--state-emerging)]">Future Forecast</p>
         <h3 className="mt-1 text-h1 text-ink-primary">{forecast.situationTitle}</h3>

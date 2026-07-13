@@ -3,7 +3,9 @@
 import { redirect } from "next/navigation";
 
 import { swallowReporting } from "@/lib/observability";
-import { createForecastModePath } from "@/lib/paths";
+import { createForecastModePath, listPathsForMoment } from "@/lib/paths";
+
+import { decodeNativePathFields } from "@/components/home/path-native-title";
 
 import { withJustChosenPathFlag } from "@/lib/forecast-visit-flag";
 
@@ -488,6 +490,64 @@ export async function generateForecastForMomentAction(
   const pathResult = await createForecastModePath(momentId);
   if ("error" in pathResult) {
     redirect(`/moments/${momentId}?error=${encodeURIComponent(pathResult.error)}`);
+  }
+
+  redirect(withJustChosenPathFlag(`/moments/${momentId}`));
+}
+
+/**
+ * Server action for the Possible Futures empty state on the situation detail
+ * page: a path was chosen but its forecast never finished generating (the
+ * original failure redirect was seen once and lost). Re-runs generation
+ * against the existing chosen path — never creates or re-chooses paths.
+ */
+export async function regenerateForecastForChosenPathAction(
+  formData: FormData,
+): Promise<void> {
+  const momentId = formData.get("momentId");
+  if (typeof momentId !== "string" || !momentId.trim()) return;
+
+  const momentResult = await getMoment(momentId);
+  if ("error" in momentResult) {
+    redirect("/moments");
+  }
+  const { moment } = momentResult;
+
+  const pathsResult = await listPathsForMoment(momentId);
+  const chosenPath =
+    "error" in pathsResult
+      ? null
+      : (pathsResult.paths.find((path) => path.is_chosen) ?? null);
+
+  let selectedPath: FutureForecastSelectedPath | undefined;
+  if (chosenPath) {
+    const { nativeTitle, description } = decodeNativePathFields(
+      chosenPath.description,
+    );
+    selectedPath = {
+      id: chosenPath.id,
+      title: nativeTitle ?? chosenPath.description,
+      description,
+      benefits: chosenPath.benefits,
+      consequences: chosenPath.consequences,
+      future_shift: chosenPath.future_shift,
+      themes: chosenPath.themes,
+    };
+  }
+
+  const forecastResponse = await runFutureForecastAction({
+    situationText: moment.title,
+    contextSummary: moment.description,
+    momentId,
+    ...(selectedPath ? { selectedPath } : {}),
+  });
+
+  if (forecastResponse.error || !forecastResponse.result) {
+    redirect(
+      `/moments/${momentId}?error=${encodeURIComponent(
+        forecastResponse.error ?? "Forecast generation returned no result.",
+      )}`,
+    );
   }
 
   redirect(withJustChosenPathFlag(`/moments/${momentId}`));

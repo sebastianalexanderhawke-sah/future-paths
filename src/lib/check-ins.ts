@@ -3,6 +3,8 @@ import { after } from "next/server";
 
 import { runStructuredGeneration } from "@/lib/ai/orchestrator";
 import { checkInOutputSchema } from "@/lib/ai/schemas/check-in";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/server";
 import { forecastOutputSchema } from "@/lib/ai/schemas/forecast";
 import {
   buildForecastSectionsFromGeneration,
@@ -409,6 +411,16 @@ export async function createCheckIn(
     if (lockError) {
       return { error: lockError.message };
     }
+  }
+
+  // Fresh submissions only — a recovered retry re-completes a check-in that
+  // was already counted when it was first committed.
+  if (insertedCheckIn) {
+    await captureServerEvent(auth.userId, ANALYTICS_EVENTS.checkInCompleted, {
+      moment_id: momentId,
+      check_in_id: insertedCheckIn.id,
+      is_first_for_situation: isFirstCheckIn,
+    });
   }
 
   // The check-in itself (row, timeline event, path lock) is committed above —

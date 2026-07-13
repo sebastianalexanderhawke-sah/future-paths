@@ -3,6 +3,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/server";
 import { reportError } from "@/lib/observability";
 import { createClient } from "@/lib/supabase/server";
 
@@ -76,13 +78,41 @@ export async function signIn(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error) {
     return { error: error.message };
   }
 
-  redirect(safeRedirectPath(formData.get("redirectTo")));
+  if (data.user) {
+    await captureServerEvent(data.user.id, ANALYTICS_EVENTS.signIn);
+  }
+
+  // An explicit redirectTo (deep link) always wins. Otherwise a user who has
+  // never finished onboarding and has no situations yet gets the guided first
+  // run at /welcome — this catches accounts whose email confirmation landed
+  // on another device. The situation count keeps accounts that predate
+  // onboarding (no flag, plenty of data) out of it, and any doubt resolves
+  // to /overview: nobody with real work is ever detoured.
+  const explicitRedirect = formData.get("redirectTo");
+  if (typeof explicitRedirect === "string" && explicitRedirect) {
+    redirect(safeRedirectPath(explicitRedirect));
+  }
+
+  const user = data.user;
+  if (!user || user.user_metadata?.onboarding_completed_at) {
+    redirect("/overview");
+  }
+
+  const { count, error: countError } = await supabase
+    .from("moments")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  redirect(!countError && (count ?? 0) === 0 ? "/welcome" : "/overview");
 }
 
 export async function signUp(
@@ -105,12 +135,23 @@ export async function signUp(
     email,
     password,
     options: {
-      emailRedirectTo: `${await requestOrigin()}/auth/callback?next=/overview`,
+      // Confirmed sign-ups are brand new — land them in onboarding.
+      emailRedirectTo: `${await requestOrigin()}/auth/callback?next=/welcome`,
     },
   });
 
   if (error) {
     return { error: error.message, pendingEmail: null };
+  }
+
+  // The account exists in both branches below (confirmed or awaiting email),
+  // so sign_up is captured here, once, at creation. Supabase responds
+  // identically for an already-registered address — data.user is present but
+  // carries no identities — so that case is skipped to avoid phantom events.
+  if (data.user && (data.user.identities?.length ?? 0) > 0) {
+    await captureServerEvent(data.user.id, ANALYTICS_EVENTS.signUp, {
+      email_confirmation_pending: !data.session,
+    });
   }
 
   // No session means email confirmation is enabled (or the address already has
@@ -121,7 +162,7 @@ export async function signUp(
     return { error: null, pendingEmail: email };
   }
 
-  redirect("/overview");
+  redirect("/welcome");
 }
 
 export async function resendConfirmationEmail(
@@ -139,7 +180,7 @@ export async function resendConfirmationEmail(
     type: "signup",
     email,
     options: {
-      emailRedirectTo: `${await requestOrigin()}/auth/callback?next=/overview`,
+      emailRedirectTo: `${await requestOrigin()}/auth/callback?next=/welcome`,
     },
   });
 
@@ -222,6 +263,16 @@ export async function updatePassword(
 
 export async function signOut() {
   const supabase = await createClient();
+
+  // Capture before the session is destroyed — afterwards there is no user
+  // to attribute the event to.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    await captureServerEvent(user.id, ANALYTICS_EVENTS.signOut);
+  }
+
   await supabase.auth.signOut();
   redirect("/");
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { TrackView } from "@/components/analytics/track-view";
 import { CheckInCard } from "@/components/check-ins/check-in-card";
 import { CheckInForm } from "@/components/check-ins/check-in-form";
 import { OverviewCard } from "@/components/overview/overview-card";
@@ -266,6 +267,10 @@ export function SituationForecastSection({
 
   const forecastSection = sections ? (
     <OverviewCard className="px-9 py-7">
+      <TrackView
+        event="future_forecast_viewed"
+        properties={{ surface: "situation", moment_id: momentId }}
+      />
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-[17px] font-bold text-[#111]">

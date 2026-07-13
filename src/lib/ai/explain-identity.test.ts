@@ -2,18 +2,27 @@ import { describe, expect, it } from "vitest";
 
 import { needsExplanationRegeneration } from "@/lib/ai/explain-identity";
 
-// A current-format (v6) narrative row: newline-separated closing recognition
-// moment (never a question) in likely_evolution AND the "What keeps pulling
-// you here" line in growth_opportunities. Older shapes are derived from this
-// by mutation: no newline = pre-v2, "?"-terminated last line = v2–v5, empty
-// growth_opportunities = v2.
+// A current-format (v8, Phase 4) narrative row: exactly three "What This
+// Strengthens" bullets in growth_opportunities AND exactly three "Tradeoffs"
+// bullets in blind_spots — the 3+3 shape is the sole format marker. Older
+// shapes are derived from this by mutation: a one-element growth_opportunities
+// or blind_spots is any v2–v7 row, an empty growth_opportunities is v2.
 const CURRENT_ROW = {
   name: "The Quiet Authority",
   narrative_source: "ai",
   narrative_evidence_strength: "Emerging",
   likely_evolution:
-    "Becomes someone defined by steady output.\nOne day the hardest question in the room is walking toward you.",
-  growth_opportunities: ["Order pulled from uncertainty long before anyone called it a career."],
+    "You become the person people bring questions to before decisions get made.",
+  growth_opportunities: [
+    "Judgment other people learn to borrow.",
+    "Comfort sitting with a problem until it opens.",
+    "A track record of being right for boring reasons.",
+  ],
+  blind_spots: [
+    "Speaking up early gets harder when being sure is the standard.",
+    "People stop double-checking you, which raises the cost of a miss.",
+    "Depth in one area crowds out breadth in the rest.",
+  ],
 };
 
 const CANONICAL_NAME = "The Quiet Authority";
@@ -94,31 +103,34 @@ describe("needsExplanationRegeneration", () => {
     expect(decision).toEqual({ regenerate: false, reason: "stable" });
   });
 
-  it("regenerates a pre-v2 narrative once — a stored likely_evolution without the newline-separated reflective question is the old format", () => {
+  it("regenerates a v3–v7 narrative once — a single pull sentence in growth_opportunities is the pre-v8 shape", () => {
     const decision = needsExplanationRegeneration(
       {
         ...CURRENT_ROW,
         narrative_evidence_strength: "Strong",
-        likely_evolution: "Becomes someone defined by steady output.",
+        growth_opportunities: [
+          "Order pulled from uncertainty long before anyone called it a career.",
+        ],
+        blind_spots: ["A single cost paragraph, the v2–v7 encoding."],
       },
       "Strong",
     );
     expect(decision).toEqual({ regenerate: true, reason: "format_upgrade" });
   });
 
-  it("regenerates a v2–v5 narrative once — a final line ending in '?' is the retired reflective-question format", () => {
+  it("regenerates when only blind_spots predates v8 — both lists must carry exactly three bullets", () => {
     const decision = needsExplanationRegeneration(
       {
         ...CURRENT_ROW,
         narrative_evidence_strength: "Strong",
-        likely_evolution: "Becomes someone defined by steady output.\nWould you keep choosing it?",
+        blind_spots: ["A single cost paragraph, the v2–v7 encoding."],
       },
       "Strong",
     );
     expect(decision).toEqual({ regenerate: true, reason: "format_upgrade" });
   });
 
-  it("regenerates a v2 narrative once — newline format but no 'What keeps pulling you here' line means it predates v3", () => {
+  it("regenerates a v2 narrative once — an empty growth_opportunities predates every current field", () => {
     const decision = needsExplanationRegeneration(
       { ...CURRENT_ROW, narrative_evidence_strength: "Strong", growth_opportunities: [] },
       "Strong",
@@ -126,15 +138,18 @@ describe("needsExplanationRegeneration", () => {
     expect(decision).toEqual({ regenerate: true, reason: "format_upgrade" });
   });
 
-  it("treats whitespace-only growth_opportunities as missing — the pull line must actually exist", () => {
+  it("treats whitespace-only bullets as missing — three REAL strengthens bullets must exist", () => {
     const decision = needsExplanationRegeneration(
-      { ...CURRENT_ROW, growth_opportunities: ["   "] },
+      {
+        ...CURRENT_ROW,
+        growth_opportunities: ["Real bullet.", "   ", "Another real bullet."],
+      },
       "Emerging",
     );
     expect(decision).toEqual({ regenerate: true, reason: "format_upgrade" });
   });
 
-  it("does not regenerate a v3 narrative — pull line present and question newline present mark the current format", () => {
+  it("does not regenerate a current-format narrative — three strengthens bullets and three tradeoffs mark v8", () => {
     const decision = needsExplanationRegeneration(
       { ...CURRENT_ROW, narrative_evidence_strength: "Strong" },
       "Strong",

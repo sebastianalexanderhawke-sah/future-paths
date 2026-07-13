@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { TrackView } from "@/components/analytics/track-view";
 import { AppSidebar } from "@/components/overview/app-sidebar";
 import { FuturePathsCard } from "@/components/overview/future-paths-card";
 import {
@@ -84,11 +85,12 @@ export default async function OverviewPage() {
 
   const now = Date.now();
 
-  // A fade IS the strongest weakening: the engine retires a weakening path
-  // in one step (status "faded", percentage 0) instead of letting it
-  // decline visibly, so recent fades join as ordinary "Faded" rows whose
-  // delta is the strength the path last held. Without them the card would
-  // almost never show anything weakening.
+  // Recent fades join as "Faded" rows so the card can tell that side of the
+  // story — but with NO delta number. A fade is a lifecycle event (the path
+  // thinned out of the recognized set, or a library update retired it), not
+  // an evidence-driven score drop, and rendering its last-held strength as
+  // "-31%" read as the identity model collapsing. The previous_percentage
+  // filter still gates out rows that never held any strength.
   const fadeMovementRows = fadedSelves
     .filter(
       (futureSelf) =>
@@ -103,7 +105,7 @@ export default async function OverviewPage() {
           key: futureSelf.id,
           name: futureSelf.name,
           detail: "Faded",
-          delta: -Math.round(lastStrength),
+          delta: null,
           kind: "down" as const,
         },
       ];
@@ -194,6 +196,10 @@ export default async function OverviewPage() {
   ]);
   const focusInsight = buildFocusInsight(focusAreas);
 
+  // Before anything has been recorded, the page can't yet show where life is
+  // moving — the header says what it is becoming instead of overpromising.
+  const isQuietStart = situations.length === 0 && futureSelves.length === 0;
+
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
       <AppSidebar
@@ -204,6 +210,7 @@ export default async function OverviewPage() {
       />
 
       <main className="flex-1 overflow-y-auto">
+        <TrackView event="overview_viewed" />
         <div className="mx-auto max-w-[1120px] px-10 py-10">
           {/* Page header */}
           <div className="mb-10 flex items-start justify-between">
@@ -213,7 +220,9 @@ export default async function OverviewPage() {
                 {userIdentity.displayName ? `, ${userIdentity.displayName}` : ""}.
               </h1>
               <p className="text-[15px] text-[#9ca3af]">
-                Here&apos;s where your life is moving.
+                {isQuietStart
+                  ? "We're still building your story. As Reflection learns from your decisions, this page becomes a snapshot of how you're changing."
+                  : "Here's where your life is moving."}
               </p>
             </div>
             <Link

@@ -64,8 +64,9 @@ export function WhatsChangedCard({ rows }: WhatsChangedCardProps) {
 
       {rows.length === 0 ? (
         <p className="py-6 text-[13px] leading-relaxed text-[#9ca3af]">
-          Nothing has shifted yet. Check in on a situation and movement will
-          show up here.
+          Nothing has shifted yet. Each check-in teaches Reflection how your
+          paths are really going — futures strengthen, weaken, or fade, and
+          every movement lands here first.
         </p>
       ) : (
         <div>

@@ -87,7 +87,9 @@ export function NeedsAttentionCard({
 
       {items.length === 0 ? (
         <p className="py-6 text-[13px] leading-relaxed text-[#9ca3af]">
-          Nothing needs your attention right now.
+          Nothing needs your focus right now. When a check-in comes due, a
+          reflection question is ready, or a decision is still open, it waits
+          for you here.
         </p>
       ) : (
         <div>

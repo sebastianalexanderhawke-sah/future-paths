@@ -1,3 +1,5 @@
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
+import { captureServerEvent } from "@/lib/analytics/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Moment } from "@/types/database";
 import type { MomentStatus } from "@/types/enums";
@@ -191,6 +193,12 @@ export async function createMoment(input: {
 
     return { error: momentError?.message ?? "Failed to create moment." };
   }
+
+  // Fresh creation only — the idempotent recoveries above are retries of a
+  // situation that was already counted.
+  await captureServerEvent(auth.userId, ANALYTICS_EVENTS.situationCreated, {
+    moment_id: moment.id,
+  });
 
   return { moment };
 }

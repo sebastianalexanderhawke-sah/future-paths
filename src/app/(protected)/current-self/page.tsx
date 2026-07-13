@@ -180,15 +180,20 @@ export default async function CurrentSelfPage({
           {!currentSelf ? (
             <OverviewCard className="px-9 py-14">
               <div className="flex flex-col items-center text-center">
-                <p className="max-w-[380px] text-[13px] leading-relaxed text-[#999999]">
-                  No Current Self yet. Start a situation and check in — your
-                  identity portrait builds itself from what you record.
+                <p className="font-voice text-[22px] font-medium tracking-[-0.3px] text-[#111]">
+                  Reflection is still getting to know you.
+                </p>
+                <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#999999]">
+                  This portrait is drawn entirely from what you record — it has
+                  nothing to work from until you do. As you add situations,
+                  complete reflections, and check in over time, patterns begin
+                  to emerge, and the person on this page comes into focus.
                 </p>
                 <Link
                   href="/moments/new"
-                  className="mt-4 text-[13px] font-medium text-[#4f46e5] transition-opacity duration-150 hover:opacity-80"
+                  className="mt-6 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
                 >
-                  Start with a situation →
+                  Create your first situation
                 </Link>
               </div>
             </OverviewCard>
