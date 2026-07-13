@@ -33,9 +33,10 @@ export type FutureSelvesEngine = "brief" | "legacy";
  * silently picking an engine (same policy as CURRENT_SELF_ENGINE).
  *
  * Independent of the flag, generation falls back to legacy for accounts
- * where fewer than two identities clear the brief's ranking threshold: the
- * two-minimum policy asks recognition for its top two REGARDLESS of
- * threshold, which requires recognition options the brief does not expose.
+ * where fewer than MIN_SELECTED_FUTURES identities clear the brief's ranking
+ * threshold: the minimum-count policy asks recognition for its top three
+ * REGARDLESS of threshold, which requires recognition options the brief does
+ * not expose.
  */
 export function getFutureSelvesEngine(): FutureSelvesEngine {
   const raw = process.env.FUTURE_SELVES_ENGINE?.trim();
@@ -91,16 +92,20 @@ export type RecognizedFutureInput = {
 
 export type FutureSelvesSelection =
   | { kind: "empty" }
-  | { kind: "fallback"; reason: "brief_unavailable" | "below_two_minimum" }
+  | { kind: "fallback"; reason: "brief_unavailable" | "below_minimum" }
   | { kind: "ok"; recognized: RecognizedFutureInput[]; brief: IdentityBrief };
 
-const MIN_SELECTED_FUTURES = 2;
+// Phase 4 floor: fewer than three ranked futures means the brief cannot
+// satisfy the display band on its own — fall back to legacy, whose
+// minLikelihood-0 re-run can ground sub-threshold matches.
+const MIN_SELECTED_FUTURES = 3;
 
 /**
- * Brief-mode selection: reads the shared Identity Brief, applies the same
- * evidence-follows-count policy the legacy path uses (injected, so the
- * policy lives in exactly one place), and normalizes the selected futures
- * for the shared pipeline.
+ * Brief-mode selection: reads the shared Identity Brief, applies the caller's
+ * count ceiling (injected, so the policy lives in exactly one place), and
+ * normalizes the selected futures for the shared pipeline. The brief's
+ * rankedFutures already carry the Phase 4 dominant-trait dedup — they come
+ * from the same recognizeIdentities core.
  *
  * Situation titles: the persisted attribution (supporting_observations /
  * supporting_situations) is user-visible — the Future Card's "grounded in"
@@ -113,8 +118,8 @@ const MIN_SELECTED_FUTURES = 2;
 export async function selectFuturesFromBrief(input: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
-  /** The legacy evidence-tier count policy (maxFutureSelvesForEvidence). */
-  maxCount: (matches: readonly { evidenceStrength: FutureSelfEvidenceStrength }[]) => number;
+  /** The display ceiling (MAX_FUTURE_SELVES). */
+  maxCount: number;
 }): Promise<FutureSelvesSelection> {
   const { supabase, userId, maxCount } = input;
 
@@ -131,10 +136,10 @@ export async function selectFuturesFromBrief(input: {
   const ranked = briefResult.brief.rankedFutures;
 
   if (ranked.length < MIN_SELECTED_FUTURES) {
-    return { kind: "fallback", reason: "below_two_minimum" };
+    return { kind: "fallback", reason: "below_minimum" };
   }
 
-  const selected = ranked.slice(0, maxCount(ranked));
+  const selected = ranked.slice(0, maxCount);
   const titles = await loadMomentTitles(supabase, userId, selected);
 
   return {

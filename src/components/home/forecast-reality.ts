@@ -1,5 +1,6 @@
 import type { MockPathDraft } from "@/lib/mock-crossroad-generator";
 import type { MockFutureSelfDraft } from "@/lib/mock-future-self-generator";
+import { IDENTITY_LIBRARY } from "@/lib/identity-library";
 import type { ForecastFutureDraft, ForecastOutput } from "@/lib/ai/schemas/forecast";
 
 import type { ScannableFuture } from "@/components/home/output-refinement";
@@ -163,14 +164,30 @@ const REFLECTIVE_FORECAST_PATTERNS: RegExp[] = [
 const REFLECTIVE_ACTION_START =
   /^(gain|observe|reflect|learn|understand|explore|process|consider|think about|work on|focus on|notice|gather)\b/i;
 
-// Matches short Future-Self identity names like "The Threshold Crosser" or
-// "The Self-Reliant Builder" (at most 2 words after "The", where a
-// hyphenated word counts as one), NOT full sentence-style forecast titles
-// like "The Friendship Deepens First". The future identity library keeps
-// every canonical name (and legacy name) in exactly this shape so library
-// names are always suppressed here by design — see the naming note on
-// IDENTITY_LIBRARY.
-const FUTURE_IDENTITY_NAME_PATTERN = /^the [a-z]+(?:-[a-z]+)*(\s[a-z]+(?:-[a-z]+)*)?$/i;
+// Bare Future-Self identity names must never surface as forecast titles.
+// Phase 4 names carry no "The" prefix and no fixed shape, so suppression is
+// exact membership in the library's canonical + legacy names (a library
+// rename is automatically suppressed here). The legacy shape pattern stays
+// for pre-Phase-4 rows whose retired names ("The Threshold Crosser") no
+// longer appear in any profile — it matches at most 2 words after "The"
+// (hyphenated words count as one), NOT sentence-style forecast titles like
+// "The Friendship Deepens First".
+const FUTURE_IDENTITY_NAMES = new Set(
+  IDENTITY_LIBRARY.flatMap((profile) => [
+    profile.canonical_name,
+    ...(profile.legacy_names ?? []),
+  ]).map((name) => name.toLowerCase()),
+);
+const LEGACY_FUTURE_IDENTITY_NAME_PATTERN =
+  /^the [a-z]+(?:-[a-z]+)*(\s[a-z]+(?:-[a-z]+)*)?$/i;
+
+function isFutureIdentityName(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return (
+    FUTURE_IDENTITY_NAMES.has(normalized) ||
+    LEGACY_FUTURE_IDENTITY_NAME_PATTERN.test(normalized)
+  );
+}
 
 const OUTCOME_INDICATOR_PATTERNS: RegExp[] = [
   /\b(relationship|friendship|friend group|dating|crush|partner|significant other)\b/i,
@@ -407,7 +424,7 @@ function shouldPreserveForecastTitle(title: string, bundle: GroundingBundle): bo
     return false;
   }
 
-  if (FUTURE_IDENTITY_NAME_PATTERN.test(normalized)) {
+  if (isFutureIdentityName(normalized)) {
     return false;
   }
 
@@ -511,7 +528,7 @@ export function formatForecastTitle(text: string): string {
   phrase = toFirstSentence(phrase, MAX_TITLE_LENGTH).replace(/[.!?]+$/, "").trim();
   phrase = phrase.replace(/^to /i, "");
 
-  if (FUTURE_IDENTITY_NAME_PATTERN.test(phrase)) {
+  if (isFutureIdentityName(phrase)) {
     return "";
   }
 
@@ -811,7 +828,7 @@ function buildBlindSpotRealityFuture(
   const detailCandidates = [
     path.future_shift,
     ...path.consequences,
-    ...(futureSelf && !FUTURE_IDENTITY_NAME_PATTERN.test(futureSelf.name) ? [futureSelf.name] : []),
+    ...(futureSelf && !isFutureIdentityName(futureSelf.name) ? [futureSelf.name] : []),
     ...(futureSelf ? [futureSelf.summary] : []),
   ].filter(
     (candidate) => candidate.trim().length > 0 && isGroundedFutureText(candidate, bundle),

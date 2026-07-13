@@ -27,7 +27,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => getActiveStub()!.client),
 }));
 
-const { generateFutureSelves, maxFutureSelvesForEvidence } = await import(
+const { generateFutureSelves, MAX_FUTURE_SELVES } = await import(
   "@/lib/future-selves"
 );
 const { getFutureSelvesEngine, selectFuturesFromBrief } = await import(
@@ -189,7 +189,7 @@ describe("selectFuturesFromBrief", () => {
     const selection = await selectFuturesFromBrief({
       supabase,
       userId: "user-1",
-      maxCount: maxFutureSelvesForEvidence,
+      maxCount: MAX_FUTURE_SELVES,
     });
 
     expect(selection.kind).toBe("empty");
@@ -203,13 +203,13 @@ describe("selectFuturesFromBrief", () => {
     const selection = await selectFuturesFromBrief({
       supabase,
       userId: "user-1",
-      maxCount: maxFutureSelvesForEvidence,
+      maxCount: MAX_FUTURE_SELVES,
     });
 
     expect(selection).toEqual({ kind: "fallback", reason: "brief_unavailable" });
   });
 
-  it("falls back below the two-future minimum (sub-threshold accounts stay on legacy)", async () => {
+  it("falls back below the three-future minimum (sub-threshold accounts stay on legacy)", async () => {
     // One weak observation: at most one identity clears the ranking threshold.
     const { supabase } = await stubClient({
       behavior_observations: {
@@ -221,7 +221,7 @@ describe("selectFuturesFromBrief", () => {
     const selection = await selectFuturesFromBrief({
       supabase,
       userId: "user-1",
-      maxCount: maxFutureSelvesForEvidence,
+      maxCount: MAX_FUTURE_SELVES,
     });
 
     expect(selection.kind).toBe("fallback");
@@ -236,7 +236,7 @@ describe("selectFuturesFromBrief", () => {
     const selection = await selectFuturesFromBrief({
       supabase,
       userId: "user-1",
-      maxCount: maxFutureSelvesForEvidence,
+      maxCount: MAX_FUTURE_SELVES,
     });
 
     expect(selection.kind).toBe("ok");

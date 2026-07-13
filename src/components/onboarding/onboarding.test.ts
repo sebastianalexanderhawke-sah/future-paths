@@ -107,8 +107,8 @@ describe("FutureSelvesPanel", () => {
   it("shows the branching map with openly illustrative identities", () => {
     // The canonical map's center marker plus fixture branches.
     expect(html).toContain("You");
-    expect(html).toContain("The Self-Reliant Builder");
-    expect(html).toContain("The Quiet Mentor");
+    expect(html).toContain("Independent Builder");
+    expect(html).toContain("Thoughtful Mentor");
     // Honesty line: this is a picture, not the user's data.
     expect(html).toContain("An illustration, not your data");
   });

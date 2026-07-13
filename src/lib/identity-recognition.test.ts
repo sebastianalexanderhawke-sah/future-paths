@@ -80,47 +80,43 @@ describe("recognizeIdentities — independence-dominant user", () => {
     expect(matches.length).toBeGreaterThan(0);
   });
 
-  it("ranks The Builder as the top match", () => {
+  it("ranks Independent Builder as the top match", () => {
     matches = recognizeIdentities(independenceUser);
-    expect(matches[0].identityId).toBe("the-builder");
+    expect(matches[0].identityId).toBe("independent-builder");
   });
 
-  it("computes the expected raw score for The Builder", () => {
-    // Initiative(1.0)×10 + Independence(0.7)×20 + Consistency(0.4)×8
-    // = 10 + 14 + 3.2 = 27.2
+  it("computes the expected raw score for Independent Builder", () => {
+    // Independence(0.8)×20 + Initiative(0.7)×10 = 16 + 7 = 23
     matches = recognizeIdentities(independenceUser);
-    const srb = matches.find((m) => m.identityId === "the-builder")!;
-    expect(srb.score).toBeCloseTo(27.2, 1);
+    const srb = matches.find((m) => m.identityId === "independent-builder")!;
+    expect(srb.score).toBeCloseTo(23, 1);
   });
 
-  it("includes Independence, Initiative, Consistency in matchedDimensions", () => {
+  it("includes Independence and Initiative in matchedDimensions", () => {
     matches = recognizeIdentities(independenceUser);
-    const srb = matches.find((m) => m.identityId === "the-builder")!;
+    const srb = matches.find((m) => m.identityId === "independent-builder")!;
     expect(srb.matchedDimensions).toContain("Independence");
     expect(srb.matchedDimensions).toContain("Initiative");
-    expect(srb.matchedDimensions).toContain("Consistency");
   });
 
-  it("does not rank The Guardian highly (no independence/initiative alignment)", () => {
-    // The Guardian's positives are Consistency(0.9) and Connection(0.5); with
-    // Initiative −0.2 it scores 0.9×8 − 0.2×10 = 5.2 here.
-    // It should not outrank The Builder.
+  it("surfaces only one Independence-dominant variation (dedup keeps the winner)", () => {
+    // Independent Loner scores 1.0×20 = 20 here and Quiet Confident 18 —
+    // both below Independent Builder's 23, so both stay hidden.
     matches = recognizeIdentities(independenceUser);
-    const sfb = matches.find((m) => m.identityId === "the-guardian");
-    const srb = matches.find((m) => m.identityId === "the-builder")!;
-    if (sfb) {
-      expect(sfb.score).toBeLessThan(srb.score);
-    }
+    const independenceDominant = matches.filter(
+      (m) => m.dominantDimension === "Independence",
+    );
+    expect(independenceDominant.map((m) => m.identityId)).toEqual([
+      "independent-builder",
+    ]);
   });
 
-  it("does not rank The Connector highly (negative Independence weight)", () => {
-    // The Connector has Independence −0.5; user has Independence 20.
-    // That alone subtracts 10 from the score, so The Connector should be low.
+  it("does not rank Trusted Companion highly (no connection evidence)", () => {
     matches = recognizeIdentities(independenceUser);
-    const cw = matches.find((m) => m.identityId === "the-connector");
-    const srb = matches.find((m) => m.identityId === "the-builder")!;
-    if (cw) {
-      expect(cw.score).toBeLessThan(srb.score);
+    const tc = matches.find((m) => m.identityId === "trusted-companion");
+    const srb = matches.find((m) => m.identityId === "independent-builder")!;
+    if (tc) {
+      expect(tc.score).toBeLessThan(srb.score);
     }
   });
 });
@@ -134,26 +130,32 @@ describe("recognizeIdentities — connection-dominant user", () => {
     Consistency: 8,
   };
 
-  it("ranks The Connector as the top match", () => {
+  it("ranks a Connection-dominant identity as the top match", () => {
+    // With Vulnerability this high the caregiver variation wins the
+    // Connection group: 1.0×24 + 0.6×14 = 32.4.
     const matches = recognizeIdentities(connectionUser);
-    expect(matches[0].identityId).toBe("the-connector");
+    expect(matches[0].identityId).toBe("steady-caregiver");
+    expect(matches[0].dominantDimension).toBe("Connection");
   });
 
-  it("computes expected raw score for The Connector", () => {
-    // Connection(1.0)×24 + Vulnerability(0.5)×14 + ConflictTolerance(0.5)×10
-    // = 24 + 7 + 5 = 36
-    // (Consistency and Initiative contribute 0 for this user.)
-    const matches = recognizeIdentities(connectionUser);
-    const cw = matches.find((m) => m.identityId === "the-connector")!;
-    expect(cw.score).toBeCloseTo(36, 1);
+  it("computes expected raw score for Steady Caregiver", () => {
+    // Connection(1.0)×24 + Vulnerability(0.6)×14 = 24 + 8.4 = 32.4
+    // (Reflection and Independence contribute 0 for this user.)
+    const matches = recognizeIdentities(connectionUser, {
+      dedupeByDominantTrait: false,
+    });
+    const cg = matches.find((m) => m.identityId === "steady-caregiver")!;
+    expect(cg.score).toBeCloseTo(32.4, 1);
   });
 
-  it("correctly excludes The Builder (penalised by Connection -0.3)", () => {
-    // Builder score = Initiative(1.0)×0 + Independence(0.7)×0
-    //                 + Consistency(0.4)×8 + Connection(-0.3)×24
-    // = 0 + 0 + 3.2 − 7.2 = −4  → likelihood 0
-    const matches = recognizeIdentities(connectionUser);
-    const srb = matches.find((m) => m.identityId === "the-builder");
+  it("correctly excludes Independent Builder (penalised by Connection -0.3)", () => {
+    // Builder score = Independence(0.8)×0 + Initiative(0.7)×0
+    //                 + Risk Tolerance(0.4)×0 + Connection(-0.3)×24 = −7.2
+    // → likelihood 0
+    const matches = recognizeIdentities(connectionUser, {
+      dedupeByDominantTrait: false,
+    });
+    const srb = matches.find((m) => m.identityId === "independent-builder");
     expect(srb).toBeUndefined();
   });
 });
@@ -169,21 +171,21 @@ describe("recognizeIdentities — risk-averse stability user", () => {
     Adaptability: -4,
   };
 
-  it("ranks The Guardian as the top match", () => {
-    // Guardian: Consistency(0.9)×30 + RiskTolerance(−0.7)×(−6)
-    //           + Adaptability(−0.4)×(−4)
-    //           = 27 + 4.2 + 1.6 = 32.8
+  it("ranks Reliable Anchor as the top match", () => {
+    // Anchor: Consistency(0.9)×30 + RiskTolerance(−0.6)×(−6)
+    //         + Adaptability(−0.4)×(−4)
+    //         = 27 + 3.6 + 1.6 = 32.2
     const matches = recognizeIdentities(stabilityUser);
-    expect(matches[0].identityId).toBe("the-guardian");
+    expect(matches[0].identityId).toBe("steady-anchor");
   });
 
   it("dimensions without positive user evidence do not appear in matchedDimensions", () => {
     const matches = recognizeIdentities(stabilityUser);
-    const sfb = matches.find((m) => m.identityId === "the-guardian")!;
-    // Connection carries a positive Guardian weight (0.5), but this user has
+    const anchor = matches.find((m) => m.identityId === "steady-anchor")!;
+    // Connection carries a positive Anchor weight (0.4), but this user has
     // no Connection evidence (score 0), so it must not appear as "matched"
     // (matched = weight > 0 AND user score > 0).
-    expect(sfb.matchedDimensions).not.toContain("Connection");
+    expect(anchor.matchedDimensions).not.toContain("Connection");
   });
 });
 
@@ -191,11 +193,9 @@ describe("recognizeIdentities — evidenceStrength thresholds", () => {
   it("returns Emerging for likelihood < 30", () => {
     // Small Independence signal produces a low raw score → low likelihood
     const user: DimensionScoreMap = { ...EMPTY_DIMENSION_SCORES, Independence: 5 };
-    const matches = recognizeIdentities(user);
-    const srb = matches.find((m) => m.identityId === "the-builder");
-    if (srb) {
-      expect(["Emerging"]).toContain(srb.evidenceStrength);
-    }
+    const matches = recognizeIdentities(user, { minLikelihood: 0 });
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches[0].evidenceStrength).toBe("Emerging");
   });
 
   it("returns Strong for likelihood ≥ 60", () => {
@@ -207,7 +207,7 @@ describe("recognizeIdentities — evidenceStrength thresholds", () => {
       Consistency: 40,
     };
     const matches = recognizeIdentities(user);
-    const srb = matches.find((m) => m.identityId === "the-builder")!;
+    const srb = matches.find((m) => m.identityId === "independent-builder")!;
     expect(srb.evidenceStrength).toBe("Strong");
   });
 });
@@ -337,15 +337,17 @@ describe("time-aware dimension scoring", () => {
         1,
       ),
     ];
-    const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder");
-    if (srb) {
-      const newer = srb.supportingObservations.find((o) => o.momentId === "m1");
-      const older = srb.supportingObservations.find((o) => o.momentId === "m2");
-      expect(newer).toBeDefined();
-      expect(older).toBeDefined();
-      expect(older!.contribution).toBeCloseTo(newer!.contribution / 2, 10);
-    }
+    const attributed = recognizeIdentitiesWithAttribution(observations, {
+      minLikelihood: 0,
+    });
+    // Pure solo evidence: Independent Loner wins the Independence group.
+    const loner = attributed.find((m) => m.identityId === "independent-loner");
+    expect(loner).toBeDefined();
+    const newer = loner!.supportingObservations.find((o) => o.momentId === "m1");
+    const older = loner!.supportingObservations.find((o) => o.momentId === "m2");
+    expect(newer).toBeDefined();
+    expect(older).toBeDefined();
+    expect(older!.contribution).toBeCloseTo(newer!.contribution / 2, 10);
   });
 });
 
@@ -385,8 +387,8 @@ describe("recognizeIdentitiesFromObservations", () => {
 // ---------------------------------------------------------------------------
 
 describe("IDENTITY_LIBRARY", () => {
-  it("contains 10 genuinely different lives", () => {
-    expect(IDENTITY_LIBRARY).toHaveLength(10);
+  it("contains 30 trait-based Future Selves (Phase 4)", () => {
+    expect(IDENTITY_LIBRARY).toHaveLength(30);
   });
 
   it("has unique ids", () => {
@@ -406,12 +408,12 @@ describe("IDENTITY_LIBRARY", () => {
     }
   });
 
-  it("every identity has at least 4 typical behaviors", () => {
+  it("every identity has at least 3 typical behaviors", () => {
     for (const identity of IDENTITY_LIBRARY) {
       expect(
         identity.typical_behaviors.length,
-        `${identity.canonical_name} has fewer than 4 typical behaviors`,
-      ).toBeGreaterThanOrEqual(4);
+        `${identity.canonical_name} has fewer than 3 typical behaviors`,
+      ).toBeGreaterThanOrEqual(3);
     }
   });
 
@@ -615,7 +617,7 @@ describe("recognizeIdentitiesWithAttribution — Independence-dominant profile",
 
   it("dimensionBreakdown lists Independence with positive contribution for top match", () => {
     const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder")!;
+    const srb = attributed.find((m) => m.identityId === "independent-builder")!;
     expect(srb).toBeDefined();
     const indep = srb.dimensionBreakdown.find((d) => d.dimension === "Independence");
     expect(indep).toBeDefined();
@@ -624,7 +626,7 @@ describe("recognizeIdentitiesWithAttribution — Independence-dominant profile",
 
   it("dimensionBreakdown is sorted descending by contribution", () => {
     const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder")!;
+    const srb = attributed.find((m) => m.identityId === "independent-builder")!;
     for (let i = 1; i < srb.dimensionBreakdown.length; i++) {
       expect(srb.dimensionBreakdown[i].contribution).toBeLessThanOrEqual(
         srb.dimensionBreakdown[i - 1].contribution,
@@ -635,7 +637,7 @@ describe("recognizeIdentitiesWithAttribution — Independence-dominant profile",
   it("opposingDimensions contains Connection (identity weight −0.3, no user score = 0 → skipped)", () => {
     // Connection weight = −0.3 but user Connection score = 0, so contribution = 0 → omitted
     const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder")!;
+    const srb = attributed.find((m) => m.identityId === "independent-builder")!;
     // Connection and Vulnerability are −weight but user has 0 score → contribution 0 → not in opposing
     const connectionInOpposing = srb.opposingDimensions.find((d) => d.dimension === "Connection");
     expect(connectionInOpposing).toBeUndefined();
@@ -643,7 +645,7 @@ describe("recognizeIdentitiesWithAttribution — Independence-dominant profile",
 
   it("supportingObservations have positive contributions", () => {
     const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder")!;
+    const srb = attributed.find((m) => m.identityId === "independent-builder")!;
     for (const o of srb.supportingObservations) {
       expect(o.contribution).toBeGreaterThan(0);
     }
@@ -651,7 +653,7 @@ describe("recognizeIdentitiesWithAttribution — Independence-dominant profile",
 
   it("supportingObservations are sorted descending by contribution", () => {
     const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder")!;
+    const srb = attributed.find((m) => m.identityId === "independent-builder")!;
     for (let i = 1; i < srb.supportingObservations.length; i++) {
       expect(srb.supportingObservations[i].contribution).toBeLessThanOrEqual(
         srb.supportingObservations[i - 1].contribution,
@@ -661,13 +663,13 @@ describe("recognizeIdentitiesWithAttribution — Independence-dominant profile",
 
   it("supportingObservations includes at most 5 entries", () => {
     const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder")!;
+    const srb = attributed.find((m) => m.identityId === "independent-builder")!;
     expect(srb.supportingObservations.length).toBeLessThanOrEqual(5);
   });
 
   it("supportingSituations aggregates observations by momentId", () => {
     const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder")!;
+    const srb = attributed.find((m) => m.identityId === "independent-builder")!;
     // m1 has 3 observations, m2 has 3, m3 has 1 — all positive for SRB
     expect(srb.supportingSituations.length).toBeGreaterThan(0);
     const momentIds = srb.supportingSituations.map((s) => s.momentId);
@@ -677,7 +679,7 @@ describe("recognizeIdentitiesWithAttribution — Independence-dominant profile",
 
   it("supportingSituations are sorted descending by contribution", () => {
     const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder")!;
+    const srb = attributed.find((m) => m.identityId === "independent-builder")!;
     for (let i = 1; i < srb.supportingSituations.length; i++) {
       expect(srb.supportingSituations[i].contribution).toBeLessThanOrEqual(
         srb.supportingSituations[i - 1].contribution,
@@ -687,14 +689,14 @@ describe("recognizeIdentitiesWithAttribution — Independence-dominant profile",
 
   it("supportingSituations carries the correct momentTitle", () => {
     const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder")!;
+    const srb = attributed.find((m) => m.identityId === "independent-builder")!;
     const m1Situation = srb.supportingSituations.find((s) => s.momentId === "m1");
     expect(m1Situation?.momentTitle).toBe("Career pivot");
   });
 
   it("observationCount in supportingSituations reflects actual observation count from that moment", () => {
     const attributed = recognizeIdentitiesWithAttribution(observations);
-    const srb = attributed.find((m) => m.identityId === "the-builder")!;
+    const srb = attributed.find((m) => m.identityId === "independent-builder")!;
     // m1 has obs 0 (chooses_solo_path), obs 1 (chooses_solo_path), obs 5 (starts_something_new) = 3
     const m1 = srb.supportingSituations.find((s) => s.momentId === "m1");
     expect(m1?.observationCount).toBe(3);
@@ -702,35 +704,41 @@ describe("recognizeIdentitiesWithAttribution — Independence-dominant profile",
 });
 
 describe("recognizeIdentitiesWithAttribution — opposing observations", () => {
-  // A user with high Connection, then some observations that work against The Connector
-  // because they signal Independence (the Connector's weight is −0.5).
+  // A user with high Connection, then an observation that works against the
+  // caregiver variation because it signals Independence (Caregiver's
+  // Independence weight is −0.3).
   const observations: AttributableObservation[] = [
-    obs({ signals: ["deepens_relationship"], momentId: "m1", momentTitle: "Friendship" }, 0),
-    obs({ signals: ["deepens_relationship"], momentId: "m1", momentTitle: "Friendship" }, 1),
+    obs({ signals: ["prioritizes_relationships"], momentId: "m1", momentTitle: "Friendship" }, 0),
+    obs({ signals: ["prioritizes_relationships"], momentId: "m1", momentTitle: "Friendship" }, 1),
     obs({ signals: ["chooses_solo_path"], momentId: "m2", momentTitle: "Solo project" }, 2),
   ];
 
   it("opposing observations appear when a signal works against the matched identity", () => {
-    // chooses_solo_path → Independence +2; CW weight for Independence = −0.4
-    // So obs 2 contribution = −0.4 × 2 = −0.8 → opposing
-    const attributed = recognizeIdentitiesWithAttribution(observations);
-    const cw = attributed.find((m) => m.identityId === "the-connector");
-    if (cw) {
-      const opposing = cw.opposingObservations;
-      expect(opposing.length).toBeGreaterThan(0);
-      for (const o of opposing) {
-        expect(o.contribution).toBeLessThan(0);
-      }
+    // chooses_solo_path → Independence +2; Caregiver weight for Independence
+    // = −0.3, so obs 2 contribution = −0.3 × 2 = −0.6 → opposing.
+    const attributed = recognizeIdentitiesWithAttribution(observations, {
+      minLikelihood: 0,
+      dedupeByDominantTrait: false,
+    });
+    const cg = attributed.find((m) => m.identityId === "steady-caregiver");
+    expect(cg).toBeDefined();
+    const opposing = cg!.opposingObservations;
+    expect(opposing.length).toBeGreaterThan(0);
+    for (const o of opposing) {
+      expect(o.contribution).toBeLessThan(0);
     }
   });
 
   it("opposingObservations are sorted ascending by contribution (most negative first)", () => {
-    const attributed = recognizeIdentitiesWithAttribution(observations);
-    const cw = attributed.find((m) => m.identityId === "the-connector");
-    if (cw && cw.opposingObservations.length > 1) {
-      for (let i = 1; i < cw.opposingObservations.length; i++) {
-        expect(cw.opposingObservations[i].contribution).toBeGreaterThanOrEqual(
-          cw.opposingObservations[i - 1].contribution,
+    const attributed = recognizeIdentitiesWithAttribution(observations, {
+      minLikelihood: 0,
+      dedupeByDominantTrait: false,
+    });
+    const cg = attributed.find((m) => m.identityId === "steady-caregiver");
+    if (cg && cg.opposingObservations.length > 1) {
+      for (let i = 1; i < cg.opposingObservations.length; i++) {
+        expect(cg.opposingObservations[i].contribution).toBeGreaterThanOrEqual(
+          cg.opposingObservations[i - 1].contribution,
         );
       }
     }
@@ -764,7 +772,7 @@ describe("recognizeIdentitiesWithAttribution — recency ordering", () => {
     );
     const all = [...early, ...recent];
     const attributed = recognizeIdentitiesWithAttribution(all);
-    const srb = attributed.find((m) => m.identityId === "the-builder");
+    const srb = attributed.find((m) => m.identityId === "independent-builder");
     // confidence should be reduced because recent 10 observations are neutral
     if (srb) {
       // Just verify confidence is a valid number — recency factor lowers it

@@ -23,6 +23,9 @@ import {
 export type IdentityMatch = {
   identityId: string;
   canonicalName: string;
+  /** The library's dominant-trait axis for this identity — the dedup key:
+   *  selection never surfaces two matches sharing a dominantDimension. */
+  dominantDimension: IdentityDimension;
   score: number;
   likelihood: number;
   matchedDimensions: IdentityDimension[];
@@ -178,6 +181,7 @@ function scoreIdentity(
   return {
     identityId: identity.id,
     canonicalName: identity.canonical_name,
+    dominantDimension: identity.dominant_dimension,
     score,
     likelihood,
     matchedDimensions,
@@ -466,6 +470,15 @@ function buildAttribution(
 export type RecognitionOptions = {
   minLikelihood?: number;
   maxResults?: number;
+  /**
+   * Phase 4 dominant-trait dedup: after ranking, keep only the
+   * highest-scoring identity per dominant dimension, so the surfaced set
+   * never contains two variations of the same trait (Independent Builder
+   * next to Independent Loner reads as one identity shown twice). Defaults
+   * to true — everything user-facing wants distinct traits. Tests and
+   * audits pass false to inspect the full ranking, siblings included.
+   */
+  dedupeByDominantTrait?: boolean;
 };
 
 const DEFAULT_MIN_LIKELIHOOD = 10;
@@ -473,9 +486,12 @@ const DEFAULT_MAX_RESULTS = 5;
 
 /**
  * Scores every identity in the library against the user's current dimension
- * profile, filters below the minimum likelihood threshold, and returns
- * matches ranked by raw score descending. No AI call, no prose, no side
- * effects. Pure application logic.
+ * profile, filters below the minimum likelihood threshold (deliberately low —
+ * the percentage communicates confidence, it is not an admission bar),
+ * collapses same-dominant-trait variations to the strongest one, and returns
+ * matches ranked by raw score descending (likelihood is monotonic in score,
+ * so this IS likelihood order). No AI call, no prose, no side effects. Pure
+ * application logic.
  */
 export function recognizeIdentities(
   userDimensions: DimensionScoreMap,
@@ -483,11 +499,26 @@ export function recognizeIdentities(
 ): IdentityMatch[] {
   const minLikelihood = options.minLikelihood ?? DEFAULT_MIN_LIKELIHOOD;
   const maxResults = options.maxResults ?? DEFAULT_MAX_RESULTS;
+  const dedupe = options.dedupeByDominantTrait ?? true;
 
-  return IDENTITY_LIBRARY.map((identity) => scoreIdentity(identity, userDimensions))
+  const ranked = IDENTITY_LIBRARY.map((identity) => scoreIdentity(identity, userDimensions))
     .filter((match) => match.likelihood >= minLikelihood)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, maxResults);
+    .sort((a, b) => b.score - a.score);
+
+  if (!dedupe) {
+    return ranked.slice(0, maxResults);
+  }
+
+  const seenDominant = new Set<IdentityDimension>();
+  const distinct = ranked.filter((match) => {
+    if (seenDominant.has(match.dominantDimension)) {
+      return false;
+    }
+    seenDominant.add(match.dominantDimension);
+    return true;
+  });
+
+  return distinct.slice(0, maxResults);
 }
 
 /**

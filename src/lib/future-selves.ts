@@ -26,7 +26,6 @@ import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { reportError, swallowReporting } from "@/lib/observability";
 import { createClient } from "@/lib/supabase/server";
 import type { FutureSelf, FutureSelfEvent } from "@/types/database";
-import type { FutureSelfEvidenceStrength } from "@/types/enums";
 
 type AuthSuccess = { userId: string };
 type AuthFailure = { error: string };
@@ -84,7 +83,7 @@ export async function listFutureSelves(options?: {
 }
 
 export async function listActiveFutureSelves(
-  limit = 4,
+  limit = MAX_FUTURE_SELVES,
 ): Promise<{ futureSelves: FutureSelf[] } | { error: string }> {
   return listFutureSelves({ status: "active", limit });
 }
@@ -244,7 +243,16 @@ async function recordFutureSelfEvent(input: {
   });
 }
 
-const MIN_FUTURE_SELVES = 2;
+/**
+ * Phase 4 display band: at least 3 and at most 5 active Future Selves,
+ * sorted by likelihood. The evidence-tier count ceiling is retired — the
+ * percentage communicates confidence and is not an admission bar. The floor
+ * is best-effort: a future is never fabricated to hit it (see the
+ * minLikelihood-0 re-run in generateFutureSelves), so an account whose
+ * evidence grounds fewer than 3 identities surfaces fewer.
+ */
+export const MIN_FUTURE_SELVES = 3;
+export const MAX_FUTURE_SELVES = 5;
 
 // ---------------------------------------------------------------------------
 // Gradual fade
@@ -276,23 +284,6 @@ export function nextFadeStep(
   return decayed >= FADE_COMPLETE_THRESHOLD
     ? { kind: "declining", percentage: decayed }
     : { kind: "complete" };
-}
-
-/**
- * v3: the number of Future Selves follows the evidence, never a fixed count.
- * The strongest match's evidence tier sets the ceiling — weak evidence
- * surfaces 2 possible lives, moderate up to 4, strong up to 5. Never more
- * than 5; never fewer than 2 as long as the engine can ground a second one
- * (a future is never fabricated to hit the floor — see the fallback in
- * generateFutureSelves).
- */
-export function maxFutureSelvesForEvidence(
-  matches: readonly { evidenceStrength: FutureSelfEvidenceStrength }[],
-): number {
-  const strongest = matches[0]?.evidenceStrength;
-  if (strongest === "Strong") return 5;
-  if (strongest === "Moderate") return 4;
-  return MIN_FUTURE_SELVES;
 }
 
 /**
@@ -425,7 +416,7 @@ async function runFutureSelvesShadowComparison(
     const legacyMatches = recognizeIdentitiesWithAttribution(observations);
     const legacyTop =
       legacyMatches.length >= MIN_FUTURE_SELVES
-        ? legacyMatches.slice(0, maxFutureSelvesForEvidence(legacyMatches))
+        ? legacyMatches.slice(0, MAX_FUTURE_SELVES)
         : recognizeIdentitiesWithAttribution(observations, {
             minLikelihood: 0,
             maxResults: MIN_FUTURE_SELVES,
@@ -499,7 +490,7 @@ export async function generateFutureSelves(
     const selection = await selectFuturesFromBrief({
       supabase,
       userId: auth.userId,
-      maxCount: maxFutureSelvesForEvidence,
+      maxCount: MAX_FUTURE_SELVES,
     });
 
     if (selection.kind === "empty") {
@@ -514,7 +505,7 @@ export async function generateFutureSelves(
       await runFutureSelvesShadowComparison(auth.userId, recognized);
     }
     // selection.kind === "fallback": the legacy path below handles it —
-    // sub-threshold accounts need the two-minimum recognition re-run the
+    // sub-threshold accounts need the minimum-count recognition re-run the
     // brief cannot express, and a brief read failure must not block
     // generation.
   }
@@ -552,17 +543,18 @@ export async function generateFutureSelves(
     const recognizedIdentities = recognizeIdentitiesWithAttribution(observations);
 
     // The Identity Engine is the sole source of Future Selves — never fall
-    // back to legacy rows. The count follows the evidence (2 for weak, up to 4
-    // for moderate, up to 5 for strong — see maxFutureSelvesForEvidence). When
-    // fewer than two identities clear the normal threshold, ask the same,
-    // unmodified engine for its top two regardless of threshold instead of
-    // fabricating anything: those matches are still evidence-grounded, their
-    // sub-threshold likelihoods already label them "Emerging", and if only one
-    // identity has any positive evidence at all, only one is surfaced — the
-    // two-minimum never invents a life the evidence doesn't support.
+    // back to legacy rows. Phase 4 band: up to MAX_FUTURE_SELVES (5) distinct
+    // dominant traits, at least MIN_FUTURE_SELVES (3) when the evidence can
+    // ground them. When fewer than three identities clear the normal
+    // threshold, ask the same, unmodified engine for its top three regardless
+    // of threshold instead of fabricating anything: those matches are still
+    // evidence-grounded, their sub-threshold likelihoods already label them
+    // "Emerging", and if fewer identities have any positive evidence at all,
+    // only those are surfaced — the three-minimum never invents a life the
+    // evidence doesn't support.
     const topIdentities =
       recognizedIdentities.length >= MIN_FUTURE_SELVES
-        ? recognizedIdentities.slice(0, maxFutureSelvesForEvidence(recognizedIdentities))
+        ? recognizedIdentities.slice(0, MAX_FUTURE_SELVES)
         : recognizeIdentitiesWithAttribution(observations, {
             minLikelihood: 0,
             maxResults: MIN_FUTURE_SELVES,
@@ -625,26 +617,27 @@ export async function generateFutureSelves(
         input,
         profile,
         existing,
-        // canonical_name detects rename epochs: a row still carrying an old
-        // name gets its narrative rewritten once under the current library
-        // (the update below renames the row in the same run).
+        // canonical_name detects rename epochs (a row still carrying an old
+        // name gets its personalization rewritten once — the update below
+        // renames the row in the same run); short_description detects the
+        // not-yet-personalized state.
         decision: needsExplanationRegeneration(
           existing,
           input.evidenceStrength,
           profile.canonical_name,
+          profile.short_description,
         ),
       },
     ];
   });
 
-  // Step 6b: Future Self narratives are stable future-identity portraits, not
-  // per-situation output — the AI is invoked only for identities with no
-  // existing row, identities whose stored narrative is a fallback awaiting
-  // repair, identities whose row still carries a pre-rename name, and
-  // identities whose evidence tier has increased since the narrative was
-  // written (see needsExplanationRegeneration). Every other
-  // identity keeps its existing why_emerging / growth_opportunities /
-  // blind_spots / likely_evolution — only percentage, evidence, and
+  // Step 6b: the AI's only output is the personalized layer (the "why now"
+  // summary sentence and the why_emerging evidence bullets) — the card copy
+  // itself is permanent library editorial. It is invoked only for identities
+  // with no existing row, rows holding a fallback awaiting repair, rows
+  // carrying a pre-rename name, rows never personalized, and rows whose
+  // evidence tier increased (see needsExplanationRegeneration). Everything
+  // else keeps its stored personalization; percentage, evidence, and
   // supporting data update below regardless of this decision.
   // A run is engine-homogeneous: brief mode invokes the brief-based prompt
   // builder, legacy mode the original one (its []-call is preserved so the
@@ -673,29 +666,22 @@ export async function generateFutureSelves(
 
   // Step 7: Persist each identity.
   for (const { input, profile, existing, decision } of entries) {
-    // Regenerated identities use the fresh AI explanation; unchanged ones
-    // keep their existing narrative fields untouched — only percentage,
-    // evidence, and supporting data are refreshed below regardless.
+    // Regenerated identities use the fresh AI personalization; unchanged
+    // ones carry their stored sentence and evidence bullets — only
+    // percentage, evidence, and supporting data are refreshed below
+    // regardless.
     const regenerated = decision.regenerate
       ? explanationById.get(input.identityId)
       : undefined;
-    const explanation = regenerated
-      ? regenerated.explanation
-      : {
-          why_emerging: existing!.why_emerging,
-          growth_opportunities: existing!.growth_opportunities,
-          blind_spots: existing!.blind_spots,
-          likely_evolution: existing!.likely_evolution,
-        };
 
     const percentage = input.likelihood;
     const evidenceStrength = input.evidenceStrength;
 
-    // Narrative provenance travels with the narrative: written only when the
-    // narrative itself is (re)written, so an untouched narrative keeps the
-    // source and evidence tier it was originally authored at. A fallback
-    // source makes the next run repair it; the recorded tier is what a later
-    // run compares against to detect a tier increase.
+    // Provenance travels with the personalization: written only when it is
+    // (re)written, so an untouched personalization keeps the source and
+    // evidence tier it was originally authored at. A fallback source makes
+    // the next run repair it; the recorded tier is what a later run compares
+    // against to detect a tier increase.
     const narrativeProvenanceFields = regenerated
       ? {
           narrative_source: regenerated.source ?? "ai",
@@ -712,18 +698,36 @@ export async function generateFutureSelves(
       opposing_observations: input.opposingObservations as unknown as Record<string, unknown>[],
     };
 
+    // The becomes / strengthens / tradeoffs sections are permanent library
+    // editorial, written from the library on EVERY run (a copy edit reaches
+    // every row without regeneration). The AI contributes exactly two
+    // fields: the "why now" sentence (persisted in summary) and the
+    // why_emerging evidence bullets. A stored summary equal to the library
+    // description is the not-yet-personalized state — see
+    // needsExplanationRegeneration.
+    const curated = profile.curated_narrative;
+    const carriedSummary =
+      existing?.summary && existing.summary !== profile.short_description
+        ? existing.summary
+        : null;
+    const personalizedSummary =
+      regenerated?.explanation.personalized_summary ?? carriedSummary;
+    const whyEmerging = regenerated
+      ? regenerated.explanation.why_emerging
+      : existing!.why_emerging;
+
     const contentFields = {
       name: profile.canonical_name,
-      summary: profile.short_description,
+      summary: personalizedSummary ?? profile.short_description,
       evidence_strength: evidenceStrength,
       // core_behaviors carries the library's canonical behaviors for this identity.
       core_behaviors: profile.typical_behaviors,
       // behavioral_evidence carries the user's actual supporting observations.
       behavioral_evidence: input.supportingObservations.map((o) => o.observationText),
-      growth_opportunities: explanation.growth_opportunities,
-      blind_spots: explanation.blind_spots,
-      likely_evolution: explanation.likely_evolution,
-      why_emerging: explanation.why_emerging,
+      why_emerging: whyEmerging,
+      growth_opportunities: [...curated.strengthens],
+      blind_spots: [...curated.tradeoffs],
+      likely_evolution: curated.becomes.join("\n"),
       // Untyped empty literal — infers never[], which satisfies ThemeName[]
       // (the old `as string[]` assertion failed the build's type check).
       themes: [],

@@ -66,7 +66,8 @@ const {
   generateFutureSelves,
   queueFutureSelvesGeneration,
   loadFutureSelfImpactByPath,
-  maxFutureSelvesForEvidence,
+  MAX_FUTURE_SELVES,
+  MIN_FUTURE_SELVES,
   nextFadeStep,
   FADE_COMPLETE_THRESHOLD,
 } = await import("@/lib/future-selves");
@@ -138,12 +139,28 @@ function createSupabaseStub(tableConfigs: Record<string, TableConfig>, userId = 
 // Test fixtures
 // ---------------------------------------------------------------------------
 
+const CURATED_NARRATIVE = {
+  becomes: ["Curated becomes one.", "Curated becomes two.", "Curated becomes three."],
+  strengthens: ["Curated gain one.", "Curated gain two.", "Curated gain three."],
+  tradeoffs: ["Curated cost one.", "Curated cost two.", "Curated cost three."],
+};
+
+// The library-permanent sections, exactly as persistence writes them from
+// CURATED_NARRATIVE on every run.
+const CURATED_LIKELY_EVOLUTION =
+  "Curated becomes one.\nCurated becomes two.\nCurated becomes three.";
+
+// Any personalized sentence — the only requirement is that it differs from
+// PROFILE.short_description (equality is the not-yet-personalized marker).
+const PERSONALIZED_SUMMARY = "You keep choosing to handle the hard parts yourself.";
+
 const PROFILE = {
   id: "self-reliant-builder",
   canonical_name: "Self-Reliant Builder",
   short_description: "Builds capability and makes decisions independently.",
   dimension_weights: { Independence: 1.0 },
   typical_behaviors: ["Takes on challenges without asking for help"],
+  curated_narrative: CURATED_NARRATIVE,
 };
 
 const MATCH = {
@@ -163,9 +180,7 @@ const MATCH = {
 
 const FALLBACK_EXPLANATION = {
   why_emerging: "This identity pattern is appearing across your recent situations.",
-  growth_opportunities: ["Engage deliberately in situations that call for this pattern."],
-  blind_spots: ["Watch for moments when this pattern creates friction with other values."],
-  likely_evolution: "If these patterns continue, this identity may become more consistent.",
+  personalized_summary: "Your recorded choices keep pointing in this direction.",
 };
 
 const OBSERVATIONS_RESPONSE = {
@@ -226,7 +241,7 @@ describe("generateFutureSelves", () => {
     expect(writes).toHaveLength(0);
   });
 
-  it("uses the highest-ranked identities as an Emerging fallback when fewer than two pass the normal threshold", async () => {
+  it("uses the highest-ranked identities as an Emerging fallback when fewer than three pass the normal threshold", async () => {
     const fallbackMatch = {
       ...MATCH,
       score: 3,
@@ -234,11 +249,11 @@ describe("generateFutureSelves", () => {
       evidenceStrength: "Emerging" as const,
     };
     // The normal (thresholded) call returns nothing; only the explicit
-    // minLikelihood: 0 / maxResults: 2 fallback call returns the best match.
+    // minLikelihood: 0 / maxResults: 3 fallback call returns the best match.
     // This proves the fallback never lowers or bypasses the real threshold —
-    // it just asks the same, unmodified engine for its top two. The engine
-    // grounds only one here, so only one is surfaced: the two-minimum never
-    // fabricates a second life.
+    // it just asks the same, unmodified engine for its top three. The engine
+    // grounds only one here, so only one is surfaced: the three-minimum never
+    // fabricates a life the evidence doesn't support.
     recognizeMock.mockImplementation((..._args: unknown[]) => {
       const options = _args[1] as { minLikelihood?: number; maxResults?: number } | undefined;
       return options?.minLikelihood === 0 ? [fallbackMatch] : [];
@@ -270,7 +285,7 @@ describe("generateFutureSelves", () => {
     expect("error" in result).toBe(false);
     expect(recognizeMock).toHaveBeenLastCalledWith(expect.anything(), {
       minLikelihood: 0,
-      maxResults: 2,
+      maxResults: 3,
     });
 
     const inserts = stub.calls.filter(
@@ -281,6 +296,109 @@ describe("generateFutureSelves", () => {
     expect(payload.identity_id).toBe("self-reliant-builder");
     expect(payload.evidence_strength).toBe("Emerging");
     expect(payload.percentage).toBe(8);
+  });
+
+  it("persists the library's permanent sections and the AI's two personalized fields (Phase 6)", async () => {
+    recognizeMock.mockReturnValue([MATCH]);
+    getIdentityByIdMock.mockReturnValue(PROFILE);
+    explainIdentitiesMock.mockResolvedValueOnce([
+      {
+        identityId: "self-reliant-builder",
+        explanation: {
+          why_emerging: "Bullet one.\nBullet two.\nBullet three.",
+          personalized_summary: PERSONALIZED_SUMMARY,
+        },
+        source: "ai",
+      },
+    ]);
+
+    const createdRow = {
+      id: "fs-new",
+      user_id: "user-1",
+      name: "Self-Reliant Builder",
+      status: "active",
+      percentage: 60,
+      identity_id: "self-reliant-builder",
+    };
+    const stub = createSupabaseStub({
+      behavior_observations: OBSERVATIONS_RESPONSE,
+      future_selves: [
+        { data: [], error: null },
+        { data: createdRow, error: null },
+        { data: [createdRow], error: null },
+      ],
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    const result = await generateFutureSelves();
+    expect("error" in result).toBe(false);
+
+    const inserts = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "insert",
+    );
+    expect(inserts).toHaveLength(1);
+    const payload = inserts[0].args[0] as Record<string, unknown>;
+    // Permanent sections come from the library, verbatim.
+    expect(payload.growth_opportunities).toEqual([
+      "Curated gain one.",
+      "Curated gain two.",
+      "Curated gain three.",
+    ]);
+    expect(payload.blind_spots).toEqual([
+      "Curated cost one.",
+      "Curated cost two.",
+      "Curated cost three.",
+    ]);
+    expect(payload.likely_evolution).toBe(CURATED_LIKELY_EVOLUTION);
+    // The AI's two contributions: evidence bullets + the personalized summary.
+    expect(payload.why_emerging).toBe("Bullet one.\nBullet two.\nBullet three.");
+    expect(payload.summary).toBe(PERSONALIZED_SUMMARY);
+  });
+
+  it("keeps a row's personalized summary when the personalization is not regenerated", async () => {
+    recognizeMock.mockReturnValue([MATCH]);
+    getIdentityByIdMock.mockReturnValue(PROFILE);
+
+    // A row already personalized at this tier: stable, no AI call needed.
+    const existingRow = {
+      id: "fs-1",
+      user_id: "user-1",
+      identity_id: "self-reliant-builder",
+      name: "Self-Reliant Builder",
+      summary: PERSONALIZED_SUMMARY,
+      status: "active",
+      percentage: 50,
+      evidence_strength: "Moderate",
+      narrative_source: "ai",
+      narrative_evidence_strength: "Moderate",
+      why_emerging: "Bullet one.\nBullet two.\nBullet three.",
+    };
+    const stub = createSupabaseStub({
+      behavior_observations: OBSERVATIONS_RESPONSE,
+      future_selves: [
+        { data: [existingRow], error: null },
+        { data: [existingRow], error: null },
+      ],
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    const result = await generateFutureSelves();
+    expect("error" in result).toBe(false);
+
+    // No regeneration: the explanation batch never runs.
+    expect(explainIdentitiesMock).toHaveBeenCalledWith([]);
+
+    const updates = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "update",
+    );
+    expect(updates).toHaveLength(1);
+    const payload = updates[0].args[0] as Record<string, unknown>;
+    // The personalized sentence is carried, not reset to the description.
+    expect(payload.summary).toBe(PERSONALIZED_SUMMARY);
+    // Permanent sections still refresh from the library every run.
+    expect(payload.likely_evolution).toBe(CURATED_LIKELY_EVOLUTION);
   });
 
   it("never surfaces legacy (non-identity-linked) rows from listFutureSelves", async () => {
@@ -439,14 +557,12 @@ describe("generateFutureSelves", () => {
       id: "fs-1",
       user_id: "user-1",
       name: "Self-Reliant Builder",
+      summary: PERSONALIZED_SUMMARY,
       status: "active",
       percentage: 22,
       evidence_strength: "Emerging",
       identity_id: "self-reliant-builder",
       why_emerging: "Existing why_emerging text.",
-      growth_opportunities: ["Existing growth opportunity.", "Existing second gain.", "Existing third gain."],
-      blind_spots: ["Existing blind spot.", "Existing second tradeoff.", "Existing third tradeoff."],
-      likely_evolution: "Existing likely evolution text.\nYou reach for the harder version first.\nBuilding fills the hours planning used to.\nPeople hand you the unfinished things.",
     };
     const stub = createSupabaseStub({
       behavior_observations: OBSERVATIONS_RESPONSE,
@@ -471,11 +587,13 @@ describe("generateFutureSelves", () => {
     const payload = updates[0].args[0] as Record<string, unknown>;
     expect(payload.percentage).toBe(24);
     expect(payload.previous_percentage).toBe(22);
-    // Narrative fields are carried over unchanged from the existing row.
+    // The personalized fields are carried unchanged from the existing row;
+    // the permanent sections come from the library as always.
     expect(payload.why_emerging).toBe("Existing why_emerging text.");
-    expect(payload.growth_opportunities).toEqual(["Existing growth opportunity.", "Existing second gain.", "Existing third gain."]);
-    expect(payload.blind_spots).toEqual(["Existing blind spot.", "Existing second tradeoff.", "Existing third tradeoff."]);
-    expect(payload.likely_evolution).toBe("Existing likely evolution text.\nYou reach for the harder version first.\nBuilding fills the hours planning used to.\nPeople hand you the unfinished things.");
+    expect(payload.summary).toBe(PERSONALIZED_SUMMARY);
+    expect(payload.growth_opportunities).toEqual(CURATED_NARRATIVE.strengthens);
+    expect(payload.blind_spots).toEqual(CURATED_NARRATIVE.tradeoffs);
+    expect(payload.likely_evolution).toBe(CURATED_LIKELY_EVOLUTION);
   });
 
   it("does not call the AI even when evidence_strength crosses a tier boundary (Phase 6C: narratives are stable archetypes, not per-situation output)", async () => {
@@ -488,14 +606,12 @@ describe("generateFutureSelves", () => {
       id: "fs-1",
       user_id: "user-1",
       name: "Self-Reliant Builder",
+      summary: PERSONALIZED_SUMMARY,
       status: "active",
       percentage: 24,
       evidence_strength: "Emerging",
       identity_id: "self-reliant-builder",
       why_emerging: "Stable why_emerging text.",
-      growth_opportunities: ["Stable growth opportunity.", "Stable second gain.", "Stable third gain."],
-      blind_spots: ["Stable blind spot.", "Stable second tradeoff.", "Stable third tradeoff."],
-      likely_evolution: "Stable likely evolution text.\nYou reach for the harder version first.\nBuilding fills the hours planning used to.\nPeople hand you the unfinished things.",
     };
     const stub = createSupabaseStub({
       behavior_observations: OBSERVATIONS_RESPONSE,
@@ -518,9 +634,9 @@ describe("generateFutureSelves", () => {
     const payload = updates[0].args[0] as Record<string, unknown>;
     expect(payload.percentage).toBe(42);
     expect(payload.evidence_strength).toBe("Moderate");
-    // Layer 1 (evidence_strength) updated; Layer 2 narrative stayed put.
+    // Layer 1 (evidence_strength) updated; the personalization stayed put.
     expect(payload.why_emerging).toBe("Stable why_emerging text.");
-    expect(payload.growth_opportunities).toEqual(["Stable growth opportunity.", "Stable second gain.", "Stable third gain."]);
+    expect(payload.summary).toBe(PERSONALIZED_SUMMARY);
   });
 
   describe("Phase 6C — Explorer walkthrough", () => {
@@ -544,10 +660,8 @@ describe("generateFutureSelves", () => {
         percentage: 22,
         evidence_strength: "Emerging",
         identity_id: "explorer",
+        summary: "You trade the familiar option for the unfamiliar one, again and again.",
         why_emerging: "Explorer's existing why_emerging.",
-        growth_opportunities: ["Explorer's existing growth opportunity.", "Explorer's existing second gain.", "Explorer's existing third gain."],
-        blind_spots: ["Explorer's existing blind spot.", "Explorer's existing second tradeoff.", "Explorer's existing third tradeoff."],
-        likely_evolution: "Explorer's existing likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -568,7 +682,7 @@ describe("generateFutureSelves", () => {
       const payload = updates[0].args[0] as Record<string, unknown>;
       expect(payload.percentage).toBe(23);
       expect(payload.why_emerging).toBe("Explorer's existing why_emerging.");
-      expect(payload.growth_opportunities).toEqual(["Explorer's existing growth opportunity.", "Explorer's existing second gain.", "Explorer's existing third gain."]);
+      expect(payload.growth_opportunities).toEqual(CURATED_NARRATIVE.strengthens);
     });
 
     it("Example 2: 22% -> 39%, several new behaviors consistently reinforce the identity — percentage updates, narrative still unchanged (Phase 6C: only a brand-new identity generates a narrative)", async () => {
@@ -585,10 +699,8 @@ describe("generateFutureSelves", () => {
         percentage: 22,
         evidence_strength: "Emerging",
         identity_id: "explorer",
+        summary: "You trade the familiar option for the unfamiliar one, again and again.",
         why_emerging: "Explorer's existing why_emerging.",
-        growth_opportunities: ["Explorer's existing growth opportunity.", "Explorer's existing second gain.", "Explorer's existing third gain."],
-        blind_spots: ["Explorer's existing blind spot.", "Explorer's existing second tradeoff.", "Explorer's existing third tradeoff."],
-        likely_evolution: "Explorer's existing likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -680,12 +792,10 @@ describe("generateFutureSelves", () => {
         percentage: 0,
         evidence_strength: "Moderate",
         identity_id: "explorer",
+        // Already personalized before it faded, so reactivation reuses the
+        // stored personalization instead of calling the AI.
+        summary: "You trade the familiar option for the unfamiliar one, again and again.",
         why_emerging: "Explorer's pre-fade why_emerging.",
-        // Current-format narrative (signal bullets + pull line), so
-        // reactivation reuses it instead of triggering a format upgrade.
-        likely_evolution: "Explorer's pre-fade evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
-        growth_opportunities: ["The unfamiliar stopped feeling like risk.", "Quick footing in new rooms.", "A wider map of what counts as home."],
-        blind_spots: ["Roots stay shallow.", "Follow-through competes with novelty.", "People hesitate to plan around you."],
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -773,10 +883,8 @@ describe("generateFutureSelves", () => {
         percentage: 22,
         evidence_strength: "Emerging",
         identity_id: "explorer",
+        summary: "You trade the familiar option for the unfamiliar one, again and again.",
         why_emerging: "Explorer's archetype narrative.",
-        growth_opportunities: ["Explorer's archetype growth opportunity.", "Explorer's archetype second gain.", "Explorer's archetype third gain."],
-        blind_spots: ["Explorer's archetype blind spot.", "Explorer's archetype second tradeoff.", "Explorer's archetype third tradeoff."],
-        likely_evolution: "Explorer's archetype likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -797,7 +905,7 @@ describe("generateFutureSelves", () => {
       const payload = updates[0].args[0] as Record<string, unknown>;
       expect(payload.percentage).toBe(28);
       expect(payload.why_emerging).toBe("Explorer's archetype narrative.");
-      expect(payload.growth_opportunities).toEqual(["Explorer's archetype growth opportunity.", "Explorer's archetype second gain.", "Explorer's archetype third gain."]);
+      expect(payload.growth_opportunities).toEqual(CURATED_NARRATIVE.strengthens);
     });
 
     it("Situation 3: Explorer goes from 28% -> 41% (an evidence-strength tier crossing) — percentage updates, narrative unchanged, no AI call", async () => {
@@ -814,10 +922,8 @@ describe("generateFutureSelves", () => {
         percentage: 28,
         evidence_strength: "Emerging",
         identity_id: "explorer",
+        summary: "You trade the familiar option for the unfamiliar one, again and again.",
         why_emerging: "Explorer's archetype narrative.",
-        growth_opportunities: ["Explorer's archetype growth opportunity.", "Explorer's archetype second gain.", "Explorer's archetype third gain."],
-        blind_spots: ["Explorer's archetype blind spot.", "Explorer's archetype second tradeoff.", "Explorer's archetype third tradeoff."],
-        likely_evolution: "Explorer's archetype likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -913,10 +1019,8 @@ describe("generateFutureSelves", () => {
         percentage: 22,
         evidence_strength: "Emerging",
         identity_id: "adaptive-explorer",
+        summary: "You adjust to new situations faster than the people around you.",
         why_emerging: "Adaptive Explorer's archetype narrative.",
-        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity.", "Adaptive Explorer's archetype second gain.", "Adaptive Explorer's archetype third gain."],
-        blind_spots: ["Adaptive Explorer's archetype blind spot.", "Adaptive Explorer's archetype second tradeoff.", "Adaptive Explorer's archetype third tradeoff."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -958,10 +1062,8 @@ describe("generateFutureSelves", () => {
         percentage: 28,
         evidence_strength: "Emerging",
         identity_id: "adaptive-explorer",
+        summary: "You adjust to new situations faster than the people around you.",
         why_emerging: "Adaptive Explorer's archetype narrative.",
-        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity.", "Adaptive Explorer's archetype second gain.", "Adaptive Explorer's archetype third gain."],
-        blind_spots: ["Adaptive Explorer's archetype blind spot.", "Adaptive Explorer's archetype second tradeoff.", "Adaptive Explorer's archetype third tradeoff."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -1054,10 +1156,8 @@ describe("generateFutureSelves", () => {
         percentage: 0,
         evidence_strength: "Moderate",
         identity_id: "adaptive-explorer",
+        summary: "You adjust to new situations faster than the people around you.",
         why_emerging: "Adaptive Explorer's archetype narrative.",
-        growth_opportunities: ["Adaptive Explorer's archetype growth opportunity.", "Adaptive Explorer's archetype second gain.", "Adaptive Explorer's archetype third gain."],
-        blind_spots: ["Adaptive Explorer's archetype blind spot.", "Adaptive Explorer's archetype second tradeoff.", "Adaptive Explorer's archetype third tradeoff."],
-        likely_evolution: "Adaptive Explorer's archetype likely evolution.\nYou pick the unfamiliar option without deliberating.\nNew places stop feeling like interruptions.\nStaying put starts taking more effort than moving.",
       };
       const stub = createSupabaseStub({
         behavior_observations: OBSERVATIONS_RESPONSE,
@@ -2010,31 +2110,13 @@ describe("loadFutureSelfImpactByPath", () => {
 });
 
 // ---------------------------------------------------------------------------
-// maxFutureSelvesForEvidence — the count follows the evidence
+// Display band — minimum 3, maximum 5 (Phase 4)
 // ---------------------------------------------------------------------------
 
-describe("maxFutureSelvesForEvidence", () => {
-  const match = (evidenceStrength: "Emerging" | "Moderate" | "Strong") => ({
-    evidenceStrength,
-  });
-
-  it("caps weak evidence at 2 possible lives", () => {
-    expect(maxFutureSelvesForEvidence([match("Emerging"), match("Emerging")])).toBe(2);
-    expect(maxFutureSelvesForEvidence([])).toBe(2);
-  });
-
-  it("caps moderate evidence at 4", () => {
-    expect(maxFutureSelvesForEvidence([match("Moderate"), match("Emerging")])).toBe(4);
-  });
-
-  it("caps strong evidence at 5 — never more", () => {
-    expect(
-      maxFutureSelvesForEvidence([match("Strong"), match("Strong"), match("Moderate")]),
-    ).toBe(5);
-  });
-
-  it("reads the strongest (top-ranked) match, not the weakest", () => {
-    expect(maxFutureSelvesForEvidence([match("Strong"), match("Emerging")])).toBe(5);
+describe("Future Selves display band", () => {
+  it("caps active Future Selves at 5 and floors the fallback at 3", () => {
+    expect(MAX_FUTURE_SELVES).toBe(5);
+    expect(MIN_FUTURE_SELVES).toBe(3);
   });
 });
 

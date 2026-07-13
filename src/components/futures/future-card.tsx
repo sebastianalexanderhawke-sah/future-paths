@@ -5,7 +5,6 @@ import { useState } from "react";
 import { TrendIndicator } from "@/components/ui/trend-indicator";
 import { getMovementStory } from "@/lib/future-self-story";
 import { getIdentityById } from "@/lib/identity-library";
-import { traitForFutureSelf } from "@/lib/trait-library";
 import type { FutureSelf } from "@/types/database";
 
 export type FutureCardAccent = {
@@ -97,18 +96,18 @@ function BulletList({
 }
 
 /**
- * A strengthening trait, not an archetype (Phase 4). The card answers, in a
- * fixed order: which trait is strengthening (headline + a hand-written
- * one-sentence quote from the trait library), how likely this future is, has
- * it moved since the last update, what this trait usually becomes (plain
+ * One dominant trait, worn as a person (Phase 4). The card answers, in a
+ * fixed order: who this trait makes you (the library's 2–3-word archetype
+ * name + its hand-written one-sentence quote), how likely this future is,
+ * has it moved since the last update, what this trait usually becomes (plain
  * prose), what it strengthens (three gains), its tradeoffs (three honest
  * costs) — closed by "Why Reflection Believes This", the evidence checklist
  * collapsed by default so understanding precedes the receipts.
  *
- * The trait is derived deterministically from the row's persisted
- * dimension_breakdown (see traitForFutureSelf); rows without one — legacy or
- * fixture rows — fall back to the stored archetype name and identity
- * statement. The narrative fields are AI-authored in the v8 encoding:
+ * Headline and quote come from the identity library via the row's
+ * identity_id; rows whose identity the library has retired (and fixture
+ * rows) fall back to the stored name with no quote — nothing disappears.
+ * The narrative fields are AI-authored in the v8 encoding:
  * why_emerging carries one evidence bullet per line; growth_opportunities
  * the three "strengthens" bullets; blind_spots the three tradeoff bullets;
  * likely_evolution the single "usually becomes" paragraph. Pre-v8 rows keep
@@ -121,38 +120,59 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
   const tone = accent ?? NEUTRAL_ACCENT;
   const pct = Math.max(0, Math.min(100, futureSelf.percentage));
   const movement = getMovementStory(futureSelf);
-  const trait = traitForFutureSelf(futureSelf);
-  const identityStatement = futureSelf.identity_id
-    ? getIdentityById(futureSelf.identity_id)?.identity_statement
+  const profile = futureSelf.identity_id
+    ? getIdentityById(futureSelf.identity_id)
     : undefined;
 
-  const headline = trait?.label ?? futureSelf.name;
-  const quote = trait?.quote ?? identityStatement;
+  const headline = profile?.canonical_name ?? futureSelf.name;
+  const quote = profile?.identity_statement;
 
-  // v8 narrative encoding (see explain-identity): why_emerging carries one
-  // evidence bullet per line; growth_opportunities and blind_spots carry
-  // exactly three bullets each (pre-v8 rows hold one — rendered as-is until
-  // regeneration); likely_evolution is a single plain paragraph (pre-v8 rows
-  // hold multi-line encodings, so only the first line — always the portrait
-  // — renders until regeneration).
+  // Phase 5.1: a curated identity's becomes / strengthens / tradeoffs are
+  // permanent library editorial — rendered from the library itself, so a
+  // copy edit reaches every card instantly and stored rows can never drift.
+  // Non-curated identities keep the v8 AI encoding (see explain-identity):
+  // growth_opportunities and blind_spots carry exactly three bullets each
+  // (pre-v8 rows hold one — rendered as-is until regeneration);
+  // likely_evolution is a single plain paragraph (pre-v8 rows hold
+  // multi-line encodings, so only the first line — always the portrait —
+  // renders until regeneration). why_emerging is always AI-personalized:
+  // one evidence bullet per line.
+  const curated = profile?.curated_narrative;
   const evidenceBullets = futureSelf.why_emerging
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
     .slice(0, 3);
-  const strengthens = futureSelf.growth_opportunities
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 3);
-  const tradeoffs = futureSelf.blind_spots
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 3);
-  const becomes =
-    futureSelf.likely_evolution
-      .split("\n")
-      .map((line) => line.trim())
-      .find(Boolean) ?? "";
+  const strengthens = curated
+    ? [...curated.strengthens]
+    : futureSelf.growth_opportunities
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 3);
+  const tradeoffs = curated
+    ? [...curated.tradeoffs]
+    : futureSelf.blind_spots
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 3);
+  const becomesParagraphs = curated
+    ? [...curated.becomes]
+    : futureSelf.likely_evolution
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, 1);
+
+  // The one AI-personalized sentence on a curated card: why this future is
+  // emerging right now. It lives in the row's summary once generated; until
+  // then the summary still holds the library description, which must not
+  // read as personal — the sentence simply doesn't render in that window.
+  const personalizedSummary =
+    curated &&
+    futureSelf.summary &&
+    futureSelf.summary !== profile?.short_description
+      ? futureSelf.summary
+      : null;
 
   // The receipts behind "What's changed": the recorded behavior that moved
   // this future when the pipeline attributed any, otherwise the situations,
@@ -175,8 +195,8 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
       <div aria-hidden="true" className="h-1" style={{ background: tone.color }} />
 
       <div className="p-8 sm:px-10 sm:py-9">
-        {/* 1 — The strengthening trait: its everyday name in the product's
-            serif voice, then the trait library's one-sentence quote. */}
+        {/* 1 — The archetype this trait grows into: its human name in the
+            product's serif voice, then the library's one-sentence quote. */}
         <header className="flex items-center gap-5">
           <span
             aria-hidden="true"
@@ -200,6 +220,15 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
             )}
           </div>
         </header>
+
+        {/* 1b — Why this future is emerging right now: the single
+            AI-personalized sentence (Phase 5.2 placement — below the quote,
+            above Likelihood). Absent until the row has been personalized. */}
+        {personalizedSummary ? (
+          <p className="mt-6 max-w-[58ch] text-[15px] leading-relaxed text-zinc-600">
+            {personalizedSummary}
+          </p>
+        ) : null}
 
         {/* Likelihood: one quiet line — the same signal the tree encodes as
             branch reach, restated in the branch's own color. */}
@@ -273,13 +302,18 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
         {/* 3 — What This Usually Becomes: what people with this growing
             trait naturally become — plain prose, standard body color. A
             hairline marks where the status zone ends and the reading
-            begins. */}
-        {becomes ? (
+            begins. Curated identities carry three short paragraphs of
+            permanent library copy; AI-narrated ones a single paragraph. */}
+        {becomesParagraphs.length > 0 ? (
           <div className="mt-9 border-t border-zinc-100 pt-8">
             <SectionLabel>What This Usually Becomes</SectionLabel>
-            <p className="mt-3 max-w-[58ch] text-[15px] leading-[1.7] text-zinc-700">
-              {becomes}
-            </p>
+            <div className="mt-3 max-w-[58ch] space-y-3">
+              {becomesParagraphs.map((paragraph) => (
+                <p key={paragraph} className="text-[15px] leading-[1.7] text-zinc-700">
+                  {paragraph}
+                </p>
+              ))}
+            </div>
           </div>
         ) : null}
 

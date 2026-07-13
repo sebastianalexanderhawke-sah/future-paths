@@ -183,22 +183,22 @@ describe("The preserved original Future Self", () => {
 });
 
 describe("Active future card hierarchy", () => {
-  it("falls back to the archetype name and identity statement when a row carries no dimension breakdown", () => {
+  it("falls back to the stored name (no quote) when the row's identity has been retired from the library", () => {
+    // "the-guardian" is a retired v3 id: nothing resolvable in today's
+    // library, so the persisted name heads the card and the evidence tier
+    // takes the quote's slot — nothing disappears, nothing is invented.
     const html = renderToString(
       createElement(FutureCard, { futureSelf: makeFuture({}) }),
     );
-    // No dimension_breakdown → no derivable trait: the stored name heads the
-    // card and the-guardian's hand-written statement quotes under it.
     expect(html).toContain("The Steady Builder");
-    expect(html).toContain(
-      "One day everything and everyone you were trusted with will still be standing",
-    );
+    expect(html).not.toContain("“");
   });
 
-  it("reads as a strengthening trait — trait headline and quote, becomes, gains, tradeoffs, collapsed evidence — never behavior vectors (Phase 4)", () => {
+  it("reads as one dominant trait worn as a person — archetype headline and quote, becomes, gains, tradeoffs, collapsed evidence (Phase 4)", () => {
     const html = renderToString(
       createElement(FutureCard, {
         futureSelf: makeFuture({
+          identity_id: "steady-finisher",
           dimension_breakdown: [
             { dimension: "Consistency", identityWeight: 1, userScore: 6, contribution: 6 },
             { dimension: "Initiative", identityWeight: 0.4, userScore: 4, contribution: 1.6 },
@@ -221,23 +221,26 @@ describe("Active future card hierarchy", () => {
       }),
     );
 
-    // The trait heads the card — everyday label + hand-written quote — and
-    // the archetype name is gone…
-    expect(html).toContain("Discipline");
+    // The library archetype heads the card — 2–3 human words + its
+    // hand-written quote — and the row's stale stored name is gone…
+    expect(html).toContain("Steady Finisher");
     expect(html).toContain("You keep showing up after the excitement wears off.");
     expect(html).not.toContain("The Steady Builder");
-    // …the plain "usually becomes" prose renders…
+    // …the "usually becomes" prose renders from the library (Phase 5.3:
+    // every archetype is curated, so the stored AI paragraph never shows)…
     expect(html).toContain("What This Usually Becomes");
-    expect(html).toContain(
+    expect(html).toContain("this becomes the person still there in week eleven");
+    expect(html).not.toContain(
       "You become the person who has already started while others are still discussing it.",
     );
-    // …three gains and three tradeoffs, as bullets…
+    // …three gains and three tradeoffs, as bullets, also library copy…
     expect(html).toContain("What This Strengthens");
-    expect(html).toContain("Making decisions without waiting for permission.");
-    expect(html).toContain("Staying steady when plans fall through.");
+    expect(html).toContain("Carrying things all the way to done.");
+    expect(html).toContain("Being trusted with work that has a deadline.");
     expect(html).toContain("Tradeoffs");
-    expect(html).toContain("Asking for help gets harder the more capable you become.");
-    expect(html).toContain("Rest starts to feel like a failure of discipline.");
+    expect(html).toContain("Quitting a thing that deserves quitting feels like failure.");
+    expect(html).toContain("Flexibility suffers when the streak matters this much.");
+    expect(html).not.toContain("Making decisions without waiting for permission.");
     // …the evidence closes the card collapsed: header and subtitle visible,
     // the checklist itself only on request. The first why_emerging bullet
     // legitimately appears as the movement lead, so the collapsed state is
@@ -262,6 +265,70 @@ describe("Active future card hierarchy", () => {
     expect(html).not.toContain("Core behaviors");
     expect(html).not.toContain("Ships weekly");
     expect(html).not.toContain("What You Risk");
+  });
+
+  it("renders a curated identity's permanent sections from the library, ignoring stored narrative fields (Phase 5.1)", () => {
+    const html = renderToString(
+      createElement(FutureCard, {
+        futureSelf: makeFuture({
+          identity_id: "independent-builder",
+          name: "Independent Builder",
+          // A personalized "why now" summary, as persisted after generation.
+          summary: "You keep starting projects nobody assigned you.",
+          // Stale stored narrative — the card must NOT render these for a
+          // curated identity; the library is the source of truth.
+          likely_evolution: "An old AI-written becomes paragraph.",
+          growth_opportunities: ["Old AI gain one.", "Old AI gain two.", "Old AI gain three."],
+          blind_spots: ["Old AI cost one.", "Old AI cost two.", "Old AI cost three."],
+          why_emerging:
+            "You built the shed alone over three weekends.\nYou registered the LLC before telling anyone.\nYou turned down the agency's retainer to keep the client direct.",
+        }),
+      }),
+    );
+
+    // Headline + hand-written quote from the library.
+    expect(html).toContain("Independent Builder");
+    expect(html).toContain(
+      "You build your own thing instead of waiting for a spot in someone else",
+    );
+    // All three permanent becomes paragraphs render, from the library.
+    expect(html).toContain("a way of living assembled piece by piece");
+    expect(html).toContain("Permission quietly stops being part of how decisions get made.");
+    expect(html).toContain("start asking what they");
+    // Permanent strengthens + tradeoffs, from the library.
+    expect(html).toContain("Starting things without needing anyone");
+    expect(html).toContain("no one to share the weight with.");
+    // The stale stored narrative never leaks.
+    expect(html).not.toContain("An old AI-written becomes paragraph.");
+    expect(html).not.toContain("Old AI gain one.");
+    expect(html).not.toContain("Old AI cost one.");
+    // The personalized "why now" sentence sits between the quote and the
+    // Likelihood row (Phase 5.2 placement); the evidence section keeps its
+    // static subtitle.
+    const quoteIndex = html.indexOf("You build your own thing");
+    const summaryIndex = html.indexOf("You keep starting projects nobody assigned you.");
+    const likelihoodIndex = html.indexOf("Likelihood");
+    expect(summaryIndex).toBeGreaterThan(quoteIndex);
+    expect(likelihoodIndex).toBeGreaterThan(summaryIndex);
+    expect(html).toContain("The moments that led Reflection here.");
+  });
+
+  it("renders no personalized sentence while a curated row's summary is still the library description", () => {
+    const html = renderToString(
+      createElement(FutureCard, {
+        futureSelf: makeFuture({
+          identity_id: "independent-builder",
+          name: "Independent Builder",
+          // Pre-personalization state: summary still holds library copy.
+          summary:
+            "Someone whose independence keeps turning into things that exist — projects started without permission, owned end to end, with risk accepted as the ordinary price of ownership.",
+        }),
+      }),
+    );
+
+    // The library description must never render as if it were personal.
+    expect(html).not.toContain("Someone whose independence keeps turning");
+    expect(html).toContain("The moments that led Reflection here.");
   });
 
   it("renders only the portrait line of a not-yet-regenerated pre-v8 row — retired closings never leak", () => {

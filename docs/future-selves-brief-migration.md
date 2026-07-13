@@ -13,13 +13,13 @@ away.
 | Selected by | `FUTURE_SELVES_ENGINE=legacy` | default, or `FUTURE_SELVES_ENGINE=brief` |
 | Identity input | full `behavior_observations` load (joined with moment titles) → `recognizeIdentitiesWithAttribution` | `getIdentityBriefForUser` → `rankedFutures` (v4.3 attribution) |
 | Narrative prompt | `explainIdentities` (evidence lines cite situation titles + per-situation list) | `explainIdentitiesFromBrief` (same system prompt; evidence without titles, breadth counts instead of the situation list) |
-| Count policy | `maxFutureSelvesForEvidence` | same function, injected — one policy, one place |
+| Count policy | `MAX_FUTURE_SELVES` (5) after dominant-trait dedup | same constant, injected — one policy, one place |
 | Persistence/fading/events/regeneration decisions | shared, mode-agnostic (normalized `RecognizedFutureInput`) | shared |
 
 **Automatic legacy fallbacks** (regardless of the flag):
-- **Sub-threshold accounts** — when fewer than two identities clear the
-  brief's ranking threshold, the two-minimum policy asks recognition for its
-  top two *ignoring the threshold*. The brief cannot express that re-run
+- **Sub-threshold accounts** — when fewer than three identities clear the
+  brief's ranking threshold, the minimum-count policy asks recognition for
+  its top three *ignoring the threshold*. The brief cannot express that re-run
   (and the consumer may not call recognition), so those accounts stay on
   the legacy path. This is a documented Identity Brief limitation, not a
   consumer workaround.
@@ -28,8 +28,9 @@ away.
 
 ## Consumer rule compliance
 
-- Selection is `rankedFutures.slice(0, maxFutureSelvesForEvidence(...))` —
-  filter/reorder of brief data with the legacy policy function injected.
+- Selection is `rankedFutures.slice(0, maxCount)` — a filter/reorder of
+  brief data with the display ceiling injected. Dominant-trait dedup happens
+  inside the shared recognition core, so `rankedFutures` already carries it.
 - Likelihood, confidence, evidence strength, dimension breakdowns, and
   evidence come from the brief verbatim; nothing is recomputed
   (pinned by `future-selves-brief.test.ts`).

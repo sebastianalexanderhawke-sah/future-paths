@@ -41,28 +41,28 @@ function illustrativeFutureSelf(
 export const ILLUSTRATIVE_FUTURE_SELVES: FutureSelf[] = [
   illustrativeFutureSelf({
     id: "preview-builder",
-    name: "The Self-Reliant Builder",
+    name: "Independent Builder",
     summary: "Keeps choosing to make things rather than wait for permission.",
     percentage: 58,
     themes: ["Independence", "Creativity"],
   }),
   illustrativeFutureSelf({
     id: "preview-anchor",
-    name: "The Steady Anchor",
+    name: "Reliable Anchor",
     summary: "Shows up for the same people, again and again.",
     percentage: 41,
     themes: ["Stability", "Belonging"],
   }),
   illustrativeFutureSelf({
     id: "preview-explorer",
-    name: "The Restless Explorer",
+    name: "Curious Explorer",
     summary: "Trades comfort for the next unfamiliar room.",
     percentage: 24,
     themes: ["Curiosity", "Courage"],
   }),
   illustrativeFutureSelf({
     id: "preview-mentor",
-    name: "The Quiet Mentor",
+    name: "Thoughtful Mentor",
     summary: "Ends up being the person others think out loud with.",
     percentage: 13,
     themes: ["Connection", "Leadership"],
