@@ -13,9 +13,11 @@ import {
   type ChangeRow,
 } from "@/components/overview/whats-changed-card";
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
-import { buildFocusInsight, getRecentFocusAreas } from "@/lib/focus-areas";
 import { getFutureSelfTrend } from "@/lib/future-self-trend";
-import { getEngagementActivity } from "@/lib/recent-activity";
+import {
+  getEngagementActivity,
+  type EngagementActivityKind,
+} from "@/lib/recent-activity";
 import { listActiveFutureSelves, listFutureSelves } from "@/lib/future-selves";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
@@ -45,6 +47,7 @@ export default async function OverviewPage() {
     fadedResult,
     reflectionSummaryResult,
     identityUpdatesResult,
+    engagementActivity,
   ] = await Promise.all([
     getUserIdentity(),
     listMoments(),
@@ -56,6 +59,7 @@ export default async function OverviewPage() {
     listFutureSelves({ status: "faded", limit: 8 }),
     getUnansweredReflectionSummary(),
     listIdentityUpdates(10),
+    getEngagementActivity(),
   ]);
 
   const situations = "moments" in momentsResult ? momentsResult.moments : [];
@@ -128,13 +132,16 @@ export default async function OverviewPage() {
     (update) => now - Date.parse(update.created_at) <= RECENT_CHANGE_WINDOW_MS,
   ).length;
 
-  // Three rows maximum, the observations row included.
-  const changeRows: ChangeRow[] = movementRows.slice(
+  // Exactly three rows: identity movement first, then new observations,
+  // then — when the significant story is shorter than three — the newest
+  // ordinary updates (reflections, check-ins, forecasts, situations,
+  // chapters) fill the remaining slots so the card never feels empty.
+  const prioritizedRows: ChangeRow[] = movementRows.slice(
     0,
     recentUpdateCount > 0 ? 2 : 3,
   );
   if (recentUpdateCount > 0) {
-    changeRows.push({
+    prioritizedRows.push({
       key: "new-observations",
       name: "New observations",
       detail: `${recentUpdateCount} added`,
@@ -142,6 +149,30 @@ export default async function OverviewPage() {
       kind: "added",
     });
   }
+
+  // Lower-priority updates, newest first, mapped from the activity feed the
+  // page already loads. Future Self movement is excluded — the movement
+  // rows above already tell that story with real deltas.
+  const CHANGE_DETAILS: Partial<Record<EngagementActivityKind, string>> = {
+    reflection: "Reflection added",
+    "check-in": "Check-in completed",
+    forecast: "Forecast updated",
+    situation: "Situation created",
+    chapter: "Timeline updated",
+  };
+  for (const item of engagementActivity.items) {
+    if (prioritizedRows.length >= 3) break;
+    const detail = CHANGE_DETAILS[item.kind];
+    if (!detail) continue;
+    prioritizedRows.push({
+      key: `activity-${item.id}`,
+      name: item.kind === "chapter" ? `Chapter: ${item.situationTitle}` : item.situationTitle,
+      detail,
+      delta: null,
+      kind: "added",
+    });
+  }
+  const changeRows: ChangeRow[] = prioritizedRows.slice(0, 3);
 
   // ── Needs Attention: overdue check-ins, waiting reflection, open decisions ──
   type RankedAttentionRow = AttentionRow & { priority: number };
@@ -184,17 +215,6 @@ export default async function OverviewPage() {
   attentionItems.sort((a, b) => a.priority - b.priority);
   const visibleAttentionItems = attentionItems.slice(0, 3);
   const hiddenAttentionCount = Math.max(0, attentionItems.length - 3);
-
-  // ── Engagement row: Recently Active → Consistency → Your Focus ───────
-  // Two pure reads over existing rows: where recent attention went (themes
-  // on the user's own check-ins and chosen paths) and how steadily they've
-  // been showing up (existing timestamps only). The focus insight sentence
-  // is composed from the same tallied areas the bars use.
-  const [focusAreas, engagementActivity] = await Promise.all([
-    getRecentFocusAreas(),
-    getEngagementActivity(),
-  ]);
-  const focusInsight = buildFocusInsight(focusAreas);
 
   // Before anything has been recorded, the page can't yet show where life is
   // moving — the header says what it is becoming instead of overpromising.
@@ -245,13 +265,11 @@ export default async function OverviewPage() {
               />
             </div>
 
-            {/* One pulse-check card: what you did → how steadily → where it went. */}
+            {/* One pulse-check card: what happened, where, when → how steadily. */}
             <YourActivityCard
               items={engagementActivity.items}
               consistency={engagementActivity.consistency}
               weeklyCounts={engagementActivity.weeklyCounts}
-              focusAreas={focusAreas}
-              insight={focusInsight}
             />
           </div>
         </div>

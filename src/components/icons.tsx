@@ -110,6 +110,16 @@ export function IconCompass(props: IconProps) {
   );
 }
 
+/** Timeline chapters — a page of the story. */
+export function IconBookOpen(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 6.5c-1.6-1.4-3.9-2-6.8-2v13c2.9 0 5.2.6 6.8 2 1.6-1.4 3.9-2 6.8-2v-13c-2.9 0-5.2.6-6.8 2z" />
+      <path d="M12 6.5v13" />
+    </Svg>
+  );
+}
+
 /** Sidebar — Overview. */
 export function IconHome(props: IconProps) {
   return (

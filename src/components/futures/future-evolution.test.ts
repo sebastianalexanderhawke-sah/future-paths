@@ -224,22 +224,22 @@ describe("Active future card hierarchy", () => {
     // The library archetype heads the card — 2–3 human words + its
     // hand-written quote — and the row's stale stored name is gone…
     expect(html).toContain("Steady Finisher");
-    expect(html).toContain("You keep showing up after the excitement wears off.");
+    expect(html).toContain("You finish what you start.");
     expect(html).not.toContain("The Steady Builder");
     // …the "usually becomes" prose renders from the library (Phase 5.3:
     // every archetype is curated, so the stored AI paragraph never shows)…
     expect(html).toContain("What This Usually Becomes");
-    expect(html).toContain("this becomes the person still there in week eleven");
+    expect(html).toContain("You become someone people can count on.");
     expect(html).not.toContain(
       "You become the person who has already started while others are still discussing it.",
     );
     // …three gains and three tradeoffs, as bullets, also library copy…
     expect(html).toContain("What This Strengthens");
-    expect(html).toContain("Carrying things all the way to done.");
-    expect(html).toContain("Being trusted with work that has a deadline.");
+    expect(html).toContain("Finishing what you start.");
+    expect(html).toContain("Staying consistent.");
     expect(html).toContain("Tradeoffs");
-    expect(html).toContain("Quitting a thing that deserves quitting feels like failure.");
-    expect(html).toContain("Flexibility suffers when the streak matters this much.");
+    expect(html).toContain("Rest starts feeling unproductive.");
+    expect(html).toContain("Letting something go becomes harder.");
     expect(html).not.toContain("Making decisions without waiting for permission.");
     // …the evidence closes the card collapsed: header and subtitle visible,
     // the checklist itself only on request. The first why_emerging bullet
@@ -289,15 +289,15 @@ describe("Active future card hierarchy", () => {
     // Headline + hand-written quote from the library.
     expect(html).toContain("Independent Builder");
     expect(html).toContain(
-      "You build your own thing instead of waiting for a spot in someone else",
+      "You build your own opportunities instead of waiting for someone to give you one.",
     );
     // All three permanent becomes paragraphs render, from the library.
-    expect(html).toContain("a way of living assembled piece by piece");
-    expect(html).toContain("Permission quietly stops being part of how decisions get made.");
-    expect(html).toContain("start asking what they");
+    expect(html).toContain("You become someone who creates instead of waits.");
+    expect(html).toContain("your first instinct is to build it yourself");
+    expect(html).toContain("People begin to know you as someone who gets things done.");
     // Permanent strengthens + tradeoffs, from the library.
-    expect(html).toContain("Starting things without needing anyone");
-    expect(html).toContain("no one to share the weight with.");
+    expect(html).toContain("Starting before everything feels ready.");
+    expect(html).toContain("Carrying everything alone becomes normal.");
     // The stale stored narrative never leaks.
     expect(html).not.toContain("An old AI-written becomes paragraph.");
     expect(html).not.toContain("Old AI gain one.");
@@ -305,7 +305,7 @@ describe("Active future card hierarchy", () => {
     // The personalized "why now" sentence sits between the quote and the
     // Likelihood row (Phase 5.2 placement); the evidence section keeps its
     // static subtitle.
-    const quoteIndex = html.indexOf("You build your own thing");
+    const quoteIndex = html.indexOf("You build your own opportunities");
     const summaryIndex = html.indexOf("You keep starting projects nobody assigned you.");
     const likelihoodIndex = html.indexOf("Likelihood");
     expect(summaryIndex).toBeGreaterThan(quoteIndex);

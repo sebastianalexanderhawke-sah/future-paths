@@ -193,11 +193,51 @@ describe("identity library — curated narratives (Phases 5.1–5.3)", () => {
     }
   });
 
-  it("never repeats a bullet or paragraph across archetypes — every identity reads distinct", () => {
-    const allLines = curatedProfiles.flatMap((profile) => {
+  // Phase 8 editorial note: the strengthens/tradeoffs bullets are canonical
+  // product copy supplied by the product owner, and a few bullets repeat
+  // across archetypes by editorial choice (e.g. "Being dependable.",
+  // "Staying calm under pressure."). Cross-archetype uniqueness is therefore
+  // only enforced for the becomes paragraphs — the prose that makes an
+  // identity read distinct — plus no repeats inside any single archetype.
+  it("never repeats a becomes paragraph across archetypes — every identity reads distinct", () => {
+    const allParagraphs = curatedProfiles.flatMap(
+      (profile) => profile.curated_narrative!.becomes,
+    );
+    expect(new Set(allParagraphs).size).toBe(allParagraphs.length);
+  });
+
+  it("never repeats a line within a single archetype", () => {
+    for (const profile of curatedProfiles) {
       const curated = profile.curated_narrative!;
-      return [...curated.becomes, ...curated.strengthens, ...curated.tradeoffs];
-    });
-    expect(new Set(allLines).size).toBe(allLines.length);
+      const lines = [...curated.becomes, ...curated.strengthens, ...curated.tradeoffs];
+      expect(new Set(lines).size, `${profile.id} repeats a line`).toBe(lines.length);
+    }
+  });
+});
+
+// Phase 7: "What This Usually Becomes" speaks plainly and directly to the
+// user. Every identity must let the reader immediately finish "I become
+// someone who..." — second person throughout, no generic time-passing
+// transitions standing in for specifics.
+describe("identity library — becomes voice (Phase 7)", () => {
+  it("addresses the user directly in every becomes paragraph", () => {
+    for (const profile of IDENTITY_LIBRARY) {
+      for (const paragraph of profile.curated_narrative.becomes) {
+        expect(
+          /\byou(r|'re|'ve|'ll|'d)?\b/i.test(paragraph),
+          `${profile.id}: "${paragraph}" never addresses the user`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("never leans on generic transitions in becomes", () => {
+    const banned =
+      /\b(over time|eventually|someone like this|year after year|quietly|in time)\b/i;
+    for (const profile of IDENTITY_LIBRARY) {
+      for (const paragraph of profile.curated_narrative.becomes) {
+        expect(banned.test(paragraph), `${profile.id}: "${paragraph}"`).toBe(false);
+      }
+    }
   });
 });

@@ -87,6 +87,7 @@ const MAP = {
   "bg|white/85": bg("rgb(28 28 33 / 0.85)"),
   "bg|[#f4f4f6]": bg(D.canvas),
   "bg|[#f5f5f5]": bg(D.surfaceMuted),
+  "bg|[#f7f7f9]": bg(D.surfaceMuted),
   "bg|[#fafafa]": bg(D.surfaceMuted),
   "bg|zinc-50": bg(D.surfaceMuted),
   "bg|zinc-100": bg(D.chip),
@@ -152,6 +153,7 @@ const MAP = {
   "border|[#f2f2f4]": bd(D.hairline),
   "border|[#f2f2f5]": bd(D.hairline),
   "border|[#f7f7f9]": bd(D.hairline),
+  "border|[#f7f7f8]": bd(D.hairline),
   "border|[#eeeef2]": bd(D.hairline),
   "border|[#eeeeee]": bd(D.hairline),
   "border|[#ececec]": bd(D.hairline),
@@ -170,6 +172,7 @@ const MAP = {
   "divide|zinc-200": bd(D.border),
   "divide|[#f0f0f0]": bd(D.hairline),
   "divide|[#f5f5f5]": bd(D.hairline),
+  "divide|[#f7f7f8]": bd(D.hairline),
 
   /* rings */
   "ring|zinc-900": { "--tw-ring-color": D.actionFill },

@@ -68,12 +68,11 @@ vi.mock("@/actions/auth", () => ({
   signOut: vi.fn(),
 }));
 // The Recent Activity card's reads are user-level and ungated, so the page
-// always calls them; quiet fixtures keep these tests about reflections.
-vi.mock("@/lib/focus-areas", () => ({
-  getRecentFocusAreas: vi.fn(async () => []),
-  buildFocusInsight: vi.fn(() => null),
-}));
+// always calls them; quiet fixtures keep these tests about reflections. The
+// card also imports the feed-limit constants, so the mock re-exports them.
 vi.mock("@/lib/recent-activity", () => ({
+  ACTIVITY_FEED_LIMIT: 3,
+  ACTIVITY_FEED_POOL: 8,
   getEngagementActivity: vi.fn(async () => ({
     consistency: {
       weekDays: [false, false, false, false, false, false, false],

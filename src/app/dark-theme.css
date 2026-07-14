@@ -12,10 +12,10 @@
 .dark .bg-\[\#ececf0\] { background-color: #2c2c34; }
 .dark .bg-\[\#ecfdf5\] { background-color: #12291f; }
 .dark .bg-\[\#eef2ff\] { background-color: #232647; }
-.dark .bg-\[\#f0f0f4\] { background-color: #2c2c34; }
 .dark .bg-\[\#f4f4f6\] { background-color: #131316; }
 .dark .bg-\[\#f5f3ff\] { background-color: #272247; }
 .dark .bg-\[\#f5f5ff\] { background-color: #272247; }
+.dark .bg-\[\#f7f7f9\] { background-color: #26262d; }
 .dark .bg-\[\#f8f7ff\] { background-color: #272247; }
 .dark .bg-\[\#fef2f2\] { background-color: #331b1e; }
 .dark .bg-\[\#fff7ed\] { background-color: #2d2414; }
@@ -38,6 +38,7 @@
 .dark .border-\[\#f2f2f4\] { border-color: #2a2a31; }
 .dark .border-\[\#f2f2f5\] { border-color: #2a2a31; }
 .dark .border-\[\#f5f5f5\] { border-color: #2a2a31; }
+.dark .border-\[\#f7f7f8\] { border-color: #2a2a31; }
 .dark .border-\[\#f7f7f9\] { border-color: #2a2a31; }
 .dark .border-amber-200 { border-color: #4d3d1c; }
 .dark .border-red-200 { border-color: #55262c; }
@@ -46,6 +47,8 @@
 .dark .border-zinc-200 { border-color: #34343c; }
 .dark .border-zinc-300 { border-color: #414149; }
 .dark .border-zinc-900 { border-color: #ececf0; }
+.dark .divide-\[\#f5f5f5\] > :not([hidden]) ~ :not([hidden]) { border-color: #2a2a31; }
+.dark .divide-\[\#f7f7f8\] > :not([hidden]) ~ :not([hidden]) { border-color: #2a2a31; }
 .dark .focus-visible\:ring-zinc-500:focus-visible { --tw-ring-color: #757580; }
 .dark .focus\:bg-white:focus { background-color: #1c1c21; }
 .dark .focus\:border-\[\#999999\]:focus { border-color: #55555e; }
@@ -94,7 +97,6 @@
 .dark .text-\[\#a1a1aa\] { color: #757580; }
 .dark .text-\[\#aaaaaa\] { color: #6d6d77; }
 .dark .text-\[\#aab0bb\] { color: #757580; }
-.dark .text-\[\#b3b3bb\] { color: #6d6d77; }
 .dark .text-\[\#b45309\] { color: #edb14d; }
 .dark .text-\[\#b91c1c\] { color: #f87171; }
 .dark .text-\[\#bbbbbb\] { color: #5d5d67; }
@@ -117,6 +119,5 @@
 .dark .text-zinc-500 { color: #83838d; }
 .dark .text-zinc-600 { color: #a9a9b3; }
 .dark .text-zinc-700 { color: #e6e6eb; }
-.dark .text-zinc-800 { color: #d3d3d9; }
 .dark .text-zinc-900 { color: #f0f0f3; }
 .dark .to-white { --tw-gradient-to: #1c1c21; }

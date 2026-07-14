@@ -1,46 +1,78 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
-export default function Home() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-24">
-      <main className="flex w-full max-w-2xl flex-col items-center gap-10 text-center">
-        <div className="flex flex-col gap-4">
-          <p className="text-sm font-medium tracking-wide text-zinc-500 uppercase">
-            Future Paths <span className="text-zinc-400">· Beta</span>
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
-            Understand who you are becoming
-          </h1>
-          <p className="text-lg leading-8 text-zinc-600">
-            An identity exploration platform for meaningful decisions, emerging
-            patterns, and the paths that shape you.
-          </p>
-        </div>
+import {
+  ExampleJourneySection,
+  ExploreSection,
+  FinalCtaSection,
+  HowItWorksSection,
+  LandingHero,
+  PricingSection,
+} from "@/components/landing/landing-sections";
 
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Link
-            href="/signup"
-            className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-          >
-            Get started
-          </Link>
+export const metadata: Metadata = {
+  title: "Reflection — every decision changes who you're becoming",
+  description:
+    "Reflection helps you understand how today's choices shape your future, one situation at a time.",
+};
+
+/**
+ * The public landing page. Deliberately just another Reflection page:
+ * the app's canvas, cards, type scale, and buttons over illustrative
+ * product fixtures — no marketing illustrations, no new visual styles.
+ * A visitor should understand the whole loop (record a decision, explore
+ * possible futures, watch who you're becoming) in under 30 seconds.
+ */
+export default function LandingPage() {
+  return (
+    <div className="flex flex-1 flex-col">
+      <header className="mx-auto flex w-full max-w-[1080px] items-center justify-between px-6 py-6">
+        <Link
+          href="/"
+          className="font-voice text-[18px] font-medium tracking-[-0.01em] text-ink-primary"
+        >
+          Reflection
+        </Link>
+        <nav className="flex items-center gap-5">
           <Link
             href="/login"
-            className="rounded-lg border border-zinc-200 bg-white px-5 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50"
+            className="text-[13px] font-medium text-ink-secondary transition-colors hover:text-ink-primary"
           >
             Sign in
           </Link>
-        </div>
+          <Link
+            href="/signup"
+            className="rounded-xl bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+          >
+            Start Free
+          </Link>
+        </nav>
+      </header>
 
-        <footer className="flex items-center gap-4 text-sm text-zinc-500">
-          <Link href="/privacy" className="hover:text-zinc-700">
-            Privacy Policy
-          </Link>
-          <Link href="/terms" className="hover:text-zinc-700">
-            Terms of Use
-          </Link>
-        </footer>
+      {/* Chapters separated by whitespace alone — one steady rhythm, no
+          section dividers, the way the product's own pages breathe. */}
+      <main className="mx-auto flex w-full max-w-[1080px] flex-col gap-28 px-6 pb-28 pt-10 sm:gap-36 sm:pt-14">
+        <LandingHero />
+        <HowItWorksSection />
+        <ExampleJourneySection />
+        <ExploreSection />
+        <PricingSection />
+        <FinalCtaSection />
       </main>
+
+      <footer className="border-t border-[#f0f0f0]">
+        <div className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center justify-between gap-4 px-6 py-8">
+          <p className="text-[13px] text-ink-tertiary">Reflection</p>
+          <div className="flex items-center gap-4 text-[13px] text-ink-tertiary">
+            <Link href="/privacy" className="transition-colors hover:text-ink-primary">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="transition-colors hover:text-ink-primary">
+              Terms of Use
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

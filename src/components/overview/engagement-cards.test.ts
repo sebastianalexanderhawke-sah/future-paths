@@ -6,19 +6,21 @@ import {
   weekDayLetters,
   YourActivityCard,
 } from "@/components/overview/your-activity-card";
-import { buildFocusInsight, type FocusArea } from "@/lib/focus-areas";
 import {
+  ACTIVITY_FEED_LIMIT,
   countWeeklyActivity,
   type EngagementActivityItem,
   type EngagementConsistency,
   type WeeklyActivityCounts,
 } from "@/lib/recent-activity";
 
-// Behavioral tests for the Overview's Your Activity card (Phase 4): one
-// elevated pulse-check card with three side-by-side sections — Recently
-// Active → Consistency → Your Focus — asserted on what the user reads,
-// plus what this card must never become (gamified, multicolored,
-// percentage-laden).
+// Behavioral tests for the Overview's Your Activity card (Phase 4, IA
+// refinement 2026-07-14): one elevated pulse-check card with two
+// side-by-side sections — Recent Activity (a chronological feed across
+// every feature: what happened, where, when) → Consistency — asserted on
+// what the user reads, plus what this card must never become (gamified,
+// multicolored, percentage-laden). The old Your Focus section moved to the
+// Situations page.
 
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * 86400000).toISOString();
@@ -31,18 +33,21 @@ function makeItems(): EngagementActivityItem[] {
       kind: "reflection",
       situationTitle: "Starting a business",
       occurredAt: daysAgo(0),
+      href: "/moments/m1",
     },
     {
       id: "check-in-2",
       kind: "check-in",
       situationTitle: "Moving to Dallas",
       occurredAt: daysAgo(1),
+      href: "/moments/m2",
     },
     {
       id: "path-1",
       kind: "path",
       situationTitle: "Should I quit soccer",
       occurredAt: daysAgo(3),
+      href: "/moments/m3",
     },
   ];
 }
@@ -59,13 +64,6 @@ function makeConsistency(
   };
 }
 
-function makeFocusAreas(): FocusArea[] {
-  return [
-    { theme: "Career", weight: 1, mentions: 5 },
-    { theme: "Relationships", weight: 0.6, mentions: 3 },
-  ];
-}
-
 function makeWeeklyCounts(
   overrides: Partial<WeeklyActivityCounts> = {},
 ): WeeklyActivityCounts {
@@ -76,23 +74,13 @@ function render({
   items = makeItems(),
   consistency = makeConsistency(),
   weeklyCounts = makeWeeklyCounts(),
-  focusAreas = makeFocusAreas(),
-  insight = buildFocusInsight(focusAreas),
 }: {
   items?: EngagementActivityItem[];
   consistency?: EngagementConsistency;
   weeklyCounts?: WeeklyActivityCounts;
-  focusAreas?: FocusArea[];
-  insight?: string | null;
 } = {}): string {
   return renderToStaticMarkup(
-    createElement(YourActivityCard, {
-      items,
-      consistency,
-      weeklyCounts,
-      focusAreas,
-      insight,
-    }),
+    createElement(YourActivityCard, { items, consistency, weeklyCounts }),
   );
 }
 
@@ -105,26 +93,31 @@ describe("YourActivityCard structure", () => {
     );
   });
 
-  it("reads Recently Active → Consistency → Your Focus", () => {
+  it("reads Recent Activity → Consistency, with no Your Focus section", () => {
     const html = render();
-    const recent = html.indexOf("Recently Active");
+    const recent = html.indexOf("Recent Activity");
     const consistency = html.indexOf("Consistency");
-    const focus = html.indexOf("Your Focus");
     expect(recent).toBeGreaterThan(-1);
     expect(consistency).toBeGreaterThan(recent);
-    expect(focus).toBeGreaterThan(consistency);
+    expect(html).not.toContain("Your Focus");
   });
 });
 
-describe("YourActivityCard — Recently Active", () => {
-  it("phrases each activity as something the person did, newest first", () => {
+describe("YourActivityCard — Recent Activity feed", () => {
+  it("tells each row as what happened → where → in chronological order", () => {
     const html = render();
-    const reflected = html.indexOf("Reflected on “Starting a business”");
-    const checkedIn = html.indexOf("Checked in on “Moving to Dallas”");
-    const chose = html.indexOf("Chose a path in “Should I quit soccer”");
+    const reflected = html.indexOf("Reflection written");
+    const business = html.indexOf("Starting a business");
+    const checkedIn = html.indexOf("Check-in completed");
+    const dallas = html.indexOf("Moving to Dallas");
+    const chose = html.indexOf("Future Path selected");
+    const soccer = html.indexOf("Should I quit soccer");
     expect(reflected).toBeGreaterThan(-1);
-    expect(checkedIn).toBeGreaterThan(reflected);
-    expect(chose).toBeGreaterThan(checkedIn);
+    expect(business).toBeGreaterThan(reflected);
+    expect(checkedIn).toBeGreaterThan(business);
+    expect(dallas).toBeGreaterThan(checkedIn);
+    expect(chose).toBeGreaterThan(dallas);
+    expect(soccer).toBeGreaterThan(chose);
   });
 
   it("dates activities with the product's relative-time voice", () => {
@@ -132,6 +125,70 @@ describe("YourActivityCard — Recently Active", () => {
     expect(html).toContain("today");
     expect(html).toContain("1 day ago");
     expect(html).toContain("3 days ago");
+  });
+
+  it("covers the non-situation features with their own labels and places", () => {
+    const html = render({
+      items: [
+        {
+          id: "forecast-1",
+          kind: "forecast",
+          situationTitle: "Starting a business",
+          occurredAt: daysAgo(0),
+          href: "/moments/m1",
+        },
+        {
+          id: "future-self-1",
+          kind: "future-self",
+          situationTitle: "Independent Builder",
+          occurredAt: daysAgo(1),
+          href: "/future-selves",
+        },
+        {
+          id: "chapter-July 2026",
+          kind: "chapter",
+          situationTitle: "July 2026",
+          occurredAt: daysAgo(2),
+          href: "/timeline",
+        },
+      ],
+    });
+    expect(html).toContain("Future Forecast generated");
+    expect(html).toContain("Future Self updated");
+    expect(html).toContain("Future Selves · Independent Builder");
+    expect(html).toContain("Timeline chapter created");
+    expect(html).toContain("Timeline · July 2026");
+    expect(html).toContain('href="/future-selves"');
+    expect(html).toContain('href="/timeline"');
+  });
+
+  it(`renders exactly ${ACTIVITY_FEED_LIMIT} rows even when more items arrive`, () => {
+    const extra: EngagementActivityItem[] = [
+      ...makeItems(),
+      {
+        id: "situation-4",
+        kind: "situation",
+        situationTitle: "Learning piano",
+        occurredAt: daysAgo(4),
+      },
+      {
+        id: "situation-5",
+        kind: "situation",
+        situationTitle: "Adopting a dog",
+        occurredAt: daysAgo(5),
+      },
+    ];
+    const html = render({ items: extra });
+    expect(html).toContain("Should I quit soccer");
+    expect(html).not.toContain("Learning piano");
+    expect(html).not.toContain("Adopting a dog");
+  });
+
+  it("links each row to where the activity happened", () => {
+    const html = render();
+    expect(html).toContain('href="/moments/m1"');
+    expect(html).toContain('href="/moments/m2"');
+    expect(html).toContain('href="/moments/m3"');
   });
 
   it("stays honest when nothing has been recorded, and links onward", () => {
@@ -183,30 +240,6 @@ describe("YourActivityCard — Consistency", () => {
   });
 });
 
-describe("YourActivityCard — Your Focus", () => {
-  it("shows life-area bars and the insight sentence", () => {
-    const html = render();
-    expect(html).toContain("Career");
-    expect(html).toContain("Relationships");
-    expect(html).toContain("width:100%");
-    expect(html).toContain(
-      "Your attention has been split mainly between Career and Relationships.",
-    );
-  });
-
-  it("stays honest when there is not enough data", () => {
-    const html = render({ focusAreas: [], insight: null });
-    expect(html).toContain("Not enough recent entries");
-  });
-
-  it("keeps violet as the only accent", () => {
-    const html = render();
-    expect(html).toContain("139,92,246");
-    expect(html).not.toContain("#10b981");
-    expect(html).not.toContain("#f43f5e");
-  });
-});
-
 describe("weekDayLetters", () => {
   it("labels the rolling window oldest → today with UTC weekday letters", () => {
     // 2026-07-12 is a Sunday (UTC), so the strip ends on S and starts the
@@ -219,54 +252,6 @@ describe("weekDayLetters", () => {
     // A Wednesday: window is Thu → Wed.
     const letters = weekDayLetters(new Date("2026-07-08T12:00:00Z"));
     expect(letters).toEqual(["T", "F", "S", "S", "M", "T", "W"]);
-  });
-});
-
-describe("buildFocusInsight", () => {
-  const area = (theme: string, weight: number, mentions = 1): FocusArea => ({
-    theme,
-    weight,
-    mentions,
-  });
-
-  it("returns null with no areas", () => {
-    expect(buildFocusInsight([])).toBeNull();
-  });
-
-  it("names a single focus", () => {
-    expect(buildFocusInsight([area("Career", 1)])).toBe(
-      "Nearly all of your recent attention has gone to Career.",
-    );
-  });
-
-  it("calls out a dominant leader", () => {
-    expect(buildFocusInsight([area("Career", 1), area("Health", 0.4)])).toBe(
-      "Career has been pulling most of your attention lately, well ahead of Health.",
-    );
-  });
-
-  it("describes an even three-way spread", () => {
-    expect(
-      buildFocusInsight([
-        area("Career", 1),
-        area("Family", 0.9),
-        area("Relationships", 0.8),
-      ]),
-    ).toBe(
-      "Your attention has been spread fairly evenly across Career, Family, and Relationships.",
-    );
-  });
-
-  it("describes a leading pair with background", () => {
-    expect(
-      buildFocusInsight([
-        area("Career", 1),
-        area("Family", 0.8),
-        area("Finances", 0.3),
-      ]),
-    ).toBe(
-      "Career and Family have been leading your attention, with Finances in the background.",
-    );
   });
 });
 

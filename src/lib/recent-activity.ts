@@ -4,23 +4,32 @@ import { createClient } from "@/lib/supabase/server";
  * The Recent Activity card's data: how the user has been engaging with
  * Reflection lately. A pure read over existing rows and their existing
  * timestamps — check-ins (whose rows also carry reflection answers), new
- * situations, and chosen paths. Nothing is scored, recognized, or stored;
- * "activity" here is only what the user demonstrably did.
+ * situations, chosen paths, generated forecasts, Future Self updates, and
+ * Timeline chapters. Nothing is scored, recognized, or stored; "activity"
+ * here is only what the user demonstrably did (or what their record
+ * demonstrably produced).
  */
 export type EngagementActivityKind =
   | "reflection"
   | "check-in"
   | "situation"
-  | "path";
+  | "path"
+  | "forecast"
+  | "future-self"
+  | "chapter";
 
 export type EngagementActivityItem = {
   id: string;
   kind: EngagementActivityKind;
-  /** Title of the situation the activity belongs to. */
+  /**
+   * WHERE the activity happened: the situation's title for
+   * situation-scoped kinds, the Future Self's name for "future-self",
+   * the chapter's month label for "chapter".
+   */
   situationTitle: string;
   /** ISO timestamp of the underlying row — never invented. */
   occurredAt: string;
-  /** Destination for future clickable feed rows; unused by today's card. */
+  /** Destination the feed row links to. */
   href?: string;
 };
 
@@ -48,12 +57,19 @@ export type WeeklyActivityCounts = {
 export type EngagementActivity = {
   consistency: EngagementConsistency;
   weeklyCounts: WeeklyActivityCounts;
-  /** Newest first, at most ACTIVITY_FEED_LIMIT. */
+  /**
+   * Newest first, at most ACTIVITY_FEED_POOL. The card renders the first
+   * ACTIVITY_FEED_LIMIT; the extras let What's Changed backfill its three
+   * rows without a second fetch.
+   */
   items: EngagementActivityItem[];
 };
 
-/** The feed stays a glance, not a log. */
+/** The card shows exactly this many rows — a glance, not a log. */
 export const ACTIVITY_FEED_LIMIT = 3;
+
+/** How many merged items the read returns for the card + backfill uses. */
+export const ACTIVITY_FEED_POOL = 8;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_DAYS = 7;
@@ -181,28 +197,51 @@ export async function getEngagementActivity(): Promise<EngagementActivity> {
   // Timestamp-only history (bounded) drives the streaks; the same rows'
   // newest few become the feed. Reflections live on check-in rows and have
   // no timestamp of their own, so an answered check-in surfaces as the
-  // reflection it became, dated by the row it lives on.
-  const [checkIns, moments, chosenPaths] = await Promise.all([
-    supabase
-      .from("check_ins")
-      .select("id, created_at, reflection_answer, moments ( title )")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1000),
-    supabase
-      .from("moments")
-      .select("id, title, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1000),
-    supabase
-      .from("paths")
-      .select("id, chosen_at, moments ( title )")
-      .eq("user_id", user.id)
-      .eq("is_chosen", true)
-      .order("chosen_at", { ascending: false })
-      .limit(1000),
-  ]);
+  // reflection it became, dated by the row it lives on. Forecasts, Future
+  // Self updates, and Timeline chapters join the FEED only — Consistency
+  // keeps counting what the user typed (check-ins, situations, paths), not
+  // what the system generated from it.
+  const [checkIns, moments, chosenPaths, forecasts, futureSelves, chapters] =
+    await Promise.all([
+      supabase
+        .from("check_ins")
+        .select("id, moment_id, created_at, reflection_answer, moments ( title )")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1000),
+      supabase
+        .from("moments")
+        .select("id, title, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1000),
+      supabase
+        .from("paths")
+        .select("id, moment_id, chosen_at, moments ( title )")
+        .eq("user_id", user.id)
+        .eq("is_chosen", true)
+        .order("chosen_at", { ascending: false })
+        .limit(1000),
+      supabase
+        .from("forecasts")
+        .select("id, moment_id, generated_at, moments ( title )")
+        .eq("user_id", user.id)
+        .order("generated_at", { ascending: false })
+        .limit(ACTIVITY_FEED_POOL),
+      supabase
+        .from("future_selves")
+        .select("id, name, updated_at")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .order("updated_at", { ascending: false })
+        .limit(1),
+      supabase
+        .from("monthly_identity_narratives")
+        .select("month, generated_at")
+        .eq("user_id", user.id)
+        .order("generated_at", { ascending: false })
+        .limit(ACTIVITY_FEED_POOL),
+    ]);
 
   const items: EngagementActivityItem[] = [];
   const timestamps: string[] = [];
@@ -226,6 +265,7 @@ export async function getEngagementActivity(): Promise<EngagementActivity> {
       kind: row.reflection_answer ? "reflection" : "check-in",
       situationTitle: title,
       occurredAt: row.created_at,
+      href: `/moments/${row.moment_id}`,
     });
   }
 
@@ -236,6 +276,7 @@ export async function getEngagementActivity(): Promise<EngagementActivity> {
       kind: "situation",
       situationTitle: row.title,
       occurredAt: row.created_at,
+      href: `/moments/${row.id}`,
     });
   }
 
@@ -250,6 +291,43 @@ export async function getEngagementActivity(): Promise<EngagementActivity> {
       kind: "path",
       situationTitle: title,
       occurredAt: row.chosen_at,
+      href: `/moments/${row.moment_id}`,
+    });
+  }
+
+  for (const row of forecasts.data ?? []) {
+    const title = titleOf(row.moments as JoinedMoment);
+    if (!title || !row.generated_at) continue;
+    items.push({
+      id: `forecast-${row.id}`,
+      kind: "forecast",
+      situationTitle: title,
+      occurredAt: row.generated_at,
+      href: `/moments/${row.moment_id}`,
+    });
+  }
+
+  // One item per generation run, not one per Future Self: a run touches
+  // every active row at once, and five identical rows would flood the feed.
+  const latestFutureSelf = (futureSelves.data ?? [])[0];
+  if (latestFutureSelf?.updated_at) {
+    items.push({
+      id: `future-self-${latestFutureSelf.id}`,
+      kind: "future-self",
+      situationTitle: latestFutureSelf.name,
+      occurredAt: latestFutureSelf.updated_at,
+      href: "/future-selves",
+    });
+  }
+
+  for (const row of chapters.data ?? []) {
+    if (!row.generated_at) continue;
+    items.push({
+      id: `chapter-${row.month}`,
+      kind: "chapter",
+      situationTitle: row.month,
+      occurredAt: row.generated_at,
+      href: "/timeline",
     });
   }
 
@@ -260,6 +338,6 @@ export async function getEngagementActivity(): Promise<EngagementActivity> {
       checkIns: checkInTimestamps,
       pathsChosen: pathTimestamps,
     }),
-    items: buildActivityFeed(items),
+    items: buildActivityFeed(items, ACTIVITY_FEED_POOL),
   };
 }

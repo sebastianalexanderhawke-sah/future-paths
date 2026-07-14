@@ -73,10 +73,12 @@ export default async function MomentsPage() {
   const visibleActive = active.slice(0, 8);
   const moreActive = active.slice(8);
 
-  // Most Engaged — ranked by how far a situation has been taken through the
-  // existing lifecycle (path chosen, then checking in), with the most recent
-  // activity breaking ties. No counts are fetched by this page, so the rank
-  // leans on milestones already loaded; no new queries, no invented scores.
+  // Your Focus — where attention is currently concentrated, ranked by how
+  // far a situation has been taken through the existing lifecycle (path
+  // chosen, then checking in), with the most recent activity breaking ties.
+  // No counts are fetched by this page, so the rank leans on milestones
+  // already loaded; no new queries, no invented scores. (Presented as "Most
+  // Engaged" before the 2026-07-14 Overview IA pass.)
   const engagementStage = (moment: Moment): number =>
     (chosenPaths[moment.id] ? 1 : 0) + (lastCheckIns[moment.id] ? 1 : 0);
   const lastActivityAt = (moment: Moment): number =>
@@ -219,15 +221,15 @@ export default async function MomentsPage() {
                 )}
               </section>
 
-              {/* Most Engaged — a curated shortlist, not analytics. */}
+              {/* Your Focus — a curated shortlist, not analytics. */}
               {mostEngaged.length > 0 ? (
                 <OverviewCard className="px-8 py-7">
                   <div className="mb-3">
                     <h2 className="text-[17px] font-bold text-[#111]">
-                      Most Engaged
+                      Your Focus
                     </h2>
                     <p className="mt-[3px] text-[13px] text-[#999999]">
-                      The situations you&apos;ve invested the most attention in.
+                      Where your attention is currently concentrated.
                     </p>
                   </div>
                   <div>
