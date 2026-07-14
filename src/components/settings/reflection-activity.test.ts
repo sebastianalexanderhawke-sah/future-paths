@@ -4,8 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   weekDayLetters,
-  YourActivityCard,
-} from "@/components/overview/your-activity-card";
+  ReflectionActivityCard,
+} from "@/components/settings/reflection-activity";
 import {
   ACTIVITY_FEED_LIMIT,
   countWeeklyActivity,
@@ -14,13 +14,13 @@ import {
   type WeeklyActivityCounts,
 } from "@/lib/recent-activity";
 
-// Behavioral tests for the Overview's Your Activity card (Phase 4, IA
-// refinement 2026-07-14): one elevated pulse-check card with two
-// side-by-side sections — Recent Activity (a chronological feed across
-// every feature: what happened, where, when) → Consistency — asserted on
-// what the user reads, plus what this card must never become (gamified,
-// multicolored, percentage-laden). The old Your Focus section moved to the
-// Situations page.
+// Behavioral tests for the Settings page's Reflection Activity card
+// (Overview Phase 2, 2026-07-14 — relocated from the Overview's Your
+// Activity card): the "You've reflected on X of the last 7 days." lead, a
+// chronological cross-feature feed (what happened, where, when) and the
+// Consistency strip + weekly counts — asserted on what the user reads, plus
+// what this card must never become (gamified, multicolored,
+// percentage-laden).
 
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * 86400000).toISOString();
@@ -80,30 +80,28 @@ function render({
   weeklyCounts?: WeeklyActivityCounts;
 } = {}): string {
   return renderToStaticMarkup(
-    createElement(YourActivityCard, { items, consistency, weeklyCounts }),
+    createElement(ReflectionActivityCard, { items, consistency, weeklyCounts }),
   );
 }
 
-describe("YourActivityCard structure", () => {
-  it("introduces itself as the activity snapshot", () => {
+describe("ReflectionActivityCard structure", () => {
+  it("introduces itself as the profile's usage section with the reflected-days lead", () => {
     const html = render();
-    expect(html).toContain("Your Activity");
-    expect(html).toContain(
-      "A quick snapshot of how you&#x27;ve been engaging with Reflection recently",
-    );
+    expect(html).toContain("Reflection Activity");
+    expect(html).toContain("How you&#x27;ve been using Reflection");
+    expect(html).toContain("You&#x27;ve reflected on 5 of the last 7 days.");
   });
 
-  it("reads Recent Activity → Consistency, with no Your Focus section", () => {
+  it("reads Recent Activity → Consistency", () => {
     const html = render();
     const recent = html.indexOf("Recent Activity");
     const consistency = html.indexOf("Consistency");
     expect(recent).toBeGreaterThan(-1);
     expect(consistency).toBeGreaterThan(recent);
-    expect(html).not.toContain("Your Focus");
   });
 });
 
-describe("YourActivityCard — Recent Activity feed", () => {
+describe("ReflectionActivityCard — Recent Activity feed", () => {
   it("tells each row as what happened → where → in chronological order", () => {
     const html = render();
     const reflected = html.indexOf("Reflection written");
@@ -199,11 +197,10 @@ describe("YourActivityCard — Recent Activity feed", () => {
   });
 });
 
-describe("YourActivityCard — Consistency", () => {
-  it("shows a seven-day strip and the summary sentence", () => {
+describe("ReflectionActivityCard — Consistency", () => {
+  it("shows the seven-day strip", () => {
     const html = render();
     expect(html).toContain("Active 5 of the last 7 days");
-    expect(html).toContain("been active 5 of the last 7 days.");
     // Seven cells: five filled, two empty.
     expect(html.match(/bg-\[rgba\(139,92,246,0\.6\)\] ?/g)?.length).toBeGreaterThanOrEqual(5);
   });
@@ -228,7 +225,7 @@ describe("YourActivityCard — Consistency", () => {
         activeDaysThisWeek: 0,
       }),
     });
-    expect(html).toContain("A quiet week so far");
+    expect(html).toContain("You&#x27;ve reflected on 0 of the last 7 days.");
   });
 
   it("never gamifies and shows no percentages or streaks", () => {

@@ -73,40 +73,6 @@ export default async function MomentsPage() {
   const visibleActive = active.slice(0, 8);
   const moreActive = active.slice(8);
 
-  // Your Focus — where attention is currently concentrated, ranked by how
-  // far a situation has been taken through the existing lifecycle (path
-  // chosen, then checking in), with the most recent activity breaking ties.
-  // No counts are fetched by this page, so the rank leans on milestones
-  // already loaded; no new queries, no invented scores. (Presented as "Most
-  // Engaged" before the 2026-07-14 Overview IA pass.)
-  const engagementStage = (moment: Moment): number =>
-    (chosenPaths[moment.id] ? 1 : 0) + (lastCheckIns[moment.id] ? 1 : 0);
-  const lastActivityAt = (moment: Moment): number =>
-    Math.max(
-      new Date(moment.updated_at).getTime(),
-      lastCheckIns[moment.id]
-        ? new Date(lastCheckIns[moment.id]).getTime()
-        : 0,
-    );
-  const mostEngaged =
-    active.length >= 3
-      ? [...active]
-          .sort(
-            (a, b) =>
-              engagementStage(b) - engagementStage(a) ||
-              lastActivityAt(b) - lastActivityAt(a),
-          )
-          .slice(0, 4)
-      : [];
-
-  const engagementLine = (moment: Moment): string => {
-    if (lastCheckIns[moment.id])
-      return `Path chosen · checked in ${formatRelativeTime(lastCheckIns[moment.id])}`;
-    if (chosenPaths[moment.id])
-      return `Path chosen · no check-ins yet`;
-    return `Exploring options · updated ${formatRelativeTime(moment.updated_at)}`;
-  };
-
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">
       <AppSidebar
@@ -157,7 +123,10 @@ export default async function MomentsPage() {
               </div>
             </OverviewCard>
           ) : (
-            <div className="flex flex-col gap-8 pb-14">
+            // UX audit 2026-07-14: the page itself IS the user's focus, so
+            // the Your Focus summary card is gone — two sections with wider
+            // air between them instead of three packed ones.
+            <div className="flex flex-col gap-10 pb-16">
               {/* Active Situations — the state of each, not its to-dos. */}
               <section id="active" className="scroll-mt-6">
                 <div className="mb-4">
@@ -220,66 +189,6 @@ export default async function MomentsPage() {
                   </>
                 )}
               </section>
-
-              {/* Your Focus — a curated shortlist, not analytics. */}
-              {mostEngaged.length > 0 ? (
-                <OverviewCard className="px-8 py-7">
-                  <div className="mb-3">
-                    <h2 className="text-[17px] font-bold text-[#111]">
-                      Your Focus
-                    </h2>
-                    <p className="mt-[3px] text-[13px] text-[#999999]">
-                      Where your attention is currently concentrated.
-                    </p>
-                  </div>
-                  <div>
-                    {mostEngaged.map((moment, i) => (
-                      <Link
-                        key={moment.id}
-                        href={`/moments/${moment.id}`}
-                        className={[
-                          "flex items-center gap-4 py-3.5 transition-opacity duration-150 hover:opacity-80",
-                          i < mostEngaged.length - 1
-                            ? "border-b border-[#f5f5f5]"
-                            : "",
-                        ].join(" ")}
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate text-[14px] font-semibold text-[#111]">
-                            {moment.title}
-                          </span>
-                          <span className="mt-0.5 block text-[12px] text-[#888888]">
-                            {engagementLine(moment)}
-                          </span>
-                        </span>
-                        {/* Lifecycle bar: captured → path chosen → checking in. */}
-                        <span
-                          aria-hidden="true"
-                          className="ml-auto flex shrink-0 gap-1"
-                        >
-                          {[0, 1, 2].map((step) => (
-                            <span
-                              key={step}
-                              className={[
-                                "h-[3px] w-4 rounded-full",
-                                step <= engagementStage(moment)
-                                  ? "bg-[#b45309]"
-                                  : "bg-[#ececf0]",
-                              ].join(" ")}
-                            />
-                          ))}
-                        </span>
-                        <span
-                          aria-hidden="true"
-                          className="shrink-0 text-[16px] text-[#cccccc]"
-                        >
-                          ›
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </OverviewCard>
-              ) : null}
 
               {/* Resolved — collapsed by default, lighter, read-only. */}
               {archived.length > 0 ? (

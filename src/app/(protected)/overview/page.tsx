@@ -7,17 +7,12 @@ import {
   NeedsAttentionCard,
   type AttentionRow,
 } from "@/components/overview/needs-attention-card";
-import { YourActivityCard } from "@/components/overview/your-activity-card";
 import {
   WhatsChangedCard,
   type ChangeRow,
 } from "@/components/overview/whats-changed-card";
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
 import { getFutureSelfTrend } from "@/lib/future-self-trend";
-import {
-  getEngagementActivity,
-  type EngagementActivityKind,
-} from "@/lib/recent-activity";
 import { listActiveFutureSelves, listFutureSelves } from "@/lib/future-selves";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
@@ -47,7 +42,6 @@ export default async function OverviewPage() {
     fadedResult,
     reflectionSummaryResult,
     identityUpdatesResult,
-    engagementActivity,
   ] = await Promise.all([
     getUserIdentity(),
     listMoments(),
@@ -59,7 +53,6 @@ export default async function OverviewPage() {
     listFutureSelves({ status: "faded", limit: 8 }),
     getUnansweredReflectionSummary(),
     listIdentityUpdates(10),
-    getEngagementActivity(),
   ]);
 
   const situations = "moments" in momentsResult ? momentsResult.moments : [];
@@ -132,16 +125,18 @@ export default async function OverviewPage() {
     (update) => now - Date.parse(update.created_at) <= RECENT_CHANGE_WINDOW_MS,
   ).length;
 
-  // Exactly three rows: identity movement first, then new observations,
-  // then — when the significant story is shorter than three — the newest
-  // ordinary updates (reflections, check-ins, forecasts, situations,
-  // chapters) fill the remaining slots so the card never feels empty.
-  const prioritizedRows: ChangeRow[] = movementRows.slice(
+  // Identity-only, three rows maximum (UX audit 2026-07-14): the card
+  // answers "how has my identity changed since I last visited?" and nothing
+  // else. Future Self movement first, then the new-observations count.
+  // Situation-derived updates (reflections, check-ins, forecasts, new
+  // situations, chapters) never appear here — a quiet identity week shows
+  // fewer rows or the empty state, honestly.
+  const changeRows: ChangeRow[] = movementRows.slice(
     0,
     recentUpdateCount > 0 ? 2 : 3,
   );
   if (recentUpdateCount > 0) {
-    prioritizedRows.push({
+    changeRows.push({
       key: "new-observations",
       name: "New observations",
       detail: `${recentUpdateCount} added`,
@@ -149,30 +144,6 @@ export default async function OverviewPage() {
       kind: "added",
     });
   }
-
-  // Lower-priority updates, newest first, mapped from the activity feed the
-  // page already loads. Future Self movement is excluded — the movement
-  // rows above already tell that story with real deltas.
-  const CHANGE_DETAILS: Partial<Record<EngagementActivityKind, string>> = {
-    reflection: "Reflection added",
-    "check-in": "Check-in completed",
-    forecast: "Forecast updated",
-    situation: "Situation created",
-    chapter: "Timeline updated",
-  };
-  for (const item of engagementActivity.items) {
-    if (prioritizedRows.length >= 3) break;
-    const detail = CHANGE_DETAILS[item.kind];
-    if (!detail) continue;
-    prioritizedRows.push({
-      key: `activity-${item.id}`,
-      name: item.kind === "chapter" ? `Chapter: ${item.situationTitle}` : item.situationTitle,
-      detail,
-      delta: null,
-      kind: "added",
-    });
-  }
-  const changeRows: ChangeRow[] = prioritizedRows.slice(0, 3);
 
   // ── Needs Attention: overdue check-ins, waiting reflection, open decisions ──
   type RankedAttentionRow = AttentionRow & { priority: number };
@@ -253,10 +224,16 @@ export default async function OverviewPage() {
             </Link>
           </div>
 
-          <div className="flex flex-col gap-6 pb-14">
+          {/* Overview Phase 2: three cards, two questions — Future Selves
+              (how am I changing?), then What's Changed + Needs Attention
+              (what deserves my attention?). The activity summary lives on
+              Settings as Reflection Activity; with the fourth card gone the
+              remaining pair breathes wider (gap-8) instead of the page
+              pretending a card is missing. */}
+          <div className="flex flex-col gap-8 pb-16">
             <FuturePathsCard futureSelves={futureSelves} />
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-8">
               <WhatsChangedCard rows={changeRows} />
               <NeedsAttentionCard
                 items={visibleAttentionItems}
@@ -264,13 +241,6 @@ export default async function OverviewPage() {
                 totalCount={attentionItems.length}
               />
             </div>
-
-            {/* One pulse-check card: what happened, where, when → how steadily. */}
-            <YourActivityCard
-              items={engagementActivity.items}
-              consistency={engagementActivity.consistency}
-              weeklyCounts={engagementActivity.weeklyCounts}
-            />
           </div>
         </div>
       </main>

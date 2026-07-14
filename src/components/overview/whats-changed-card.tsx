@@ -47,8 +47,10 @@ type WhatsChangedCardProps = {
 
 export function WhatsChangedCard({ rows }: WhatsChangedCardProps) {
   return (
-    <OverviewCard className="flex flex-col px-8 py-8">
-      <div className="mb-7">
+    // Overview Phase 2: one of the page's two summary cards — wider padding
+    // and taller rows give it the room the removed activity card left.
+    <OverviewCard className="flex flex-col px-10 py-9">
+      <div className="mb-8">
         <div className="flex items-center gap-2">
           <span aria-hidden="true" className="text-[#10b981]">
             <IconTrendingUp size={16} />
@@ -76,7 +78,7 @@ export function WhatsChangedCard({ rows }: WhatsChangedCardProps) {
               <div
                 key={row.key}
                 className={[
-                  "flex items-center gap-4 py-4",
+                  "flex items-center gap-4 py-[18px]",
                   i < rows.length - 1 ? "border-b border-[#f5f5f5]" : "",
                 ].join(" ")}
               >
@@ -115,7 +117,7 @@ export function WhatsChangedCard({ rows }: WhatsChangedCardProps) {
 
       <Link
         href="/future-selves"
-        className="mt-auto pt-5 text-[13px] font-medium text-[#9ca3af] transition-colors duration-150 hover:text-[#047857]"
+        className="mt-auto pt-6 text-[13px] font-medium text-[#9ca3af] transition-colors duration-150 hover:text-[#047857]"
       >
         View all changes →
       </Link>

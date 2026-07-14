@@ -10,10 +10,12 @@ import {
 } from "@/components/settings/account-controls";
 import { AppearanceControl } from "@/components/settings/appearance-control";
 import { PremiumSection } from "@/components/settings/premium-section";
+import { ReflectionActivityCard } from "@/components/settings/reflection-activity";
 import { AppSidebar } from "@/components/overview/app-sidebar";
 import { OverviewCard } from "@/components/overview/overview-card";
 import { Button } from "@/components/ui/button";
 import { getPlanStatus } from "@/lib/plan";
+import { getEngagementActivity } from "@/lib/recent-activity";
 import { getUnansweredReflectionSummary } from "@/lib/reflections";
 import { createClient } from "@/lib/supabase/server";
 import { getUserIdentity } from "@/lib/user-identity";
@@ -38,12 +40,16 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     {
       data: { user },
     },
+    engagementActivity,
   ] = await Promise.all([
     getUserIdentity(),
     getUnansweredReflectionSummary(),
     getPlanStatus(),
     searchParams,
     supabase.auth.getUser(),
+    // Overview Phase 2: the activity summary lives here now — product usage
+    // and personal statistics belong with the profile.
+    getEngagementActivity(),
   ]);
 
   const reflectionSummary =
@@ -217,6 +223,15 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 </Link>
               </div>
             </OverviewCard>
+
+            {/* Reflection Activity — usage statistics, relocated from the
+                Overview (Phase 2): the profile is where personal statistics
+                belong. */}
+            <ReflectionActivityCard
+              items={engagementActivity.items}
+              consistency={engagementActivity.consistency}
+              weeklyCounts={engagementActivity.weeklyCounts}
+            />
 
             {/* During the beta — honest expectation-setting, no dead controls. */}
             <OverviewCard className="px-9 py-7">

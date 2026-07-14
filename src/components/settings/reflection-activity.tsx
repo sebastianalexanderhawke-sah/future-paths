@@ -20,16 +20,16 @@ import {
 import { formatRelativeTime } from "@/lib/relative-time";
 
 /**
- * Overview Phase 4 (IA refinement 2026-07-14): the bottom section is ONE
- * elevated card — a quick pulse check, not an analytics dashboard. Two
- * compact sections sit side by side, each answering a different question:
- * Recent Activity (what happened, where, when — a chronological feed across
- * every feature) → Consistency (how steadily you showed up). The old third
- * section, Your Focus, moved to the Situations page where the attention
- * data actually lives. Everything stays observational: existing rows,
- * existing timestamps, no goals, no rewards, no percentages.
+ * Overview Phase 2 (2026-07-14): the activity summary relocated from the
+ * Overview's Your Activity card to Settings — product usage and personal
+ * statistics live with the profile, so the Overview stays about the user's
+ * life, not their activity inside Reflection. The internals are the same
+ * relocation, not a redesign: the chronological cross-feature feed (what
+ * happened, where, when) and the Consistency strip + weekly counts, all
+ * observational — existing rows, existing timestamps, no goals, no rewards,
+ * no percentages.
  */
-type YourActivityCardProps = {
+type ReflectionActivityCardProps = {
   /** Newest first — the card renders the first ACTIVITY_FEED_LIMIT. */
   items: EngagementActivityItem[];
   /** Week strip + active-day count for the Consistency section. */
@@ -144,81 +144,32 @@ function WeeklyStatRow({ label, count }: { label: string; count: number }) {
   );
 }
 
-function ConsistencySection({
-  consistency,
-  weeklyCounts,
-  now,
-}: {
-  consistency: EngagementConsistency;
-  weeklyCounts: WeeklyActivityCounts;
-  now?: Date;
-}) {
-  const letters = weekDayLetters(now);
-  const active = consistency.activeDaysThisWeek;
-
-  return (
-    <div>
-      <SectionLabel>Consistency</SectionLabel>
-      <div
-        className="flex gap-1.5"
-        role="img"
-        aria-label={`Active ${active} of the last 7 days`}
-      >
-        {consistency.weekDays.map((wasActive, index) => (
-          <div key={index} className="flex flex-1 flex-col items-center gap-1.5">
-            <span className="text-[10px] font-medium text-[#9ca3af]">
-              {letters[index]}
-            </span>
-            <span
-              className={`h-6 w-full max-w-[26px] rounded-[7px] ${
-                wasActive
-                  ? "bg-[rgba(139,92,246,0.6)]"
-                  : "bg-[rgba(139,92,246,0.10)]"
-              }`}
-            />
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 flex flex-col gap-1.5 border-t border-[#f7f7f8] pt-3.5">
-        <WeeklyStatRow label="Reflections" count={weeklyCounts.reflections} />
-        <WeeklyStatRow label="Check-ins" count={weeklyCounts.checkIns} />
-        <WeeklyStatRow label="Paths Chosen" count={weeklyCounts.pathsChosen} />
-      </div>
-
-      <p className="mt-4 text-[13px] leading-relaxed text-[#6b6b76]">
-        {active === 0
-          ? "A quiet week so far — anything you record counts as showing up."
-          : `You've been active ${active} of the last 7 days.`}
-      </p>
-    </div>
-  );
-}
-
-export function YourActivityCard({
+export function ReflectionActivityCard({
   items,
   consistency,
   weeklyCounts,
-}: YourActivityCardProps) {
+}: ReflectionActivityCardProps) {
   const feedItems = items.slice(0, ACTIVITY_FEED_LIMIT);
+  const letters = weekDayLetters();
+  const active = consistency.activeDaysThisWeek;
 
   return (
-    <OverviewCard className="px-9 py-8">
-      <div className="mb-7">
-        <div className="flex items-center gap-2">
-          <span aria-hidden="true" className="text-[#8b5cf6]">
-            <IconSparkle size={16} />
-          </span>
-          <h2 className="text-[17px] font-bold text-[#111]">Your Activity</h2>
-        </div>
-        <p className="mt-1 text-[12px] text-[#aab0bb]">
-          A quick snapshot of how you&apos;ve been engaging with Reflection
-          recently
+    <OverviewCard className="px-9 py-7">
+      <div className="mb-5">
+        <h2 className="text-[17px] font-bold text-[#111]">
+          Reflection Activity
+        </h2>
+        <p className="mt-[3px] text-[13px] text-[#888888]">
+          How you&apos;ve been using Reflection
         </p>
       </div>
 
+      <p className="mb-6 text-[14px] leading-[1.6] text-[#333333]">
+        You&apos;ve reflected on {active} of the last 7 days.
+      </p>
+
       <div className="grid grid-cols-2 divide-x divide-[#f5f5f5]">
-        {/* Section 1 — the chronological feed: what, where, when. */}
+        {/* The chronological feed: what, where, when. */}
         <section className="pr-8">
           <SectionLabel>Recent Activity</SectionLabel>
           {feedItems.length === 0 ? (
@@ -241,12 +192,38 @@ export function YourActivityCard({
           </Link>
         </section>
 
-        {/* Section 2 — how steadily you showed up. */}
+        {/* How steadily you showed up. */}
         <section className="pl-8">
-          <ConsistencySection
-            consistency={consistency}
-            weeklyCounts={weeklyCounts}
-          />
+          <SectionLabel>Consistency</SectionLabel>
+          <div
+            className="flex gap-1.5"
+            role="img"
+            aria-label={`Active ${active} of the last 7 days`}
+          >
+            {consistency.weekDays.map((wasActive, index) => (
+              <div
+                key={index}
+                className="flex flex-1 flex-col items-center gap-1.5"
+              >
+                <span className="text-[10px] font-medium text-[#9ca3af]">
+                  {letters[index]}
+                </span>
+                <span
+                  className={`h-6 w-full max-w-[26px] rounded-[7px] ${
+                    wasActive
+                      ? "bg-[rgba(139,92,246,0.6)]"
+                      : "bg-[rgba(139,92,246,0.10)]"
+                  }`}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-1.5 border-t border-[#f7f7f8] pt-3.5">
+            <WeeklyStatRow label="Reflections" count={weeklyCounts.reflections} />
+            <WeeklyStatRow label="Check-ins" count={weeklyCounts.checkIns} />
+            <WeeklyStatRow label="Paths Chosen" count={weeklyCounts.pathsChosen} />
+          </div>
         </section>
       </div>
     </OverviewCard>
