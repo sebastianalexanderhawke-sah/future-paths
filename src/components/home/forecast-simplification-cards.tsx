@@ -6,7 +6,7 @@ import type { CardShellVariant } from "@/lib/design/tokens";
 
 const MOVEMENT_INDICATOR: Record<FutureMovement, { symbol: string; className: string }> = {
   up: { symbol: "↑", className: "text-emerald-600" },
-  down: { symbol: "↓", className: "text-red-400" },
+  down: { symbol: "↓", className: "text-rose-500" },
   neutral: { symbol: "−", className: "text-zinc-300" },
   new: { symbol: "↑", className: "text-emerald-600" },
 };
@@ -68,12 +68,12 @@ function splitForecastBullets(text: string | undefined | null): string[] {
     .slice(0, MAX_SECTION_BULLETS);
 }
 
-function ForecastBulletSection({ label, items }: { label: string; items: string[] }) {
+function ForecastBulletSection({ label, items }: { label?: string; items: string[] }) {
   if (items.length === 0) return null;
 
   return (
     <div>
-      <p className="text-label text-ink-tertiary">{label}</p>
+      {label ? <p className="text-label text-ink-tertiary">{label}</p> : null}
       <ul className="mt-1.5 flex flex-col gap-1">
         {items.map((item) => (
           <li key={item} className="flex gap-2 text-body-small text-ink-secondary">
@@ -115,7 +115,10 @@ function StructuredForecastCard({
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-3 px-4 py-3.5 sm:px-5">
+      {/* A touch more air than the original px-4 py-3.5 — the cards are the
+          forecast's hero elements, and the tighter padding read as a dense
+          utility row rather than a considered card. */}
+      <div className="flex flex-col gap-3.5 px-5 py-4 sm:px-6 sm:py-[18px]">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-baseline gap-1.5">
             <h4 className="text-h2 text-ink-primary">{future.title}</h4>
@@ -135,13 +138,15 @@ function StructuredForecastCard({
           ) : null}
         </div>
 
-        <ForecastBulletSection
-          label="What could happen"
-          items={splitForecastBullets(future.futureImpact)}
-        />
+        {/* The card IS the "what could happen" — its title announces the
+            prediction and the group header above frames it, so the bullets
+            read directly under the title. Repeating an identical label on
+            every card said nothing the layout doesn't already say; the one
+            labelled block on a card is "What you can do", the takeaway. */}
+        <ForecastBulletSection items={splitForecastBullets(future.futureImpact)} />
 
         {future.actions && future.actions.length > 0 ? (
-          <div className="rounded-[var(--radius-whisper)] border border-[var(--state-emerging)]/20 bg-[var(--state-emerging)]/8 px-3 py-2.5">
+          <div className="rounded-[var(--radius-whisper)] border border-[var(--state-emerging)]/20 bg-[var(--state-emerging)]/8 px-3.5 py-3">
             <p className="text-label font-semibold text-[var(--state-emerging)]">
               What you can do
             </p>
@@ -195,7 +200,7 @@ export function CurrentForecastFutureCard({
       ) : null}
 
       <details className="group">
-        <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 hover:bg-[var(--surface-muted)] sm:px-5 [&::-webkit-details-marker]:hidden">
+        <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 transition-colors duration-150 hover:bg-[var(--surface-muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-400/70 sm:px-5 [&::-webkit-details-marker]:hidden">
           <div className="flex min-w-0 flex-col gap-2">
             {timeframeLabel ? (
               <span className="self-start rounded-full bg-[var(--state-emerging)]/15 px-2.5 py-0.5 text-label font-semibold text-[var(--state-emerging)]">
@@ -219,13 +224,26 @@ export function CurrentForecastFutureCard({
               </p>
             ) : null}
           </div>
-          <span aria-hidden="true" className="mt-0.5 shrink-0 text-sm text-ink-tertiary">
-            <span className="group-open:hidden">+</span>
-            <span className="hidden group-open:inline">−</span>
+          {/* The platform's one disclosure mark — a turning chevron, not
+              +/− text glyphs. */}
+          <span aria-hidden="true" className="mt-1 shrink-0 text-ink-tertiary">
+            <svg
+              viewBox="0 0 16 16"
+              className="h-4 w-4 transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"
+            >
+              <path
+                d="M4 6l4 4 4-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </span>
         </summary>
 
-        <div className="flex flex-col gap-3 border-t border-[var(--ink-tertiary)]/10 px-4 pb-4 pt-3 sm:px-5">
+        <div className="reveal-in flex flex-col gap-3 border-t border-[var(--ink-tertiary)]/10 px-4 pb-4 pt-3 sm:px-5">
           {future.signals.length > 0 ? (
             <div>
               <p className="text-label text-ink-tertiary">How You&apos;ll Know</p>
@@ -254,10 +272,10 @@ export function CurrentForecastFutureCard({
 
           {future.expansion ? (
             <details className="text-body-small text-ink-secondary">
-              <summary className="cursor-pointer text-ink-tertiary hover:text-ink-secondary">
+              <summary className="cursor-pointer rounded-md text-ink-tertiary transition-colors duration-150 hover:text-ink-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2">
                 View full reasoning
               </summary>
-              <p className="mt-2 border-t border-[var(--ink-tertiary)]/10 pt-2">
+              <p className="reveal-in mt-2 border-t border-[var(--ink-tertiary)]/10 pt-2">
                 {future.expansion}
               </p>
             </details>

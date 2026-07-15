@@ -9,8 +9,10 @@ import {
 import { CheckInCard } from "@/components/check-ins/check-in-card";
 import { IdentityUpdateCard } from "@/components/identity/identity-update-card";
 import { AlternatePathsDisclosure } from "@/components/moments/alternate-paths-disclosure";
+import { EmergingSituationCallout } from "@/components/moments/emerging-situation-callout";
 import { ChosenPathPanel } from "@/components/moments/chosen-path-panel";
 import { SituationForecastSection } from "@/components/moments/situation-forecast-section";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { SummaryDisclosure } from "@/components/moments/summary-disclosure";
 import { OtherPathCard } from "@/components/moments/stored-path-card";
 import { AppSidebar } from "@/components/overview/app-sidebar";
@@ -90,6 +92,15 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
 
   // Phase detection
   const isArchived = moment.status === "archived";
+
+  // Emerging Situations: show the suggestion while it is neither dismissed
+  // nor stale (a resolved situation no longer needs splitting).
+  const emergingSuggestion =
+    !isArchived &&
+    moment.emerging_situation &&
+    !moment.emerging_situation_dismissed_at
+      ? moment.emerging_situation
+      : null;
   const hasPaths = paths.length > 0;
   const hasChosenPath = !!chosenPath;
   const hasCheckIns = checkIns.length > 0;
@@ -208,6 +219,13 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
           ) : null}
 
           <div className="flex flex-col gap-5 pb-14">
+            {emergingSuggestion ? (
+              <EmergingSituationCallout
+                momentId={moment.id}
+                suggestion={emergingSuggestion}
+              />
+            ) : null}
+
             {/* ════════════════════════════════════════════════════════════
                 PHASE 5 — Resolved. A summary artifact. No actions.
             ════════════════════════════════════════════════════════════ */}
@@ -279,12 +297,12 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                       </p>
                       <form action={generatePathsAction} className="mt-4">
                         <input type="hidden" name="momentId" value={moment.id} />
-                        <button
-                          type="submit"
+                        <PendingSubmitButton
+                          spinner="onDark"
                           className="cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
                         >
                           Explore decisions
-                        </button>
+                        </PendingSubmitButton>
                       </form>
                     </div>
 
@@ -297,12 +315,9 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                       </p>
                       <form action={generateForecastForMomentAction} className="mt-4">
                         <input type="hidden" name="momentId" value={moment.id} />
-                        <button
-                          type="submit"
-                          className="cursor-pointer rounded-[10px] border border-[#ececf0] bg-white px-[18px] py-2.5 text-[13px] font-semibold text-[#333333] transition-colors duration-150 hover:bg-[#f5f5f5]"
-                        >
+                        <PendingSubmitButton className="cursor-pointer rounded-[10px] border border-[#ececf0] bg-white px-[18px] py-2.5 text-[13px] font-semibold text-[#333333] transition-colors duration-150 hover:bg-[#f5f5f5] disabled:hover:bg-white">
                           Generate forecast
-                        </button>
+                        </PendingSubmitButton>
                       </form>
                     </div>
                   </div>
@@ -322,7 +337,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                     <h2 className="text-[17px] font-bold text-[#111]">
                       Your options
                     </h2>
-                    <p className="mt-[3px] text-[13px] text-[#999999]">
+                    <p className="mt-[3px] text-[13px] text-[#888888]">
                       Choose one to move forward
                     </p>
                   </div>
@@ -333,12 +348,12 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                         <form action={choosePathAction}>
                           <input type="hidden" name="momentId" value={moment.id} />
                           <input type="hidden" name="pathId" value={path.id} />
-                          <button
-                            type="submit"
-                            className="w-full cursor-pointer rounded-[10px] border border-[#ececf0] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#333333] transition-colors duration-150 hover:border-[#111] hover:bg-[#111] hover:text-white"
-                          >
+                          {/* Choosing a path kicks off the forecast for it —
+                              a multi-second generation, so the button
+                              reports pending like every generation form. */}
+                          <PendingSubmitButton className="w-full cursor-pointer rounded-[10px] border border-[#ececf0] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#333333] transition-colors duration-150 hover:border-[#111] hover:bg-[#111] hover:text-white disabled:hover:border-[#ececf0] disabled:hover:bg-white disabled:hover:text-[#333333]">
                             Choose this path
-                          </button>
+                          </PendingSubmitButton>
                         </form>
                       </div>
                     ))}
@@ -377,12 +392,12 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                     </p>
                     <form action={regenerateForecastForChosenPathAction} className="mt-4">
                       <input type="hidden" name="momentId" value={moment.id} />
-                      <button
-                        type="submit"
+                      <PendingSubmitButton
+                        spinner="onDark"
                         className="cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
                       >
                         Generate your forecast
-                      </button>
+                      </PendingSubmitButton>
                     </form>
                   </OverviewCard>
                 ) : null}

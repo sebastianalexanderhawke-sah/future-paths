@@ -49,19 +49,38 @@ export function FadedPathsSection({
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((current) => !current)}
-          className="mt-4 cursor-pointer text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80"
+          className="-mx-1 mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
         >
-          {open ? "▲ Hide faded paths" : "▼ Show faded paths"}
+          {/* The platform's one disclosure mark — a turning chevron, not
+              text-glyph arrows. */}
+          <svg
+            viewBox="0 0 16 16"
+            aria-hidden="true"
+            className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out motion-reduce:transition-none ${
+              open ? "rotate-180" : ""
+            }`}
+          >
+            <path
+              d="M4 6l4 4 4-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          {open ? "Hide faded paths" : "Show faded paths"}
         </button>
       </OverviewCard>
 
       {open
         ? futureSelves.map((futureSelf) => (
-            <FadedFutureCard
-              key={futureSelf.id}
-              futureSelf={futureSelf}
-              events={eventsByFutureSelf[futureSelf.id] ?? []}
-            />
+            <div key={futureSelf.id} className="reveal-in">
+              <FadedFutureCard
+                futureSelf={futureSelf}
+                events={eventsByFutureSelf[futureSelf.id] ?? []}
+              />
+            </div>
           ))
         : null}
     </>

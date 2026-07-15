@@ -73,7 +73,7 @@ describe("getMovementStory", () => {
     )!;
 
     expect(story.direction).toBe("up");
-    expect(story.headline).toBe("+12% since your last update");
+    expect(story.headline).toBe("+12 since your last update");
     // The lead cites real situations, never a canned phrase.
     expect(story.lead).toContain("2 situations");
     expect(story.lead).toContain("Considering the Lisbon move");
@@ -95,7 +95,7 @@ describe("getMovementStory", () => {
     )!;
 
     expect(story.direction).toBe("down");
-    expect(story.headline).toBe("-8% since your last update");
+    expect(story.headline).toBe("-8 since your last update");
     expect(story.evidence).toEqual([
       "Chose the familiar routine over a new opportunity",
     ]);

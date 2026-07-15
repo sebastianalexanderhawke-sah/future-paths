@@ -159,6 +159,17 @@ export function enforceContextLimits(bundle: IdentityContextBundle): IdentityCon
     answer: truncateText(r.answer, limits.reflection),
   }));
 
+  next.recentEntries = truncateArray(
+    bundle.recentEntries,
+    CONTEXT_LIMITS.COUNTS.checkIns,
+  )?.map((entry) => ({
+    ...entry,
+    reflection: truncateText(entry.reflection, limits.reflection),
+    reality_summary: truncateText(entry.reality_summary, limits.realitySummary),
+    reflection_question: truncateNullableText(entry.reflection_question, limits.question),
+    reflection_answer: truncateNullableText(entry.reflection_answer, limits.response),
+  }));
+
   next.identityUpdates = truncateArray(
     bundle.identityUpdates,
     CONTEXT_LIMITS.COUNTS.identityUpdates,
@@ -364,6 +375,15 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     identityUpdates: bundle.identityUpdates,
     futureSelves: bundle.futureSelves,
     riskFocusThemes: bundle.riskFocusThemes,
+    // The emerging_situation profile's only evidence — shortened, never
+    // dropped, or detection would compare the original story to nothing.
+    recentEntries: truncateArray(bundle.recentEntries, 5)?.map((entry) => ({
+      ...entry,
+      reflection: truncateText(entry.reflection, 300),
+      reality_summary: truncateText(entry.reality_summary, 200),
+      reflection_question: truncateNullableText(entry.reflection_question, 100),
+      reflection_answer: truncateNullableText(entry.reflection_answer, 200),
+    })),
   };
 
   serialized = JSON.stringify(reduced);
@@ -428,6 +448,13 @@ function enforceTotalJsonLimit(bundle: IdentityContextBundle): IdentityContextBu
     futureSelves: truncateArray(bundle.futureSelves, 5)?.map((futureSelf) => ({
       ...futureSelf,
       summary: truncateText(futureSelf.summary, 150),
+    })),
+    recentEntries: truncateArray(bundle.recentEntries, 4)?.map((entry) => ({
+      ...entry,
+      reflection: truncateText(entry.reflection, 200),
+      reality_summary: truncateText(entry.reality_summary, 150),
+      reflection_question: truncateNullableText(entry.reflection_question, 80),
+      reflection_answer: truncateNullableText(entry.reflection_answer, 150),
     })),
   };
 }

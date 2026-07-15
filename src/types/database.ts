@@ -28,6 +28,16 @@ export type Profile = {
   updated_at: string;
 };
 
+// Emerging Situations: a high-confidence suggestion that this situation's
+// recent entries have become a different story. At most one per moment;
+// only ever a prefill for the creation flow, never an auto-created situation.
+export type EmergingSituationSuggestion = {
+  title: string;
+  description: string;
+  detected_at: string;
+  source_check_in_id: string | null;
+};
+
 export type Moment = {
   id: string;
   user_id: string;
@@ -38,6 +48,8 @@ export type Moment = {
   opportunity_themes: ThemeName[];
   risk_themes: ThemeName[];
   client_token: string | null;
+  emerging_situation: EmergingSituationSuggestion | null;
+  emerging_situation_dismissed_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -371,7 +383,14 @@ export type MomentInsert = Pick<Moment, "user_id" | "title"> & {
 export type MomentUpdate = Partial<
   Pick<
     Moment,
-    "title" | "description" | "current_understanding" | "status" | "opportunity_themes" | "risk_themes"
+    | "title"
+    | "description"
+    | "current_understanding"
+    | "status"
+    | "opportunity_themes"
+    | "risk_themes"
+    | "emerging_situation"
+    | "emerging_situation_dismissed_at"
   >
 >;
 

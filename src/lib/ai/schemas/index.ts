@@ -9,6 +9,7 @@ import {
   parseCurrentSelfFromBriefOutput,
   parseCurrentSelfOutput,
 } from "@/lib/ai/schemas/current-self";
+import { parseEmergingSituationOutput } from "@/lib/ai/schemas/emerging-situation";
 import { parseForecastOutput } from "@/lib/ai/schemas/forecast";
 import { parseFutureSelfOutput } from "@/lib/ai/schemas/future-self";
 import { parseIdentityPromptOutput } from "@/lib/ai/schemas/identity-prompt";
@@ -37,6 +38,7 @@ const OUTPUT_PARSERS: Record<PromptId, (data: unknown) => unknown> = {
   "timeline.generate": parseTimelineOutput,
   "monthly_identity_narrative.generate": parseMonthlyIdentityNarrativeOutput,
   "reflection_question.evaluate": parseReflectionQuestionOutput,
+  "emerging_situation.detect": parseEmergingSituationOutput,
 };
 
 export function parsePromptOutput(promptId: PromptId, data: unknown): unknown {

@@ -70,9 +70,10 @@ const isKinPair = (a: Station, b: Station) =>
   [a.role, b.role].sort().join("+") === "kin-a+kin-b";
 
 // Label geometry, rendered px: 28px icon chip + gap + a LONG name
-// ("The Self-Reliant Builder" scale), two text lines tall.
+// ("The Self-Reliant Builder" scale), two text lines tall (15/16px serif
+// name over the 11px tracked-caps caption).
 const LABEL_W = 216;
-const LABEL_H = 34;
+const LABEL_H = 35;
 
 type Box = { x0: number; x1: number; y0: number; y1: number };
 

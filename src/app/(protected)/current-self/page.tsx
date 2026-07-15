@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { generateCurrentSelfAction } from "@/actions/current-self";
 import { AnalysisDisclosure } from "@/components/current-self/analysis-disclosure";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { IdentityStrengthBadge } from "@/components/current-self/identity-strength-badge";
 import { AppSidebar } from "@/components/overview/app-sidebar";
 import { OverviewCard } from "@/components/overview/overview-card";
@@ -162,12 +163,12 @@ export default async function CurrentSelfPage({
               </p>
             </div>
             <form action={generateCurrentSelfAction}>
-              <button
-                type="submit"
-                className="shrink-0 cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+              <PendingSubmitButton
+                spinner="onDark"
+                className="shrink-0 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
               >
                 Refresh Current Self
-              </button>
+              </PendingSubmitButton>
             </form>
           </div>
 

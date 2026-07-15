@@ -6,6 +6,7 @@ import { contradictionDetectV1 } from "@/lib/ai/prompts/contradiction.detect.v1"
 import { crossroadGenerateV1 } from "@/lib/ai/prompts/crossroad.generate.v1";
 import { discoveryQuestionGenerateV1 } from "@/lib/ai/prompts/discovery_question.generate.v1";
 import { currentSelfGenerateV1 } from "@/lib/ai/prompts/current_self.generate.v1";
+import { emergingSituationDetectV1 } from "@/lib/ai/prompts/emerging_situation.detect.v1";
 import { currentSelfGenerateFromBriefV1 } from "@/lib/ai/prompts/current_self.generate_from_brief.v1";
 import { forecastGenerateV1 } from "@/lib/ai/prompts/forecast.generate.v1";
 import { futureSelfDiscoverV1 } from "@/lib/ai/prompts/future_self.discover.v1";
@@ -61,6 +62,7 @@ const PROMPT_REGISTRY: Record<PromptId, PromptDefinition> = {
   "timeline.generate": registerPrompt(timelineGenerateV1),
   "monthly_identity_narrative.generate": registerPrompt(monthlyIdentityNarrativeGenerateV1),
   "reflection_question.evaluate": registerPrompt(reflectionQuestionEvaluateV1),
+  "emerging_situation.detect": registerPrompt(emergingSituationDetectV1),
 };
 
 export {

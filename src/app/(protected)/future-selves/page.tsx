@@ -1,6 +1,7 @@
 import { generateFutureSelvesAction } from "@/actions/future-selves";
 import { TrackView } from "@/components/analytics/track-view";
 import { FadedPathsSection } from "@/components/futures/faded-paths-section";
+import { RefreshFuturesButton } from "@/components/futures/refresh-futures-button";
 import { FutureSelvesExplorer } from "@/components/futures/future-selves-explorer";
 import { AppShell } from "@/components/overview/app-shell";
 import {
@@ -41,12 +42,7 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
           </p>
         </div>
         <form action={generateFutureSelvesAction}>
-          <button
-            type="submit"
-            className="shrink-0 cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
-          >
-            Refresh futures
-          </button>
+          <RefreshFuturesButton />
         </form>
       </div>
 
@@ -61,11 +57,14 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
             the overview's cards, but still: no hover lift, more air. This
             card is for lingering with the tree, not scanning a dashboard. */}
         {/* The hero: attention lands on the tree first, everything else
-            supports it. Slim horizontal padding gives the map the full card
-            width (the chart's aspect is canonical, so width is the lever
-            that makes it bigger), and tall vertical padding gives it a
-            stage rather than a slot. */}
-        <section className="rounded-2xl border border-[#f0f0f2] bg-white px-3 py-14 shadow-[0_1px_2px_rgba(17,17,17,0.02),0_12px_32px_rgba(17,17,17,0.04)] sm:px-6 sm:py-16">
+            supports it. Horizontal padding matches the 36px the label
+            contract lets signposts spill past the chart edge (X_GRACE in
+            stage-territory.test.ts) so a long label never crosses the card
+            surface; vertical padding stays generous — a stage, not a slot —
+            without outweighing the map itself. Mobile keeps slim padding
+            for map width (narrow-width label clipping is accepted there,
+            same as the landing rendering). */}
+        <section className="rounded-2xl border border-[#f0f0f2] bg-white px-3 py-10 shadow-[0_1px_2px_rgba(17,17,17,0.02),0_12px_32px_rgba(17,17,17,0.04)] sm:px-9 sm:py-12">
           <FutureSelvesExplorer futureSelves={result.futureSelves} />
         </section>
 

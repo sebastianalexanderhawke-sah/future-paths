@@ -122,7 +122,7 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
         </p>
         <Link
           href="/moments"
-          className="mt-4 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80"
+          className="mt-4 rounded-md px-1 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
         >
           Explore a situation →
         </Link>
@@ -297,14 +297,17 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
             {/* Arrival ring: a detached hairline circle with clear air
                 between it and the core — the cartographic mark for a
                 surveyed place, not a graph node's halo. It widens and
-                saturates when the destination is lit. */}
+                saturates when the destination is lit; the CHOSEN one (its
+                dialog open) holds a slightly firmer, deeper ring than a
+                passing hover — clearly selected, same colors, no louder. */}
             <span
               aria-hidden="true"
               className="absolute rounded-full border transition-[width,height,border-color] duration-200 ease-out motion-reduce:transition-none"
               style={{
                 width: ringSize,
                 height: ringSize,
-                borderColor: `${accent.color}${isLit ? "8c" : "4d"}`,
+                borderWidth: isOpen ? 1.5 : 1,
+                borderColor: `${accent.color}${isOpen ? "b3" : isLit ? "8c" : "4d"}`,
                 transform: "translate(-50%, -50%)",
               }}
             />
@@ -343,7 +346,7 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
                 >
                   {futureSelf.name}
                 </span>
-                <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.08em]">
+                <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.08em]">
                   <span style={{ color: accent.color }}>{branch.pct}%</span>
                   <span className="text-[#a1a1aa]">
                     {" "}

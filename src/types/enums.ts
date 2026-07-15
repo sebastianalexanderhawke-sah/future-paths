@@ -90,6 +90,7 @@ export type FutureSelfStatus = (typeof FUTURE_SELF_STATUSES)[number];
 export const FUTURE_SELF_EVENT_TYPES = [
   "emerged",
   "grew",
+  "weakened",
   "faded",
   "returned",
 ] as const;

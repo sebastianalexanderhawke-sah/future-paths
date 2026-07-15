@@ -133,7 +133,7 @@ export default async function MomentsPage() {
                   <h2 className="text-[17px] font-bold text-[#111]">
                     Active Situations
                   </h2>
-                  <p className="mt-[3px] text-[13px] text-[#999999]">
+                  <p className="mt-[3px] text-[13px] text-[#888888]">
                     Everything currently in motion
                   </p>
                 </div>
@@ -201,7 +201,7 @@ export default async function MomentsPage() {
                       <h2 className="text-[17px] font-bold text-[#111]">
                         Resolved Situations ({archived.length})
                       </h2>
-                      <p className="mt-[3px] text-[13px] text-[#999999]">
+                      <p className="mt-[3px] text-[13px] text-[#888888]">
                         Completed and archived
                       </p>
                     </div>

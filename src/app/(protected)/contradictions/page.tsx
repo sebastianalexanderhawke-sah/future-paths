@@ -1,5 +1,6 @@
 import { detectContradictionsAction } from "@/actions/contradictions";
 import { ContradictionCard } from "@/components/contradictions/contradiction-card";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { AppShell } from "@/components/overview/app-shell";
 import { listContradictions } from "@/lib/contradictions";
 
@@ -42,12 +43,12 @@ export default async function ContradictionsPage({
           </p>
         </div>
         <form action={detectContradictionsAction}>
-          <button
-            type="submit"
-            className="shrink-0 cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+          <PendingSubmitButton
+            spinner="onDark"
+            className="shrink-0 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
           >
             Detect contradictions
-          </button>
+          </PendingSubmitButton>
         </form>
       </div>
 
@@ -81,7 +82,7 @@ export default async function ContradictionsPage({
           <section className="flex flex-col gap-4">
             <div>
               <h2 className="text-[17px] font-bold text-[#111]">Resolved or faded</h2>
-              <p className="mt-[3px] text-[13px] text-[#999999]">
+              <p className="mt-[3px] text-[13px] text-[#888888]">
                 Tensions that no longer appear in the latest detection pass
               </p>
             </div>

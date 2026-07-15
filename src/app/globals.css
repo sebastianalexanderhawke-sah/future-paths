@@ -84,16 +84,45 @@
   to   { opacity: 1; }
 }
 
+/* The backdrop leaves by fading only — it is a full-bleed veil, and scaling
+   it (the dialog's exit) would slide its edges into view as it goes. */
+@keyframes futureBackdropOut {
+  to { opacity: 0; }
+}
+
 .modal-in { animation: futureModalIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 .modal-out { animation: futureModalOut 0.15s ease-in forwards; }
 .modal-backdrop-in { animation: futureBackdropIn 0.2s ease-out backwards; }
-.modal-backdrop-out { animation: futureModalOut 0.15s ease-in forwards; }
+.modal-backdrop-out { animation: futureBackdropOut 0.15s ease-in forwards; }
+
+/* Disclosed content (evidence lists, faded paths) arrives with a small,
+   settling rise instead of snapping in — the platform's one reveal gesture.
+   `backwards` keeps first paint at the from-state, so nothing flashes. */
+@keyframes revealIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.reveal-in { animation: revealIn 0.22s ease-out backwards; }
+
+/* THE focus treatment: one ring for every interactive element, keyed to the
+   existing --action-ring token (the same ring ui/button has always worn).
+   Outline-based so it follows any border-radius and needs no background
+   assumption — visible only for keyboard focus, never on click. */
+.focus-ring:focus {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--action-ring);
+  outline-offset: 2px;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .modal-in,
   .modal-out,
   .modal-backdrop-in,
-  .modal-backdrop-out {
+  .modal-backdrop-out,
+  .reveal-in {
     animation: none;
   }
 }

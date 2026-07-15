@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { layoutBranches } from "@/components/futures/branch-language";
@@ -40,6 +41,21 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
   const branches = useMemo(() => layoutBranches(active), [active]);
   const openBranch = branches.find((b) => b.futureSelf.id === openId) ?? null;
   const openFuture = openBranch?.futureSelf ?? null;
+
+  // The workflow bridge for the dialog footer: this future's strongest
+  // supporting situation, when the attribution carries one. Checking in
+  // there is exactly how the user keeps feeding this path — no new
+  // mechanics, just a door to the existing one.
+  const topSituation = (() => {
+    const row = openFuture?.supporting_situations?.[0] as
+      | Record<string, unknown>
+      | undefined;
+    const id = row?.momentId;
+    const title = row?.momentTitle;
+    return typeof id === "string" && typeof title === "string"
+      ? { id, title }
+      : null;
+  })();
 
   // Modal open/close plumbing.
   const close = useCallback(() => {
@@ -86,11 +102,14 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
   return (
     <div className="w-full">
       {active.length > 0 ? (
+        // The invitation speaks in the product's serif voice — the same
+        // voice as "You" and the destination names it introduces — so the
+        // heading belongs to the map instead of competing with it.
         <div className="text-center">
-          <h2 className="text-[22px] font-bold tracking-[-0.3px] text-[#111]">
+          <h2 className="font-voice text-[24px] font-medium tracking-[-0.01em] text-[#111]">
             Which future are you becoming?
           </h2>
-          <p className="mt-1.5 text-[13px] text-[#999999]">
+          <p className="mt-2 text-[13px] text-[#71717a]">
             Each branch is a possible life. Select one to explore it.
           </p>
         </div>
@@ -100,8 +119,9 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
         futureSelves={active}
         // Full width of this page's quieter, wider surface: the exact
         // Overview composition, faithfully enlarged — never reshaped. The
-        // generous top margin lets the hero breathe under its heading.
-        widthClassName="mt-10"
+        // top margin lets the hero breathe under its heading without
+        // pushing the map into the card's lower half.
+        widthClassName="mt-8"
         interaction={{
           kind: "dialog",
           openId,
@@ -141,7 +161,7 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
             aria-label={openFuture.name}
             onClick={(event) => event.stopPropagation()}
             onKeyDown={trapTab}
-            className={`relative flex max-h-[85vh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl ${
+            className={`relative flex max-h-[85vh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_8px_rgba(17,17,17,0.06),0_32px_80px_rgba(17,17,17,0.18)] ${
               closing ? "modal-out" : "modal-in"
             }`}
           >
@@ -155,7 +175,38 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
               ×
             </button>
             <div className="dialog-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
-              <FutureCard futureSelf={openFuture} accent={openBranch?.accent} />
+              {/* Frameless: the dialog shell already owns the radius and
+                  border, so the card's own frame would double it — and its
+                  rounded corners would scroll visibly through the middle. */}
+              <FutureCard
+                futureSelf={openFuture}
+                accent={openBranch?.accent}
+                frameless
+              />
+            </div>
+            {/* The exploration doesn't end at Close: one quiet line back
+                into the existing workflow — checking in on the situation
+                that feeds this future most, or opening a situation when the
+                attribution carries none. Existing routes only. */}
+            <div className="flex items-center justify-between gap-4 border-t border-zinc-100 px-8 py-3.5 sm:px-10">
+              <p className="hidden text-[13px] text-zinc-400 sm:block">
+                Futures strengthen with what you actually do.
+              </p>
+              {topSituation ? (
+                <Link
+                  href={`/moments/${topSituation.id}#check-in`}
+                  className="min-w-0 truncate rounded-md px-1 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
+                >
+                  Check in on “{topSituation.title}” →
+                </Link>
+              ) : (
+                <Link
+                  href="/moments"
+                  className="shrink-0 rounded-md px-1 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
+                >
+                  Explore a situation →
+                </Link>
+              )}
             </div>
           </div>
         </div>

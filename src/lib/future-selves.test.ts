@@ -510,8 +510,52 @@ describe("generateFutureSelves", () => {
     expect(event.percentage_after).toBe(75);
   });
 
-  it("updates an existing active future without recording any event when likelihood does not increase", async () => {
+  it("updates an existing active future and records a weakened event when its likelihood decreases", async () => {
     recognizeMock.mockReturnValue([{ ...MATCH, likelihood: 50 }]);
+    getIdentityByIdMock.mockReturnValueOnce(PROFILE);
+
+    const existingRow = {
+      id: "fs-1",
+      user_id: "user-1",
+      name: "Self-Reliant Builder",
+      status: "active",
+      percentage: 60,
+      evidence_strength: "Moderate",
+      identity_id: "self-reliant-builder",
+    };
+    const stub = createSupabaseStub({
+      behavior_observations: OBSERVATIONS_RESPONSE,
+      future_selves: [
+        { data: [existingRow], error: null },
+        { error: null },
+        { data: [existingRow], error: null },
+      ],
+      future_self_events: { error: null },
+    });
+    setActiveStub(stub);
+
+    await generateFutureSelves();
+
+    const updates = stub.calls.filter(
+      (c) => c.table === "future_selves" && c.method === "update",
+    );
+    expect(updates).toHaveLength(1);
+    const payload = updates[0].args[0] as Record<string, unknown>;
+    expect(payload.percentage).toBe(50);
+    expect(payload.previous_percentage).toBe(60);
+
+    const events = stub.calls.filter(
+      (c) => c.table === "future_self_events" && c.method === "insert",
+    );
+    expect(events).toHaveLength(1);
+    const event = events[0].args[0] as Record<string, unknown>;
+    expect(event.event_type).toBe("weakened");
+    expect(event.percentage_before).toBe(60);
+    expect(event.percentage_after).toBe(50);
+  });
+
+  it("updates an existing active future without recording any event when likelihood is unchanged", async () => {
+    recognizeMock.mockReturnValue([{ ...MATCH, likelihood: 60 }]);
     getIdentityByIdMock.mockReturnValueOnce(PROFILE);
 
     const existingRow = {

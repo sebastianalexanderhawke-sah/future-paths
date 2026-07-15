@@ -17,6 +17,9 @@ export const CONTEXT_PROFILES = [
   "timeline",
   "monthly_identity_narrative",
   "reflection_question",
+  // Emerging Situations: the original situation plus its recent entries,
+  // nothing else — detection compares the two.
+  "emerging_situation",
 ] as const;
 
 export type ContextProfile = (typeof CONTEXT_PROFILES)[number];

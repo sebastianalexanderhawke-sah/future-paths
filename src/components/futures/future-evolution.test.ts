@@ -178,7 +178,7 @@ describe("The preserved original Future Self", () => {
     // …and the fade kept out of the identity's own presentation: no trend
     // arrow or movement section leaks into the original card.
     expect(html).not.toContain("since your last update");
-    expect(html).not.toContain("View supporting evidence");
+    expect(html).not.toContain("What&#x27;s changed");
   });
 });
 
@@ -351,7 +351,7 @@ describe("Active future card hierarchy", () => {
     expect(html).not.toContain("Notice It When...");
   });
 
-  it("explains an increase with a grounded sentence, receipts behind a quiet action", () => {
+  it("explains an increase with a grounded sentence; receipts wait in the one evidence section", () => {
     const html = renderToString(
       createElement(FutureCard, {
         futureSelf: makeFuture({
@@ -365,12 +365,15 @@ describe("Active future card hierarchy", () => {
       }),
     );
 
-    expect(html).toContain("+12% since your last update");
+    expect(html).toContain("+12 since your last update");
     // The one-sentence explanation cites real data…
     expect(html).toContain("The database rewrite");
-    // …but the evidence list itself stays hidden until asked for.
-    expect(html).toContain("View supporting evidence");
+    // …but the receipts live only in the card's single evidence section,
+    // collapsed until asked for. The old inline movement disclosure is gone.
+    expect(html).toContain("Why Reflection Believes This");
+    expect(html).not.toContain("View supporting evidence");
     expect(html).not.toContain("Finished the migration ahead of schedule");
+    expect(html).not.toContain("From your recorded moments");
   });
 
   it("explains a decrease the same way — sentence visible, evidence on demand", () => {
@@ -386,19 +389,21 @@ describe("Active future card hierarchy", () => {
       }),
     );
 
-    expect(html).toContain("-8% since your last update");
+    expect(html).toContain("-8 since your last update");
     expect(html).toContain("pushed against this path");
-    expect(html).toContain("View supporting evidence");
+    expect(html).toContain("Why Reflection Believes This");
+    expect(html).not.toContain("View supporting evidence");
     expect(html).not.toContain("Dropped the weekly shipping habit");
   });
 
-  it("shows no movement section when nothing changed", () => {
+  it("shows no movement section when nothing changed — the evidence home remains", () => {
     const html = renderToString(
       createElement(FutureCard, {
         futureSelf: makeFuture({ percentage: 20, previous_percentage: 20 }),
       }),
     );
     expect(html).not.toContain("since your last update");
-    expect(html).not.toContain("View supporting evidence");
+    // The single evidence section is independent of movement.
+    expect(html).toContain("Why Reflection Believes This");
   });
 });

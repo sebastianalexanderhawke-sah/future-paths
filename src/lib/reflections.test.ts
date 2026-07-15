@@ -18,6 +18,7 @@ const {
   listMomentsMock,
   listActiveFutureSelvesMock,
   listFutureSelvesMock,
+  getRecentFutureSelfChangesMock,
   listIdentityUpdatesMock,
   getChosenPathsForMomentsMock,
   getLastCheckInsForMomentsMock,
@@ -29,6 +30,7 @@ const {
   listMomentsMock: vi.fn(),
   listActiveFutureSelvesMock: vi.fn(),
   listFutureSelvesMock: vi.fn(),
+  getRecentFutureSelfChangesMock: vi.fn(),
   listIdentityUpdatesMock: vi.fn(),
   getChosenPathsForMomentsMock: vi.fn(),
   getLastCheckInsForMomentsMock: vi.fn(),
@@ -48,6 +50,7 @@ vi.mock("@/lib/moments", () => ({
 vi.mock("@/lib/future-selves", () => ({
   listActiveFutureSelves: listActiveFutureSelvesMock,
   listFutureSelves: listFutureSelvesMock,
+  getRecentFutureSelfChanges: getRecentFutureSelfChangesMock,
 }));
 vi.mock("@/lib/identity-updates", () => ({
   listIdentityUpdates: listIdentityUpdatesMock,
@@ -230,6 +233,7 @@ describe("overview surfaces the waiting reflection", () => {
     listMomentsMock.mockResolvedValue({ moments: [] });
     listActiveFutureSelvesMock.mockResolvedValue({ futureSelves: [] });
     listFutureSelvesMock.mockResolvedValue({ futureSelves: [] });
+    getRecentFutureSelfChangesMock.mockResolvedValue([]);
     listIdentityUpdatesMock.mockResolvedValue({ identityUpdates: [] });
     getChosenPathsForMomentsMock.mockResolvedValue({});
     getLastCheckInsForMomentsMock.mockResolvedValue({});

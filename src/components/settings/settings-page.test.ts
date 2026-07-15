@@ -42,8 +42,6 @@ vi.mock("@/actions/billing", () => ({
 // The Reflection Activity card's read is user-level and ungated, so the
 // page always calls it; a quiet fixture keeps these tests about settings.
 vi.mock("@/lib/recent-activity", () => ({
-  ACTIVITY_FEED_LIMIT: 3,
-  ACTIVITY_FEED_POOL: 8,
   getEngagementActivity: vi.fn(async () => ({
     consistency: {
       weekDays: [false, false, false, false, false, false, false],
@@ -51,8 +49,6 @@ vi.mock("@/lib/recent-activity", () => ({
       currentStreak: 0,
       longestStreak: 0,
     },
-    weeklyCounts: { reflections: 0, checkIns: 0, pathsChosen: 0 },
-    items: [],
   })),
 }));
 vi.mock("@/lib/plan", async (importOriginal) => {

@@ -22,6 +22,11 @@ export const ANALYTICS_EVENTS = {
   futurePathChosen: "future_path_chosen",
   futureForecastGenerated: "future_forecast_generated",
   futureForecastViewed: "future_forecast_viewed",
+  // Emerging Situations: a high-confidence "new story" suggestion was stored
+  // for a situation / the user chose "Dismiss". Acceptance shows up as a
+  // regular situation_created from the prefilled flow.
+  emergingSituationSuggested: "emerging_situation_suggested",
+  emergingSituationDismissed: "emerging_situation_dismissed",
 
   // Future Selves
   futureSelvesViewed: "future_selves_viewed",

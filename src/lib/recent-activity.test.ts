@@ -1,15 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  ACTIVITY_FEED_LIMIT,
-  buildActivityFeed,
-  summarizeConsistency,
-  type EngagementActivityItem,
-} from "@/lib/recent-activity";
+import { summarizeConsistency } from "@/lib/recent-activity";
 
 // Consistency is observational arithmetic over existing timestamps — these
-// tests pin the day bucketing, the yesterday grace on the current streak,
-// and the never-invent rules of the feed.
+// tests pin the day bucketing and the yesterday grace on the current streak.
 
 const NOW = new Date("2026-07-11T18:00:00.000Z");
 
@@ -76,30 +70,3 @@ describe("summarizeConsistency", () => {
   });
 });
 
-describe("buildActivityFeed", () => {
-  function item(id: string, days: number): EngagementActivityItem {
-    return {
-      id,
-      kind: "check-in",
-      situationTitle: "Moving to Dallas",
-      occurredAt: daysAgo(days),
-    };
-  }
-
-  it("orders newest first and caps the feed at three", () => {
-    const feed = buildActivityFeed([
-      item("a", 5),
-      item("b", 0),
-      item("c", 3),
-      item("d", 1),
-      item("e", 2),
-      item("f", 6),
-    ]);
-    expect(feed).toHaveLength(ACTIVITY_FEED_LIMIT);
-    expect(feed.map((f) => f.id)).toEqual(["b", "d", "e"]);
-  });
-
-  it("never pads an empty feed", () => {
-    expect(buildActivityFeed([])).toEqual([]);
-  });
-});

@@ -33,6 +33,10 @@ export const CONTEXT_LIMITS = {
     answeredPrompts: 5,
     pastAlternativePaths: 5,
     lifeChapterEvidence: 8,
+    // Emerging Situations: how many of a situation's newest entries the
+    // detector reads — enough to establish "consistently", small enough that
+    // a long-resolved early topic can't outvote the emerging one.
+    emergingSituationRecentEntries: 6,
   },
   TOTAL_JSON_CHARS: 12_000,
 } as const;

@@ -64,6 +64,17 @@ export type IdentityContextBundle = {
   // Reflection Q&A pairs where the user has written an answer — the highest-confidence
   // identity evidence, separated from general check-ins so the AI can treat them distinctly.
   confirmedReflections?: { question: string; answer: string }[];
+  // Emerging Situations: the recent check-in entries of ONE situation, newest
+  // first — the user's own reflection text plus the stored summary and any
+  // answered reflection question, so detection reads what the entries are
+  // actually about rather than derived theme labels.
+  recentEntries?: {
+    reflection: string;
+    reality_summary: string;
+    reflection_question?: string | null;
+    reflection_answer?: string | null;
+    recorded_at: string;
+  }[];
   identityUpdates?: Pick<IdentityUpdate, "title" | "summary" | "themes">[];
   futureSelves?: Pick<
     FutureSelf,

@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 import { captureServerEvent } from "@/lib/analytics/server";
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
+import { maybeDetectEmergingSituation } from "@/lib/emerging-situation";
 import { queueFutureSelvesGeneration } from "@/lib/future-selves";
 import {
   reportDiscardedResultError,
@@ -250,6 +251,11 @@ export async function submitReflectionAnswer(
             { momentId: checkIn.moment_id, checkInId: checkIn.id },
           ),
         );
+
+      // Emerging Situations: a reflection answer is a full entry in its own
+      // right — it can tip "recent entries" into consistently telling a
+      // different story. Handles its own errors and skips internally.
+      await maybeDetectEmergingSituation(userId, checkIn.moment_id);
 
       // Advance the queue: evaluate the next unanswered check-in so the user
       // never lands on an empty reflection queue after answering one.

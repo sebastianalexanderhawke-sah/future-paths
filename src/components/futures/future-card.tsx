@@ -19,6 +19,12 @@ type FutureCardProps = {
    * back to a quiet neutral when rendered outside a branch context.
    */
   accent?: FutureCardAccent;
+  /**
+   * Presentation only: drops the card's own border and radius when a host
+   * surface (the deep-dive dialog) already provides the frame — otherwise
+   * the card's rounded corners scroll visibly inside the dialog.
+   */
+  frameless?: boolean;
 };
 
 const NEUTRAL_ACCENT: FutureCardAccent = { color: "#71717a", soft: "#f4f4f5" };
@@ -116,7 +122,7 @@ function BulletList({
  * lead with FadedFutureCard, which preserves this card behind its "View
  * original Future Self" reveal.
  */
-export function FutureCard({ futureSelf, accent }: FutureCardProps) {
+export function FutureCard({ futureSelf, accent, frameless = false }: FutureCardProps) {
   const tone = accent ?? NEUTRAL_ACCENT;
   const pct = Math.max(0, Math.min(100, futureSelf.percentage));
   const movement = getMovementStory(futureSelf);
@@ -174,22 +180,28 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
       ? futureSelf.summary
       : null;
 
-  // The receipts behind "What's changed": the recorded behavior that moved
-  // this future when the pipeline attributed any, otherwise the situations,
-  // check-ins, and reflections that support it. Hidden until asked for —
-  // the default reading stays calm.
-  const [showEvidence, setShowEvidence] = useState(false);
   // "Why Reflection Believes This" closes the card collapsed by default:
   // the reader meets the trait, sees what it builds and costs, and only
-  // then opens the receipts if curious.
+  // then opens the receipts if curious. It is the card's ONE evidence home
+  // (Phase 9.2): the personalized why_emerging checklist plus the raw
+  // receipts — the recorded behavior that moved this future when the
+  // pipeline attributed any, otherwise the situations, check-ins, and
+  // reflections that support it.
   const [showWhy, setShowWhy] = useState(false);
   const receipts =
     movement && movement.evidence.length > 0
       ? movement.evidence
       : getEvidence(futureSelf);
+  const hasEvidenceSection = evidenceBullets.length > 0 || receipts.length > 0;
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-zinc-100 bg-white">
+    <article
+      className={
+        frameless
+          ? "overflow-hidden bg-white"
+          : "overflow-hidden rounded-2xl border border-zinc-100 bg-white"
+      }
+    >
       {/* Accent band: the profile carries the color of the branch it grew
           from. */}
       <div aria-hidden="true" className="h-1" style={{ background: tone.color }} />
@@ -254,7 +266,8 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
         </div>
 
         {/* 2 — Has this future changed? The movement and one grounded
-            sentence; the receipts wait behind a quiet inline action. */}
+            sentence. The receipts behind it live in the card's single
+            evidence section below ("Why Reflection Believes This"). */}
         {movement ? (
           <div className="mt-8">
             <SectionLabel>What&apos;s changed</SectionLabel>
@@ -269,33 +282,6 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
               {" — "}
               {movement.lead}
             </p>
-            {receipts.length > 0 ? (
-              <div className="mt-3">
-                {showEvidence ? (
-                  <ul className="mb-3 max-w-[60ch] space-y-1.5">
-                    {receipts.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-600"
-                      >
-                        <span aria-hidden="true" className="mt-0.5 shrink-0 text-zinc-300">
-                          —
-                        </span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                <button
-                  type="button"
-                  aria-expanded={showEvidence}
-                  onClick={() => setShowEvidence((current) => !current)}
-                  className="cursor-pointer text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80"
-                >
-                  {showEvidence ? "Hide supporting evidence" : "View supporting evidence →"}
-                </button>
-              </div>
-            ) : null}
           </div>
         ) : null}
 
@@ -334,18 +320,19 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
           </div>
         ) : null}
 
-        {/* 6 — Why Reflection Believes This: the receipts, last and collapsed
-            by default — understand the trait, recognize it, then explore the
-            evidence if curious. Same quiet aria-expanded disclosure idiom as
-            every other in-card reveal. The checklist inside is unchanged:
-            one ✓ bullet per line of why_emerging. */}
-        {evidenceBullets.length > 0 ? (
+        {/* 6 — Why Reflection Believes This: the card's one evidence home,
+            last and collapsed by default — understand the trait, recognize
+            it, then explore the evidence if curious. Same quiet
+            aria-expanded disclosure idiom as every other in-card reveal.
+            Inside: the ✓ checklist (one bullet per line of why_emerging),
+            then the raw receipts from the user's recorded moments. */}
+        {hasEvidenceSection ? (
           <div className="mt-9 border-t border-zinc-100 pt-8">
             <button
               type="button"
               aria-expanded={showWhy}
               onClick={() => setShowWhy((current) => !current)}
-              className="flex w-full cursor-pointer items-center justify-between gap-4 text-left"
+              className="-mx-2 -my-1.5 flex w-[calc(100%+16px)] cursor-pointer items-center justify-between gap-4 rounded-lg px-2 py-1.5 text-left transition-colors duration-150 hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70"
             >
               <span className="min-w-0">
                 <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
@@ -358,7 +345,7 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
               <svg
                 viewBox="0 0 16 16"
                 aria-hidden="true"
-                className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform duration-150 ${
+                className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform duration-200 ease-out motion-reduce:transition-none ${
                   showWhy ? "rotate-180" : ""
                 }`}
               >
@@ -373,23 +360,47 @@ export function FutureCard({ futureSelf, accent }: FutureCardProps) {
               </svg>
             </button>
             {showWhy ? (
-              <ul className="mt-4 max-w-[60ch] space-y-2">
-                {evidenceBullets.map((bullet) => (
-                  <li
-                    key={bullet}
-                    className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-600"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="mt-px shrink-0 text-[13px] font-semibold"
-                      style={{ color: tone.color, opacity: 0.7 }}
-                    >
-                      ✓
-                    </span>
-                    {bullet}
-                  </li>
-                ))}
-              </ul>
+              <div className="reveal-in">
+                {evidenceBullets.length > 0 ? (
+                  <ul className="mt-4 max-w-[60ch] space-y-2">
+                    {evidenceBullets.map((bullet) => (
+                      <li
+                        key={bullet}
+                        className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-600"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="mt-px shrink-0 text-[13px] font-semibold"
+                          style={{ color: tone.color, opacity: 0.7 }}
+                        >
+                          ✓
+                        </span>
+                        {bullet}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {receipts.length > 0 ? (
+                  <div className={evidenceBullets.length > 0 ? "mt-5" : "mt-4"}>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+                      From your recorded moments
+                    </p>
+                    <ul className="mt-2.5 max-w-[60ch] space-y-1.5">
+                      {receipts.map((item) => (
+                        <li
+                          key={item}
+                          className="flex items-start gap-2.5 text-sm leading-relaxed text-zinc-600"
+                        >
+                          <span aria-hidden="true" className="mt-0.5 shrink-0 text-zinc-300">
+                            —
+                          </span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
             ) : null}
           </div>
         ) : null}

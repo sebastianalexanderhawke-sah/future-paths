@@ -13,6 +13,7 @@ import {
 import { requestCurrentSelfRegeneration } from "@/lib/current-self";
 import { hasForecastForMomentAndPath, saveForecast } from "@/lib/forecasts";
 import { queueFutureSelvesGeneration } from "@/lib/future-selves";
+import { maybeDetectEmergingSituation } from "@/lib/emerging-situation";
 import { createIdentityUpdateIfMeaningful } from "@/lib/identity-updates";
 import {
   reportDiscardedResultError,
@@ -525,6 +526,12 @@ export async function createCheckIn(
           console.error("[createCheckIn] Failed to persist reflection_question:", reflectionUpdateError.message);
         }
       }
+
+      // Emerging Situations: with this check-in recorded, do the situation's
+      // recent entries now consistently tell a different story? Handles its
+      // own errors and skips (dismissed, too few check-ins, suggestion
+      // already present) internally.
+      await maybeDetectEmergingSituation(userId, momentId);
 
       // Check-ins are lived evidence — the strongest signal Future Selves
       // respond to — so every check-in always triggers a regeneration. The

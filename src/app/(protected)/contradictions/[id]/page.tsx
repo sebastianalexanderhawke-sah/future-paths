@@ -89,7 +89,7 @@ export default async function ContradictionDetailPage({
           <section className="flex flex-col gap-4">
             <div>
               <h3 className="text-[17px] font-bold text-[#111]">History</h3>
-              <p className="mt-[3px] text-[13px] text-[#999999]">
+              <p className="mt-[3px] text-[13px] text-[#888888]">
                 How this tension has changed over time
               </p>
             </div>

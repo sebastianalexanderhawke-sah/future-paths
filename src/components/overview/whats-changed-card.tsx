@@ -11,15 +11,16 @@ import { OverviewCard } from "@/components/overview/overview-card";
 /**
  * One row of the three-second summary. This card answers "what changed?"
  * and nothing else — no stories, no explanations. WHY things are moving is
- * Pattern Emerging's job. A recent fade arrives here as an ordinary
- * "Faded" row whose delta is the strength the path last held.
+ * Pattern Emerging's job. Rows come from future_self_events: lifecycle
+ * transitions (New / Returned / Faded) carry no movement value; movement
+ * rows net the window's events into one signed number.
  */
 export type ChangeRow = {
   key: string;
   name: string;
-  /** One-word qualifier: Strengthened / Weakened / Faded / "N added". */
+  /** One-word qualifier: Strengthened / Weakened / Faded / Returned / New / "N added". */
   detail: string;
-  /** Signed percentage-point movement; null renders no delta (e.g. counts). */
+  /** Signed point movement, rendered without a "%"; null renders no delta (e.g. counts). */
   delta: number | null;
   kind: "up" | "down" | "added";
 };
@@ -27,18 +28,18 @@ export type ChangeRow = {
 // Movement is the row's meaning, so movement owns the color: green growth,
 // rose decline, blue for informational additions. Chips are outlined rings
 // on white — lighter than filled chips, so the delta stays the loudest
-// colored element in the row.
+// colored element in the row. Direction lives in the row icon and the
+// qualifier; the delta itself is only the signed number ("+5", "-4").
 const KIND_STYLES: Record<
   ChangeRow["kind"],
   {
     color: string;
-    glyph: string;
     Icon: (props: { size?: number }) => React.JSX.Element;
   }
 > = {
-  up: { color: "#10b981", glyph: "↑", Icon: IconArrowUpRight },
-  down: { color: "#f43f5e", glyph: "↓", Icon: IconArrowDownRight },
-  added: { color: "#3b82f6", glyph: "", Icon: IconPlus },
+  up: { color: "#10b981", Icon: IconArrowUpRight },
+  down: { color: "#f43f5e", Icon: IconArrowDownRight },
+  added: { color: "#3b82f6", Icon: IconPlus },
 };
 
 type WhatsChangedCardProps = {
@@ -103,10 +104,7 @@ export function WhatsChangedCard({ rows }: WhatsChangedCardProps) {
                     style={{ color: style.color }}
                   >
                     {row.delta > 0 ? "+" : ""}
-                    {row.delta}%
-                    {style.glyph ? (
-                      <span className="ml-1 text-[13px]">{style.glyph}</span>
-                    ) : null}
+                    {row.delta}
                   </span>
                 ) : null}
               </div>

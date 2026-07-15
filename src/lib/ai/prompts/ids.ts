@@ -21,6 +21,9 @@ export const PROMPT_MIGRATION_ORDER = [
   "alternate_self.generate",
   "monthly_identity_narrative.generate",
   "reflection_question.evaluate",
+  // Emerging Situations: decides whether a situation's recent entries have
+  // become a different story worth starting as a new situation.
+  "emerging_situation.detect",
   "timeline.generate",
 ] as const;
 

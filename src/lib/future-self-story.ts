@@ -37,7 +37,7 @@ export function situationTitles(raw: Record<string, unknown>[] | null): string[]
 
 export type MovementStory = {
   direction: "up" | "down";
-  /** e.g. "+12% since your last update" */
+  /** Signed point movement, no "%" — e.g. "+12 since your last update" */
   headline: string;
   /** One grounded sentence introducing the evidence. */
   lead: string;
@@ -73,7 +73,7 @@ export function getMovementStory(futureSelf: FutureSelf): MovementStory | null {
             "Recent patterns aligned more closely with this trajectory.";
     return {
       direction,
-      headline: `+${delta}% since your last update`,
+      headline: `+${delta} since your last update`,
       lead,
       evidence,
     };
@@ -86,7 +86,7 @@ export function getMovementStory(futureSelf: FutureSelf): MovementStory | null {
       : "No new evidence reinforced this path — recent patterns favored others.";
   return {
     direction,
-    headline: `${delta}% since your last update`,
+    headline: `${delta} since your last update`,
     lead,
     evidence,
   };

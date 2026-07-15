@@ -12,8 +12,10 @@ import {
   type ChangeRow,
 } from "@/components/overview/whats-changed-card";
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
-import { getFutureSelfTrend } from "@/lib/future-self-trend";
-import { listActiveFutureSelves, listFutureSelves } from "@/lib/future-selves";
+import {
+  getRecentFutureSelfChanges,
+  listActiveFutureSelves,
+} from "@/lib/future-selves";
 import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
 import { getChosenPathsForMoments } from "@/lib/paths";
@@ -21,10 +23,9 @@ import { getUnansweredReflectionSummary } from "@/lib/reflections";
 import { isCheckInStale } from "@/lib/relative-time";
 import { getUserIdentity } from "@/lib/user-identity";
 
-// How far back "since you last checked in" reaches for one-off events (a
-// path fading, new observations landing). Active-path movement carries its
-// own since-last-run snapshot; fades and additions only carry timestamps, so
-// they stay in the story for a week and then step aside.
+// How far back "since you last checked in" reaches: every What's Changed
+// row — movement, lifecycle transitions, and new observations alike — stays
+// in the story for a week and then steps aside.
 const RECENT_CHANGE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 function getGreeting(): string {
@@ -39,18 +40,18 @@ export default async function OverviewPage() {
     userIdentity,
     momentsResult,
     futuresResult,
-    fadedResult,
+    movementRows,
     reflectionSummaryResult,
     identityUpdatesResult,
   ] = await Promise.all([
     getUserIdentity(),
     listMoments(),
     listActiveFutureSelves(5),
-    // Weakening rarely survives as a "down" delta on an active row — when a
-    // path truly weakens the engine fades it out of the active set entirely
-    // (see the What's Changed assembly below). Read recent fades so the card
-    // can tell that side of the story too.
-    listFutureSelves({ status: "faded", limit: 8 }),
+    // What's Changed reads entirely from future_self_events: one row per
+    // future, lifecycle transitions (New / Returned / Faded) outranking
+    // netted movement (Strengthened / Weakened), movement sorted by
+    // absolute change — see composeFutureSelfChangeRows.
+    getRecentFutureSelfChanges(RECENT_CHANGE_WINDOW_MS),
     getUnansweredReflectionSummary(),
     listIdentityUpdates(10),
   ]);
@@ -58,7 +59,6 @@ export default async function OverviewPage() {
   const situations = "moments" in momentsResult ? momentsResult.moments : [];
   const futureSelves =
     "futureSelves" in futuresResult ? futuresResult.futureSelves : [];
-  const fadedSelves = "futureSelves" in fadedResult ? fadedResult.futureSelves : [];
   const reflectionSummary =
     "pending" in reflectionSummaryResult ? reflectionSummaryResult : null;
   const identityUpdates =
@@ -72,52 +72,7 @@ export default async function OverviewPage() {
     getLastCheckInsForMoments(momentIds),
   ]);
 
-  // ── What's Changed: a three-second summary of movement ───────────────
-  // Compact by design: name, one-word qualifier, signed delta. WHY things
-  // moved is Pattern Emerging's job; this card never explains.
-  const movers = futureSelves
-    .map((futureSelf) => ({ futureSelf, trend: getFutureSelfTrend(futureSelf) }))
-    .filter(({ trend }) => trend.direction === "up" || trend.direction === "down")
-    .sort((a, b) => Math.abs(b.trend.delta) - Math.abs(a.trend.delta));
-
   const now = Date.now();
-
-  // Recent fades join as "Faded" rows so the card can tell that side of the
-  // story — but with NO delta number. A fade is a lifecycle event (the path
-  // thinned out of the recognized set, or a library update retired it), not
-  // an evidence-driven score drop, and rendering its last-held strength as
-  // "-31%" read as the identity model collapsing. The previous_percentage
-  // filter still gates out rows that never held any strength.
-  const fadeMovementRows = fadedSelves
-    .filter(
-      (futureSelf) =>
-        now - Date.parse(futureSelf.updated_at) <= RECENT_CHANGE_WINDOW_MS,
-    )
-    .slice(0, 2)
-    .flatMap((futureSelf) => {
-      const lastStrength = futureSelf.previous_percentage;
-      if (lastStrength === null || lastStrength <= 0) return [];
-      return [
-        {
-          key: futureSelf.id,
-          name: futureSelf.name,
-          detail: "Faded",
-          delta: null,
-          kind: "down" as const,
-        },
-      ];
-    });
-
-  const movementRows = [
-    ...movers.map(({ futureSelf, trend }) => ({
-      key: futureSelf.id,
-      name: futureSelf.name,
-      detail: trend.direction === "up" ? "Strengthened" : "Weakened",
-      delta: Math.round(trend.delta),
-      kind: trend.direction === "up" ? ("up" as const) : ("down" as const),
-    })),
-    ...fadeMovementRows,
-  ].sort((a, b) => Math.abs(b.delta ?? 0) - Math.abs(a.delta ?? 0));
 
   // "New observations" is honest news, not a rolling total: only signals
   // recorded inside the recency window count, and a quiet week shows none.
@@ -203,14 +158,17 @@ export default async function OverviewPage() {
       <main className="flex-1 overflow-y-auto">
         <TrackView event="overview_viewed" />
         <div className="mx-auto max-w-[1120px] px-10 py-10">
-          {/* Page header */}
+          {/* Page header. The greeting owns this row: its subtitle sits
+              tight underneath in a legible gray, and the New-situation
+              action is the platform's quiet secondary button rather than a
+              second black focal point competing with the heading. */}
           <div className="mb-10 flex items-start justify-between">
             <div>
-              <h1 className="font-voice mb-1.5 text-[34px] font-medium tracking-[-0.5px] text-[#111]">
+              <h1 className="font-voice mb-1 text-[34px] font-medium tracking-[-0.5px] text-[#111]">
                 {getGreeting()}
                 {userIdentity.displayName ? `, ${userIdentity.displayName}` : ""}.
               </h1>
-              <p className="text-[15px] text-[#9ca3af]">
+              <p className="text-[15px] text-[#6b7280]">
                 {isQuietStart
                   ? "We're still building your story. As Reflection learns from your decisions, this page becomes a snapshot of how you're changing."
                   : "Here's where your life is moving."}
@@ -218,7 +176,7 @@ export default async function OverviewPage() {
             </div>
             <Link
               href="/moments/new"
-              className="shrink-0 rounded-xl bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+              className="shrink-0 rounded-xl border border-[#ececf0] bg-white px-[18px] py-2.5 text-[13px] font-semibold text-[#333333] transition-colors duration-150 hover:bg-[#f5f5f5]"
             >
               + New situation
             </Link>

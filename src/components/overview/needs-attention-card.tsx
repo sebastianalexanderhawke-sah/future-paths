@@ -102,7 +102,7 @@ export function NeedsAttentionCard({
                 key={item.key}
                 href={item.href}
                 className={[
-                  "flex items-center gap-4 py-[18px] transition-opacity duration-150 hover:opacity-80",
+                  "flex items-center gap-4 py-5 transition-opacity duration-150 hover:opacity-80",
                   i < items.length - 1 ? "border-b border-[#f5f5f5]" : "",
                 ].join(" ")}
               >
@@ -118,7 +118,7 @@ export function NeedsAttentionCard({
                     {item.situationName}
                   </span>
                   <span
-                    className="mt-0.5 block text-[12px] font-medium"
+                    className="mt-1 block text-[12px] font-medium"
                     style={{ color: chip.statusColor }}
                   >
                     {item.status}

@@ -1,5 +1,6 @@
 import { generateIdentityPromptsAction } from "@/actions/identity-prompts";
 import { IdentityPromptCard } from "@/components/identity-prompts/identity-prompt-card";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { AppShell } from "@/components/overview/app-shell";
 import { listIdentityPrompts } from "@/lib/identity-prompts";
 
@@ -40,12 +41,12 @@ export default async function IdentityPromptsPage({
           </p>
         </div>
         <form action={generateIdentityPromptsAction}>
-          <button
-            type="submit"
-            className="shrink-0 cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+          <PendingSubmitButton
+            spinner="onDark"
+            className="shrink-0 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
           >
             Generate prompts
-          </button>
+          </PendingSubmitButton>
         </form>
       </div>
 
@@ -79,7 +80,7 @@ export default async function IdentityPromptsPage({
           <section className="flex flex-col gap-4">
             <div>
               <h2 className="text-[17px] font-bold text-[#111]">Answered</h2>
-              <p className="mt-[3px] text-[13px] text-[#999999]">
+              <p className="mt-[3px] text-[13px] text-[#888888]">
                 Your recent answers
               </p>
             </div>

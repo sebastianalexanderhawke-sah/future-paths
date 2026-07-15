@@ -22,7 +22,7 @@ export function AlternatePathsDisclosure({ children }: AlternatePathsDisclosureP
       <h3 className="text-[15px] font-semibold text-[#111]">
         Alternate Paths You Didn&apos;t Choose
       </h3>
-      <p className="mt-[3px] text-[13px] text-[#999999]">
+      <p className="mt-[3px] text-[13px] text-[#888888]">
         {open
           ? "These were realistic futures available at the time."
           : "See the other futures this decision closed off."}

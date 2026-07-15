@@ -190,6 +190,18 @@ export function runMockGenerator(
     case "reflection_question.evaluate":
       return { should_reflect: false, question: null };
 
+    case "emerging_situation.detect":
+      // Deterministic mock verdict: recognizing that entries have drifted to
+      // a genuinely different story needs real reasoning, and a fabricated
+      // suggestion would prompt the user to split a situation that never
+      // split. The mock always reports no new story.
+      return {
+        new_story_detected: false,
+        confidence: "low",
+        suggested_title: null,
+        suggested_description: null,
+      };
+
     default:
       throw new Error(`Unsupported prompt id: ${promptId satisfies never}`);
   }

@@ -224,14 +224,10 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               </div>
             </OverviewCard>
 
-            {/* Reflection Activity — usage statistics, relocated from the
-                Overview (Phase 2): the profile is where personal statistics
-                belong. */}
-            <ReflectionActivityCard
-              items={engagementActivity.items}
-              consistency={engagementActivity.consistency}
-              weeklyCounts={engagementActivity.weeklyCounts}
-            />
+            {/* Reflection Activity — the lightweight consistency summary,
+                relocated from the Overview (Phase 2): the profile is where
+                personal statistics belong. */}
+            <ReflectionActivityCard consistency={engagementActivity.consistency} />
 
             {/* During the beta — honest expectation-setting, no dead controls. */}
             <OverviewCard className="px-9 py-7">

@@ -112,7 +112,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle: string })
   return (
     <div className="mb-4">
       <h2 className="text-[17px] font-bold text-[#111]">{title}</h2>
-      <p className="mt-[3px] text-[13px] text-[#999999]">{subtitle}</p>
+      <p className="mt-[3px] text-[13px] text-[#888888]">{subtitle}</p>
     </div>
   );
 }
@@ -370,7 +370,7 @@ export default async function WorkspacePage() {
             <section className="pb-14">
               <div className="mb-4">
                 <h2 className="text-[17px] font-bold text-[#111]">Completed</h2>
-                <p className="mt-[3px] text-[13px] text-[#999999]">
+                <p className="mt-[3px] text-[13px] text-[#888888]">
                   {completed.length} reflection{completed.length !== 1 ? "s" : ""}{" "}
                   finished — your thinking so far
                 </p>

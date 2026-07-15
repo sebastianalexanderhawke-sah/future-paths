@@ -285,6 +285,13 @@ type SituationEntryFlowProps = {
    * paths → a chosen path → its forecast.
    */
   fixedGoal?: SituationGoal;
+  /**
+   * Prefills for the describe stage (Emerging Situations passes the
+   * suggested title/description). Plain initial values in the same editable
+   * fields — the user changes anything before the situation is created.
+   */
+  initialTitle?: string;
+  initialContext?: string;
   /** Reports stage transitions so an embedding page can move its own chrome. */
   onStageChange?: (stage: Stage) => void;
   /**
@@ -303,6 +310,8 @@ type SituationEntryFlowProps = {
 
 export function SituationEntryFlow({
   fixedGoal,
+  initialTitle,
+  initialContext,
   onStageChange,
   onComplete,
   completeLabel,
@@ -311,8 +320,12 @@ export function SituationEntryFlow({
 
   const [stage, setStage] = useState<Stage>("describe");
 
-  const [situationText, setSituationText] = useState("");
-  const [additionalContext, setAdditionalContext] = useState("");
+  // The title input caps at 120 characters; a longer prefill would silently
+  // exceed what the user could have typed.
+  const [situationText, setSituationText] = useState(
+    (initialTitle ?? "").slice(0, 120),
+  );
+  const [additionalContext, setAdditionalContext] = useState(initialContext ?? "");
   const [goal, setGoal] = useState<SituationGoal | null>(fixedGoal ?? null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [questionsComplete, setQuestionsComplete] = useState(false);

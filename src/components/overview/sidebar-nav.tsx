@@ -108,7 +108,7 @@ export function SidebarNav({ items, activeHref }: SidebarNavProps) {
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             className={[
-              "flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13px] transition-colors duration-150",
+              "flex items-center gap-3 rounded-[10px] px-3 py-3 text-[13px] transition-colors duration-150",
               isActive
                 ? "bg-[#f5f3ff] font-semibold text-[#111]"
                 : "font-medium text-[#666666] hover:bg-[#f5f5f5] hover:text-[#111]",

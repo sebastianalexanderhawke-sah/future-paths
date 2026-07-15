@@ -234,7 +234,7 @@ export function SituationForecastSection({
 
         {mostRecentCheckIn ? (
           <div className="mt-7">
-            <p className="text-[12px] font-semibold text-[#999999]">
+            <p className="text-label text-ink-tertiary">
               Most recent check-in
             </p>
             <div className="mt-3">
@@ -249,7 +249,7 @@ export function SituationForecastSection({
 
         {historyCheckIns.length > 0 ? (
           <div className="mt-8 flex flex-col gap-3">
-            <p className="text-[12px] font-semibold text-[#999999]">
+            <p className="text-label text-ink-tertiary">
               Earlier check-ins
             </p>
             {historyCheckIns.map((checkIn) => (
@@ -290,7 +290,7 @@ export function SituationForecastSection({
           <button
             type="button"
             onClick={dismissTransition}
-            className="shrink-0 cursor-pointer rounded-full bg-[#f4f4f6] px-3 py-1 text-[12px] font-medium text-[#666666] transition-colors duration-150 hover:bg-[#ececf0]"
+            className="shrink-0 cursor-pointer rounded-full bg-[#f4f4f6] px-3 py-1 text-[12px] font-medium text-[#666666] transition-colors duration-150 hover:bg-[#ececf0] focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
           >
             Done
           </button>
@@ -300,7 +300,7 @@ export function SituationForecastSection({
       <div className="mt-6 flex flex-col gap-4">
         {transitioning && disappearedFutures.length > 0 ? (
           <div className="flex flex-col gap-2">
-            <p className="text-[12px] font-semibold text-[#999999]">
+            <p className="text-label text-ink-tertiary">
               No longer likely
             </p>
             {disappearedFutures.map((future) => (
@@ -311,9 +311,13 @@ export function SituationForecastSection({
 
         {isStructured ? (
           <>
+            {/* Group headers speak in the platform's label voice — the same
+                tracked caps the entry-flow forecast uses for these exact
+                groups — so the card titles stay the loudest text in the
+                section. */}
             {groupedFutures.risks.length > 0 ? (
               <div className="flex flex-col gap-3">
-                <p className="text-[12px] font-semibold text-[#999999]">
+                <p className="text-label text-ink-tertiary">
                   Things to Watch For
                 </p>
                 {groupedFutures.risks.map((future) => renderFutureCard(future))}
@@ -321,8 +325,10 @@ export function SituationForecastSection({
             ) : null}
 
             {groupedFutures.opportunities.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                <p className="text-[12px] font-semibold text-[#999999]">
+              // A step more air than the in-group card gap, so the two
+              // groups read as structure rather than one continuous list.
+              <div className="mt-3 flex flex-col gap-3">
+                <p className="text-label text-ink-tertiary">
                   Unexpected Opportunities
                 </p>
                 {groupedFutures.opportunities.map((future) => renderFutureCard(future))}
@@ -335,13 +341,29 @@ export function SituationForecastSection({
 
             {remainingFutures.length > 0 ? (
               <details className="group">
-                <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#7c3aed] [&::-webkit-details-marker]:hidden">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#7c3aed] focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+                  {/* The platform's one disclosure mark — a turning chevron,
+                      not text-glyph arrows. */}
+                  <svg
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none"
+                  >
+                    <path
+                      d="M4 6l4 4 4-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                   <span className="group-open:hidden">
-                    ▼ See all futures ({remainingFutures.length} more)
+                    See all futures ({remainingFutures.length} more)
                   </span>
-                  <span className="hidden group-open:inline">▲ Hide</span>
+                  <span className="hidden group-open:inline">Hide</span>
                 </summary>
-                <div className="mt-3 flex flex-col gap-4">
+                <div className="reveal-in mt-3 flex flex-col gap-4">
                   {remainingFutures.map((future) => renderFutureCard(future))}
                 </div>
               </details>

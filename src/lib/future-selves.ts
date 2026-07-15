@@ -17,6 +17,10 @@ import {
   selectFuturesFromBrief,
   type RecognizedFutureInput,
 } from "@/lib/future-selves-brief";
+import {
+  composeFutureSelfChangeRows,
+  type FutureSelfChangeRow,
+} from "@/lib/future-self-changes";
 import { getIdentityById } from "@/lib/identity-library";
 import {
   recognizeIdentitiesWithAttribution,
@@ -114,6 +118,42 @@ export async function loadFutureSelfEventsByFutureSelf(): Promise<
     (byFutureSelf[event.future_self_id] ??= []).push(event);
   }
   return byFutureSelf;
+}
+
+/**
+ * The Overview's What's Changed rows, read entirely from future_self_events
+ * inside the recency window — movement stays visible for the whole window
+ * instead of only until the next generation run. Aggregation (one row per
+ * future, lifecycle precedence, grew/weakened netting, decay-step
+ * exclusion) lives in composeFutureSelfChangeRows. Legacy rows without an
+ * identity_id never surface, matching every other Future Self read.
+ */
+export async function getRecentFutureSelfChanges(
+  windowMs: number,
+): Promise<FutureSelfChangeRow[]> {
+  const auth = await requireUser();
+  if ("error" in auth) {
+    return [];
+  }
+
+  const supabase = await createClient();
+  const since = new Date(Date.now() - windowMs).toISOString();
+
+  const [{ data: events }, { data: rows }] = await Promise.all([
+    supabase
+      .from("future_self_events")
+      .select("future_self_id, event_type, percentage_before, percentage_after, created_at")
+      .eq("user_id", auth.userId)
+      .gte("created_at", since)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("future_selves")
+      .select("id, name, status")
+      .eq("user_id", auth.userId)
+      .not("identity_id", "is", null),
+  ]);
+
+  return composeFutureSelfChangeRows(events ?? [], rows ?? []);
 }
 
 export type FutureSelfImpactEntry = {
@@ -226,7 +266,7 @@ export async function loadFutureSelfImpactByPath(): Promise<Map<string, FutureSe
 async function recordFutureSelfEvent(input: {
   userId: string;
   futureSelfId: string;
-  eventType: "emerged" | "grew" | "faded" | "returned";
+  eventType: "emerged" | "grew" | "weakened" | "faded" | "returned";
   percentageBefore: number | null;
   percentageAfter: number;
   summary: string;
@@ -807,6 +847,7 @@ export async function generateFutureSelves(
 
     // Active future — always snapshot previous_percentage for trend tracking.
     const percentageIncreased = percentage > existing.percentage;
+    const percentageDecreased = percentage < existing.percentage;
     const evidenceStrengthChanged = evidenceStrength !== existing.evidence_strength;
 
     const { error: updateError } = await supabase
@@ -833,6 +874,20 @@ export async function generateFutureSelves(
         percentageBefore: existing.percentage,
         percentageAfter: percentage,
         summary: `${profile.canonical_name} may be gaining strength.`,
+      });
+    }
+
+    // The decline counterpart of "grew": a matched active future whose
+    // likelihood decreased. Remaps stay silent for the same reason they
+    // record no grew event — a re-keyed epoch is a migration, not evidence.
+    if (percentageDecreased && !remapped) {
+      await recordFutureSelfEvent({
+        userId: auth.userId,
+        futureSelfId: existing.id,
+        eventType: "weakened",
+        percentageBefore: existing.percentage,
+        percentageAfter: percentage,
+        summary: `${profile.canonical_name} may be losing strength.`,
       });
     }
 

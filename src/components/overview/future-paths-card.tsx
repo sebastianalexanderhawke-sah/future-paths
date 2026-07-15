@@ -16,27 +16,23 @@ type FuturePathsCardProps = {
  */
 export function FuturePathsCard({ futureSelves }: FuturePathsCardProps) {
   return (
-    <OverviewCard className="px-9 pb-7 pt-7">
-      <div className="mb-4 flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span aria-hidden="true" className="text-[#8b5cf6]">
-              <IconRoute size={19} />
-            </span>
-            <h2 className="text-[22px] font-bold tracking-[-0.3px] text-[#111]">
-              Future Paths
-            </h2>
-          </div>
-          <p className="mt-1 text-[12px] text-[#aab0bb]">
-            Where you&apos;re headed
-          </p>
+    // Header grammar shared by every Overview card (icon 16 + 17px bold
+    // title, 12px subtitle, mb-8; footer action bottom-left behind pt-6).
+    // Horizontal padding stays px-9: the BranchMap below is the canonical
+    // 966px composition and must not change width.
+    <OverviewCard className="flex flex-col px-9 py-9">
+      <div className="mb-8">
+        <div className="flex items-center gap-2">
+          <span aria-hidden="true" className="text-[#8b5cf6]">
+            <IconRoute size={16} />
+          </span>
+          <h2 className="text-[17px] font-bold text-[#111]">
+            Future Paths
+          </h2>
         </div>
-        <Link
-          href="/future-selves"
-          className="text-[13px] font-medium text-[#9ca3af] transition-colors duration-150 hover:text-[#7c3aed]"
-        >
-          Explore all futures →
-        </Link>
+        <p className="mt-1 text-[12px] text-[#aab0bb]">
+          Where you&apos;re headed
+        </p>
       </div>
 
       <BranchMap
@@ -47,6 +43,12 @@ export function FuturePathsCard({ futureSelves }: FuturePathsCardProps) {
         interaction={{ kind: "link", href: "/future-selves" }}
       />
 
+      <Link
+        href="/future-selves"
+        className="mt-auto pt-6 text-[13px] font-medium text-[#9ca3af] transition-colors duration-150 hover:text-[#7c3aed]"
+      >
+        Explore all futures →
+      </Link>
     </OverviewCard>
   );
 }

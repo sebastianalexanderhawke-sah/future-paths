@@ -69,6 +69,10 @@ export async function buildIdentityContext(
       return await loadMonthlyIdentityNarrativeContext(base);
     case "reflection_question":
       return enforceContextLimits(loadReflectionQuestionContext(base, options));
+    case "emerging_situation":
+      return enforceContextLimits(
+        await loadEmergingSituationContext(supabase, base, options),
+      );
     default:
       return { error: "Unknown context profile." };
   }
@@ -757,5 +761,49 @@ function loadReflectionQuestionContext(
     ...base,
     reflection: options.overrides?.reflection,
     realitySummary: options.overrides?.realitySummary,
+  };
+}
+
+// Emerging Situations: the original story (title + description as first
+// written — deliberately NOT current_understanding, which evolves with the
+// very entries being compared) and the situation's recent entries, newest
+// first. Nothing else: detection is a comparison, not an identity analysis.
+async function loadEmergingSituationContext(
+  supabase: SupabaseClient,
+  base: IdentityContextBundle,
+  options: BuildContextOptions,
+): Promise<IdentityContextBundle> {
+  const momentId = options.overrides?.momentId;
+
+  if (!momentId) {
+    return base;
+  }
+
+  const [{ data: moment }, { data: checkIns }] = await Promise.all([
+    supabase
+      .from("moments")
+      .select("id, title, description")
+      .eq("id", momentId)
+      .eq("user_id", options.userId)
+      .maybeSingle(),
+    supabase
+      .from("check_ins")
+      .select("reflection, reality_summary, reflection_question, reflection_answer, created_at")
+      .eq("moment_id", momentId)
+      .eq("user_id", options.userId)
+      .order("created_at", { ascending: false })
+      .limit(CONTEXT_LIMITS.COUNTS.emergingSituationRecentEntries),
+  ]);
+
+  return {
+    ...base,
+    moment: moment ?? undefined,
+    recentEntries: (checkIns ?? []).map((checkIn) => ({
+      reflection: checkIn.reflection,
+      reality_summary: checkIn.reality_summary,
+      reflection_question: checkIn.reflection_question ?? null,
+      reflection_answer: checkIn.reflection_answer ?? null,
+      recorded_at: checkIn.created_at,
+    })),
   };
 }
