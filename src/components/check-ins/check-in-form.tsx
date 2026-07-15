@@ -81,7 +81,7 @@ export function CheckInForm({ momentId, onBeforeSubmit }: CheckInFormProps) {
       <button
         type="submit"
         disabled={pending}
-        className="self-start cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88] disabled:opacity-50"
+        className="self-start cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88] focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-50"
       >
         {pending ? "Recording…" : "Record check-in"}
       </button>

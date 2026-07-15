@@ -86,7 +86,7 @@ export function PremiumSection({ plan, showBillingNotice }: PremiumSectionProps)
             <form action={manageSubscription} className="mt-5">
               <button
                 type="submit"
-                className="cursor-pointer rounded-xl bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+                className="cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
               >
                 Manage Subscription
               </button>
@@ -110,7 +110,7 @@ export function PremiumSection({ plan, showBillingNotice }: PremiumSectionProps)
               <form action={startPremiumCheckout}>
                 <button
                   type="submit"
-                  className="cursor-pointer rounded-xl bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+                  className="cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
                 >
                   Upgrade to Premium — $9.99/month
                 </button>
@@ -118,7 +118,7 @@ export function PremiumSection({ plan, showBillingNotice }: PremiumSectionProps)
               <form action={buySituationTokens}>
                 <button
                   type="submit"
-                  className="cursor-pointer rounded-xl border border-[#e5e5e5] bg-white px-[18px] py-2.5 text-[13px] font-medium text-[#333333] transition-colors hover:border-[#111] hover:text-[#111]"
+                  className="cursor-pointer rounded-[10px] border border-[#e5e5e5] bg-white px-[18px] py-2.5 text-[13px] font-medium text-[#333333] transition-colors hover:border-[#111] hover:text-[#111]"
                 >
                   Buy {TOKENS_PER_PACK} Situation Tokens — $9.99
                 </button>

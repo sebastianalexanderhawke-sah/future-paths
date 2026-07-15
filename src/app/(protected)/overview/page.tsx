@@ -176,7 +176,7 @@ export default async function OverviewPage() {
             </div>
             <Link
               href="/moments/new"
-              className="shrink-0 rounded-xl border border-[#ececf0] bg-white px-[18px] py-2.5 text-[13px] font-semibold text-[#333333] transition-colors duration-150 hover:bg-[#f5f5f5]"
+              className="shrink-0 rounded-[10px] border border-[#ececf0] bg-white px-[18px] py-2.5 text-[13px] font-semibold text-[#333333] transition-colors duration-150 hover:bg-[#f5f5f5]"
             >
               + New situation
             </Link>
