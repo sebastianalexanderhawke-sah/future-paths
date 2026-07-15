@@ -10,9 +10,11 @@ type FuturePathsCardProps = {
 };
 
 /**
- * The overview's Future Paths section: the canonical branch visualization at
+ * The overview's Future Selves section: the canonical branch visualization at
  * dashboard scale. The dedicated Future Selves page renders the exact same
- * BranchMap larger — selecting any branch here zooms into that page.
+ * BranchMap larger — selecting any branch here zooms into that page. Titled
+ * "Future Selves" to match that page (and onboarding's vocabulary): a
+ * "Future Path" is a decision option inside a situation, never this map.
  */
 export function FuturePathsCard({ futureSelves }: FuturePathsCardProps) {
   return (
@@ -27,7 +29,7 @@ export function FuturePathsCard({ futureSelves }: FuturePathsCardProps) {
             <IconRoute size={16} />
           </span>
           <h2 className="text-[17px] font-bold text-[#111]">
-            Future Paths
+            Future Selves
           </h2>
         </div>
         <p className="mt-1 text-[12px] text-[#aab0bb]">

@@ -8,14 +8,15 @@ export default function SignupPage() {
       <div className="flex w-full max-w-sm flex-col items-center gap-8">
         <div className="flex flex-col items-center gap-2 text-center">
           <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-700">
-            Future Paths
+            Reflection
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
             Create account
           </h1>
           <p className="text-sm text-zinc-600">
-            Begin mapping the paths that shape you. Future Paths is in beta —
-            you&rsquo;re early, and your feedback shapes it.
+            Bring one real situation and follow it from first words to a
+            forecast. Reflection is in beta — you&rsquo;re early, and your
+            feedback shapes it.
           </p>
         </div>
 

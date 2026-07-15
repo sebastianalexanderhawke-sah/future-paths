@@ -7,6 +7,7 @@ import {
 } from "@/components/moments/situation-card";
 import { AppSidebar } from "@/components/overview/app-sidebar";
 import { OverviewCard } from "@/components/overview/overview-card";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
 import { listArchivedMoments, listMoments } from "@/lib/moments";
 import { getChosenPathsForMoments } from "@/lib/paths";
@@ -45,11 +46,7 @@ export default async function MomentsPage() {
     ]);
 
   if ("error" in activeResult) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{activeResult.error}</p>
-      </div>
-    );
+    return <PageLoadError retryHref="/moments" message={activeResult.error} />;
   }
 
   const active = activeResult.moments;

@@ -22,7 +22,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Future Paths",
+  title: "Reflection",
   description: "An identity exploration platform for meaningful decisions and emerging patterns.",
 };
 

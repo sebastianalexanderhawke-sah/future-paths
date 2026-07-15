@@ -38,7 +38,7 @@ export default function GlobalError({
               margin: "0 0 12px",
             }}
           >
-            Future Paths
+            Reflection
           </p>
           <h1
             style={{

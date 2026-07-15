@@ -278,13 +278,25 @@ describe("chapter — becoming portraits", () => {
 // ---------------------------------------------------------------------------
 
 describe("chapter — accent identity", () => {
-  it("colors the chapter title with the strongest shift's family", () => {
-    // Fixture's strongest shift is Courage → emerald family.
+  it("keeps the chapter headline in editorial ink, never the accent", () => {
+    // Fixture's strongest shift is Courage → emerald family; the cover
+    // headline still renders in ink (#111) with no accent-inked title.
     const preview = renderPreview(makeNarrative());
-    expect(preview).toContain("#065f46");
+    expect(preview).toContain("text-[#111]");
+    expect(preview).not.toContain("#065f46");
 
     const chapter = renderChapter(makeNarrative());
-    expect(chapter).toContain("#065f46");
+    expect(chapter).not.toContain("#065f46");
+  });
+
+  it("reserves the family accent for section marks inside the chapter", () => {
+    // Courage → emerald: the strong shade appears on tier labels and glyphs
+    // inside the opened chapter, not on the collapsed cover.
+    const chapter = renderChapter(makeNarrative());
+    expect(chapter).toContain("#059669");
+
+    const preview = renderPreview(makeNarrative());
+    expect(preview).not.toContain("#059669");
   });
 
   it("gives a difficult month its own quiet identity, not a warning color", () => {
@@ -292,20 +304,20 @@ describe("chapter — accent identity", () => {
       identityShifts: [{ theme: "Loneliness", value: 5 }],
       closingReflection: null,
     });
-    const html = renderPreview(makeNarrative(), slateStory);
+    const html = renderChapter(makeNarrative(), slateStory);
 
-    // Slate title, no red anywhere.
-    expect(html).toContain("#1e293b");
+    // Slate section accents, no red anywhere.
+    expect(html).toContain("#475569");
     expect(html).not.toContain("#dc2626");
   });
 
   it("falls back to the Timeline's emerald family when a month has no shifts", () => {
-    const html = renderPreview(
+    const html = renderChapter(
       makeNarrative(),
       makeStory({ identityShifts: [], closingReflection: null }),
     );
 
-    expect(html).toContain("#065f46");
+    expect(html).toContain("#059669");
   });
 });
 

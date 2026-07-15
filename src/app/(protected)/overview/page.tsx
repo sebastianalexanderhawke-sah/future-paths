@@ -105,11 +105,18 @@ export default async function OverviewPage() {
   const attentionItems: RankedAttentionRow[] = [];
 
   for (const moment of situations) {
-    if (isCheckInStale(lastCheckIns[moment.id])) {
+    // A situation with no check-ins becomes due the same 3 days after its
+    // creation, not immediately — onboarding promises the first ask comes
+    // "in a few days", and a minutes-old situation must never read as
+    // overdue. The label stays honest either way: a first check-in is
+    // "ready", only a lapsed rhythm is "overdue".
+    if (isCheckInStale(lastCheckIns[moment.id] ?? moment.created_at)) {
       attentionItems.push({
         key: `checkin-${moment.id}`,
         situationName: moment.title,
-        status: "Check-in overdue",
+        status: lastCheckIns[moment.id]
+          ? "Check-in overdue"
+          : "First check-in ready",
         kind: "overdue",
         href: `/moments/${moment.id}#check-in`,
         priority: 0,
@@ -142,9 +149,10 @@ export default async function OverviewPage() {
   const visibleAttentionItems = attentionItems.slice(0, 3);
   const hiddenAttentionCount = Math.max(0, attentionItems.length - 3);
 
-  // Before anything has been recorded, the page can't yet show where life is
-  // moving — the header says what it is becoming instead of overpromising.
-  const isQuietStart = situations.length === 0 && futureSelves.length === 0;
+  // Until Future Selves exist the branch map below is still a lone "You" —
+  // even right after the first situation — so the header says what the page
+  // is becoming instead of promising movement it can't show yet.
+  const isQuietStart = futureSelves.length === 0;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f4f6] text-[#111]">

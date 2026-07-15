@@ -11,6 +11,11 @@ import {
   IconPenLine,
   IconUser,
 } from "@/components/icons";
+import {
+  readSidebarCollapsed,
+  serverSidebarCollapsed,
+  subscribeSidebarCollapsed,
+} from "@/components/overview/sidebar-state";
 
 // Icon components resolved here (client side) from a string key, because
 // the server-rendered AppSidebar can't pass component functions across the
@@ -72,6 +77,14 @@ type SidebarNavProps = {
 
 export function SidebarNav({ items, activeHref }: SidebarNavProps) {
   const seen = useSyncExternalStore(emptySubscribe, readSeen, () => null);
+  // The rail state SidebarChrome toggles: collapsed, links shrink to their
+  // icons — active pill and activity dot preserved — and labels move into
+  // hover tooltips.
+  const collapsed = useSyncExternalStore(
+    subscribeSidebarCollapsed,
+    readSidebarCollapsed,
+    serverSidebarCollapsed,
+  );
 
   // Visiting a page marks it seen. The cached snapshot above is per-load, so
   // the dot on the page being read disappears without hiding sibling dots.
@@ -98,7 +111,7 @@ export function SidebarNav({ items, activeHref }: SidebarNavProps) {
   };
 
   return (
-    <nav className="flex flex-col gap-1 px-3">
+    <nav className={`flex flex-col gap-1 ${collapsed ? "px-2" : "px-3"}`}>
       {items.map((item) => {
         const isActive = item.href === activeHref;
         const Icon = NAV_ICONS[item.icon];
@@ -108,7 +121,8 @@ export function SidebarNav({ items, activeHref }: SidebarNavProps) {
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             className={[
-              "flex items-center gap-3 rounded-[10px] px-3 py-3 text-[13px] transition-colors duration-150",
+              "group/item relative flex items-center whitespace-nowrap rounded-[10px] py-3 text-[13px] transition-colors duration-150",
+              collapsed ? "justify-center px-0" : "gap-3 px-3",
               isActive
                 ? "bg-[#f5f3ff] font-semibold text-[#111]"
                 : "font-medium text-[#666666] hover:bg-[#f5f5f5] hover:text-[#111]",
@@ -122,9 +136,29 @@ export function SidebarNav({ items, activeHref }: SidebarNavProps) {
             >
               {Icon ? <Icon size={16} /> : null}
             </span>
-            {item.label}
+            {collapsed ? (
+              <span className="sr-only">{item.label}</span>
+            ) : (
+              item.label
+            )}
+            {/* The label as a hover tooltip while the rail is collapsed. */}
+            {collapsed ? (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-[#111] px-2.5 py-1.5 text-[12px] font-medium text-white shadow-lg group-hover/item:block"
+              >
+                {item.label}
+              </span>
+            ) : null}
             {showDot(item) ? (
-              <span className="ml-auto flex items-center" title="New activity">
+              <span
+                className={
+                  collapsed
+                    ? "absolute right-1.5 top-1.5 flex items-center"
+                    : "ml-auto flex items-center"
+                }
+                title="New activity"
+              >
                 <span className="h-[6px] w-[6px] rounded-full bg-[#6366f1] opacity-70" />
                 <span className="sr-only">New activity</span>
               </span>

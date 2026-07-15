@@ -59,7 +59,7 @@ export function DisplayNameForm({ currentName }: { currentName: string | null })
         Display name
       </label>
       <p className={helpClassName}>
-        How Future Paths greets you. Leave it blank to go without one.
+        How Reflection greets you. Leave it blank to go without one.
       </p>
       <div className="mt-2.5 flex items-center gap-2.5">
         <input

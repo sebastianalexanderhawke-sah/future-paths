@@ -943,10 +943,11 @@ export function SituationEntryFlow({
         <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5">
           <div>
             <h2 className="text-xl font-semibold text-zinc-900">
-              Help us understand your situation
+              Help Reflection understand your situation
             </h2>
             <p className="mt-1.5 text-sm text-zinc-500">
-              Answer a few questions so we can tailor the analysis to your specific situation.
+              Answer a few questions so everything that follows is grounded in
+              your actual situation.
             </p>
           </div>
 

@@ -5,6 +5,7 @@ import { OverviewCard } from "@/components/overview/overview-card";
 import { CompletedReflectionsList } from "@/components/reflections/completed-reflections-list";
 import { ReflectionPredictionCard } from "@/components/reflections/reflection-prediction-card";
 import { SituationTitleExpander } from "@/components/reflections/situation-title-expander";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { getLastCheckInsForMoments } from "@/lib/check-ins";
 import { listMoments } from "@/lib/moments";
 import { listReflectionCheckIns, type ReflectionCheckIn } from "@/lib/reflections";
@@ -126,9 +127,7 @@ export default async function WorkspacePage() {
 
   if ("error" in reflectionsResult) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{reflectionsResult.error}</p>
-      </div>
+      <PageLoadError retryHref="/reflections" message={reflectionsResult.error} />
     );
   }
 
@@ -168,9 +167,14 @@ export default async function WorkspacePage() {
     activeMoments.map((m) => m.id),
   );
   const needsCheckIn = activeMoments
+    // Never-checked-in situations become due 3 days after creation rather
+    // than instantly, matching both the row's own reason line ("enough time
+    // has passed") and onboarding's "in a few days" promise. Checking in
+    // earlier stays available on the situation page itself.
     .filter(
       (moment) =>
-        !seenMoments.has(moment.id) && isCheckInStale(lastCheckIns[moment.id]),
+        !seenMoments.has(moment.id) &&
+        isCheckInStale(lastCheckIns[moment.id] ?? moment.created_at),
     )
     .sort((a, b) => {
       const aTime = lastCheckIns[a.id] ? new Date(lastCheckIns[a.id]).getTime() : 0;

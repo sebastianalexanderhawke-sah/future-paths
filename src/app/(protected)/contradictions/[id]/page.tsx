@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/overview/app-shell";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { getContradiction } from "@/lib/contradictions";
 
 type ContradictionDetailPageProps = {
@@ -28,9 +29,7 @@ export default async function ContradictionDetailPage({
     }
 
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{result.error}</p>
-      </div>
+      <PageLoadError retryHref={`/contradictions/${id}`} message={result.error} />
     );
   }
 

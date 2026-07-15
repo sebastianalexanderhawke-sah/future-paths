@@ -8,6 +8,7 @@ import {
 } from "@/actions/alternate-selves";
 import { AlternativePathCard } from "@/components/alternate-selves/alternative-path-card";
 import { AppShell } from "@/components/overview/app-shell";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { getPastCrossroad } from "@/lib/past-crossroads";
 
 type AlternateSelfDetailPageProps = {
@@ -29,9 +30,7 @@ export default async function AlternateSelfDetailPage({
     }
 
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{result.error}</p>
-      </div>
+      <PageLoadError retryHref={`/alternate-selves/${id}`} message={result.error} />
     );
   }
 

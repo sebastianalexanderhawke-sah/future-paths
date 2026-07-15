@@ -1,7 +1,9 @@
 import { detectContradictionsAction } from "@/actions/contradictions";
 import { ContradictionCard } from "@/components/contradictions/contradiction-card";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { AppShell } from "@/components/overview/app-shell";
+import { OverviewCard } from "@/components/overview/overview-card";
 import { listContradictions } from "@/lib/contradictions";
 
 type ContradictionsPageProps = {
@@ -15,11 +17,7 @@ export default async function ContradictionsPage({
   const result = await listContradictions();
 
   if ("error" in result) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{result.error}</p>
-      </div>
-    );
+    return <PageLoadError retryHref="/contradictions" message={result.error} />;
   }
 
   const activeContradictions = result.contradictions.filter(
@@ -65,10 +63,14 @@ export default async function ContradictionsPage({
           </div>
 
           {activeContradictions.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-8 text-center text-sm text-zinc-600">
-              No active contradictions yet. Check in on your situations, then
-              detect tensions.
-            </div>
+            <OverviewCard className="px-8 py-7">
+              <p className="text-[13px] leading-relaxed text-[#888888]">
+                No tensions found yet. As your check-ins accumulate, Reflection
+                can notice where what you say you value and what you actually
+                choose pull in different directions — run a detection any time
+                to look.
+              </p>
+            </OverviewCard>
           ) : (
             <div className="flex flex-col gap-3">
               {activeContradictions.map((contradiction) => (

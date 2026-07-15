@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/overview/app-shell";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { PromptResponseForm } from "@/components/identity-prompts/prompt-response-form";
 import { getIdentityPrompt } from "@/lib/identity-prompts";
 
@@ -21,9 +22,7 @@ export default async function IdentityPromptDetailPage({
     }
 
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{result.error}</p>
-      </div>
+      <PageLoadError retryHref={`/identity-prompts/${id}`} message={result.error} />
     );
   }
 

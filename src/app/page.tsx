@@ -36,13 +36,13 @@ export default function LandingPage() {
         <nav className="flex items-center gap-5">
           <Link
             href="/login"
-            className="text-[13px] font-medium text-ink-secondary transition-colors hover:text-ink-primary"
+            className="text-[14px] font-medium text-ink-secondary transition-colors hover:text-ink-primary"
           >
             Sign in
           </Link>
           <Link
             href="/signup"
-            className="rounded-xl bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
+            className="rounded-xl bg-[#111] px-5 py-2.5 text-[14px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
           >
             Start Free
           </Link>
@@ -62,8 +62,8 @@ export default function LandingPage() {
 
       <footer className="border-t border-[#f0f0f0]">
         <div className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center justify-between gap-4 px-6 py-8">
-          <p className="text-[13px] text-ink-tertiary">Reflection</p>
-          <div className="flex items-center gap-4 text-[13px] text-ink-tertiary">
+          <p className="text-[14px] text-ink-tertiary">Reflection</p>
+          <div className="flex items-center gap-4 text-[14px] text-ink-tertiary">
             <Link href="/privacy" className="transition-colors hover:text-ink-primary">
               Privacy Policy
             </Link>

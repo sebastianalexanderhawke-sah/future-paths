@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Terms of Use — Future Paths",
-  description: "Lightweight terms for the Future Paths beta.",
+  title: "Terms of Use — Reflection",
+  description: "Lightweight terms for the Reflection beta.",
 };
 
 // Same honesty rule as the Privacy Policy: these terms describe the product
@@ -33,7 +33,7 @@ export default function TermsPage() {
       <article className="flex w-full max-w-2xl flex-col gap-10">
         <header className="flex flex-col gap-3">
           <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-700">
-            Future Paths
+            Reflection
           </Link>
           <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
             Terms of Use
@@ -42,7 +42,7 @@ export default function TermsPage() {
             For the beta · Last updated July 6, 2026
           </p>
           <p className="text-[15px] leading-7 text-zinc-600">
-            Future Paths is in beta. These terms are deliberately short and
+            Reflection is in beta. These terms are deliberately short and
             honest — they describe the deal between you and us as it actually
             is right now.
           </p>
@@ -84,7 +84,7 @@ export default function TermsPage() {
 
         <Section title="Your content is yours">
           <p className="text-[15px] leading-7 text-zinc-600">
-            Everything you write in Future Paths belongs to you. By using the
+            Everything you write in Reflection belongs to you. By using the
             product you give us permission to store and process it — including
             sending relevant parts to our AI provider — solely to make the
             product work for you. That&rsquo;s the only thing your content is

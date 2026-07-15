@@ -55,6 +55,7 @@ const D = {
   indigoText: "#8f9bf7",
   indigoTextHover: "#a7b1f8",
   indigoSoft: "#232647",
+  indigoBorder: "#3a4076",
   violetText: "#b39af9",
   violetTextHover: "#c3aefb",
   violetSoft: "#272247",
@@ -106,6 +107,8 @@ const MAP = {
 
   /* family soft surfaces */
   "bg|[#eef2ff]": bg(D.indigoSoft),
+  // Emerging-situation callout: the indigo soft surface at its 60% veil.
+  "bg|[#eef2ff]/60": bg("rgb(35 38 71 / 0.6)"),
   "bg|[#f5f3ff]": bg(D.violetSoft),
   "bg|[#f8f7ff]": bg(D.violetSoft),
   "bg|[#f5f5ff]": bg(D.violetSoft),
@@ -134,6 +137,7 @@ const MAP = {
   "text|[#9a9aa2]": tx(D.inkTertiary),
   "text|zinc-500": tx(D.inkTertiary),
   "text|[#6b7280]": tx(D.inkTertiary),
+  "text|[#71717a]": tx(D.inkTertiary),
   "text|[#9ca3af]": tx(D.inkQuiet),
   "text|[#a1a1aa]": tx(D.inkQuiet),
   "text|zinc-400": tx(D.inkQuiet),
@@ -163,7 +167,11 @@ const MAP = {
   "border|[#e2e2e8]": bd(D.border),
   "border|zinc-200": bd(D.border),
   "border|zinc-300": bd(D.borderStrong),
+  "border|[#d4d4d8]": bd(D.borderStrong), // spinner track on light surfaces
   "border|zinc-400": bd(D.borderFocus),
+  // The onDark spinner sits on action fills, which are LIGHT in dark mode —
+  // its track flips to the action-text ink at the same 30% veil.
+  "border|white/30": bd("rgb(23 24 27 / 0.3)"),
   "border|[#999999]": bd(D.borderFocus),
   "border|white": bd(D.surface),
   "border|zinc-900": bd(D.actionFill),
@@ -193,6 +201,7 @@ const MAP = {
   "text|[#10b981]": tx(D.emeraldText),
   "text|[#15803d]": tx(D.emeraldText),
   "text|[#f43f5e]": tx(D.roseText),
+  "text|rose-500": tx(D.roseText),
   "text|rose-700": tx(D.roseText),
   "text|[#e11d48]": tx(D.roseText),
   "text|red-700": tx(D.redText),
@@ -203,6 +212,7 @@ const MAP = {
 
   /* family borders */
   "border|amber-200": bd(D.amberBorder),
+  "border|[#e0e7ff]": bd(D.indigoBorder),
   "border|red-200": bd(D.redBorder),
 
   /* gradient stops (scroll fades over cards) */
@@ -239,6 +249,7 @@ const KEEP = new Set([
   "border|[#8b5cf6]",
   "text|[#f59e0b]",
   "text|[#fbbf24]",
+  "ring|zinc-400/70", // focus ring: mid gray reads on both themes
 ]);
 
 /* ── Variant handling ───────────────────────────────────────────────────── */

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/overview/app-shell";
 import { ChapterEvidence } from "@/components/timeline/chapter-evidence";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { getLifeChapter } from "@/lib/life-chapters";
 
 type TimelineDetailPageProps = {
@@ -33,11 +34,7 @@ export default async function TimelineDetailPage({ params }: TimelineDetailPageP
       notFound();
     }
 
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{result.error}</p>
-      </div>
-    );
+    return <PageLoadError retryHref={`/timeline/${id}`} message={result.error} />;
   }
 
   const { chapter, evidence } = result;

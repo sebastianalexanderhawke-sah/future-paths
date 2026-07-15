@@ -9,9 +9,9 @@
  */
 .dark .bg-\[\#111\] { background-color: #ececf0; color: #17181b; }
 .dark .bg-\[\#e8e8ee\] { background-color: #2c2c34; }
-.dark .bg-\[\#ececf0\] { background-color: #2c2c34; }
 .dark .bg-\[\#ecfdf5\] { background-color: #12291f; }
 .dark .bg-\[\#eef2ff\] { background-color: #232647; }
+.dark .bg-\[\#eef2ff\]\/60 { background-color: rgb(35 38 71 / 0.6); }
 .dark .bg-\[\#f4f4f6\] { background-color: #131316; }
 .dark .bg-\[\#f5f3ff\] { background-color: #272247; }
 .dark .bg-\[\#f5f5ff\] { background-color: #272247; }
@@ -28,6 +28,8 @@
 .dark .bg-zinc-200\/50 { background-color: rgb(58 58 66 / 0.5); }
 .dark .bg-zinc-50 { background-color: #26262d; }
 .dark .bg-zinc-900 { background-color: #ececf0; color: #17181b; }
+.dark .border-\[\#d4d4d8\] { border-color: #414149; }
+.dark .border-\[\#e0e7ff\] { border-color: #3a4076; }
 .dark .border-\[\#e5e5e5\] { border-color: #34343c; }
 .dark .border-\[\#ececec\] { border-color: #2a2a31; }
 .dark .border-\[\#ececf0\] { border-color: #2a2a31; }
@@ -38,17 +40,20 @@
 .dark .border-\[\#f2f2f4\] { border-color: #2a2a31; }
 .dark .border-\[\#f2f2f5\] { border-color: #2a2a31; }
 .dark .border-\[\#f5f5f5\] { border-color: #2a2a31; }
-.dark .border-\[\#f7f7f8\] { border-color: #2a2a31; }
 .dark .border-\[\#f7f7f9\] { border-color: #2a2a31; }
 .dark .border-amber-200 { border-color: #4d3d1c; }
 .dark .border-red-200 { border-color: #55262c; }
+.dark .border-t-white { border-top-color: #1c1c21; }
 .dark .border-white { border-color: #1c1c21; }
+.dark .border-white\/30 { border-color: rgb(23 24 27 / 0.3); }
 .dark .border-zinc-100 { border-color: #2a2a31; }
 .dark .border-zinc-200 { border-color: #34343c; }
 .dark .border-zinc-300 { border-color: #414149; }
 .dark .border-zinc-900 { border-color: #ececf0; }
+.dark .disabled\:hover\:bg-white:disabled:hover { background-color: #1c1c21; }
+.dark .disabled\:hover\:border-\[\#ececf0\]:disabled:hover { border-color: #2a2a31; }
+.dark .disabled\:hover\:text-\[\#333333\]:disabled:hover { color: #d3d3d9; }
 .dark .divide-\[\#f5f5f5\] > :not([hidden]) ~ :not([hidden]) { border-color: #2a2a31; }
-.dark .divide-\[\#f7f7f8\] > :not([hidden]) ~ :not([hidden]) { border-color: #2a2a31; }
 .dark .focus-visible\:ring-zinc-500:focus-visible { --tw-ring-color: #757580; }
 .dark .focus\:bg-white:focus { background-color: #1c1c21; }
 .dark .focus\:border-\[\#999999\]:focus { border-color: #55555e; }
@@ -87,7 +92,8 @@
 .dark .text-\[\#4f46e5\] { color: #8f9bf7; }
 .dark .text-\[\#555555\] { color: #bcbcc4; }
 .dark .text-\[\#666666\] { color: #a9a9b3; }
-.dark .text-\[\#6b6b76\] { color: #9b9ba5; }
+.dark .text-\[\#6b7280\] { color: #83838d; }
+.dark .text-\[\#71717a\] { color: #83838d; }
 .dark .text-\[\#777777\] { color: #9b9ba5; }
 .dark .text-\[\#7c3aed\] { color: #b39af9; }
 .dark .text-\[\#888888\] { color: #8e8e98; }
@@ -109,10 +115,10 @@
 .dark .text-amber-900 { color: #f5d08c; }
 .dark .text-emerald-600 { color: #3ecf94; }
 .dark .text-emerald-700 { color: #3ecf94; }
-.dark .text-red-400 { color: #fa8a8a; }
 .dark .text-red-500 { color: #f87171; }
 .dark .text-red-600 { color: #f87171; }
 .dark .text-red-700 { color: #f87171; }
+.dark .text-rose-500 { color: #fb7185; }
 .dark .text-rose-700 { color: #fb7185; }
 .dark .text-zinc-300 { color: #5d5d67; }
 .dark .text-zinc-400 { color: #757580; }

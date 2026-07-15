@@ -1,7 +1,4 @@
-import {
-  chapterAccentFor,
-  type ChapterAccent,
-} from "@/components/timeline/chapter-accent";
+import { chapterAccentFor } from "@/components/timeline/chapter-accent";
 import { ChapterWhatChanged } from "@/components/timeline/chapter-what-changed";
 import { ChapterSurface } from "@/components/timeline/chapter-surface";
 import type { MonthlyIdentityNarrative } from "@/lib/monthly-identity-narrative";
@@ -74,20 +71,19 @@ function TierLabel({ color, children }: { color: string; children: React.ReactNo
 }
 
 /**
- * The chapter's cover: month header, hairline, the serif accent-inked title,
+ * The chapter's cover: month header, hairline, the serif editorial title,
  * and the one-sentence teaser. Rendered identically in the collapsed and
  * expanded states — the cover stays put while the accordion swaps what sits
  * beneath it, so opening a chapter reveals the story without reprinting the
  * cover. Everything else (the identity comparison, the situations) lives
  * only inside the opened chapter.
+ *
+ * The headline is ink, never the month's accent: headings across Reflection
+ * speak in the editorial voice, and the family color is reserved for the
+ * meaningful accents inside the chapter (shift indicators, tier labels,
+ * the closing mark).
  */
-function ChapterCover({
-  narrative,
-  accent,
-}: {
-  narrative: MonthlyIdentityNarrative;
-  accent: ChapterAccent;
-}) {
+function ChapterCover({ narrative }: { narrative: MonthlyIdentityNarrative }) {
   // Only the dedicated cover line. Legacy narratives (written before the
   // teaser existed) show no teaser rather than borrowing the opening
   // portrait's first sentence — the portraits render inside the chapter, so
@@ -106,10 +102,7 @@ function ChapterCover({
       </div>
 
       <div className="border-t border-[#f0f0f0] pt-6">
-        <p
-          className="font-voice text-[28px] font-medium leading-[1.15] tracking-[-0.5px]"
-          style={{ color: accent.title }}
-        >
+        <p className="font-voice text-[28px] font-medium leading-[1.15] tracking-[-0.5px] text-[#111]">
           {narrative.headline}
         </p>
         {teaser ? (
@@ -136,11 +129,10 @@ export function MonthlyChapterPreview({
   story: ChapterStory | null;
 }) {
   const storyCount = story?.storylines.length ?? 0;
-  const accent = chapterAccentFor(story?.identityShifts ?? []);
 
   return (
     <div>
-      <ChapterCover narrative={narrative} accent={accent} />
+      <ChapterCover narrative={narrative} />
 
       {storyCount > 0 ? (
         <p className="mt-5 border-t border-[#f0f0f0] pt-5 text-[13px] font-medium text-[#888888]">
@@ -189,7 +181,7 @@ export function MonthlyChapter({ narrative, story }: MonthlyChapterProps) {
     <div className="flex flex-col gap-5">
       {/* The cover, unchanged from the collapsed card: opening the chapter
           keeps the cover in place and reveals the story below it. */}
-      <ChapterCover narrative={narrative} accent={accent} />
+      <ChapterCover narrative={narrative} />
 
       {/* 1. The chapter's centerpiece: who this person was becoming — the
           before/after identity portraits, still in motion, never a finished

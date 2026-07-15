@@ -4,6 +4,7 @@ import { FadedPathsSection } from "@/components/futures/faded-paths-section";
 import { RefreshFuturesButton } from "@/components/futures/refresh-futures-button";
 import { FutureSelvesExplorer } from "@/components/futures/future-selves-explorer";
 import { AppShell } from "@/components/overview/app-shell";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import {
   listFutureSelves,
   loadFutureSelfEventsByFutureSelf,
@@ -21,11 +22,7 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
   ]);
 
   if ("error" in result) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{result.error}</p>
-      </div>
-    );
+    return <PageLoadError retryHref="/future-selves" message={result.error} />;
   }
 
   return (

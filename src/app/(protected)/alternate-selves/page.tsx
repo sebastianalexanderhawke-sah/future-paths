@@ -2,17 +2,14 @@ import Link from "next/link";
 
 import { AlternateSelfCard } from "@/components/alternate-selves/alternate-self-card";
 import { AppShell } from "@/components/overview/app-shell";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { listPastCrossroads } from "@/lib/past-crossroads";
 
 export default async function AlternateSelvesPage() {
   const result = await listPastCrossroads();
 
   if ("error" in result) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{result.error}</p>
-      </div>
-    );
+    return <PageLoadError retryHref="/alternate-selves" message={result.error} />;
   }
 
   const { crossroads } = result;

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { generateCurrentSelfAction } from "@/actions/current-self";
 import { AnalysisDisclosure } from "@/components/current-self/analysis-disclosure";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { IdentityStrengthBadge } from "@/components/current-self/identity-strength-badge";
 import { AppSidebar } from "@/components/overview/app-sidebar";
@@ -100,11 +101,7 @@ export default async function CurrentSelfPage({
     ]);
 
   if ("error" in result) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{result.error}</p>
-      </div>
-    );
+    return <PageLoadError retryHref="/current-self" message={result.error} />;
   }
 
   const { currentSelf } = result;

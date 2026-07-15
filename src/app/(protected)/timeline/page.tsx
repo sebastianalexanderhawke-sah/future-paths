@@ -8,6 +8,7 @@ import {
   MonthlyChapter,
   MonthlyChapterPreview,
 } from "@/components/timeline/monthly-chapter";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { loadMonthlyIdentityNarratives } from "@/lib/monthly-identity-narrative";
 import { loadTimelineChapterStories } from "@/lib/timeline-chapter-story-loader";
 import type { ChapterStory } from "@/lib/timeline-chapter-story";
@@ -24,11 +25,7 @@ export default async function TimelinePage() {
     ]);
 
   if ("error" in result) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{result.error}</p>
-      </div>
-    );
+    return <PageLoadError retryHref="/timeline" message={result.error} />;
   }
 
   const { narratives } = result;

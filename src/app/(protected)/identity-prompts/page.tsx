@@ -1,7 +1,9 @@
 import { generateIdentityPromptsAction } from "@/actions/identity-prompts";
 import { IdentityPromptCard } from "@/components/identity-prompts/identity-prompt-card";
+import { PageLoadError } from "@/components/ui/page-load-error";
 import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { AppShell } from "@/components/overview/app-shell";
+import { OverviewCard } from "@/components/overview/overview-card";
 import { listIdentityPrompts } from "@/lib/identity-prompts";
 
 type IdentityPromptsPageProps = {
@@ -15,11 +17,7 @@ export default async function IdentityPromptsPage({
   const result = await listIdentityPrompts();
 
   if ("error" in result) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[#f4f4f6] px-6">
-        <p className="text-[13px] text-red-600">{result.error}</p>
-      </div>
-    );
+    return <PageLoadError retryHref="/identity-prompts" message={result.error} />;
   }
 
   const pendingPrompts = result.prompts.filter((prompt) => prompt.status === "pending");
@@ -63,10 +61,14 @@ export default async function IdentityPromptsPage({
           </div>
 
           {pendingPrompts.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-8 text-center text-sm text-zinc-600">
-              No pending prompts. Start a situation, check in, then generate
-              new questions.
-            </div>
+            <OverviewCard className="px-8 py-7">
+              <p className="text-[13px] leading-relaxed text-[#888888]">
+                No questions waiting. Prompts are drawn from the patterns in
+                what you&apos;ve recorded — once your situations and check-ins
+                give Reflection something to ask about, generating prompts
+                will offer questions worth sitting with.
+              </p>
+            </OverviewCard>
           ) : (
             <div className="flex flex-col gap-3">
               {pendingPrompts.map((prompt) => (

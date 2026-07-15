@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Future Paths",
-  description: "How Future Paths handles your data during the beta.",
+  title: "Privacy Policy — Reflection",
+  description: "How Reflection handles your data during the beta.",
 };
 
 // Honesty rule for this page: every statement below describes behavior that
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
       <article className="flex w-full max-w-2xl flex-col gap-10">
         <header className="flex flex-col gap-3">
           <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-700">
-            Future Paths
+            Reflection
           </Link>
           <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
             Privacy Policy
@@ -42,7 +42,7 @@ export default function PrivacyPage() {
             For the beta · Last updated July 6, 2026
           </p>
           <p className="text-[15px] leading-7 text-zinc-600">
-            Future Paths asks you to write down genuinely personal things —
+            Reflection asks you to write down genuinely personal things —
             decisions you&rsquo;re facing, how situations actually went, what
             you think they say about you. That only works if you know exactly
             what happens to those words. This page is the whole picture, in
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
 
         <Section title="What the AI processes">
           <p className="text-[15px] leading-7 text-zinc-600">
-            When Future Paths generates paths, forecasts, or identity insights,
+            When Reflection generates paths, forecasts, or identity insights,
             the relevant parts of what you&rsquo;ve written are sent to
             Anthropic&rsquo;s Claude API for processing, and the response is
             stored back into your account. Under Anthropic&rsquo;s commercial

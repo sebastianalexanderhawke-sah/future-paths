@@ -3,14 +3,13 @@ import type { IdentityShift } from "@/lib/timeline-chapter-story";
 /**
  * One accent per chapter, derived from the month's strongest identity shift.
  * Presentation only: the accent never encodes judgment — a slate Loneliness
- * month and an emerald Courage month use their colors identically (title,
- * hairlines, indicators). Shades follow the app's semantic ramp convention
- * (globals.css): 800 for text, 600/500 for strong marks, 400 for muted
- * values, 200/100 for pale fills and hairlines.
+ * month and an emerald Courage month use their colors identically
+ * (hairlines, indicators, tier labels). Shades follow the app's semantic
+ * ramp convention (globals.css): 600/500 for strong marks, 400 for muted
+ * values, 200/100 for pale fills and hairlines. Headings stay in editorial
+ * ink — the accent marks meaning inside a chapter, never its title.
  */
 export type ChapterAccent = {
-  /** Deep 800 shade — the chapter title's ink. */
-  title: string;
   /** 600 — strong text accents: rising values, disclosure links. */
   strong: string;
   /** 500 — solid indicators and rising bars. */
@@ -25,7 +24,6 @@ export type ChapterAccent = {
 
 const FAMILIES = {
   emerald: {
-    title: "#065f46",
     strong: "#059669",
     mid: "#10b981",
     muted: "#34d399",
@@ -33,7 +31,6 @@ const FAMILIES = {
     faint: "#d1fae5",
   },
   violet: {
-    title: "#5b21b6",
     strong: "#7c3aed",
     mid: "#8b5cf6",
     muted: "#a78bfa",
@@ -41,7 +38,6 @@ const FAMILIES = {
     faint: "#ede9fe",
   },
   indigo: {
-    title: "#3730a3",
     strong: "#4f46e5",
     mid: "#6366f1",
     muted: "#818cf8",
@@ -49,7 +45,6 @@ const FAMILIES = {
     faint: "#e0e7ff",
   },
   rose: {
-    title: "#9f1239",
     strong: "#e11d48",
     mid: "#f43f5e",
     muted: "#fb7185",
@@ -57,7 +52,6 @@ const FAMILIES = {
     faint: "#ffe4e6",
   },
   amber: {
-    title: "#92400e",
     strong: "#d97706",
     mid: "#f59e0b",
     muted: "#fbbf24",
@@ -65,7 +59,6 @@ const FAMILIES = {
     faint: "#fef3c7",
   },
   slate: {
-    title: "#1e293b",
     strong: "#475569",
     mid: "#64748b",
     muted: "#94a3b8",
