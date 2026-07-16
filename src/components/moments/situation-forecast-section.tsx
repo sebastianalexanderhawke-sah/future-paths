@@ -203,7 +203,7 @@ export function SituationForecastSection({
     <section id="check-in" className="scroll-mt-6">
       <OverviewCard className="px-9 py-7">
         <h2 className="text-[17px] font-bold text-[#111]">Check-in</h2>
-        <p className="mt-[3px] text-[13px] text-[#888888]">
+        <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
           Record what actually happened since your last forecast.
         </p>
 
@@ -220,7 +220,7 @@ export function SituationForecastSection({
             <p className="mt-2 text-[14px] leading-[1.7] text-[#111]">
               {pendingReflection.reflection_question}
             </p>
-            <p className="mt-1 text-[12px] text-[#999999]">
+            <p className="mt-1 text-[12px] text-[#707070]">
               This question is about how you operate, not just this situation.
             </p>
             <div className="mt-4">
@@ -276,11 +276,11 @@ export function SituationForecastSection({
           <h2 className="text-[17px] font-bold text-[#111]">
             Possible Futures
           </h2>
-          <p className="mt-[3px] text-[13px] text-[#888888]">
+          <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
             How this situation could unfold.
           </p>
           {checkInFirst && isRegenerated && generatedAt ? (
-            <p className="mt-1 text-[12px] text-[#bbbbbb]">
+            <p className="mt-1 text-[12px] text-[#767676]">
               Updated after your check-in on{" "}
               {new Date(generatedAt).toLocaleDateString()}
             </p>
@@ -290,7 +290,7 @@ export function SituationForecastSection({
           <button
             type="button"
             onClick={dismissTransition}
-            className="shrink-0 cursor-pointer rounded-full bg-[#f4f4f6] px-3 py-1 text-[12px] font-medium text-[#666666] transition-colors duration-150 hover:bg-[#ececf0] focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
+            className="shrink-0 cursor-pointer rounded-full bg-[#f4f4f6] px-3 py-1 text-[12px] font-medium text-[#666666] transition-colors duration-150 hover:bg-[#ececf0] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2"
           >
             Done
           </button>
@@ -341,7 +341,7 @@ export function SituationForecastSection({
 
             {remainingFutures.length > 0 ? (
               <details className="group">
-                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#7c3aed] focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md py-1 text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#7c3aed] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
                   {/* The platform's one disclosure mark — a turning chevron,
                       not text-glyph arrows. */}
                   <svg

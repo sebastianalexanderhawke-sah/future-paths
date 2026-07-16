@@ -2,26 +2,30 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import {
+  BecomingSection,
   ExampleJourneySection,
-  ExploreSection,
   FinalCtaSection,
-  HowItWorksSection,
   LandingHero,
   PricingSection,
 } from "@/components/landing/landing-sections";
 
 export const metadata: Metadata = {
-  title: "Reflection — every decision changes who you're becoming",
+  title: "Sibyl — every decision changes who you're becoming",
   description:
-    "Reflection helps you understand how today's choices shape your future, one situation at a time.",
+    "Sibyl helps you understand how today's choices shape your future, one situation at a time.",
 };
 
 /**
  * The public landing page. Deliberately just another Reflection page:
  * the app's canvas, cards, type scale, and buttons over illustrative
  * product fixtures — no marketing illustrations, no new visual styles.
- * A visitor should understand the whole loop (record a decision, explore
- * possible futures, watch who you're becoming) in under 30 seconds.
+ *
+ * The page tells ONE story: a single relatable situation followed from
+ * first words (Situation) through Future Paths, Future Forecast, and
+ * Future Self to the Workspace check-in. The worked example is the whole
+ * product explanation; the only section after it adds the one thing the
+ * example can't show (what a year of decisions draws on the map), then
+ * pricing and the close.
  */
 export default function LandingPage() {
   return (
@@ -31,7 +35,7 @@ export default function LandingPage() {
           href="/"
           className="font-voice text-[18px] font-medium tracking-[-0.01em] text-ink-primary"
         >
-          Reflection
+          Sibyl
         </Link>
         <nav className="flex items-center gap-5">
           <Link
@@ -53,16 +57,15 @@ export default function LandingPage() {
           section dividers, the way the product's own pages breathe. */}
       <main className="mx-auto flex w-full max-w-[1080px] flex-col gap-28 px-6 pb-28 pt-10 sm:gap-36 sm:pt-14">
         <LandingHero />
-        <HowItWorksSection />
         <ExampleJourneySection />
-        <ExploreSection />
+        <BecomingSection />
         <PricingSection />
         <FinalCtaSection />
       </main>
 
       <footer className="border-t border-[#f0f0f0]">
         <div className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center justify-between gap-4 px-6 py-8">
-          <p className="text-[14px] text-ink-tertiary">Reflection</p>
+          <p className="text-[14px] text-ink-tertiary">Sibyl</p>
           <div className="flex items-center gap-4 text-[14px] text-ink-tertiary">
             <Link href="/privacy" className="transition-colors hover:text-ink-primary">
               Privacy Policy

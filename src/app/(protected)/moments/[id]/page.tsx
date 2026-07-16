@@ -111,14 +111,15 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
       ? (checkIns.find((ci) => ci.reflection_question && !ci.reflection_answer) ?? null)
       : null;
 
-  // Object state, matching the Situations list exactly.
+  // Object state, matching the Situations list exactly. Chip text/surface
+  // pairs travel together inline, so each pair holds 4.5:1 on its own.
   const state = isArchived
-    ? { label: "Resolved", color: "#888888", soft: "#f4f4f6" }
+    ? { label: "Resolved", color: "#6b6b6b", soft: "#f4f4f6" }
     : !hasChosenPath
       ? { label: "Exploring options", color: "#666666", soft: "#f4f4f6" }
       : !hasCheckIns
-        ? { label: "Forecast", color: "#b45309", soft: "#eef2ff" }
-        : { label: "Checking in", color: "#10b981", soft: "#ecfdf5" };
+        ? { label: "Forecast", color: "#92400e", soft: "#eef2ff" }
+        : { label: "Checking in", color: "#047857", soft: "#ecfdf5" };
 
   const summaryCard = situationUnderstanding ? (
     <OverviewCard className="px-9 py-7">
@@ -133,7 +134,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
           {state.label}
         </span>
       </div>
-      <p className="mt-1 text-[13px] text-[#999999]">
+      <p className="mt-1 text-[13px] text-[#707070]">
         Started {new Date(moment.created_at).toLocaleDateString()} · Updated{" "}
         {formatRelativeTime(moment.updated_at)}
       </p>
@@ -145,7 +146,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
     <OverviewCard className="px-9 py-8">
       <div className="mb-6">
         <h2 className="text-[17px] font-bold text-[#111]">Chosen Path</h2>
-        <p className="mt-[3px] text-[13px] text-[#888888]">
+        <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
           The direction you committed to
         </p>
       </div>
@@ -170,7 +171,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
       <h2 className="text-[15px] font-semibold text-[#111]">
         Resolve Situation
       </h2>
-      <p className="mt-1 text-[13px] leading-relaxed text-[#999999]">
+      <p className="mt-1 text-[13px] leading-relaxed text-[#707070]">
         Once resolved, this situation moves to your archive and timeline.
         Nothing is deleted.
       </p>
@@ -194,20 +195,20 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
         userInitial={userIdentity.initial}
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[1120px] px-10 py-10">
           {/* Page header */}
           <div className="mb-10">
             <Link
               href="/moments"
-              className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#b45309]"
+              className="text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#b45309]"
             >
               ← All situations
             </Link>
             <h1 className="mb-1.5 mt-3 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
               {moment.title}
             </h1>
-            <p className="text-[15px] text-[#999999]">
+            <p className="text-[15px] text-[#707070]">
               Everything currently known about this situation.
             </p>
           </div>
@@ -282,7 +283,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                     <h2 className="text-[17px] font-bold text-[#111]">
                       What are you looking for?
                     </h2>
-                    <p className="mt-[3px] text-[13px] text-[#888888]">
+                    <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                       Choose how you want to explore this situation.
                     </p>
                   </div>
@@ -292,7 +293,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                       <p className="text-[14px] font-semibold text-[#111]">
                         Explore Decisions
                       </p>
-                      <p className="mt-0.5 text-[13px] text-[#888888]">
+                      <p className="mt-0.5 text-[13px] text-[#6b6b6b]">
                         I haven&apos;t decided yet. Help me think through my options.
                       </p>
                       <form action={generatePathsAction} className="mt-4">
@@ -310,7 +311,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                       <p className="text-[14px] font-semibold text-[#111]">
                         Forecast Futures
                       </p>
-                      <p className="mt-0.5 text-[13px] text-[#888888]">
+                      <p className="mt-0.5 text-[13px] text-[#6b6b6b]">
                         This is already happening. Help me understand what may come next.
                       </p>
                       <form action={generateForecastForMomentAction} className="mt-4">
@@ -337,7 +338,7 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                     <h2 className="text-[17px] font-bold text-[#111]">
                       Your options
                     </h2>
-                    <p className="mt-[3px] text-[13px] text-[#888888]">
+                    <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                       Choose one to move forward
                     </p>
                   </div>
@@ -381,10 +382,10 @@ export default async function MomentPage({ params, searchParams }: MomentPagePro
                     <h2 className="text-[17px] font-bold text-[#111]">
                       Possible Futures
                     </h2>
-                    <p className="mt-[3px] text-[13px] text-[#888888]">
+                    <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                       How this situation could unfold.
                     </p>
-                    <p className="mt-5 max-w-[52em] text-[13px] leading-relaxed text-[#999999]">
+                    <p className="mt-5 max-w-[52em] text-[13px] leading-relaxed text-[#707070]">
                       The forecast for your chosen path hasn&apos;t been
                       generated yet. Once it runs, Reflection maps the risks
                       worth watching and the opportunities that could open up

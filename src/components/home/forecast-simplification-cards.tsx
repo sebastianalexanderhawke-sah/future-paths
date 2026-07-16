@@ -200,7 +200,7 @@ export function CurrentForecastFutureCard({
       ) : null}
 
       <details className="group">
-        <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 transition-colors duration-150 hover:bg-[var(--surface-muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-400/70 sm:px-5 [&::-webkit-details-marker]:hidden">
+        <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 transition-colors duration-150 hover:bg-[var(--surface-muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--action-ring)] sm:px-5 [&::-webkit-details-marker]:hidden">
           <div className="flex min-w-0 flex-col gap-2">
             {timeframeLabel ? (
               <span className="self-start rounded-full bg-[var(--state-emerging)]/15 px-2.5 py-0.5 text-label font-semibold text-[var(--state-emerging)]">
@@ -272,7 +272,7 @@ export function CurrentForecastFutureCard({
 
           {future.expansion ? (
             <details className="text-body-small text-ink-secondary">
-              <summary className="cursor-pointer rounded-md text-ink-tertiary transition-colors duration-150 hover:text-ink-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2">
+              <summary className="cursor-pointer rounded-md text-ink-tertiary transition-colors duration-150 hover:text-ink-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2">
                 View full reasoning
               </summary>
               <p className="reveal-in mt-2 border-t border-[var(--ink-tertiary)]/10 pt-2">

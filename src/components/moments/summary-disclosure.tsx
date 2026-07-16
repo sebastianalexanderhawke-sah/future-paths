@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 const MIN_PREVIEW_SENTENCES = 3;
 const MAX_PREVIEW_SENTENCES = 4;
@@ -21,6 +21,7 @@ type SummaryDisclosureProps = {
  */
 export function SummaryDisclosure({ text }: SummaryDisclosureProps) {
   const [open, setOpen] = useState(false);
+  const contentId = useId();
 
   const sentences = splitSentences(text);
   const previewCount = Math.min(
@@ -32,7 +33,7 @@ export function SummaryDisclosure({ text }: SummaryDisclosureProps) {
 
   if (!hasMore) {
     return (
-      <p className="mt-4 max-w-[56em] text-[14px] leading-[1.7] text-[#777777]">
+      <p className="mt-4 max-w-[56em] text-[14px] leading-[1.7] text-[#707070]">
         {text}
       </p>
     );
@@ -41,7 +42,7 @@ export function SummaryDisclosure({ text }: SummaryDisclosureProps) {
   return (
     <div className="mt-4">
       <div className="relative">
-        <p className="max-w-[56em] text-[14px] leading-[1.7] text-[#777777]">
+        <p id={contentId} className="max-w-[56em] text-[14px] leading-[1.7] text-[#707070]">
           {open ? text : preview}
         </p>
         {!open ? (
@@ -54,6 +55,7 @@ export function SummaryDisclosure({ text }: SummaryDisclosureProps) {
       <button
         type="button"
         aria-expanded={open}
+        aria-controls={contentId}
         onClick={() => setOpen((current) => !current)}
         className="mt-2 cursor-pointer text-[13px] font-medium text-[#b45309] transition-opacity duration-150 hover:opacity-80"
       >

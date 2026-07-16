@@ -25,7 +25,7 @@ export function ReflectionActivityCard({
         <h2 className="text-[17px] font-bold text-[#111]">
           Reflection Activity
         </h2>
-        <p className="mt-[3px] text-[13px] text-[#888888]">
+        <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
           How you&apos;ve been using Reflection
         </p>
       </div>
@@ -37,7 +37,7 @@ export function ReflectionActivityCard({
 
       <Link
         href="/reflections"
-        className="mt-3 inline-block text-[13px] font-medium text-[#9ca3af] transition-colors duration-150 hover:text-[#7c3aed]"
+        className="mt-3 inline-block text-[13px] font-medium text-[#6b7280] transition-colors duration-150 hover:text-[#7c3aed]"
       >
         See activity →
       </Link>

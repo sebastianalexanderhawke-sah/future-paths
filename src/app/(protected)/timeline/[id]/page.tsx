@@ -45,7 +45,7 @@ export default async function TimelineDetailPage({ params }: TimelineDetailPageP
       <div className="mb-10">
         <Link
           href="/timeline"
-          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857]"
+          className="text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#047857]"
         >
           ← Timeline
         </Link>
@@ -57,8 +57,8 @@ export default async function TimelineDetailPage({ params }: TimelineDetailPageP
       <div className="flex max-w-2xl flex-col gap-8 pb-14">
         <article className="rounded-lg border border-zinc-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-zinc-400">{chapter.period_label}</p>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-zinc-500">{chapter.period_label}</p>
+            <p className="text-xs text-zinc-500">
               {formatDateRange(chapter.starts_at, chapter.ends_at)}
             </p>
           </div>

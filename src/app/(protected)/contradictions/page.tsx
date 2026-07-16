@@ -35,7 +35,7 @@ export default async function ContradictionsPage({
           <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
             Contradictions
           </h1>
-          <p className="text-[15px] text-[#999999]">
+          <p className="text-[15px] text-[#707070]">
             Identity tensions surfaced from your current self, futures, and
             check-ins — tentative, never judgmental.
           </p>
@@ -64,7 +64,7 @@ export default async function ContradictionsPage({
 
           {activeContradictions.length === 0 ? (
             <OverviewCard className="px-8 py-7">
-              <p className="text-[13px] leading-relaxed text-[#888888]">
+              <p className="text-[13px] leading-relaxed text-[#6b6b6b]">
                 No tensions found yet. As your check-ins accumulate, Reflection
                 can notice where what you say you value and what you actually
                 choose pull in different directions — run a detection any time
@@ -84,7 +84,7 @@ export default async function ContradictionsPage({
           <section className="flex flex-col gap-4">
             <div>
               <h2 className="text-[17px] font-bold text-[#111]">Resolved or faded</h2>
-              <p className="mt-[3px] text-[13px] text-[#888888]">
+              <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                 Tensions that no longer appear in the latest detection pass
               </p>
             </div>

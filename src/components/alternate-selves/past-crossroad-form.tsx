@@ -30,7 +30,7 @@ export function PastCrossroadForm() {
           placeholder="I attended a local university close to home."
           className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none focus:border-zinc-400"
         />
-        <p className="text-xs text-zinc-400">
+        <p className="text-xs text-zinc-500">
           Describe the path you actually took — the decision that already happened.
         </p>
       </div>

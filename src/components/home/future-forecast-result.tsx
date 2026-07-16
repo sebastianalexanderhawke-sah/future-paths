@@ -133,7 +133,7 @@ export function FutureForecastResultView({ forecast }: FutureForecastResultProps
 
         <Link
           href={`/moments/${forecast.momentId}`}
-          className="self-start rounded-md text-body-small text-ink-secondary underline-offset-4 transition-colors duration-150 hover:text-ink-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
+          className="self-start rounded-md text-body-small text-ink-secondary underline-offset-4 transition-colors duration-150 hover:text-ink-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2"
         >
           View tracked situation
         </Link>

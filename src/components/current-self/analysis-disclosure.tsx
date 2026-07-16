@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 type AnalysisDisclosureProps = {
   /** The deeper portrait paragraphs shown after the hero's lead observation. */
@@ -12,6 +12,7 @@ type AnalysisDisclosureProps = {
 // when the lead observation already covers the whole portrait.
 export function AnalysisDisclosure({ paragraphs }: AnalysisDisclosureProps) {
   const [open, setOpen] = useState(false);
+  const contentId = useId();
 
   if (paragraphs.length === 0) {
     return null;
@@ -20,11 +21,11 @@ export function AnalysisDisclosure({ paragraphs }: AnalysisDisclosureProps) {
   return (
     <div className="mt-6 border-t border-[#f0f0f0] pt-5">
       {open ? (
-        <div className="mb-3 flex flex-col gap-3">
+        <div id={contentId} className="mb-3 flex flex-col gap-3">
           {paragraphs.map((paragraph, i) => (
             <p
               key={i}
-              className="max-w-[52em] text-[14px] leading-[1.7] text-[#777777]"
+              className="max-w-[52em] text-[14px] leading-[1.7] text-[#707070]"
             >
               {paragraph}
             </p>
@@ -34,6 +35,7 @@ export function AnalysisDisclosure({ paragraphs }: AnalysisDisclosureProps) {
       <button
         type="button"
         aria-expanded={open}
+        aria-controls={open ? contentId : undefined}
         onClick={() => setOpen((current) => !current)}
         className="cursor-pointer text-[13px] font-medium text-[#4f46e5] transition-opacity duration-150 hover:opacity-80"
       >

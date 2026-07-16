@@ -53,7 +53,7 @@ function CardHeader({
           {title}
         </h2>
       </div>
-      <p className="mt-[3px] text-[13px] text-[#888888]">{subtitle}</p>
+      <p className="mt-[3px] text-[13px] text-[#6b6b6b]">{subtitle}</p>
     </div>
   );
 }
@@ -96,7 +96,7 @@ function ChapterCover({ narrative }: { narrative: MonthlyIdentityNarrative }) {
         <h2 className="text-[22px] font-bold tracking-[-0.3px] text-[#111]">
           {narrative.month}
         </h2>
-        <p className="mt-1 text-[13px] text-[#999999]">
+        <p className="mt-1 text-[13px] text-[#707070]">
           One month of your story.
         </p>
       </div>
@@ -135,7 +135,7 @@ export function MonthlyChapterPreview({
       <ChapterCover narrative={narrative} />
 
       {storyCount > 0 ? (
-        <p className="mt-5 border-t border-[#f0f0f0] pt-5 text-[13px] font-medium text-[#888888]">
+        <p className="mt-5 border-t border-[#f0f0f0] pt-5 text-[13px] font-medium text-[#6b6b6b]">
           {storyCount === 1
             ? "1 story changed this month."
             : `${storyCount} stories changed this month.`}
@@ -199,7 +199,7 @@ export function MonthlyChapter({ narrative, story }: MonthlyChapterProps) {
               the past state in muted ink, the emerging one in body ink. */}
           <div>
             <TierLabel color={accent.strong}>{`Beginning of ${monthName}`}</TierLabel>
-            <p className="mt-2 max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
+            <p className="mt-2 max-w-[52em] text-[14px] leading-[1.7] text-[#707070]">
               {narrative.openingBeginning}
             </p>
           </div>

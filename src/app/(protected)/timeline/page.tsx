@@ -45,7 +45,7 @@ export default async function TimelinePage() {
         userInitial={userIdentity.initial}
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto">
         <TrackView event="timeline_viewed" />
         <div className="mx-auto max-w-[1120px] px-10 py-10">
           {/* Page header */}
@@ -53,7 +53,7 @@ export default async function TimelinePage() {
             <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
               Timeline
             </h1>
-            <p className="text-[15px] text-[#999999]">
+            <p className="text-[15px] text-[#707070]">
               Your personal evolution, one chapter at a time.
             </p>
           </div>
@@ -64,7 +64,7 @@ export default async function TimelinePage() {
                 <p className="font-voice text-[22px] font-medium tracking-[-0.3px] text-[#111]">
                   Your first chapter is still being written.
                 </p>
-                <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#999999]">
+                <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#707070]">
                   Reflection composes a chapter for each month once it has
                   observed enough meaningful change to tell a complete story.
                   The month you&apos;re living now is already gathering

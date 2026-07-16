@@ -60,6 +60,9 @@
   --accent-moments: var(--c-amber-700);
   --accent-growth: var(--c-emerald-700);
   --accent-attention: var(--c-rose-600);
+  /* Informational blue — status text for "open decision"/"added" rows.
+     Not a family of its own; text-only, AA on white, lightened for dark. */
+  --accent-info: #2563eb;
 }
 
 @keyframes scrollBall {
@@ -172,10 +175,11 @@ html {
   --surface-muted: #f4f4f6;
   --surface-raised: #ffffff;
 
-  /* Ink */
+  /* Ink — tertiary must hold 4.5:1 for small text on both white cards and
+     the #f4f4f6 canvas (WCAG 1.4.3), so it sits at #707070, not lighter. */
   --ink-primary: #111111;
   --ink-secondary: #666666;
-  --ink-tertiary: #999999;
+  --ink-tertiary: #707070;
 
   /* Actions — primary buttons are ink-on-white everywhere in the app */
   --action-fill: #111111;
@@ -183,7 +187,9 @@ html {
   --action-text: #ffffff;
   --action-soft-fill: #ececf0;
   --action-soft-fill-hover: #e0e0e6;
-  --action-ring: rgb(17 17 17 / 0.3);
+  /* THE keyboard focus ring. 0.65 alpha blends to ~#6a6a6a on white —
+     ≥3:1 against every surface (WCAG 1.4.11); 0.3 was invisible (~2:1). */
+  --action-ring: rgb(17 17 17 / 0.65);
 
   /* Legacy aliases (existing pages) */
   --background: var(--canvas);
@@ -224,8 +230,10 @@ html {
   --text-quote-size: 1.0625rem;
   --text-quote-leading: 1.5;
 
-  /* Theme colors — Connection */
-  --theme-connection-primary: #b85a4e;
+  /* Theme colors — Connection
+     (Chip-text "primary" tones sit at ≥4.5:1 over their soft surfaces —
+     the five that used to fail AA at chip size are darkened one step.) */
+  --theme-connection-primary: #a1453a;
   --theme-connection-secondary: #e8a598;
   --theme-connection-soft: #f9ebe8;
   --theme-connection-soft-dark: rgb(42 30 28 / 0.8);
@@ -260,14 +268,14 @@ html {
   --theme-creativity-glow: #a84e7a;
 
   /* Theme colors — Growth */
-  --theme-growth-primary: #3d8260;
+  --theme-growth-primary: #35714f;
   --theme-growth-secondary: #7ab89a;
   --theme-growth-soft: #e8f4ed;
   --theme-growth-soft-dark: rgb(26 34 28 / 0.85);
   --theme-growth-glow: #3d8260;
 
   /* Theme colors — Belonging */
-  --theme-belonging-primary: #9a7344;
+  --theme-belonging-primary: #7d5c2c;
   --theme-belonging-secondary: #c4a078;
   --theme-belonging-soft: #f5ede3;
   --theme-belonging-soft-dark: rgb(36 30 24 / 0.85);
@@ -288,7 +296,7 @@ html {
   --theme-reflection-glow: #5c6370;
 
   /* Theme colors — Courage */
-  --theme-courage-primary: #b84e32;
+  --theme-courage-primary: #9e4129;
   --theme-courage-secondary: #d88468;
   --theme-courage-soft: #f9ebe6;
   --theme-courage-soft-dark: rgb(40 26 22 / 0.85);
@@ -297,7 +305,7 @@ html {
   /* Theme colors — Tension (shared identity for all difficult themes:
      Loneliness, Disappointment, Grief, Frustration, Uncertainty, Hurt,
      Acceptance, Resilience) — reuses the contradiction-detected amber tone. */
-  --theme-tension-primary: #b45309;
+  --theme-tension-primary: #9c4708;
   --theme-tension-secondary: #d8954f;
   --theme-tension-soft: #f5e6d3;
   --theme-tension-soft-dark: rgb(42 32 20 / 0.85);
@@ -332,6 +340,7 @@ html {
   --accent-moments: #edb14d;
   --accent-growth: #3ecf94;
   --accent-attention: #fb7185;
+  --accent-info: #60a5fa;
 
   --canvas: #131316;
   --canvas-gradient-top: #17171b;
@@ -350,7 +359,7 @@ html {
   --action-text: #17181b;
   --action-soft-fill: #2c2c34;
   --action-soft-fill-hover: #34343c;
-  --action-ring: rgb(236 236 240 / 0.35);
+  --action-ring: rgb(236 236 240 / 0.8);
 
   --shadow-elevated: 0 4px 24px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.35);
   --shadow-hero: 0 12px 40px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.35);

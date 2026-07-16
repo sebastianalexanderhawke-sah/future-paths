@@ -92,22 +92,28 @@ export function SignupForm() {
           type="email"
           autoComplete="email"
           required
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none focus:border-zinc-400"
+          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus:border-zinc-400"
         />
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="password" className="text-sm text-zinc-600">
-          Password
-        </label>
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="password" className="text-sm text-zinc-600">
+            Password
+          </label>
+          <span id="password-hint" className="text-xs text-zinc-500">
+            At least 8 characters
+          </span>
+        </div>
         <input
           id="password"
           name="password"
           type="password"
           autoComplete="new-password"
+          aria-describedby="password-hint"
           required
           minLength={8}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none focus:border-zinc-400"
+          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus:border-zinc-400"
         />
       </div>
 

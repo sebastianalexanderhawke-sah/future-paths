@@ -46,20 +46,20 @@ export default async function ResolvePage({ params }: ResolvePageProps) {
       <div className="mb-10">
         <Link
           href={`/moments/${moment.id}`}
-          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#b45309]"
+          className="text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#b45309]"
         >
           ← Back to situation
         </Link>
         <h1 className="mb-1.5 mt-3 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
           {moment.title}
         </h1>
-        <p className="text-[15px] text-[#999999]">Before you close this</p>
+        <p className="text-[15px] text-[#707070]">Before you close this</p>
       </div>
 
       <div className="flex max-w-2xl flex-col gap-6 pb-14">
         {/* ── What was navigated ──────────────────────────────────────────── */}
         <section className="rounded-xl border border-zinc-200 bg-white p-6">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             What you navigated
           </p>
           {chosenPath ? (
@@ -70,14 +70,14 @@ export default async function ResolvePage({ params }: ResolvePageProps) {
           ) : null}
           {checkIns.length > 0 ? (
             <div className="mt-4 flex flex-col gap-3">
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-zinc-500">
                 {checkIns.length} check-in{checkIns.length !== 1 ? "s" : ""} recorded
               </p>
               {checkIns.slice(0, 3).map((ci) => (
                 <CheckInCard key={ci.id} checkIn={ci} />
               ))}
               {checkIns.length > 3 ? (
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-zinc-500">
                   + {checkIns.length - 3} more
                 </p>
               ) : null}
@@ -88,7 +88,7 @@ export default async function ResolvePage({ params }: ResolvePageProps) {
         {/* ── What this revealed ──────────────────────────────────────────── */}
         {identityUpdates.length > 0 ? (
           <section className="rounded-xl border border-zinc-200 bg-white p-6">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
               What this situation revealed about you
             </p>
             <div className="mt-3 flex flex-col gap-3">

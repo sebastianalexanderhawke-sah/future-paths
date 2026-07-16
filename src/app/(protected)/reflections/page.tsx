@@ -42,11 +42,11 @@ function ReflectionRow({
         <span className="block truncate text-[14px] font-semibold text-[#111]">
           {checkIn.moment.title}
         </span>
-        <span className="mt-0.5 block truncate text-[12px] text-[#888888]">
+        <span className="mt-0.5 block truncate text-[12px] text-[#6b6b6b]">
           Reflection · {checkIn.reflection_question}
         </span>
       </span>
-      <span className="ml-auto shrink-0 text-[12px] font-medium text-[#999999]">
+      <span className="ml-auto shrink-0 text-[12px] font-medium text-[#707070]">
         1 question
       </span>
     </div>
@@ -85,12 +85,13 @@ function CheckInRow({
         <span className="block truncate text-[14px] font-semibold text-[#111]">
           {moment.title}
         </span>
-        <span className="mt-0.5 block text-[12px] text-[#888888]">
+        <span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
           {checkInReason(lastCheckIn)}
         </span>
       </span>
       <Link
         href={`/moments/${moment.id}#check-in`}
+        aria-label={`Continue — check in on ${moment.title}`}
         className="ml-auto shrink-0 rounded-lg bg-[#111] px-3.5 py-2 text-[12px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
       >
         Continue
@@ -102,7 +103,7 @@ function CheckInRow({
 /** The same folded-list control the queue used: preview, then one control. */
 function ShowMoreSummary({ count }: { count: number }) {
   return (
-    <summary className="cursor-pointer list-none py-3 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857] [&::-webkit-details-marker]:hidden">
+    <summary className="cursor-pointer list-none py-3 text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#047857] [&::-webkit-details-marker]:hidden">
       <span className="group-open:hidden">Show {count} more →</span>
       <span className="hidden group-open:inline">↑ Show fewer</span>
     </summary>
@@ -113,7 +114,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle: string })
   return (
     <div className="mb-4">
       <h2 className="text-[17px] font-bold text-[#111]">{title}</h2>
-      <p className="mt-[3px] text-[13px] text-[#888888]">{subtitle}</p>
+      <p className="mt-[3px] text-[13px] text-[#6b6b6b]">{subtitle}</p>
     </div>
   );
 }
@@ -195,14 +196,14 @@ export default async function WorkspacePage() {
         userInitial={userIdentity.initial}
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[1120px] px-10 py-10">
           {/* Page header */}
           <div className="mb-10">
             <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
               Workspace
             </h1>
-            <p className="text-[15px] text-[#999999]">
+            <p className="text-[15px] text-[#707070]">
               Check in on what&apos;s changed, then continue your reflections.
             </p>
           </div>
@@ -218,7 +219,7 @@ export default async function WorkspacePage() {
                   <p className="font-voice text-[22px] font-medium tracking-[-0.3px] text-[#111]">
                     Your workspace is waiting for its first situation.
                   </p>
-                  <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#999999]">
+                  <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#707070]">
                     This is where Reflection brings the work to you — a
                     check-in when a situation has had time to move, a question
                     worth sitting with after something meaningful happens.
@@ -238,14 +239,14 @@ export default async function WorkspacePage() {
                   <p className="text-[17px] font-semibold text-[#111]">
                     You&apos;re all caught up.
                   </p>
-                  <p className="mt-2 max-w-[400px] text-[13px] leading-relaxed text-[#999999]">
+                  <p className="mt-2 max-w-[400px] text-[13px] leading-relaxed text-[#707070]">
                     New reflections and check-ins will appear here as your
                     situations evolve — once enough time passes for something
                     to have changed, Reflection will ask about it.
                   </p>
                   <Link
                     href="/moments"
-                    className="mt-5 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857]"
+                    className="mt-5 text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#047857]"
                   >
                     Revisit your situations →
                   </Link>
@@ -314,7 +315,7 @@ export default async function WorkspacePage() {
                         Reflection
                       </span>
                       {waitingReflections.length > 0 ? (
-                        <span className="text-[12px] text-[#999999]">
+                        <span className="text-[12px] text-[#707070]">
                           {waitingReflections.length} more waiting below
                         </span>
                       ) : null}
@@ -359,7 +360,7 @@ export default async function WorkspacePage() {
               ) : null}
 
               {supersededCount > 0 ? (
-                <p className="px-1 text-[12px] text-[#bbbbbb]">
+                <p className="px-1 text-[12px] text-[#767676]">
                   {supersededCount} older reflection
                   {supersededCount !== 1 ? "s" : ""} superseded by newer
                   check-ins on the same situations.
@@ -374,7 +375,7 @@ export default async function WorkspacePage() {
             <section className="pb-14">
               <div className="mb-4">
                 <h2 className="text-[17px] font-bold text-[#111]">Completed</h2>
-                <p className="mt-[3px] text-[13px] text-[#888888]">
+                <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                   {completed.length} reflection{completed.length !== 1 ? "s" : ""}{" "}
                   finished — your thinking so far
                 </p>

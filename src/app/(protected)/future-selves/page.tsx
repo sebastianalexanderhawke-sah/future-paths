@@ -11,11 +11,13 @@ import {
 } from "@/lib/future-selves";
 
 type FutureSelvesPageProps = {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; selected?: string }>;
 };
 
 export default async function FutureSelvesPage({ searchParams }: FutureSelvesPageProps) {
-  const { error } = await searchParams;
+  // `selected` deep-links from the Overview map: the named future's card
+  // opens immediately instead of asking for a second click.
+  const { error, selected } = await searchParams;
   const [result, eventsByFutureSelf] = await Promise.all([
     listFutureSelves(),
     loadFutureSelfEventsByFutureSelf(),
@@ -34,7 +36,7 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
           <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
             Future Selves
           </h1>
-          <p className="text-[15px] text-[#999999]">
+          <p className="text-[15px] text-[#707070]">
             The people you may be becoming, based on what you&apos;ve recorded.
           </p>
         </div>
@@ -62,7 +64,10 @@ export default async function FutureSelvesPage({ searchParams }: FutureSelvesPag
             for map width (narrow-width label clipping is accepted there,
             same as the landing rendering). */}
         <section className="rounded-2xl border border-[#f0f0f2] bg-white px-3 py-10 shadow-[0_1px_2px_rgba(17,17,17,0.02),0_12px_32px_rgba(17,17,17,0.04)] sm:px-9 sm:py-12">
-          <FutureSelvesExplorer futureSelves={result.futureSelves} />
+          <FutureSelvesExplorer
+            futureSelves={result.futureSelves}
+            initialOpenId={selected ?? null}
+          />
         </section>
 
         {/* Then the faded paths: one section card with the page's single

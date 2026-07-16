@@ -12,6 +12,9 @@ import type { FutureSelf } from "@/types/database";
 
 type FutureSelvesExplorerProps = {
   futureSelves: FutureSelf[];
+  /** Deep link (?selected=<id> from the Overview map): this future's dialog
+      opens on load. Unknown or faded ids simply render nothing open. */
+  initialOpenId?: string | null;
 };
 
 /**
@@ -22,15 +25,18 @@ type FutureSelvesExplorerProps = {
  * identity card in a dialog. Faded futures live in their own sibling card on
  * the page (FadedPathsCard), deliberately separate from the tree.
  */
-export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps) {
+export function FutureSelvesExplorer({
+  futureSelves,
+  initialOpenId = null,
+}: FutureSelvesExplorerProps) {
   const active = useMemo(
     () => futureSelves.filter((f) => f.status === "active"),
     [futureSelves],
   );
 
-  // Tree-first: nothing is selected on load. The card exists only as a
-  // temporary deep dive in a modal.
-  const [openId, setOpenId] = useState<string | null>(null);
+  // Tree-first: nothing is selected on load unless a deep link named a
+  // future. The card exists only as a temporary deep dive in a modal.
+  const [openId, setOpenId] = useState<string | null>(initialOpenId);
   const [closing, setClosing] = useState(false);
   const triggerRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -85,7 +91,7 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
   const trapTab = (event: React.KeyboardEvent) => {
     if (event.key !== "Tab" || !dialogRef.current) return;
     const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
-      'button, summary, a[href], [tabindex]:not([tabindex="-1"])',
+      'button:not([disabled]), summary, a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [contenteditable="true"], [tabindex]:not([tabindex="-1"])',
     );
     if (focusables.length === 0) return;
     const first = focusables[0];
@@ -170,7 +176,7 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
               type="button"
               aria-label={`Close ${openFuture.name}`}
               onClick={close}
-              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-lg leading-none text-zinc-400 backdrop-blur-sm transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
+              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-lg leading-none text-zinc-500 backdrop-blur-sm transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
             >
               ×
             </button>
@@ -189,20 +195,22 @@ export function FutureSelvesExplorer({ futureSelves }: FutureSelvesExplorerProps
                 that feeds this future most, or opening a situation when the
                 attribution carries none. Existing routes only. */}
             <div className="flex items-center justify-between gap-4 border-t border-zinc-100 px-8 py-3.5 sm:px-10">
-              <p className="hidden text-[13px] text-zinc-400 sm:block">
+              <p className="hidden text-[13px] text-zinc-500 sm:block">
                 Futures strengthen with what you actually do.
               </p>
+              {/* The platform's black primary button — the same mark every
+                  disclosure and primary action wears. */}
               {topSituation ? (
                 <Link
                   href={`/moments/${topSituation.id}#check-in`}
-                  className="min-w-0 truncate rounded-md px-1 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
+                  className="min-w-0 truncate rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2"
                 >
                   Check in on “{topSituation.title}” →
                 </Link>
               ) : (
                 <Link
                   href="/moments"
-                  className="shrink-0 rounded-md px-1 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
+                  className="shrink-0 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2"
                 >
                   Explore a situation →
                 </Link>

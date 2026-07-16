@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { FutureCard } from "@/components/futures/future-card";
 import { OverviewCard } from "@/components/overview/overview-card";
@@ -26,6 +26,7 @@ export function FadedFutureCard({ futureSelf, events = [] }: FadedFutureCardProp
   const story = getFadeStory(futureSelf, events);
   const [showOriginal, setShowOriginal] = useState(false);
   const originalRef = useRef<HTMLDivElement | null>(null);
+  const originalId = useId();
 
   // The preserved card is far taller than the disclosure link that reveals
   // it, and it mounts above that link — without this, opening it leaves the
@@ -52,13 +53,13 @@ export function FadedFutureCard({ futureSelf, events = [] }: FadedFutureCardProp
       <div className="mb-6 flex items-start justify-between gap-8">
         <div>
           <h2 className="text-[17px] font-bold text-[#111]">{futureSelf.name}</h2>
-          <p className="mt-[3px] text-[13px] text-[#888888]">
+          <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
             {subtitleFacts.join(" · ")}
           </p>
         </div>
         {/* The whole arc in one quiet line, off to the side. */}
         {story.trajectory.length > 1 ? (
-          <p className="mt-1 shrink-0 text-[13px] tabular-nums text-[#bbbbbb]">
+          <p className="mt-1 shrink-0 text-[13px] tabular-nums text-[#767676]">
             {story.trajectory.join(" → ")}
           </p>
         ) : null}
@@ -69,7 +70,7 @@ export function FadedFutureCard({ futureSelf, events = [] }: FadedFutureCardProp
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#aaaaaa]">
             Why this path faded
           </h3>
-          <p className="mt-2.5 max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
+          <p className="mt-2.5 max-w-[52em] text-[14px] leading-[1.7] text-[#707070]">
             {story.why}
           </p>
         </div>
@@ -83,7 +84,7 @@ export function FadedFutureCard({ futureSelf, events = [] }: FadedFutureCardProp
               {story.evidence.map((item) => (
                 <li
                   key={item}
-                  className="flex items-start gap-2.5 text-[14px] leading-[1.7] text-[#777777]"
+                  className="flex items-start gap-2.5 text-[14px] leading-[1.7] text-[#707070]"
                 >
                   <span aria-hidden="true" className="mt-0.5 shrink-0 text-[#d4d4d8]">
                     —
@@ -100,13 +101,14 @@ export function FadedFutureCard({ futureSelf, events = [] }: FadedFutureCardProp
           same quiet inline disclosure the Current Self analysis uses. */}
       <div className="mt-6">
         {showOriginal ? (
-          <div ref={originalRef} className="mb-5 scroll-mt-6">
+          <div id={originalId} ref={originalRef} className="mb-5 scroll-mt-6">
             <FutureCard futureSelf={asLastActive(futureSelf)} />
           </div>
         ) : null}
         <button
           type="button"
           aria-expanded={showOriginal}
+          aria-controls={showOriginal ? originalId : undefined}
           onClick={() => setShowOriginal((current) => !current)}
           className="cursor-pointer text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80"
         >

@@ -68,7 +68,7 @@ export function CheckInForm({ momentId, onBeforeSubmit }: CheckInFormProps) {
           value={reflection}
           onChange={(event) => setReflection(event.target.value)}
           placeholder="What changed? What surprised you? What happened differently than expected?"
-          className="rounded-xl border border-[#ececf0] bg-white px-4 py-3 text-[14px] leading-[1.6] text-[#111] outline-none transition-colors duration-150 placeholder:text-[#bbbbbb] focus:border-[#b45309]"
+          className="rounded-xl border border-[#ececf0] bg-white px-4 py-3 text-[14px] leading-[1.6] text-[#111] outline-none transition-colors duration-150 placeholder:text-[#767676] focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus:border-[#b45309]"
         />
       </div>
 
@@ -81,7 +81,7 @@ export function CheckInForm({ momentId, onBeforeSubmit }: CheckInFormProps) {
       <button
         type="submit"
         disabled={pending}
-        className="self-start cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88] focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-50"
+        className="self-start cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-50"
       >
         {pending ? "Recording…" : "Record check-in"}
       </button>

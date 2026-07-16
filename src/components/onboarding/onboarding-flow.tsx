@@ -48,6 +48,24 @@ export function OnboardingFlow() {
     trackEvent(ANALYTICS_EVENTS.onboardingStarted);
   }, []);
 
+  // Advancing a phase unmounts the button that was clicked, dropping focus
+  // to <body> with no announcement. Move focus to the new panel's heading
+  // so keyboard and screen-reader users land where the flow went. The
+  // journey phase manages its own stage focus (see SituationEntryFlow).
+  const mainRef = useRef<HTMLElement | null>(null);
+  const previousPhaseRef = useRef<OnboardingPhase>(phase);
+  useEffect(() => {
+    if (previousPhaseRef.current === phase) return;
+    previousPhaseRef.current = phase;
+    if (phase === "journey") return;
+    const heading = mainRef.current?.querySelector<HTMLElement>("h1, h2");
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.style.outline = "none";
+      heading.focus();
+    }
+  }, [phase]);
+
   const step = onboardingStep(phase, journeyStage);
 
   return (
@@ -64,7 +82,7 @@ export function OnboardingFlow() {
               <input type="hidden" name="outcome" value="skipped" />
               <button
                 type="submit"
-                className="cursor-pointer text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#111]"
+                className="cursor-pointer text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#111]"
               >
                 Skip for now
               </button>
@@ -84,18 +102,18 @@ export function OnboardingFlow() {
                 style={{ width: `${(step.number / ONBOARDING_STEP_COUNT) * 100}%` }}
               />
             </div>
-            <p className="shrink-0 text-[13px] font-medium text-[#888888]">
+            <p className="shrink-0 text-[13px] font-medium text-[#6b6b6b]">
               Step {step.number} of {ONBOARDING_STEP_COUNT}
             </p>
           </div>
           {step.caption ? (
-            <p className="mt-3 text-[13px] leading-relaxed text-[#999999]">
+            <p className="mt-3 text-[13px] leading-relaxed text-[#707070]">
               {step.caption}
             </p>
           ) : null}
         </header>
 
-        <main className="flex flex-1 flex-col py-10">
+        <main ref={mainRef} className="flex flex-1 flex-col py-10">
           {phase === "welcome" ? (
             <div className="mx-auto w-full max-w-[720px]">
               <WelcomePanel onBegin={() => setPhase("journey")} />

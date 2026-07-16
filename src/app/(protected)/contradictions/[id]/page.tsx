@@ -41,7 +41,7 @@ export default async function ContradictionDetailPage({
       <div className="mb-10">
         <Link
           href="/contradictions"
-          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#e11d48]"
+          className="text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#e11d48]"
         >
           ← Contradictions
         </Link>
@@ -53,8 +53,8 @@ export default async function ContradictionDetailPage({
       <div className="flex max-w-2xl flex-col gap-8 pb-14">
         <article className="rounded-lg border border-zinc-200 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-zinc-400 capitalize">{contradiction.status}</p>
-            <p className="text-xs text-zinc-400">Intensity {contradiction.intensity}</p>
+            <p className="text-xs text-zinc-500 capitalize">{contradiction.status}</p>
+            <p className="text-xs text-zinc-500">Intensity {contradiction.intensity}</p>
           </div>
           <h2 className="mt-2 text-sm font-medium text-zinc-900">{contradiction.title}</h2>
           <p className="mt-3 text-sm leading-relaxed text-zinc-600">{contradiction.summary}</p>
@@ -88,7 +88,7 @@ export default async function ContradictionDetailPage({
           <section className="flex flex-col gap-4">
             <div>
               <h3 className="text-[17px] font-bold text-[#111]">History</h3>
-              <p className="mt-[3px] text-[13px] text-[#888888]">
+              <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                 How this tension has changed over time
               </p>
             </div>
@@ -103,7 +103,7 @@ export default async function ContradictionDetailPage({
                     <p className="text-sm font-medium text-zinc-900">
                       {EVENT_LABELS[event.event_type]}
                     </p>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-zinc-500">
                       {new Date(event.created_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -111,7 +111,7 @@ export default async function ContradictionDetailPage({
                     <p className="mt-2 text-sm text-zinc-600">{event.summary}</p>
                   ) : null}
                   {event.intensity_after !== null ? (
-                    <p className="mt-2 text-xs text-zinc-400">
+                    <p className="mt-2 text-xs text-zinc-500">
                       Intensity {event.intensity_before ?? "—"} → {event.intensity_after}
                     </p>
                   ) : null}

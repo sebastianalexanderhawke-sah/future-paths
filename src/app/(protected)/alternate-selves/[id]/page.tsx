@@ -44,7 +44,7 @@ export default async function AlternateSelfDetailPage({
       <div className="mb-10">
         <Link
           href="/alternate-selves"
-          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#7c3aed]"
+          className="text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#7c3aed]"
         >
           ← Alternate Selves
         </Link>
@@ -61,7 +61,7 @@ export default async function AlternateSelfDetailPage({
 
       <div className="flex max-w-2xl flex-col gap-8 pb-14">
         <article className="rounded-lg border border-zinc-200 bg-white p-4">
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-zinc-500">
             {new Date(crossroad.created_at).toLocaleDateString()}
           </p>
           <h2 className="mt-2 text-sm font-medium text-zinc-900">What happened</h2>

@@ -29,7 +29,7 @@ export function PageLoadError({ retryHref, message }: PageLoadErrorProps) {
           <p className="font-voice text-[22px] font-medium tracking-[-0.3px] text-[#111]">
             This page couldn&apos;t load.
           </p>
-          <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#999999]">
+          <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#707070]">
             Everything you&apos;ve recorded is safe — this was a problem
             fetching your data, not a change to it. Trying again usually
             resolves it.
@@ -43,12 +43,12 @@ export function PageLoadError({ retryHref, message }: PageLoadErrorProps) {
             </a>
             <Link
               href="/overview"
-              className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#111]"
+              className="text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#111]"
             >
               Back to Overview
             </Link>
           </div>
-          <p className="mt-6 max-w-[440px] text-[12px] leading-relaxed text-[#bbbbbb]">
+          <p className="mt-6 max-w-[440px] text-[12px] leading-relaxed text-[#767676]">
             {message}
           </p>
         </div>

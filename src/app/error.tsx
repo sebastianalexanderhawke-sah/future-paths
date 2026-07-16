@@ -50,7 +50,7 @@ export default function Error({
         </div>
 
         {error.digest ? (
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-zinc-500">
             If this keeps happening, mention this code: {error.digest}
           </p>
         ) : null}

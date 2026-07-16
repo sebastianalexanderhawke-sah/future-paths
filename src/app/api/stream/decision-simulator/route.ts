@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { crossOriginRejection, isSameOriginRequest } from "@/lib/http/same-origin";
 import { createMoment } from "@/lib/moments";
 import { persistGeneratedPaths } from "@/lib/paths";
 import { generateDiverseCrossroadSet } from "@/lib/crossroad-generation";
@@ -22,6 +23,12 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
+  // Reject cross-site POSTs before any work: this route creates a situation
+  // and consumes AI quota on the cookie-authenticated caller's account.
+  if (!isSameOriginRequest(request)) {
+    return crossOriginRejection();
+  }
+
   const body = await request.json().catch(() => null);
 
   if (!body || typeof body.situationText !== "string" || !body.situationText.trim()) {

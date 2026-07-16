@@ -133,7 +133,10 @@ const MAP = {
   "text|[#777777]": tx(D.ink777),
   "text|[#6b6b76]": tx(D.ink777),
   "text|[#888888]": tx(D.ink888),
+  "text|[#6b6b6b]": tx(D.ink888), // AA replacement for #888888
   "text|[#999999]": tx(D.inkTertiary),
+  "text|[#707070]": tx(D.inkTertiary), // AA replacement for #999999/#777777
+  "text|[#767676]": tx(D.inkTertiary), // AA replacement for #bbbbbb (placeholders)
   "text|[#9a9aa2]": tx(D.inkTertiary),
   "text|zinc-500": tx(D.inkTertiary),
   "text|[#6b7280]": tx(D.inkTertiary),
@@ -173,6 +176,7 @@ const MAP = {
   // its track flips to the action-text ink at the same 30% veil.
   "border|white/30": bd("rgb(23 24 27 / 0.3)"),
   "border|[#999999]": bd(D.borderFocus),
+  "border|[#707070]": bd(D.borderFocus), // AA replacement for #999999
   "border|white": bd(D.surface),
   "border|zinc-900": bd(D.actionFill),
   "border|[#111]": bd(D.actionFill),
@@ -249,7 +253,6 @@ const KEEP = new Set([
   "border|[#8b5cf6]",
   "text|[#f59e0b]",
   "text|[#fbbf24]",
-  "ring|zinc-400/70", // focus ring: mid gray reads on both themes
 ]);
 
 /* ── Variant handling ───────────────────────────────────────────────────── */

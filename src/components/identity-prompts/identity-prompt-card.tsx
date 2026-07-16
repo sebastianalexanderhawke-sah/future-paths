@@ -18,7 +18,7 @@ export function IdentityPromptCard({ prompt }: IdentityPromptCardProps) {
       href={`/identity-prompts/${prompt.id}`}
       className="block rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300"
     >
-      <p className="text-xs text-zinc-400">
+      <p className="text-xs text-zinc-500">
         {PROMPT_TYPE_LABELS[prompt.prompt_type]}
       </p>
       <h3 className="mt-2 text-sm font-medium text-zinc-900">{prompt.question}</h3>

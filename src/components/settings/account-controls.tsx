@@ -11,13 +11,13 @@ import {
 } from "@/actions/settings";
 
 const inputClassName =
-  "w-full rounded-lg border border-[#e5e5e5] bg-white px-3 py-2 text-[14px] text-[#111] outline-none placeholder:text-[#bbbbbb] focus:border-[#999999]";
+  "w-full rounded-lg border border-[#e5e5e5] bg-white px-3 py-2 text-[14px] text-[#111] outline-none placeholder:text-[#767676] focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus:border-[#707070]";
 
 const buttonClassName =
   "shrink-0 rounded-lg bg-[#111] px-4 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-80 disabled:opacity-50";
 
 const labelClassName = "text-[14px] font-medium text-[#111]";
-const helpClassName = "mt-1 text-[13px] leading-[1.6] text-[#999999]";
+const helpClassName = "mt-1 text-[13px] leading-[1.6] text-[#707070]";
 
 function StatusLine({
   error,

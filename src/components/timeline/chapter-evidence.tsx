@@ -37,7 +37,7 @@ export function ChapterEvidence({ evidence }: ChapterEvidenceProps) {
               <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
                 {EVIDENCE_LABELS[item.evidence_type]}
               </p>
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-zinc-500">
                 {new Date(item.occurred_at).toLocaleDateString()}
               </p>
             </div>

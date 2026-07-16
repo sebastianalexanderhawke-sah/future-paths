@@ -50,12 +50,12 @@ export function SituationCard({
         </span>
       </div>
 
-      <p className="mt-1.5 truncate text-[13px] text-[#888888]">
+      <p className="mt-1.5 truncate text-[13px] text-[#6b6b6b]">
         {summary ?? "No summary yet."}
       </p>
 
       <div className="mt-4 flex items-center justify-between">
-        <span className="text-[12px] text-[#999999]">
+        <span className="text-[12px] text-[#707070]">
           Updated {updatedLabel}
         </span>
         <span className="text-[13px] font-medium text-[#b45309] transition-opacity duration-150 group-hover:opacity-80">

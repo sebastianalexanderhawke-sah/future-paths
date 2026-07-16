@@ -24,7 +24,15 @@ import type { FutureSelf } from "@/types/database";
  * opens the deep-dive dialog.
  */
 export type BranchMapInteraction =
-  | { kind: "link"; href: string }
+  | {
+      kind: "link";
+      href: string;
+      /** When set, selecting a branch deep-links to
+          `{href}?{selectParam}={futureSelf.id}` — the dedicated page with
+          that future's card already open. A plain string, never a
+          function: this prop crosses the server→client boundary. */
+      selectParam?: string;
+    }
   | {
       kind: "dialog";
       /** The future currently open in the dialog, if any — it stays fully
@@ -87,9 +95,16 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
     return activeId === null || activeId === id ? 1 : 0.3;
   };
 
+  const linkHref = (futureSelf: FutureSelf): string => {
+    if (interaction.kind !== "link") return "";
+    return interaction.selectParam
+      ? `${interaction.href}?${interaction.selectParam}=${futureSelf.id}`
+      : interaction.href;
+  };
+
   const select = (branch: PlacedBranch) => {
     if (interaction.kind === "link") {
-      router.push(interaction.href);
+      router.push(linkHref(branch.futureSelf));
       return;
     }
     interaction.onOpen(
@@ -114,7 +129,7 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
         <span className="font-voice flex h-[68px] w-[68px] items-center justify-center rounded-full border border-[#ececf0] bg-white text-[16px] font-medium text-[#111] shadow-[0_10px_36px_rgba(17,17,17,0.10),0_2px_8px_rgba(17,17,17,0.05)]">
           You
         </span>
-        <p className="mt-4 max-w-[380px] text-center text-[13px] leading-relaxed text-[#999999]">
+        <p className="mt-4 max-w-[380px] text-center text-[13px] leading-relaxed text-[#707070]">
           Every situation can lead in a different direction. As you choose
           paths and check in on how they&apos;re going, the people you may be
           becoming branch out from here — each one growing stronger or fading
@@ -122,7 +137,7 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
         </p>
         <Link
           href="/moments"
-          className="mt-4 rounded-md px-1 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
+          className="mt-4 rounded-md px-1 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2"
         >
           Explore a situation →
         </Link>
@@ -261,7 +276,7 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
         const dotSize = 13 + 9 * weight;
         const ringSize = dotSize + 12 + 2 * weight + (isLit ? 4 : 0);
         const positionClass =
-          "absolute z-10 h-0 w-0 cursor-pointer outline-none [transition:left_600ms_cubic-bezier(0.22,1,0.36,1),top_600ms_cubic-bezier(0.22,1,0.36,1),opacity_200ms_ease-out] motion-reduce:[transition:none]";
+          "group absolute z-10 h-0 w-0 cursor-pointer outline-none [transition:left_600ms_cubic-bezier(0.22,1,0.36,1),top_600ms_cubic-bezier(0.22,1,0.36,1),opacity_200ms_ease-out] motion-reduce:[transition:none]";
         const positionStyle = {
           ...toPercent(tip),
           opacity: branchOpacity(futureSelf.id),
@@ -281,6 +296,19 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
 
         const contents = (
           <>
+            {/* Keyboard focus ring: the "lit" hover treatment alone is too
+                subtle to satisfy focus visibility, so keyboard focus draws
+                the platform's ink ring around the waypoint. */}
+            <span
+              aria-hidden="true"
+              className="absolute hidden rounded-full border-2 group-focus-visible:block"
+              style={{
+                width: ringSize + 10,
+                height: ringSize + 10,
+                borderColor: "var(--action-ring)",
+                transform: "translate(-50%, -50%)",
+              }}
+            />
             {/* Waypoint core: the accent point in a thin white ring, lifted
                 by a soft tinted shadow. The place itself. */}
             <span
@@ -347,8 +375,8 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
                   {futureSelf.name}
                 </span>
                 <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.08em]">
-                  <span style={{ color: accent.color }}>{branch.pct}%</span>
-                  <span className="text-[#a1a1aa]">
+                  <span style={{ color: accent.text }}>{branch.pct}%</span>
+                  <span className="text-[#71717a]">
                     {" "}
                     · {futureSelf.evidence_strength}
                   </span>
@@ -362,7 +390,7 @@ export function BranchMap({ futureSelves, interaction, widthClassName = "" }: Br
           return (
             <Link
               key={futureSelf.id}
-              href={interaction.href}
+              href={linkHref(futureSelf)}
               ref={storeRef}
               aria-label={`${futureSelf.name}, ${branch.pct} percent, ${futureSelf.evidence_strength}. Explore this future.`}
               className={positionClass}

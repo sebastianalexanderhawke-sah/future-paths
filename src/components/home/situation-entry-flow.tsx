@@ -766,6 +766,37 @@ export function SituationEntryFlow({
     onStageChange?.(next);
   }
 
+  // Moving between stages unmounts the button that was clicked, which would
+  // silently drop keyboard/screen-reader focus to <body>. Each stage's
+  // heading takes the focus instead (only one stage renders at a time, so
+  // they share one ref), announcing where the flow has moved.
+  const stageHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const previousStageRef = useRef<Stage>(stage);
+  useEffect(() => {
+    if (previousStageRef.current !== stage) {
+      previousStageRef.current = stage;
+      stageHeadingRef.current?.focus();
+    }
+  }, [stage]);
+
+  // One persistent polite live region for the multi-second AI generations:
+  // a region that already exists announces its content changes reliably,
+  // where the mounted-with-content GenerationLoader may say nothing.
+  const generationStatus = isLoadingQuestions
+    ? "Preparing your questions…"
+    : isStreamingPaths
+      ? "Generating possible paths…"
+      : isStreamingPathForecast || isStreamingForecast
+        ? "Generating your forecast…"
+        : stage === "questions" && questions.length > 0
+          ? "Questions ready."
+          : stage === "paths" && simulatorResult
+            ? "Your possible paths are ready."
+            : stage === "forecast" &&
+                (pathForecastResult !== null || forecastResult !== null)
+              ? "Your forecast is ready."
+              : "";
+
   function handleContinueFromDescribe() {
     goToStage("questions");
   }
@@ -809,6 +840,9 @@ export function SituationEntryFlow({
 
   return (
     <div className="flex flex-col gap-10">
+      <div aria-live="polite" className="sr-only">
+        {generationStatus}
+      </div>
 
       {/* ── Stage 1: Describe your situation ── */}
       {/* The writing stages live on ONE form card at reading width — a dense
@@ -821,10 +855,16 @@ export function SituationEntryFlow({
             <div className="flex flex-col gap-6">
               <div className="flex flex-col gap-3">
                 <div>
-                  <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+                  <h1
+                    id="situation-input-label"
+                    className="text-2xl font-semibold tracking-tight text-zinc-900"
+                  >
                     What should we call this situation?
                   </h1>
-                  <p className="mt-1.5 text-sm text-zinc-500">
+                  <p
+                    id="situation-input-hint"
+                    className="mt-1.5 text-sm text-zinc-500"
+                  >
                     A short title that helps you recognize this situation later.
                   </p>
                 </div>
@@ -832,6 +872,8 @@ export function SituationEntryFlow({
                   <SituationRotatingExamples />
                   <input
                     id="situation-input"
+                    aria-labelledby="situation-input-label"
+                    aria-describedby="situation-input-hint"
                     type="text"
                     value={situationText}
                     onChange={(event) => {
@@ -845,7 +887,7 @@ export function SituationEntryFlow({
                     autoFocus
                     maxLength={120}
                     placeholder="Give this situation a short title…"
-                    className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white transition-colors"
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-500 outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus:border-zinc-400 focus:bg-white transition-colors"
                   />
                 </div>
               </div>
@@ -853,10 +895,16 @@ export function SituationEntryFlow({
               {hasSituation ? (
                 <div className="flex flex-col gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-zinc-900">
+                    <h2
+                      id="additional-context-label"
+                      className="text-lg font-semibold text-zinc-900"
+                    >
                       Tell Reflection what&apos;s happening
                     </h2>
-                    <p className="mt-1 text-sm text-zinc-500">
+                    <p
+                      id="additional-context-hint"
+                      className="mt-1 text-sm text-zinc-500"
+                    >
                       The more context you provide, the more personalized your
                       paths and forecasts become.
                     </p>
@@ -867,20 +915,23 @@ export function SituationEntryFlow({
                       of being pushed off by an empty box. */}
                   <textarea
                     id="additional-context-input"
+                    aria-labelledby="additional-context-label"
+                    aria-describedby="additional-context-hint"
                     value={additionalContext}
                     onChange={(event) => setAdditionalContext(event.target.value)}
                     placeholder="What's going on? Who's involved? What have you tried? What are the constraints?"
                     rows={4}
-                    className="max-h-[50vh] w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 transition-colors [field-sizing:content] placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:bg-white"
+                    className="max-h-[50vh] w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-base text-zinc-900 transition-colors [field-sizing:content] placeholder:text-zinc-500 outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus:border-zinc-400 focus:bg-white"
                   />
                 </div>
               ) : null}
 
               {!fixedGoal && hasSituation && hasContext ? (
-                <div className="flex flex-col gap-2.5">
-                  <p className="text-sm font-medium text-zinc-700">
+                <fieldset className="min-w-0">
+                  {/* legend sits outside flex flow, so spacing lives on it */}
+                  <legend className="mb-2.5 text-sm font-medium text-zinc-700">
                     What kind of help are you looking for?
-                  </p>
+                  </legend>
                   {/* Side by side, directly under the writing: the last
                       choice before Continue, not a separate section. */}
                   <div className="grid gap-2.5 sm:grid-cols-2">
@@ -921,7 +972,7 @@ export function SituationEntryFlow({
                       </div>
                     </label>
                   </div>
-                </div>
+                </fieldset>
               ) : null}
 
               {hasSituation && hasContext && hasGoal ? (
@@ -942,7 +993,11 @@ export function SituationEntryFlow({
       {stage === "questions" ? (
         <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5">
           <div>
-            <h2 className="text-xl font-semibold text-zinc-900">
+            <h2
+              ref={stageHeadingRef}
+              tabIndex={-1}
+              className="text-xl font-semibold text-zinc-900 focus:outline-none"
+            >
               Help Reflection understand your situation
             </h2>
             <p className="mt-1.5 text-sm text-zinc-500">
@@ -972,7 +1027,7 @@ export function SituationEntryFlow({
             ) : null}
 
             {questionsError ? (
-              <p className="text-sm text-red-500">{questionsError}</p>
+              <p className="text-sm text-red-600">{questionsError}</p>
             ) : null}
 
             {questions.length > 0 ? (
@@ -1006,7 +1061,13 @@ export function SituationEntryFlow({
               and bring back the report feel. */}
           {!simulatorResult ? (
             <div>
-              <h2 className="text-xl font-semibold text-zinc-900">Explore possible paths</h2>
+              <h2
+                ref={stageHeadingRef}
+                tabIndex={-1}
+                className="text-xl font-semibold text-zinc-900 focus:outline-none"
+              >
+                Explore possible paths
+              </h2>
               <p className="mt-2 text-sm text-zinc-500">
                 Here are the different decisions you could make. Select the one that resonates most.
               </p>
@@ -1034,7 +1095,7 @@ export function SituationEntryFlow({
           ) : null}
 
           {simulatorError ? (
-            <p className="text-sm text-red-500">{simulatorError}</p>
+            <p className="text-sm text-red-600">{simulatorError}</p>
           ) : null}
 
           {simulatorError && strandedMomentId ? (
@@ -1073,7 +1134,13 @@ export function SituationEntryFlow({
       {stage === "forecast" ? (
         <div className="flex flex-col gap-8">
           <div>
-            <h2 className="text-xl font-semibold text-zinc-900">Look ahead</h2>
+            <h2
+              ref={stageHeadingRef}
+              tabIndex={-1}
+              className="text-xl font-semibold text-zinc-900 focus:outline-none"
+            >
+              Look ahead
+            </h2>
             <p className="mt-2 text-sm text-zinc-500">
               Here&apos;s what might happen based on your situation.
             </p>
@@ -1097,7 +1164,7 @@ export function SituationEntryFlow({
               ) : null}
 
               {pathForecastError ? (
-                <p className="text-sm text-red-500">{pathForecastError}</p>
+                <p className="text-sm text-red-600">{pathForecastError}</p>
               ) : null}
 
               {pathForecastResult ? (
@@ -1124,7 +1191,7 @@ export function SituationEntryFlow({
               ) : null}
 
               {forecastError ? (
-                <p className="text-sm text-red-500">{forecastError}</p>
+                <p className="text-sm text-red-600">{forecastError}</p>
               ) : null}
 
               {forecastError && strandedForecastMomentId ? (

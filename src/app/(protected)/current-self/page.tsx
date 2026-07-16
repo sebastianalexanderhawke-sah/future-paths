@@ -146,7 +146,7 @@ export default async function CurrentSelfPage({
         userInitial={userIdentity.initial}
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[1120px] px-10 py-10">
           {/* Page header */}
           <div className="mb-10 flex items-start justify-between">
@@ -154,7 +154,7 @@ export default async function CurrentSelfPage({
               <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
                 Current Self
               </h1>
-              <p className="text-[15px] text-[#999999]">
+              <p className="text-[15px] text-[#707070]">
                 Your current identity based on recent reflections, check-ins,
                 and decisions.
               </p>
@@ -181,7 +181,7 @@ export default async function CurrentSelfPage({
                 <p className="font-voice text-[22px] font-medium tracking-[-0.3px] text-[#111]">
                   Reflection is still getting to know you.
                 </p>
-                <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#999999]">
+                <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#707070]">
                   This portrait is drawn entirely from what you record — it has
                   nothing to work from until you do. As you add situations,
                   complete reflections, and check in over time, patterns begin
@@ -205,7 +205,7 @@ export default async function CurrentSelfPage({
                   <h2 className="text-[22px] font-bold tracking-[-0.3px] text-[#111]">
                     Current Self
                   </h2>
-                  <p className="mt-1 text-[13px] text-[#999999]">
+                  <p className="mt-1 text-[13px] text-[#707070]">
                     Who you are today.
                   </p>
                 </div>
@@ -249,13 +249,13 @@ export default async function CurrentSelfPage({
                         What You Value
                       </h2>
                     </div>
-                    <p className="mt-[3px] text-[13px] text-[#888888]">
+                    <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                       What your repeated choices consistently protect
                     </p>
                   </div>
 
                   {values.length === 0 ? (
-                    <p className="py-6 text-[13px] leading-relaxed text-[#888888]">
+                    <p className="py-6 text-[13px] leading-relaxed text-[#6b6b6b]">
                       Not clear yet — this fills in as patterns repeat.
                     </p>
                   ) : (
@@ -279,7 +279,7 @@ export default async function CurrentSelfPage({
                               {name}
                             </p>
                             {evidence ? (
-                              <p className="mt-1 text-[13px] leading-relaxed text-[#777777]">
+                              <p className="mt-1 text-[13px] leading-relaxed text-[#707070]">
                                 {firstSentence(evidence)}
                               </p>
                             ) : null}
@@ -303,13 +303,13 @@ export default async function CurrentSelfPage({
                         What You Fear Becoming
                       </h2>
                     </div>
-                    <p className="mt-[3px] text-[13px] text-[#888888]">
+                    <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                       Not anxiety — the version of you your choices keep steering away from
                     </p>
                   </div>
 
                   {afraidOfBecoming.length === 0 ? (
-                    <p className="py-6 text-[13px] leading-relaxed text-[#888888]">
+                    <p className="py-6 text-[13px] leading-relaxed text-[#6b6b6b]">
                       Not clear yet — this fills in as patterns repeat.
                     </p>
                   ) : (
@@ -335,7 +335,7 @@ export default async function CurrentSelfPage({
                               {theme ?? statement}
                             </p>
                             {theme ? (
-                              <p className="mt-1 text-[13px] leading-relaxed text-[#777777]">
+                              <p className="mt-1 text-[13px] leading-relaxed text-[#707070]">
                                 {statement}
                               </p>
                             ) : null}
@@ -367,7 +367,7 @@ export default async function CurrentSelfPage({
                         The Tradeoff You Live With
                       </h2>
                     </div>
-                    <p className="mt-[3px] text-[13px] text-[#888888]">
+                    <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                       A recurring pattern Reflection has noticed.
                     </p>
                   </div>
@@ -421,7 +421,7 @@ export default async function CurrentSelfPage({
                           <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[#b45309]">
                             Reflection Noticed
                           </p>
-                          <p className="mt-1 max-w-[52em] text-[13px] leading-relaxed text-[#888888]">
+                          <p className="mt-1 max-w-[52em] text-[13px] leading-relaxed text-[#6b6b6b]">
                             {tradeoff.observation}
                           </p>
                         </div>
@@ -437,7 +437,7 @@ export default async function CurrentSelfPage({
                   <h2 className="text-[17px] font-bold text-[#111]">
                     Why this identity?
                   </h2>
-                  <p className="mt-[3px] text-[13px] text-[#888888]">
+                  <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                     This portrait is built only from what you&apos;ve actually
                     recorded — nothing here is invented.
                   </p>
@@ -449,7 +449,7 @@ export default async function CurrentSelfPage({
                       <p className="text-[28px] font-extrabold leading-none tracking-[-1px] text-[#111]">
                         {stat.value}
                       </p>
-                      <p className="mt-1.5 text-[12px] font-medium text-[#999999]">
+                      <p className="mt-1.5 text-[12px] font-medium text-[#707070]">
                         {stat.label}
                       </p>
                     </div>

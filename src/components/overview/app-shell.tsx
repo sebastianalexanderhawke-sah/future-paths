@@ -30,7 +30,7 @@ export async function AppShell({ activeHref, children }: AppShellProps) {
         userLabel={userIdentity.displayName ?? "Your account"}
         userInitial={userIdentity.initial}
       />
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[1120px] px-10 py-10">{children}</div>
       </main>
     </div>

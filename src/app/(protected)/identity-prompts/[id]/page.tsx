@@ -34,21 +34,21 @@ export default async function IdentityPromptDetailPage({
       <div className="mb-10">
         <Link
           href="/identity-prompts"
-          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#4f46e5]"
+          className="text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#4f46e5]"
         >
           ← Identity Prompts
         </Link>
         <h1 className="mb-1.5 mt-3 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
           Reflect
         </h1>
-        <p className="text-[15px] text-[#999999]">
+        <p className="text-[15px] text-[#707070]">
           A question to sit with, in your own words.
         </p>
       </div>
 
       <div className="flex max-w-2xl flex-col gap-8 pb-14">
         <article className="rounded-lg border border-zinc-200 bg-white p-4">
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-zinc-500">
             {new Date(prompt.created_at).toLocaleDateString()}
           </p>
           <h2 className="mt-2 text-sm font-medium text-zinc-900">{prompt.question}</h2>
@@ -78,7 +78,7 @@ export default async function IdentityPromptDetailPage({
               <p className="text-sm leading-relaxed text-zinc-700 whitespace-pre-wrap">
                 {response.response}
               </p>
-              <p className="mt-3 text-xs text-zinc-400">
+              <p className="mt-3 text-xs text-zinc-500">
                 Recorded {new Date(response.created_at).toLocaleDateString()}
               </p>
             </div>

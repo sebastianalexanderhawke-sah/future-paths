@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { FadedFutureCard } from "@/components/futures/faded-future-card";
 import { OverviewCard } from "@/components/overview/overview-card";
@@ -26,6 +26,7 @@ export function FadedPathsSection({
   eventsByFutureSelf = {},
 }: FadedPathsSectionProps) {
   const [open, setOpen] = useState(false);
+  const contentId = useId();
 
   if (futureSelves.length === 0) {
     return null;
@@ -39,7 +40,7 @@ export function FadedPathsSection({
         <h2 className="text-[22px] font-bold tracking-[-0.3px] text-[#111]">
           Paths That Have Faded
         </h2>
-        <p className="mt-1 text-[13px] text-[#999999]">
+        <p className="mt-1 text-[13px] text-[#707070]">
           {count === 1
             ? "One path has faded over time."
             : `${count} paths have faded over time.`}{" "}
@@ -48,8 +49,9 @@ export function FadedPathsSection({
         <button
           type="button"
           aria-expanded={open}
+          aria-controls={open ? contentId : undefined}
           onClick={() => setOpen((current) => !current)}
-          className="-mx-1 mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1 text-[13px] font-medium text-[#7c3aed] transition-opacity duration-150 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2"
+          className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2"
         >
           {/* The platform's one disclosure mark — a turning chevron, not
               text-glyph arrows. */}
@@ -73,16 +75,20 @@ export function FadedPathsSection({
         </button>
       </OverviewCard>
 
-      {open
-        ? futureSelves.map((futureSelf) => (
+      {open ? (
+        // display:contents wrapper: gives the disclosure a real
+        // aria-controls target without disturbing the page column layout.
+        <div id={contentId} className="contents">
+          {futureSelves.map((futureSelf) => (
             <div key={futureSelf.id} className="reveal-in">
               <FadedFutureCard
                 futureSelf={futureSelf}
                 events={eventsByFutureSelf[futureSelf.id] ?? []}
               />
             </div>
-          ))
-        : null}
+          ))}
+        </div>
+      ) : null}
     </>
   );
 }

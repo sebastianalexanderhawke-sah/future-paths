@@ -33,7 +33,7 @@ export default async function IdentityPromptsPage({
           <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
             Identity Prompts
           </h1>
-          <p className="text-[15px] text-[#999999]">
+          <p className="text-[15px] text-[#707070]">
             Questions drawn from your current self, active futures, and recent
             shifts — always tentative, never absolute.
           </p>
@@ -62,7 +62,7 @@ export default async function IdentityPromptsPage({
 
           {pendingPrompts.length === 0 ? (
             <OverviewCard className="px-8 py-7">
-              <p className="text-[13px] leading-relaxed text-[#888888]">
+              <p className="text-[13px] leading-relaxed text-[#6b6b6b]">
                 No questions waiting. Prompts are drawn from the patterns in
                 what you&apos;ve recorded — once your situations and check-ins
                 give Reflection something to ask about, generating prompts
@@ -82,7 +82,7 @@ export default async function IdentityPromptsPage({
           <section className="flex flex-col gap-4">
             <div>
               <h2 className="text-[17px] font-bold text-[#111]">Answered</h2>
-              <p className="mt-[3px] text-[13px] text-[#888888]">
+              <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                 Your recent answers
               </p>
             </div>

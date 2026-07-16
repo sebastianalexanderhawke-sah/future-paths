@@ -45,7 +45,7 @@ export function ChosenPathPanel({ path, index = 0 }: ChosenPathPanelProps) {
       </div>
 
       {scannable.explanation ? (
-        <p className="mt-3 max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
+        <p className="mt-3 max-w-[52em] text-[14px] leading-[1.7] text-[#707070]">
           {scannable.explanation}
         </p>
       ) : null}

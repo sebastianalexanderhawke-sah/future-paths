@@ -19,6 +19,12 @@ export function SituationRotatingExamples() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    // Auto-rotation is decorative inspiration. Under prefers-reduced-motion
+    // it never starts (WCAG 2.2.2): the first example simply stays put.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
     let fadeTimeout: ReturnType<typeof setTimeout> | undefined;
 
     const interval = setInterval(() => {
@@ -37,10 +43,12 @@ export function SituationRotatingExamples() {
     };
   }, []);
 
+  // aria-hidden, never aria-live: announcing a new example every 2.6s would
+  // talk over a screen-reader user typing their title right below. The
+  // input's own placeholder carries the same guidance accessibly.
   return (
     <p
-      aria-live="polite"
-      aria-atomic="true"
+      aria-hidden="true"
       className={`min-h-[1.5rem] text-body text-ink-tertiary transition-opacity duration-300 ease-in-out motion-reduce:transition-none ${
         visible ? "opacity-100" : "opacity-0"
       }`}

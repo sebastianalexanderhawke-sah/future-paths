@@ -1,7 +1,8 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+
+import { useTheme } from "@/components/providers/theme-provider";
 
 const OPTIONS = [
   {
@@ -23,14 +24,14 @@ const OPTIONS = [
 
 /**
  * Theme picker for the Settings Appearance card. Radio cards in the same
- * idiom as the situation entry flow's goal choice; the selection is stored
- * by next-themes in localStorage, so it persists across sessions, and
- * "system" tracks the OS preference live.
+ * idiom as the situation entry flow's goal choice; ThemeProvider stores the
+ * selection in localStorage, so it persists across sessions, and "system"
+ * tracks the OS preference live.
  */
 export function AppearanceControl() {
-  // next-themes only knows the stored theme on the client. Until mounted,
-  // render the three options without a selection instead of guessing —
-  // a wrong pre-hydration checkmark would flicker.
+  // The stored theme is only known on the client. Until mounted, render
+  // the three options without a selection instead of guessing — a wrong
+  // pre-hydration checkmark would flicker.
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 

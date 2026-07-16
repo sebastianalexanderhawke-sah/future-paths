@@ -37,7 +37,7 @@ function PathDetails({
   return (
     <>
       {scannable.explanation ? (
-        <p className="mt-2 max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
+        <p className="mt-2 max-w-[52em] text-[14px] leading-[1.7] text-[#707070]">
           {scannable.explanation}
         </p>
       ) : null}
@@ -129,7 +129,7 @@ export function OtherPathCard({ path, index }: OtherPathCardProps) {
               </div>
             ) : null}
             {preview ? (
-              <p className="text-[13px] leading-relaxed text-[#888888] group-open:hidden">
+              <p className="text-[13px] leading-relaxed text-[#6b6b6b] group-open:hidden">
                 {preview}
               </p>
             ) : null}

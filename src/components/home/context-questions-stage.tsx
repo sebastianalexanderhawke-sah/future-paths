@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ContextQuestion } from "./context-questions";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,20 @@ export function ContextQuestionsStage({
   useEffect(() => {
     setCurrentIndex(0);
   }, [questions]);
+
+  // Moving between questions re-renders the same textarea in place, so a
+  // screen reader hears nothing change. Focusing the textarea re-announces
+  // its (new) label; skipped on first render so the page doesn't steal
+  // focus while the questions are still arriving.
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    textareaRef.current?.focus();
+  }, [currentIndex]);
 
   if (questions.length === 0) {
     return null;
@@ -66,6 +80,7 @@ export function ContextQuestionsStage({
         </label>
         <textarea
           id={currentQuestion.id}
+          ref={textareaRef}
           value={currentAnswer}
           onChange={(event) => onAnswerChange(currentQuestion.id, event.target.value)}
           rows={3}

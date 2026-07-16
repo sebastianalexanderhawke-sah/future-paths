@@ -23,7 +23,7 @@ export function CheckInCard({
           : "rounded-lg border border-zinc-200 bg-white px-4 py-3"
       }
     >
-      <p className="text-xs text-zinc-400">
+      <p className="text-xs text-zinc-500">
         {new Date(checkIn.created_at).toLocaleString(undefined, {
           month: "short",
           day: "numeric",

@@ -58,7 +58,7 @@ export default async function WalkthroughPage({ searchParams }: WalkthroughPageP
             <p className="text-label text-ink-tertiary">Interactive Walkthrough</p>
             <Link
               href="/settings"
-              className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#111]"
+              className="text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#111]"
             >
               Skip Walkthrough
             </Link>
@@ -77,7 +77,7 @@ export default async function WalkthroughPage({ searchParams }: WalkthroughPageP
                 style={{ width: `${(stepNumber / WALKTHROUGH_STEP_COUNT) * 100}%` }}
               />
             </div>
-            <p className="shrink-0 text-[13px] font-medium text-[#888888]">
+            <p className="shrink-0 text-[13px] font-medium text-[#6b6b6b]">
               Step {stepNumber} of {WALKTHROUGH_STEP_COUNT}
             </p>
           </div>

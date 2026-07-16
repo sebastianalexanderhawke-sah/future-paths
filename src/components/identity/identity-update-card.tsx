@@ -7,7 +7,7 @@ type IdentityUpdateCardProps = {
 export function IdentityUpdateCard({ update }: IdentityUpdateCardProps) {
   return (
     <article className="rounded-lg border border-zinc-200 bg-white p-4">
-      <p className="text-xs text-zinc-400">
+      <p className="text-xs text-zinc-500">
         {new Date(update.created_at).toLocaleDateString()}
       </p>
       <h3 className="mt-2 text-sm font-medium text-zinc-900">{update.title}</h3>

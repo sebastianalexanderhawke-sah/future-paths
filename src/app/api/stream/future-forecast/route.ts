@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { crossOriginRejection, isSameOriginRequest } from "@/lib/http/same-origin";
 import { swallowReporting } from "@/lib/observability";
 import {
   allowRequest,
@@ -84,6 +85,13 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
+  // Reject cross-site POSTs before any work: this route creates/updates a
+  // situation and consumes AI quota on the cookie-authenticated caller's
+  // account.
+  if (!isSameOriginRequest(request)) {
+    return crossOriginRejection();
+  }
+
   const body = await request.json().catch(() => null);
 
   if (!body || typeof body.situationText !== "string" || !body.situationText.trim()) {

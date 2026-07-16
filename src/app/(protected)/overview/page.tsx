@@ -20,13 +20,26 @@ import { listIdentityUpdates } from "@/lib/identity-updates";
 import { listMoments } from "@/lib/moments";
 import { getChosenPathsForMoments } from "@/lib/paths";
 import { getUnansweredReflectionSummary } from "@/lib/reflections";
-import { isCheckInStale } from "@/lib/relative-time";
+import { formatRelativeTime, isCheckInStale } from "@/lib/relative-time";
 import { getUserIdentity } from "@/lib/user-identity";
 
 // How far back "since you last checked in" reaches: every What's Changed
 // row — movement, lifecycle transitions, and new observations alike — stays
 // in the story for a week and then steps aside.
 const RECENT_CHANGE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+// The metadata voice for "Created …": recent dates speak relatively
+// ("Created 2 days ago"), anything older than a week names the day
+// ("Created Jul 13") — a calendar date reads better than "3 weeks ago"
+// once the memory of creating it has cooled.
+function formatCreatedDate(dateStr: string, now = new Date()): string {
+  const diffMs = now.getTime() - new Date(dateStr).getTime();
+  if (diffMs < 7 * 24 * 60 * 60 * 1000) return formatRelativeTime(dateStr, now);
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -111,12 +124,17 @@ export default async function OverviewPage() {
     // overdue. The label stays honest either way: a first check-in is
     // "ready", only a lapsed rhythm is "overdue".
     if (isCheckInStale(lastCheckIns[moment.id] ?? moment.created_at)) {
+      const lastCheckIn = lastCheckIns[moment.id];
       attentionItems.push({
         key: `checkin-${moment.id}`,
         situationName: moment.title,
-        status: lastCheckIns[moment.id]
-          ? "Check-in overdue"
-          : "First check-in ready",
+        // The row's little story: before the first check-in the date says
+        // where the situation came from; after, it says how long the rhythm
+        // has lapsed.
+        metaLabel: lastCheckIn
+          ? `Last checked in ${formatRelativeTime(lastCheckIn)}`
+          : `Created ${formatCreatedDate(moment.created_at)}`,
+        status: lastCheckIn ? "Check-in overdue" : "First check-in ready",
         kind: "overdue",
         href: `/moments/${moment.id}#check-in`,
         priority: 0,
@@ -127,6 +145,8 @@ export default async function OverviewPage() {
     attentionItems.push({
       key: `reflection-${reflectionSummary.pending.id}`,
       situationName: reflectionSummary.pending.moment.title,
+      // A reflection row's timestamp is the question's, not the situation's.
+      metaLabel: `Asked ${formatRelativeTime(reflectionSummary.pending.created_at)}`,
       status: "Reflection available",
       kind: "reflection",
       href: "/reflections",
@@ -138,6 +158,7 @@ export default async function OverviewPage() {
       attentionItems.push({
         key: `unresolved-${moment.id}`,
         situationName: moment.title,
+        metaLabel: `Created ${formatCreatedDate(moment.created_at)}`,
         status: "Still deciding",
         kind: "decision",
         href: `/moments/${moment.id}`,
@@ -163,9 +184,9 @@ export default async function OverviewPage() {
         userInitial={userIdentity.initial}
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto">
         <TrackView event="overview_viewed" />
-        <div className="mx-auto max-w-[1120px] px-10 py-10">
+        <div className="mx-auto max-w-[1200px] px-10 py-10">
           {/* Page header. The greeting owns this row: its subtitle sits
               tight underneath in a legible gray, and the New-situation
               action is the platform's quiet secondary button rather than a
@@ -176,7 +197,9 @@ export default async function OverviewPage() {
                 {getGreeting()}
                 {userIdentity.displayName ? `, ${userIdentity.displayName}` : ""}.
               </h1>
-              <p className="text-[15px] text-[#6b7280]">
+              {/* #666 (not slate-500): the subtitle sits on the #f4f4f6
+                  canvas, where slate-500 dips under 4.5:1. */}
+              <p className="text-[15px] text-[#666666]">
                 {isQuietStart
                   ? "We're still building your story. As Reflection learns from your decisions, this page becomes a snapshot of how you're changing."
                   : "Here's where your life is moving."}
@@ -190,23 +213,22 @@ export default async function OverviewPage() {
             </Link>
           </div>
 
-          {/* Overview Phase 2: three cards, two questions — Future Selves
-              (how am I changing?), then What's Changed + Needs Attention
-              (what deserves my attention?). The activity summary lives on
-              Settings as Reflection Activity; with the fourth card gone the
-              remaining pair breathes wider (gap-8) instead of the page
-              pretending a card is missing. */}
+          {/* Overview Phase 3: three full-width cards — the Future Selves
+              map leads as the hero (how am I changing?), the short What's
+              Changed strip follows (what moved since I was here?), and
+              Needs Attention closes as a full-width list (what deserves my
+              attention?). The activity summary lives on Settings as
+              Reflection Activity. */}
           <div className="flex flex-col gap-8 pb-16">
             <FuturePathsCard futureSelves={futureSelves} />
 
-            <div className="grid grid-cols-2 gap-8">
-              <WhatsChangedCard rows={changeRows} />
-              <NeedsAttentionCard
-                items={visibleAttentionItems}
-                hiddenCount={hiddenAttentionCount}
-                totalCount={attentionItems.length}
-              />
-            </div>
+            <WhatsChangedCard rows={changeRows} />
+
+            <NeedsAttentionCard
+              items={visibleAttentionItems}
+              hiddenCount={hiddenAttentionCount}
+              totalCount={attentionItems.length}
+            />
           </div>
         </div>
       </main>

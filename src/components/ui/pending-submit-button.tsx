@@ -30,7 +30,7 @@ export function PendingSubmitButton({
       type="submit"
       disabled={pending}
       aria-busy={pending}
-      className={`inline-flex cursor-pointer items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-60 ${className}`}
+      className={`inline-flex cursor-pointer items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-60 ${className}`}
     >
       {pending ? (
         <span

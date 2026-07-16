@@ -22,10 +22,12 @@ import type { Moment } from "@/types/database";
 // state, so it stays neutral; color marks progress (accent for a made
 // forecast, green for lived check-ins), keeping the grid calm rather than
 // a wall of blue.
+// Chip text/surface pairs travel together inline, so each pair holds
+// 4.5:1 on its own (600/700 text steps over the soft fills).
 const STATUSES = {
   exploring: { label: "Exploring options", color: "#666666", soft: "#f4f4f6" },
-  forecast: { label: "Forecast", color: "#b45309", soft: "#eef2ff" },
-  checkingIn: { label: "Checking in", color: "#10b981", soft: "#ecfdf5" },
+  forecast: { label: "Forecast", color: "#92400e", soft: "#eef2ff" },
+  checkingIn: { label: "Checking in", color: "#047857", soft: "#ecfdf5" },
 } satisfies Record<string, SituationStatus>;
 
 function summarize(moment: Moment): string | null {
@@ -79,7 +81,7 @@ export default async function MomentsPage() {
         userInitial={userIdentity.initial}
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[1120px] px-10 py-10">
           {/* Page header */}
           <div className="mb-10 flex items-start justify-between">
@@ -87,7 +89,7 @@ export default async function MomentsPage() {
               <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
                 Situations
               </h1>
-              <p className="text-[15px] text-[#999999]">
+              <p className="text-[15px] text-[#707070]">
                 The active parts of your life.
               </p>
             </div>
@@ -105,7 +107,7 @@ export default async function MomentsPage() {
                 <p className="font-voice text-[22px] font-medium tracking-[-0.3px] text-[#111]">
                   Everything in Reflection begins with a situation.
                 </p>
-                <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#999999]">
+                <p className="mt-3 max-w-[440px] text-[13px] leading-relaxed text-[#707070]">
                   Capture a decision you&apos;re weighing or a change already
                   underway. Each one you work through — the paths you consider,
                   the check-ins you record — teaches Reflection where your life
@@ -130,13 +132,13 @@ export default async function MomentsPage() {
                   <h2 className="text-[17px] font-bold text-[#111]">
                     Active Situations
                   </h2>
-                  <p className="mt-[3px] text-[13px] text-[#888888]">
+                  <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                     Everything currently in motion
                   </p>
                 </div>
                 {active.length === 0 ? (
                   <OverviewCard className="px-8 py-7">
-                    <p className="text-[13px] leading-relaxed text-[#888888]">
+                    <p className="text-[13px] leading-relaxed text-[#6b6b6b]">
                       Nothing is in motion right now — everything you&apos;ve
                       worked through lives on in your resolved situations
                       below. When the next decision or change arrives, capture
@@ -159,7 +161,7 @@ export default async function MomentsPage() {
                     </div>
                     {moreActive.length > 0 ? (
                       <details className="group mt-4">
-                        <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#b45309] [&::-webkit-details-marker]:hidden">
+                        <summary className="cursor-pointer list-none py-1 text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#b45309] [&::-webkit-details-marker]:hidden">
                           <span className="group-open:hidden">
                             ▼ Show all active ({moreActive.length} more)
                           </span>
@@ -198,11 +200,11 @@ export default async function MomentsPage() {
                       <h2 className="text-[17px] font-bold text-[#111]">
                         Resolved Situations ({archived.length})
                       </h2>
-                      <p className="mt-[3px] text-[13px] text-[#888888]">
+                      <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                         Completed and archived
                       </p>
                     </div>
-                    <span className="text-[13px] font-medium text-[#999999]">
+                    <span className="text-[13px] font-medium text-[#707070]">
                       <span className="group-open:hidden">▼ Show resolved</span>
                       <span className="hidden group-open:inline">
                         ▲ Hide resolved
@@ -220,10 +222,10 @@ export default async function MomentsPage() {
                             : "",
                         ].join(" ")}
                       >
-                        <span className="min-w-0 truncate text-[14px] font-medium text-[#999999]">
+                        <span className="min-w-0 truncate text-[14px] font-medium text-[#707070]">
                           {moment.title}
                         </span>
-                        <span className="shrink-0 text-[12px] text-[#bbbbbb]">
+                        <span className="shrink-0 text-[12px] text-[#767676]">
                           Resolved {formatRelativeTime(moment.updated_at)}
                         </span>
                       </div>

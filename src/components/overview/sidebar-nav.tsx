@@ -111,7 +111,10 @@ export function SidebarNav({ items, activeHref }: SidebarNavProps) {
   };
 
   return (
-    <nav className={`flex flex-col gap-1 ${collapsed ? "px-2" : "px-3"}`}>
+    <nav
+      aria-label="Primary"
+      className={`flex flex-col gap-1 ${collapsed ? "px-2" : "px-3"}`}
+    >
       {items.map((item) => {
         const isActive = item.href === activeHref;
         const Icon = NAV_ICONS[item.icon];
@@ -131,7 +134,7 @@ export function SidebarNav({ items, activeHref }: SidebarNavProps) {
             <span
               aria-hidden="true"
               className={`flex w-[18px] shrink-0 justify-center ${
-                isActive ? "text-[#7c3aed]" : "text-[#9ca3af]"
+                isActive ? "text-[#7c3aed]" : "text-[#6b7280]"
               }`}
             >
               {Icon ? <Icon size={16} /> : null}
@@ -141,11 +144,13 @@ export function SidebarNav({ items, activeHref }: SidebarNavProps) {
             ) : (
               item.label
             )}
-            {/* The label as a hover tooltip while the rail is collapsed. */}
+            {/* The label as a tooltip while the rail is collapsed — shown on
+                hover AND keyboard focus, so icon-only links are never
+                nameless for sighted keyboard users. */}
             {collapsed ? (
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-[#111] px-2.5 py-1.5 text-[12px] font-medium text-white shadow-lg group-hover/item:block"
+                className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-[#111] px-2.5 py-1.5 text-[12px] font-medium text-white shadow-lg group-hover/item:block group-focus-visible/item:block"
               >
                 {item.label}
               </span>
@@ -157,7 +162,6 @@ export function SidebarNav({ items, activeHref }: SidebarNavProps) {
                     ? "absolute right-1.5 top-1.5 flex items-center"
                     : "ml-auto flex items-center"
                 }
-                title="New activity"
               >
                 <span className="h-[6px] w-[6px] rounded-full bg-[#6366f1] opacity-70" />
                 <span className="sr-only">New activity</span>

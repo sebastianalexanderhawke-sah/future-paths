@@ -22,7 +22,7 @@ export default async function AlternateSelvesPage() {
           <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
             Alternate Selves
           </h1>
-          <p className="text-[15px] text-[#999999]">
+          <p className="text-[15px] text-[#707070]">
             Past crossroads and the roads not taken — perspective, not regret.
           </p>
         </div>

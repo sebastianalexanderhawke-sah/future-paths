@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import type { ChapterStoryline } from "@/lib/timeline-chapter-story";
 
@@ -27,7 +27,7 @@ function ComparisonRow({ storyline }: { storyline: ChapterStoryline }) {
 
       {storyline.beginning ? (
         <div className="mt-1.5 flex flex-col gap-1 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-baseline sm:gap-3">
-          <p className="text-[14px] leading-[1.55] text-[#777777]">
+          <p className="text-[14px] leading-[1.55] text-[#707070]">
             {storyline.beginning}
           </p>
           <span
@@ -66,6 +66,7 @@ function ComparisonRow({ storyline }: { storyline: ChapterStoryline }) {
  */
 export function ChapterWhatChanged({ storylines }: ChapterWhatChangedProps) {
   const [expanded, setExpanded] = useState(false);
+  const listId = useId();
 
   if (storylines.length === 0) {
     return null;
@@ -75,7 +76,7 @@ export function ChapterWhatChanged({ storylines }: ChapterWhatChangedProps) {
   const hiddenCount = storylines.length - VISIBLE_ROWS;
 
   return (
-    <div>
+    <div id={listId}>
       {visible.map((storyline) => (
         <ComparisonRow key={storyline.momentId} storyline={storyline} />
       ))}
@@ -86,6 +87,7 @@ export function ChapterWhatChanged({ storylines }: ChapterWhatChangedProps) {
         <button
           type="button"
           aria-expanded={expanded}
+          aria-controls={listId}
           onClick={() => setExpanded((current) => !current)}
           className="mt-4 cursor-pointer rounded-[10px] bg-[#111] px-[18px] py-2.5 text-[13px] font-semibold text-white transition-opacity duration-150 hover:opacity-[0.88]"
         >

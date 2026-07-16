@@ -9,8 +9,11 @@ import type { FutureSelf } from "@/types/database";
  * from the user's first situation, and never mix with real data — the panel
  * says so out loud. Percentages are chosen to show the full grammar of the
  * stage (a leading future, a close rival, quieter possibilities).
+ *
+ * The helper is exported: the landing page builds its own illustrative cast
+ * (landing-content.ts) with the same guarantees.
  */
-function illustrativeFutureSelf(
+export function illustrativeFutureSelf(
   overrides: Pick<FutureSelf, "id" | "name" | "summary" | "percentage" | "themes">,
 ): FutureSelf {
   return {

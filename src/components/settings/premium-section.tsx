@@ -24,7 +24,7 @@ type PremiumSectionProps = {
 
 function PlanLine({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex items-baseline gap-2.5 text-[14px] leading-[1.85] text-[#777777]">
+    <li className="flex items-baseline gap-2.5 text-[14px] leading-[1.85] text-[#707070]">
       <span aria-hidden="true" className="text-[11px] text-[#c9c9d1]">
         •
       </span>
@@ -54,7 +54,7 @@ export function PremiumSection({ plan, showBillingNotice }: PremiumSectionProps)
         <h2 className="text-[17px] font-bold text-[#111]">
           Reflection Premium
         </h2>
-        <p className="mt-[3px] text-[13px] text-[#888888]">
+        <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
           Your plan and available usage.
         </p>
       </div>
@@ -78,7 +78,7 @@ export function PremiumSection({ plan, showBillingNotice }: PremiumSectionProps)
             </ul>
 
             {plan.renewsAt ? (
-              <p className="mt-4 text-[13px] text-[#999999]">
+              <p className="mt-4 text-[13px] text-[#707070]">
                 Renews on {formatRenewalDate(plan.renewsAt)}.
               </p>
             ) : null}
@@ -125,7 +125,7 @@ export function PremiumSection({ plan, showBillingNotice }: PremiumSectionProps)
               </form>
             </div>
 
-            <p className="mt-3 text-[13px] leading-[1.6] text-[#999999]">
+            <p className="mt-3 text-[13px] leading-[1.6] text-[#707070]">
               Tokens permanently unlock {TOKENS_PER_PACK} additional situations
               — no subscription required. Premium includes unlimited situations
               for as long as it&apos;s active.
@@ -146,7 +146,7 @@ export function PremiumSection({ plan, showBillingNotice }: PremiumSectionProps)
         ) : null}
 
         {showBillingNotice ? (
-          <p className="mt-5 rounded-xl bg-[#f7f7f9] px-4 py-3 text-[13px] leading-[1.6] text-[#777777]">
+          <p className="mt-5 rounded-xl bg-[#f7f7f9] px-4 py-3 text-[13px] leading-[1.6] text-[#707070]">
             Checkout isn&apos;t open during the beta yet. The pricing shown is
             what these options will cost at launch — nothing has been charged.
           </p>

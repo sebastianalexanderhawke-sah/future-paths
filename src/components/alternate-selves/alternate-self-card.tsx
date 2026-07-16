@@ -16,9 +16,9 @@ export function AlternateSelfCard({ item }: AlternateSelfCardProps) {
       className="block rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300"
     >
       {alternateSelf ? (
-        <p className="text-xs text-zinc-400">{alternateSelf.name}</p>
+        <p className="text-xs text-zinc-500">{alternateSelf.name}</p>
       ) : (
-        <p className="text-xs text-zinc-400">Past crossroad</p>
+        <p className="text-xs text-zinc-500">Past crossroad</p>
       )}
       <h3 className="mt-2 text-sm font-medium text-zinc-900 line-clamp-2">
         {crossroad.what_happened}

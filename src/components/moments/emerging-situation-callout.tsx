@@ -43,7 +43,7 @@ export function EmergingSituationCallout({
           <input type="hidden" name="momentId" value={momentId} />
           <button
             type="submit"
-            className="cursor-pointer rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#888888] transition-colors duration-150 hover:text-[#111]"
+            className="cursor-pointer rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#6b6b6b] transition-colors duration-150 hover:text-[#111]"
           >
             Dismiss
           </button>

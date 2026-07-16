@@ -22,7 +22,7 @@ export function RefreshFuturesButton() {
       type="submit"
       disabled={pending}
       aria-busy={pending}
-      className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-[10px] border border-[#ececf0] bg-white px-[18px] py-2.5 text-[13px] font-semibold text-[#333333] transition-colors duration-150 hover:bg-[#f5f5f5] focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70 focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-60 disabled:hover:bg-white"
+      className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-[10px] border border-[#ececf0] bg-white px-[18px] py-2.5 text-[13px] font-semibold text-[#333333] transition-colors duration-150 hover:bg-[#f5f5f5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)] focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-60 disabled:hover:bg-white"
     >
       {pending ? (
         <span

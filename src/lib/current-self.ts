@@ -330,14 +330,20 @@ async function runCurrentSelfShadowComparison(
       briefDraft = shadow.draft;
     }
 
-    console.log(
-      `[current-self-shadow] ${JSON.stringify({
-        primaryEngine,
-        comparison: compareCurrentSelfDrafts(legacyDraft, briefDraft, briefDraft.themes),
-        legacyDraft,
-        briefDraft,
-      })}`,
-    );
+    // The drafts are the user's identity portrait — prose derived from their
+    // private reflections. This comparison log is dev-only instrumentation and
+    // must never reach production logs (which are retained and often shipped to
+    // third-party drains). Gated behind an explicit opt-in; silent otherwise.
+    if (process.env.DEBUG_SHADOW_LOGS === "true") {
+      console.log(
+        `[current-self-shadow] ${JSON.stringify({
+          primaryEngine,
+          comparison: compareCurrentSelfDrafts(legacyDraft, briefDraft, briefDraft.themes),
+          legacyDraft,
+          briefDraft,
+        })}`,
+      );
+    }
   } catch {
     // Shadow comparison must never affect the primary generation.
   }

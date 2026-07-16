@@ -72,7 +72,7 @@ export function FutureSelvesPanel({ onContinue }: { onContinue: () => void }) {
             widthClassName="max-w-[880px]"
           />
         </div>
-        <p className="mt-6 text-center text-[12px] text-[#aab0bb]">
+        <p className="mt-6 text-center text-[12px] text-[#6b7280]">
           An illustration, not your data — your own map begins with a single
           &ldquo;You&rdquo; and grows from what you record.
         </p>
@@ -134,7 +134,7 @@ export function FoundationsPanel({ onContinue }: { onContinue: () => void }) {
               </span>
               <div className="pt-0.5">
                 <p className="text-[14px] font-bold text-[#111]">{name}</p>
-                <p className="mt-1 max-w-[46em] text-[13px] leading-relaxed text-[#777777]">
+                <p className="mt-1 max-w-[46em] text-[13px] leading-relaxed text-[#707070]">
                   {description}
                 </p>
               </div>
@@ -201,7 +201,7 @@ export function ClosingPanel({ momentId }: { momentId: string | null }) {
             <input type="hidden" name="outcome" value="completed" />
             <button
               type="submit"
-              className="cursor-pointer text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#111]"
+              className="cursor-pointer text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#111]"
             >
               or revisit your first situation →
             </button>

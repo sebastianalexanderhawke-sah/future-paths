@@ -18,7 +18,7 @@ const primaryButtonClass =
 
 // Same overflow voice as Coming Up ("Show N more →") — one design language.
 const expanderButtonClass =
-  "cursor-pointer self-start text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#047857]";
+  "cursor-pointer self-start text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#047857]";
 
 // A memory card: each finished reflection is its own elevated white card —
 // the same OverviewCard surface every other finished artifact in the app
@@ -42,12 +42,12 @@ function ReflectionMemoryCard({ checkIn }: { checkIn: ReflectionCheckIn }) {
           <span className="block truncate text-[14px] font-semibold text-[#111]">
             {checkIn.moment.title}
           </span>
-          <span className="mt-0.5 block text-[12px] text-[#888888]">
+          <span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
             Reflection · {new Date(checkIn.created_at).toLocaleDateString()}
           </span>
         </span>
       </div>
-      <p className="mt-3.5 text-[13px] font-medium text-[#888888]">
+      <p className="mt-3.5 text-[13px] font-medium text-[#6b6b6b]">
         {checkIn.reflection_question}
       </p>
       {checkIn.reflection_answer ? (
@@ -55,7 +55,7 @@ function ReflectionMemoryCard({ checkIn }: { checkIn: ReflectionCheckIn }) {
           {checkIn.reflection_answer}
         </p>
       ) : null}
-      <p className="mt-3 border-l-2 border-[#ececec] pl-3 text-[12px] leading-relaxed text-[#999999]">
+      <p className="mt-3 border-l-2 border-[#ececec] pl-3 text-[12px] leading-relaxed text-[#707070]">
         Expected · {checkIn.identity_impact}
       </p>
     </OverviewCard>
@@ -78,7 +78,7 @@ export function CompletedReflectionsList({ checkIns }: CompletedReflectionsListP
     <div className="flex flex-col gap-5">
       <OverviewCard className="px-8 py-6">
         <div className="flex flex-col items-start gap-4">
-          <p className="text-[13px] text-[#999999]">
+          <p className="text-[13px] text-[#707070]">
             Every question you&apos;ve answered, newest first
           </p>
           <button

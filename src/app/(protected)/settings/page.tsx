@@ -65,14 +65,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         userInitial={userIdentity.initial}
       />
 
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[1120px] px-10 py-10">
           {/* Page header */}
           <div className="mb-10">
             <h1 className="mb-1.5 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
               Settings
             </h1>
-            <p className="text-[15px] text-[#999999]">
+            <p className="text-[15px] text-[#707070]">
               Your account, your experience, and how Reflection works.
             </p>
           </div>
@@ -82,7 +82,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <OverviewCard className="px-9 py-7">
               <div className="mb-6">
                 <h2 className="text-[17px] font-bold text-[#111]">Account</h2>
-                <p className="mt-[3px] text-[13px] text-[#888888]">
+                <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                   Who you are here
                 </p>
               </div>
@@ -101,7 +101,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   <span className="block truncate text-[15px] font-semibold text-[#111]">
                     {userIdentity.displayName ?? "Your account"}
                   </span>
-                  <span className="block truncate text-[13px] text-[#999999]">
+                  <span className="block truncate text-[13px] text-[#707070]">
                     {email}
                   </span>
                 </span>
@@ -123,7 +123,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <OverviewCard className="px-9 py-7">
               <div className="mb-4">
                 <h2 className="text-[17px] font-bold text-[#111]">Security</h2>
-                <p className="mt-[3px] text-[13px] text-[#888888]">
+                <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                   How you sign in
                 </p>
               </div>
@@ -136,7 +136,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                     <p className="text-[14px] font-medium text-[#111]">
                       Sign out
                     </p>
-                    <p className="mt-1 text-[13px] leading-[1.6] text-[#999999]">
+                    <p className="mt-1 text-[13px] leading-[1.6] text-[#707070]">
                       Ends your session on this device.
                     </p>
                   </div>
@@ -156,14 +156,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <OverviewCard className="px-9 py-7">
               <div className="mb-5">
                 <h2 className="text-[17px] font-bold text-[#111]">Appearance</h2>
-                <p className="mt-[3px] text-[13px] text-[#888888]">
+                <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                   How Reflection looks on this device
                 </p>
               </div>
 
               <div className="max-w-[36rem]">
                 <AppearanceControl />
-                <p className="mt-3 text-[13px] leading-[1.6] text-[#999999]">
+                <p className="mt-3 text-[13px] leading-[1.6] text-[#707070]">
                   System follows your operating system&apos;s preference. Your
                   choice is remembered between sessions.
                 </p>
@@ -176,12 +176,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 <h2 className="text-[17px] font-bold text-[#111]">
                   Interactive Walkthrough
                 </h2>
-                <p className="mt-[3px] text-[13px] text-[#888888]">
+                <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                   Learn by doing, not by reading
                 </p>
               </div>
 
-              <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
+              <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#707070]">
                 Learn how Reflection works from beginning to end by following
                 one example situation — from writing it down to watching it
                 become part of a Timeline. It uses demonstration content only
@@ -189,7 +189,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               </p>
               <div className="mt-5 flex items-center gap-5">
                 <Button href="/settings/walkthrough">Start Walkthrough →</Button>
-                <p className="text-[13px] text-[#999999]">
+                <p className="text-[13px] text-[#707070]">
                   Estimated time: 2–3 minutes
                 </p>
               </div>
@@ -199,12 +199,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <OverviewCard className="px-9 py-7">
               <div className="mb-4">
                 <h2 className="text-[17px] font-bold text-[#111]">Privacy</h2>
-                <p className="mt-[3px] text-[13px] text-[#888888]">
+                <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                   Your writing is private
                 </p>
               </div>
 
-              <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
+              <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#707070]">
                 Reflection only uses the situations, check-ins, and reflections
                 you choose to record.
               </p>
@@ -235,12 +235,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 <h2 className="text-[17px] font-bold text-[#111]">
                   During the beta
                 </h2>
-                <p className="mt-[3px] text-[13px] text-[#888888]">
+                <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                   What&apos;s not here yet
                 </p>
               </div>
 
-              <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#777777]">
+              <p className="max-w-[52em] text-[14px] leading-[1.7] text-[#707070]">
                 A few account tools aren&apos;t in the app yet: exporting your
                 data, deleting your account yourself, and notification
                 preferences. They&apos;re planned — until they ship, nothing
@@ -254,7 +254,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <OverviewCard className="px-9 py-7">
               <div className="mb-4">
                 <h2 className="text-[17px] font-bold text-[#111]">About</h2>
-                <p className="mt-[3px] text-[13px] text-[#888888]">
+                <p className="mt-[3px] text-[13px] text-[#6b6b6b]">
                   This application
                 </p>
               </div>
@@ -263,7 +263,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 <span className="text-[14px] font-medium text-[#111]">
                   Application version
                 </span>
-                <span className="text-[13px] text-[#999999]">
+                <span className="text-[13px] text-[#707070]">
                   {packageJson.version}
                 </span>
               </div>

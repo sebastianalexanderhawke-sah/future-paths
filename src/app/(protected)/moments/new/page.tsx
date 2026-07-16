@@ -31,7 +31,7 @@ export default async function NewSituationPage({
       <div className="mb-8">
         <Link
           href="/overview"
-          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#b45309]"
+          className="text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#b45309]"
         >
           ← Overview
         </Link>

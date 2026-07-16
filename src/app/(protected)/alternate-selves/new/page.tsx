@@ -10,14 +10,14 @@ export default function NewAlternateSelfPage() {
       <div className="mb-10">
         <Link
           href="/alternate-selves"
-          className="text-[13px] font-medium text-[#999999] transition-colors duration-150 hover:text-[#7c3aed]"
+          className="text-[13px] font-medium text-[#707070] transition-colors duration-150 hover:text-[#7c3aed]"
         >
           ← Alternate Selves
         </Link>
         <h1 className="mb-1.5 mt-3 text-[32px] font-extrabold tracking-[-0.8px] text-[#111]">
           New past crossroad
         </h1>
-        <p className="text-[15px] text-[#999999]">
+        <p className="text-[15px] text-[#707070]">
           Describe a significant decision that already happened. You&apos;ll
           explore plausible alternative paths next — never as regret, never as
           advice.

@@ -24,12 +24,6 @@ export function initAnalyticsClient(): void {
   }
 
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  console.log("POSTHOG KEY:", process.env.NEXT_PUBLIC_POSTHOG_KEY)
-console.log("POSTHOG HOST:", process.env.NEXT_PUBLIC_POSTHOG_HOST)
-
-
-console.log("POSTHOG KEY:", key);
-console.log("POSTHOG HOST:", process.env.NEXT_PUBLIC_POSTHOG_HOST);
 
   if (!key) {
     return;

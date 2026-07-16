@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { TrendIndicator } from "@/components/ui/trend-indicator";
 import { getMovementStory } from "@/lib/future-self-story";
@@ -68,7 +68,7 @@ function BranchGlyph({ color, className }: { color: string; className: string })
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
       {children}
     </p>
   );
@@ -188,6 +188,7 @@ export function FutureCard({ futureSelf, accent, frameless = false }: FutureCard
   // pipeline attributed any, otherwise the situations, check-ins, and
   // reflections that support it.
   const [showWhy, setShowWhy] = useState(false);
+  const whyContentId = useId();
   const receipts =
     movement && movement.evidence.length > 0
       ? movement.evidence
@@ -260,7 +261,7 @@ export function FutureCard({ futureSelf, accent, frameless = false }: FutureCard
             <span className="font-semibold tabular-nums text-zinc-900">{pct}%</span>
             <TrendIndicator futureSelf={futureSelf} className="ml-1.5 text-xs font-medium" />
             {quote ? (
-              <span className="ml-1.5 text-zinc-400">· {futureSelf.evidence_strength}</span>
+              <span className="ml-1.5 text-zinc-500">· {futureSelf.evidence_strength}</span>
             ) : null}
           </p>
         </div>
@@ -331,11 +332,12 @@ export function FutureCard({ futureSelf, accent, frameless = false }: FutureCard
             <button
               type="button"
               aria-expanded={showWhy}
+              aria-controls={showWhy ? whyContentId : undefined}
               onClick={() => setShowWhy((current) => !current)}
-              className="-mx-2 -my-1.5 flex w-[calc(100%+16px)] cursor-pointer items-center justify-between gap-4 rounded-lg px-2 py-1.5 text-left transition-colors duration-150 hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/70"
+              className="-mx-2 -my-1.5 flex w-[calc(100%+16px)] cursor-pointer items-center justify-between gap-4 rounded-lg px-2 py-1.5 text-left transition-colors duration-150 hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--action-ring)]"
             >
               <span className="min-w-0">
-                <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
                   Why Reflection Believes This
                 </span>
                 <span className="mt-1 block text-[13px] text-zinc-500">
@@ -345,7 +347,7 @@ export function FutureCard({ futureSelf, accent, frameless = false }: FutureCard
               <svg
                 viewBox="0 0 16 16"
                 aria-hidden="true"
-                className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform duration-200 ease-out motion-reduce:transition-none ${
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out motion-reduce:transition-none ${
                   showWhy ? "rotate-180" : ""
                 }`}
               >
@@ -360,7 +362,7 @@ export function FutureCard({ futureSelf, accent, frameless = false }: FutureCard
               </svg>
             </button>
             {showWhy ? (
-              <div className="reveal-in">
+              <div id={whyContentId} className="reveal-in">
                 {evidenceBullets.length > 0 ? (
                   <ul className="mt-4 max-w-[60ch] space-y-2">
                     {evidenceBullets.map((bullet) => (
@@ -382,7 +384,7 @@ export function FutureCard({ futureSelf, accent, frameless = false }: FutureCard
                 ) : null}
                 {receipts.length > 0 ? (
                   <div className={evidenceBullets.length > 0 ? "mt-5" : "mt-4"}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
                       From your recorded moments
                     </p>
                     <ul className="mt-2.5 max-w-[60ch] space-y-1.5">

@@ -39,6 +39,7 @@ export function ChapterAccordion({ chapters }: ChapterAccordionProps) {
       <div className="flex flex-col gap-10">
         {chapters.map(({ month, preview, full }) => {
           const open = openMonth === month;
+          const contentId = `chapter-${month.replace(/\s+/g, "-").toLowerCase()}`;
           return (
             <div key={month} className="relative pl-10">
               {/* Node on the rail; the month itself lives inside the cover. */}
@@ -47,12 +48,17 @@ export function ChapterAccordion({ chapters }: ChapterAccordionProps) {
                 className="absolute left-0 top-[26px] h-4 w-4 rounded-full border-[3px] border-white bg-[#047857] shadow-[0_0_0_1px_#e8e8ee]"
               />
               <OverviewCard className="px-8 pb-7 pt-7">
-                {open ? full : preview}
+                <div id={contentId}>{open ? full : preview}</div>
                 {/* The app's primary action style — same control language as
-                    Workspace and Situations, not a bespoke text disclosure. */}
+                    Workspace and Situations, not a bespoke text disclosure.
+                    The aria-label keeps the visible text and adds the month,
+                    so the identical buttons stay distinguishable in a screen
+                    reader's controls list. */}
                 <button
                   type="button"
                   aria-expanded={open}
+                  aria-controls={contentId}
+                  aria-label={`${open ? "Close" : "Show"} chapter, ${month}`}
                   onClick={() => {
                     if (!open) {
                       trackEvent(ANALYTICS_EVENTS.timelineChapterOpened, { month });

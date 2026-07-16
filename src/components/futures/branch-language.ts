@@ -33,12 +33,16 @@ import type { FutureSelf } from "@/types/database";
 // dialog accent, and session-to-session memory, and five analogous shades
 // proved too ambiguous for that job. Semantics still live in the label
 // text and the stage role.
+// `text` is the SAME hue as a theme-aware token for anything rendered as
+// small text (the % caption): the 500s hold the graphics but sit under
+// 4.5:1 on white, so text steps down to the family's accent token, which
+// lightens again in dark mode.
 export const BRANCH_ACCENTS = [
-  { color: "#3b82f6", soft: "#eff6ff" },
-  { color: "#10b981", soft: "#ecfdf5" },
-  { color: "#f59e0b", soft: "#fffbeb" },
-  { color: "#f43f5e", soft: "#fff1f2" },
-  { color: "#8b5cf6", soft: "#f5f3ff" },
+  { color: "#3b82f6", soft: "#eff6ff", text: "var(--accent-info)" },
+  { color: "#10b981", soft: "#ecfdf5", text: "var(--accent-growth)" },
+  { color: "#f59e0b", soft: "#fffbeb", text: "var(--accent-moments)" },
+  { color: "#f43f5e", soft: "#fff1f2", text: "var(--accent-attention)" },
+  { color: "#8b5cf6", soft: "#f5f3ff", text: "var(--accent-futures)" },
 ] as const;
 
 export type BranchAccent = (typeof BRANCH_ACCENTS)[number];
